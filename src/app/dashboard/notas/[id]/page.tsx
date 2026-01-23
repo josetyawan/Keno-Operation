@@ -53,7 +53,7 @@ export default function NotaDetailPage({ params }: { params: { id: string } }) {
     notFound();
   }
 
-  const createdAtDate = nota.createdAt?.toDate ? nota.createdAt.toDate() : new Date();
+  const dateCreatedDate = nota.dateCreated?.toDate ? nota.dateCreated.toDate() : new Date();
 
   return (
     <div className="mx-auto grid max-w-4xl flex-1 auto-rows-max gap-6">
@@ -77,7 +77,7 @@ export default function NotaDetailPage({ params }: { params: { id: string } }) {
           <CardTitle>{nota.title}</CardTitle>
           <div className="flex items-center justify-between flex-wrap gap-2">
             <CardDescription>
-              Created on {format(createdAtDate, 'PPPPp')}
+              Created on {format(dateCreatedDate, 'PPPPp')}
             </CardDescription>
             <SummarizeButton notaContent={nota.content} />
           </div>

@@ -46,7 +46,7 @@ export default function NewNotaPage() {
         userId: user.uid,
         title,
         content,
-        createdAt: serverTimestamp(),
+        dateCreated: serverTimestamp(),
     };
 
     addDocumentNonBlocking(notasCollection, newNota)

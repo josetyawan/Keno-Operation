@@ -7,12 +7,14 @@ import { Label } from '@/components/ui/label';
 import AuthLayout from '@/components/auth-layout';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth, useUser, initiateEmailSignUp } from '@/firebase';
+import { useAuth, useUser, signUpWithEmail } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { FirebaseError } from 'firebase/app';
 
 export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
@@ -24,9 +26,32 @@ export default function SignupPage() {
     }
   }, [user, isUserLoading, router]);
 
-  const handleSignUp = (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    initiateEmailSignUp(auth, email, password, toast);
+    setIsLoading(true);
+    try {
+      await signUpWithEmail(auth, email, password);
+      // Successful sign-up will trigger onAuthStateChanged, and the useEffect will redirect.
+    } catch (error) {
+        let title = 'Sign Up Failed';
+        let description = 'An unexpected error occurred. Please try again.';
+        if (error instanceof FirebaseError) {
+          if (error.code === 'auth/email-already-in-use') {
+              title = 'Email Already in Use';
+              description = 'This email address is already registered. Please login or use a different email.';
+          } else if (error.code === 'auth/weak-password') {
+              title = 'Weak Password';
+              description = 'The password must be at least 6 characters long.';
+          }
+        }
+        toast({
+            variant: 'destructive',
+            title,
+            description,
+        });
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   return (
@@ -41,8 +66,8 @@ export default function SignupPage() {
             <Label htmlFor="password">Password</Label>
             <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
-          <Button type="submit" className="w-full" disabled={isUserLoading}>
-            {isUserLoading ? 'Creating Account...' : 'Create an account'}
+          <Button type="submit" className="w-full" disabled={isUserLoading || isLoading}>
+            {isLoading ? 'Creating Account...' : 'Create an account'}
           </Button>
         </div>
       </form>

@@ -7,12 +7,14 @@ import { Label } from '@/components/ui/label';
 import AuthLayout from '@/components/auth-layout';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth, useUser, initiateEmailSignIn } from '@/firebase';
+import { useAuth, useUser, signInWithEmail } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { FirebaseError } from 'firebase/app';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
@@ -24,9 +26,29 @@ export default function LoginPage() {
     }
   }, [user, isUserLoading, router]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    initiateEmailSignIn(auth, email, password, toast);
+    setIsLoading(true);
+    try {
+      await signInWithEmail(auth, email, password);
+      // Successful login will trigger onAuthStateChanged, and the useEffect will redirect.
+    } catch (error) {
+      let title = 'Login Failed';
+      let description = 'An unexpected error occurred. Please try again.';
+      if (error instanceof FirebaseError) {
+        if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+            title = 'Invalid Credentials';
+            description = 'The email or password you entered is incorrect. Please check your credentials and try again.';
+        }
+      }
+      toast({
+          variant: 'destructive',
+          title,
+          description,
+      });
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   return (
@@ -46,8 +68,8 @@ export default function LoginPage() {
             </div>
             <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
-          <Button type="submit" className="w-full" disabled={isUserLoading}>
-            {isUserLoading ? 'Logging in...' : 'Login'}
+          <Button type="submit" className="w-full" disabled={isUserLoading || isLoading}>
+            {isLoading ? 'Logging in...' : 'Login'}
           </Button>
         </div>
       </form>

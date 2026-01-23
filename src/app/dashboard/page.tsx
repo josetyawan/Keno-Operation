@@ -18,14 +18,14 @@ import { collection, query, orderBy } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 
 function NotaCard({ nota }: { nota: Nota }) {
-  const createdAtDate = nota.createdAt?.toDate ? nota.createdAt.toDate() : new Date();
+  const dateCreatedDate = nota.dateCreated?.toDate ? nota.dateCreated.toDate() : new Date();
   
   return (
     <Card className="flex flex-col transition-all hover:shadow-md">
       <CardHeader>
         <CardTitle className="text-xl">{nota.title}</CardTitle>
         <CardDescription>
-          Created on {format(createdAtDate, 'PPP')}
+          Created on {format(dateCreatedDate, 'PPP')}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow">
@@ -51,7 +51,7 @@ export default function DashboardPage() {
 
   const notasQuery = useMemoFirebase(() => {
     if (!user) return null;
-    return query(collection(firestore, 'users', user.uid, 'notas'), orderBy('createdAt', 'desc'));
+    return query(collection(firestore, 'users', user.uid, 'notas'), orderBy('dateCreated', 'desc'));
   }, [user, firestore]);
 
   const { data: notas, isLoading } = useCollection<Nota>(notasQuery);
