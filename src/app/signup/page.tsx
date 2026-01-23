@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth, useUser, signUpWithEmail } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { FirebaseError } from 'firebase/app';
+import { ToastAction } from '@/components/ui/toast';
 
 export default function SignupPage() {
   const [email, setEmail] = useState('');
@@ -38,10 +39,18 @@ export default function SignupPage() {
         if (error instanceof FirebaseError) {
           switch (error.code) {
             case 'auth/email-already-in-use':
-              title = 'Email Already in Use';
-              description =
-                'This email address is already registered. Please login or use a different email.';
-              break;
+                toast({
+                    variant: 'destructive',
+                    title: 'Email Already in Use',
+                    description: 'This email is already registered. Please login.',
+                    action: (
+                        <ToastAction altText="Login">
+                            <Link href="/login">Login</Link>
+                        </ToastAction>
+                    ),
+                });
+                setIsLoading(false);
+                return;
             case 'auth/weak-password':
               title = 'Weak Password';
               description = 'The password must be at least 6 characters long.';
@@ -51,7 +60,6 @@ export default function SignupPage() {
               description = 'Please enter a valid email address.';
               break;
             default:
-              // This will catch other errors, like Firestore permission errors during createUserDocument
               description = `An error occurred during sign up. (${error.code})`;
               break;
           }

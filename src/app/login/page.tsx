@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth, useUser, signInWithEmail } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { FirebaseError } from 'firebase/app';
+import { ToastAction } from '@/components/ui/toast';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -35,15 +36,26 @@ export default function LoginPage() {
     } catch (error) {
       let title = 'Login Failed';
       let description = 'An unexpected error occurred. Please try again.';
+      
       if (error instanceof FirebaseError) {
         switch (error.code) {
           case 'auth/invalid-credential':
           case 'auth/user-not-found':
           case 'auth/wrong-password':
-            title = 'Invalid Credentials';
-            description =
-              'The email or password you entered is incorrect. If you do not have an account, please sign up.';
-            break;
+            toast({
+              variant: 'destructive',
+              title: 'Invalid Credentials',
+              description:
+                'Incorrect email or password. Please try again or sign up.',
+              action: (
+                <ToastAction altText="Sign Up">
+                  <Link href="/signup">Sign Up</Link>
+                </ToastAction>
+              ),
+            });
+            // Early return to prevent the generic toast from showing
+            setIsLoading(false);
+            return;
           case 'auth/invalid-api-key':
             title = 'Configuration Error';
             description =
@@ -80,7 +92,7 @@ export default function LoginPage() {
           <div className="grid gap-2">
             <div className="flex items-center">
               <Label htmlFor="password">Password</Label>
-              <Link href="#" className="ml-auto inline-block text-sm underline">
+              <Link href="/forgot-password" className="ml-auto inline-block text-sm underline">
                 Forgot your password?
               </Link>
             </div>
