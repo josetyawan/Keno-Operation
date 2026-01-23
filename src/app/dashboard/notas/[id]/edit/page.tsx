@@ -29,8 +29,9 @@ import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { ArrowLeft, CalendarIcon, Upload } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { useUser, useFirestore, useDoc, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase, updateDocumentNonBlocking, useStorage } from '@/firebase';
 import { doc, serverTimestamp } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { Nota, UserProfile } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -96,6 +97,7 @@ export default function EditNotaPage() {
   const { toast } = useToast();
   const { user } = useUser();
   const firestore = useFirestore();
+  const storage = useStorage();
 
   const [isSaving, setIsSaving] = useState(false);
 
@@ -193,7 +195,7 @@ export default function EditNotaPage() {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!notaRef) return;
+    if (!notaRef || !user) return;
     
     // Dynamic validation
     let isFormValid = !!(tanggal && segmen && nominal && namaPic);
@@ -211,40 +213,68 @@ export default function EditNotaPage() {
     }
     setIsSaving(true);
 
-    const updatedData: Partial<Nota> = {
-        tanggal,
-        segmen,
-        keterangan,
-        nominal: Number(nominal),
-        namaPic,
-        // File uploads would be handled here
-    };
-    
-    if (isBBMKendaraan) {
-        updatedData.noPlatKendaraan = noPlatKendaraan;
-        updatedData.kmAwal = Number(kmAwal);
-        updatedData.kmAkhir = Number(kmAkhir);
-    } else {
-        updatedData.noPlatKendaraan = '';
-        updatedData.kmAwal = 0;
-        updatedData.kmAkhir = 0;
-    }
-    
-    if(isNonBBMKendaraan) {
-        updatedData.namaBarang = namaBarang;
-    } else {
-        updatedData.namaBarang = '';
-    }
-    
-    updateDocumentNonBlocking(notaRef, updatedData);
+    try {
+        const existingUrls = nota?.fotoEvidenUrls || [];
+        const finalUrls = [...existingUrls];
 
-    toast({
-      title: 'Laporan Diperbarui!',
-      description: 'Laporan Anda telah berhasil disimpan.',
-    });
-    
-    // Redirect immediately, optimistic update
-    router.push(`/dashboard/notas/${id}`);
+        const uploadPromises = files.map(async (file, index) => {
+            if (file) {
+                const fileExtension = file.name.split('.').pop();
+                const fileName = `${user.uid}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExtension}`;
+                const filePath = `notas/${user.uid}/${fileName}`;
+                const storageRef = ref(storage, filePath);
+                
+                await uploadBytes(storageRef, file);
+                const downloadURL = await getDownloadURL(storageRef);
+                
+                finalUrls[index] = downloadURL;
+            }
+        });
+        
+        await Promise.all(uploadPromises);
+
+        const updatedData: Partial<Nota> = {
+            tanggal,
+            segmen,
+            keterangan,
+            nominal: Number(nominal),
+            namaPic,
+            fotoEvidenUrls: finalUrls,
+        };
+        
+        if (isBBMKendaraan) {
+            updatedData.noPlatKendaraan = noPlatKendaraan;
+            updatedData.kmAwal = Number(kmAwal);
+            updatedData.kmAkhir = Number(kmAkhir);
+        } else {
+            updatedData.noPlatKendaraan = '';
+            updatedData.kmAwal = 0;
+            updatedData.kmAkhir = 0;
+        }
+        
+        if(isNonBBMKendaraan) {
+            updatedData.namaBarang = namaBarang;
+        } else {
+            updatedData.namaBarang = '';
+        }
+        
+        updateDocumentNonBlocking(notaRef, updatedData);
+
+        toast({
+          title: 'Laporan Diperbarui!',
+          description: 'Laporan Anda telah berhasil disimpan.',
+        });
+        
+        router.push(`/dashboard/notas/${id}`);
+    } catch(error) {
+        console.error("Error updating nota:", error);
+        toast({
+            variant: "destructive",
+            title: "Gagal Memperbarui",
+            description: "Terjadi kesalahan saat mengunggah gambar atau memperbarui laporan. Silakan coba lagi.",
+        });
+        setIsSaving(false);
+    }
   }
   
   if (isNotaLoading || !nota) {

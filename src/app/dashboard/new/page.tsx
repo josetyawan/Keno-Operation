@@ -28,8 +28,9 @@ import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { ArrowLeft, CalendarIcon, Camera, Upload } from 'lucide-react';
 import { useState } from 'react';
-import { useUser, useFirestore, addDocumentNonBlocking } from '@/firebase';
+import { useUser, useFirestore, addDocumentNonBlocking, useStorage } from '@/firebase';
 import { collection, serverTimestamp } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import type { Nota } from '@/lib/types';
@@ -80,6 +81,7 @@ export default function NewNotaPage() {
   const { toast } = useToast();
   const { user } = useUser();
   const firestore = useFirestore();
+  const storage = useStorage();
   const [isSaving, setIsSaving] = useState(false);
 
   // Form state
@@ -155,41 +157,64 @@ export default function NewNotaPage() {
 
     setIsSaving(true);
 
-    const notasCollection = collection(firestore, 'notas');
+    try {
+      const uploadPromises = files
+        .filter((file): file is File => file !== null)
+        .map(async (file) => {
+          const fileExtension = file.name.split('.').pop();
+          const fileName = `${user.uid}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExtension}`;
+          const filePath = `notas/${user.uid}/${fileName}`;
+          const storageRef = ref(storage, filePath);
+          
+          await uploadBytes(storageRef, file);
+          const downloadURL = await getDownloadURL(storageRef);
+          return downloadURL;
+        });
 
-    // Note: File upload logic is not implemented. We are saving an empty array for URLs.
-    const newNota: Partial<Nota> = {
-      userId: user.uid,
-      userEmail: user.email,
-      tanggal: tanggal,
-      segmen,
-      keterangan,
-      nominal: Number(nominal),
-      namaPic,
-      fotoEvidenUrls: [], // Placeholder for file URLs
-      dateCreated: serverTimestamp(),
-      status: 'pending',
-    };
+      const uploadedUrls = await Promise.all(uploadPromises);
 
-    if (isBBMKendaraan) {
-        newNota.noPlatKendaraan = noPlatKendaraan;
-        newNota.kmAwal = Number(kmAwal);
-        newNota.kmAkhir = Number(kmAkhir);
+      const notasCollection = collection(firestore, 'notas');
+
+      const newNota: Partial<Nota> = {
+        userId: user.uid,
+        userEmail: user.email,
+        tanggal: tanggal,
+        segmen,
+        keterangan,
+        nominal: Number(nominal),
+        namaPic,
+        fotoEvidenUrls: uploadedUrls,
+        dateCreated: serverTimestamp(),
+        status: 'pending',
+      };
+
+      if (isBBMKendaraan) {
+          newNota.noPlatKendaraan = noPlatKendaraan;
+          newNota.kmAwal = Number(kmAwal);
+          newNota.kmAkhir = Number(kmAkhir);
+      }
+      
+      if(isNonBBMKendaraan) {
+          newNota.namaBarang = namaBarang;
+      }
+
+      addDocumentNonBlocking(notasCollection, newNota);
+
+      toast({
+        title: 'Laporan Dibuat!',
+        description: 'Laporan baru Anda telah berhasil disimpan.',
+      });
+
+      router.push('/dashboard');
+    } catch (error) {
+      console.error("Error creating nota:", error);
+      toast({
+        variant: "destructive",
+        title: "Gagal Menyimpan",
+        description: "Terjadi kesalahan saat mengunggah gambar atau menyimpan laporan. Silakan coba lagi.",
+      });
+      setIsSaving(false);
     }
-    
-    if(isNonBBMKendaraan) {
-        newNota.namaBarang = namaBarang;
-    }
-
-    addDocumentNonBlocking(notasCollection, newNota);
-
-    toast({
-      title: 'Laporan Dibuat!',
-      description: 'Laporan baru Anda telah berhasil disimpan.',
-    });
-
-    // Redirect immediately, optimistic update
-    router.push('/dashboard');
   }
 
   return (
