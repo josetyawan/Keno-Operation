@@ -16,7 +16,7 @@
  *
  * ## Key Security Decisions
  * - **No User Listing**: To protect user privacy, it is impossible for any client to
- *   list all documents in the top-level `/users` collection.
+ *   list all documents in the top-level `/users` collection unless they are an admin.
  * - **Strict Ownership**: A user can only read, create, update, or delete their own data.
  *   Access is strictly controlled by matching the authenticated user's UID with the
  *   `{userId}` wildcard in the document path.
@@ -61,10 +61,12 @@ service cloud.firestore {
     }
 
     /**
-     * Checks if the requesting user has an 'admin' role in their profile document.
+     * Checks if the requesting user has an 'admin' role via Custom Claims.
+     * This is the performant and secure way to handle roles, and is required
+     * for collection group queries.
      */
     function isAdmin() {
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return isSignedIn() && request.auth.token.role == 'admin';
     }
 
     /**
