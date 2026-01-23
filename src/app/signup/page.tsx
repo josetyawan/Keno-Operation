@@ -8,6 +8,7 @@ import AuthLayout from '@/components/auth-layout';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth, useUser, initiateEmailSignUp } from '@/firebase';
+import { useToast } from '@/hooks/use-toast';
 
 export default function SignupPage() {
   const [email, setEmail] = useState('');
@@ -15,6 +16,7 @@ export default function SignupPage() {
   const router = useRouter();
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!isUserLoading && user) {
@@ -24,7 +26,7 @@ export default function SignupPage() {
 
   const handleSignUp = (e: React.FormEvent) => {
     e.preventDefault();
-    initiateEmailSignUp(auth, email, password);
+    initiateEmailSignUp(auth, email, password, toast);
   };
 
   return (
