@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -32,6 +33,7 @@ import { useUser, useFirestore, addDocumentNonBlocking } from '@/firebase';
 import { collection, serverTimestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import type { Nota } from '@/lib/types';
 
 function PhotoUpload({
   id,
@@ -92,6 +94,19 @@ export default function NewNotaPage() {
   const [namaPic, setNamaPic] = useState('');
   const [files, setFiles] = useState<(File | null)[]>(Array(7).fill(null));
 
+  const bbmKendaraanSegments = ['BBM R2', 'BBM R4 Harian', 'BBM R4 Turlap', 'BBM R4 UT'];
+  const isBBMKendaraan = segmen && bbmKendaraanSegments.includes(segmen);
+  
+  const handleSegmenChange = (value: string) => {
+    setSegmen(value);
+    // Reset fields that are not applicable to the new segmen
+    if (!bbmKendaraanSegments.includes(value)) {
+      setNoPlatKendaraan('');
+      setKmAwal('');
+      setKmAkhir('');
+    }
+  };
+
   const handleFileChange = (index: number, file: File | null) => {
     const newFiles = [...files];
     newFiles[index] = file;
@@ -108,30 +123,32 @@ export default function NewNotaPage() {
       });
       return;
     }
-    // Basic validation
-    if (!tanggal || !segmen || !noPlatKendaraan || !kmAwal || !kmAkhir || !nominal || !namaPic) {
+    
+    // Dynamic validation
+    let isFormValid = !!(tanggal && segmen && nominal && namaPic);
+    if (isBBMKendaraan) {
+        isFormValid = isFormValid && !!(noPlatKendaraan && kmAwal && kmAkhir);
+    }
+    
+    if (!isFormValid) {
       toast({
         variant: 'destructive',
         title: 'Incomplete Form',
-        description: 'Please fill out all required fields.',
+        description: 'Please fill out all required fields for the selected segment.',
       });
       return;
     }
+
     setIsSaving(true);
 
     const notasCollection = collection(firestore, 'notas');
 
     // Note: File upload logic is not implemented. We are saving an empty array for URLs.
-    // A real implementation would upload files to Firebase Storage and get the URLs.
-
-    const newNota = {
+    const newNota: Partial<Nota> = {
       userId: user.uid,
       userEmail: user.email,
       tanggal: tanggal,
       segmen,
-      noPlatKendaraan,
-      kmAwal: Number(kmAwal),
-      kmAkhir: Number(kmAkhir),
       uraianPekerjaan,
       nominal: Number(nominal),
       namaPic,
@@ -139,6 +156,12 @@ export default function NewNotaPage() {
       dateCreated: serverTimestamp(),
       status: 'pending',
     };
+
+    if (isBBMKendaraan) {
+        newNota.noPlatKendaraan = noPlatKendaraan;
+        newNota.kmAwal = Number(kmAwal);
+        newNota.kmAkhir = Number(kmAkhir);
+    }
 
     addDocumentNonBlocking(notasCollection, newNota);
 
@@ -211,7 +234,7 @@ export default function NewNotaPage() {
                 </div>
                 <div className="grid gap-3">
                   <Label htmlFor="segmen">Segmen *</Label>
-                  <Select onValueChange={setSegmen} value={segmen} required>
+                  <Select onValueChange={handleSegmenChange} value={segmen} required>
                     <SelectTrigger>
                       <SelectValue placeholder="Pilih segmen" />
                     </SelectTrigger>
@@ -232,42 +255,46 @@ export default function NewNotaPage() {
                 </div>
               </div>
 
-               <div className="grid gap-3">
-                  <Label htmlFor="noPlatKendaraan">No Plat Kendaraan *</Label>
-                  <Input
-                    id="noPlatKendaraan"
-                    type="text"
-                    placeholder="B 1234 ABC"
-                    required
-                    value={noPlatKendaraan}
-                    onChange={(e) => setNoPlatKendaraan(e.target.value)}
-                  />
-                </div>
+              {isBBMKendaraan && (
+                <>
+                  <div className="grid gap-3">
+                    <Label htmlFor="noPlatKendaraan">No Plat Kendaraan *</Label>
+                    <Input
+                      id="noPlatKendaraan"
+                      type="text"
+                      placeholder="B 1234 ABC"
+                      required={isBBMKendaraan}
+                      value={noPlatKendaraan}
+                      onChange={(e) => setNoPlatKendaraan(e.target.value)}
+                    />
+                  </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="grid gap-3">
-                        <Label htmlFor="kmAwal">KM Awal *</Label>
-                        <Input
-                            id="kmAwal"
-                            type="number"
-                            placeholder="10000"
-                            required
-                            value={kmAwal}
-                            onChange={(e) => setKmAwal(e.target.value)}
-                        />
-                    </div>
-                    <div className="grid gap-3">
-                        <Label htmlFor="kmAkhir">KM Akhir *</Label>
-                        <Input
-                            id="kmAkhir"
-                            type="number"
-                            placeholder="10050"
-                            required
-                            value={kmAkhir}
-                            onChange={(e) => setKmAkhir(e.target.value)}
-                        />
-                    </div>
-                </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="grid gap-3">
+                          <Label htmlFor="kmAwal">KM Awal *</Label>
+                          <Input
+                              id="kmAwal"
+                              type="number"
+                              placeholder="10000"
+                              required={isBBMKendaraan}
+                              value={kmAwal}
+                              onChange={(e) => setKmAwal(e.target.value)}
+                          />
+                      </div>
+                      <div className="grid gap-3">
+                          <Label htmlFor="kmAkhir">KM Akhir *</Label>
+                          <Input
+                              id="kmAkhir"
+                              type="number"
+                              placeholder="10050"
+                              required={isBBMKendaraan}
+                              value={kmAkhir}
+                              onChange={(e) => setKmAkhir(e.target.value)}
+                          />
+                      </div>
+                  </div>
+                </>
+              )}
 
               <div className="grid gap-3">
                 <Label htmlFor="uraianPekerjaan">Uraian Pekerjaan</Label>
@@ -304,50 +331,79 @@ export default function NewNotaPage() {
               </div>
               <div>
                 <Label className="mb-3 block">Upload Foto Bukti</Label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <PhotoUpload
-                    id="foto1"
-                    label="Foto Keperluan 1"
-                    file={files[0]}
-                    onFileChange={(file) => handleFileChange(0, file)}
-                  />
-                  <PhotoUpload
-                    id="foto2"
-                    label="Foto Keperluan 2"
-                    file={files[1]}
-                    onFileChange={(file) => handleFileChange(1, file)}
-                  />
-                  <PhotoUpload
-                    id="foto3"
-                    label="Foto Keperluan 3"
-                    file={files[2]}
-                    onFileChange={(file) => handleFileChange(2, file)}
-                  />
-                  <PhotoUpload
-                    id="foto4"
-                    label="Foto Keperluan 4"
-                    file={files[3]}
-                    onFileChange={(file) => handleFileChange(3, file)}
-                  />
-                   <PhotoUpload
-                    id="foto5"
-                    label="Foto KM Awal Bulan"
-                    file={files[4]}
-                    onFileChange={(file) => handleFileChange(4, file)}
-                  />
-                   <PhotoUpload
-                    id="foto6"
-                    label="Foto KM Awal"
-                    file={files[5]}
-                    onFileChange={(file) => handleFileChange(5, file)}
-                  />
-                   <PhotoUpload
-                    id="foto7"
-                    label="Foto KM Akhir"
-                    file={files[6]}
-                    onFileChange={(file) => handleFileChange(6, file)}
-                  />
-                </div>
+                {isBBMKendaraan ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <PhotoUpload
+                      id="foto1"
+                      label="Foto Keperluan 1"
+                      file={files[0]}
+                      onFileChange={(file) => handleFileChange(0, file)}
+                    />
+                    <PhotoUpload
+                      id="foto2"
+                      label="Foto Keperluan 2"
+                      file={files[1]}
+                      onFileChange={(file) => handleFileChange(1, file)}
+                    />
+                    <PhotoUpload
+                      id="foto3"
+                      label="Foto Keperluan 3"
+                      file={files[2]}
+                      onFileChange={(file) => handleFileChange(2, file)}
+                    />
+                    <PhotoUpload
+                      id="foto4"
+                      label="Foto Keperluan 4"
+                      file={files[3]}
+                      onFileChange={(file) => handleFileChange(3, file)}
+                    />
+                    <PhotoUpload
+                      id="foto5"
+                      label="Foto KM Awal Bulan"
+                      file={files[4]}
+                      onFileChange={(file) => handleFileChange(4, file)}
+                    />
+                    <PhotoUpload
+                      id="foto6"
+                      label="Foto KM Awal"
+                      file={files[5]}
+                      onFileChange={(file) => handleFileChange(5, file)}
+                    />
+                    <PhotoUpload
+                      id="foto7"
+                      label="Foto KM Akhir"
+                      file={files[6]}
+                      onFileChange={(file) => handleFileChange(6, file)}
+                    />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <PhotoUpload
+                      id="foto1"
+                      label="Foto Eviden 1"
+                      file={files[0]}
+                      onFileChange={(file) => handleFileChange(0, file)}
+                    />
+                    <PhotoUpload
+                      id="foto2"
+                      label="Foto Eviden 2"
+                      file={files[1]}
+                      onFileChange={(file) => handleFileChange(1, file)}
+                    />
+                    <PhotoUpload
+                      id="foto3"
+                      label="Foto Eviden 3"
+                      file={files[2]}
+                      onFileChange={(file) => handleFileChange(2, file)}
+                    />
+                    <PhotoUpload
+                      id="foto4"
+                      label="Foto Eviden 4"
+                      file={files[3]}
+                      onFileChange={(file) => handleFileChange(3, file)}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { notFound, useRouter } from 'next/navigation';
@@ -111,14 +112,18 @@ export default function NotaDetailPage({ params }: { params: { id: string } }) {
               <p className="text-muted-foreground">Nominal</p>
               <p className="font-medium">Rp {nota.nominal.toLocaleString('id-ID')}</p>
             </div>
-             <div>
-              <p className="text-muted-foreground">No Plat Kendaraan</p>
-              <p className="font-medium">{nota.noPlatKendaraan}</p>
-            </div>
-             <div>
-              <p className="text-muted-foreground">KM Awal / Akhir</p>
-              <p className="font-medium">{nota.kmAwal} / {nota.kmAkhir}</p>
-            </div>
+             {nota.noPlatKendaraan && (
+                <div>
+                  <p className="text-muted-foreground">No Plat Kendaraan</p>
+                  <p className="font-medium">{nota.noPlatKendaraan}</p>
+                </div>
+             )}
+             {(nota.kmAwal !== undefined && nota.kmAkhir !== undefined && nota.kmAwal > 0) && (
+                <div>
+                    <p className="text-muted-foreground">KM Awal / Akhir</p>
+                    <p className="font-medium">{nota.kmAwal} / {nota.kmAkhir}</p>
+                </div>
+             )}
           </div>
           {nota.uraianPekerjaan && (
             <div>

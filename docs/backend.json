@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -117,9 +118,6 @@
         "userEmail",
         "tanggal",
         "segmen",
-        "noPlatKendaraan",
-        "kmAwal",
-        "kmAkhir",
         "nominal",
         "namaPic",
         "dateCreated",

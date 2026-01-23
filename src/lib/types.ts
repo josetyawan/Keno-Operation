@@ -1,12 +1,13 @@
+
 export type Nota = {
   id: string;
   userId: string;
   userEmail: string;
   tanggal: any; // Using `any` to accommodate Firestore's serverTimestamp
   segmen: string;
-  noPlatKendaraan: string;
-  kmAwal: number;
-  kmAkhir: number;
+  noPlatKendaraan?: string;
+  kmAwal?: number;
+  kmAkhir?: number;
   uraianPekerjaan?: string;
   nominal: number;
   namaPic: string;

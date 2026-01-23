@@ -1,6 +1,7 @@
+
 'use client';
 
-import { notFound, useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -30,13 +31,12 @@ import Link from 'next/link';
 import { ArrowLeft, CalendarIcon, Upload } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useUser, useFirestore, useDoc, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { doc, serverTimestamp } from 'firebase/firestore';
 import type { Nota, UserProfile } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import Image from 'next/image';
-
 
 // Simplified upload component for edit page
 function PhotoUpload({
@@ -60,6 +60,10 @@ function PhotoUpload({
       setPreview(URL.createObjectURL(file));
     }
   };
+  
+  useEffect(() => {
+    setPreview(existingImageUrl || null);
+  }, [existingImageUrl]);
 
   return (
     <div className="grid gap-2">
@@ -106,6 +110,9 @@ export default function EditNotaPage() {
   const [nominal, setNominal] = useState('');
   const [namaPic, setNamaPic] = useState('');
   const [files, setFiles] = useState<(File | null)[]>(Array(7).fill(null));
+  
+  const bbmKendaraanSegments = ['BBM R2', 'BBM R4 Harian', 'BBM R4 Turlap', 'BBM R4 UT'];
+  const isBBMKendaraan = segmen && bbmKendaraanSegments.includes(segmen);
 
   // Get user profile to check for admin role
   const userDocRef = useMemoFirebase(() => {
@@ -152,6 +159,16 @@ export default function EditNotaPage() {
         }
     }
   }, [isNotaLoading, nota, user, isAdmin, router, toast]);
+  
+  const handleSegmenChange = (value: string) => {
+    setSegmen(value);
+    // Reset fields that are not applicable to the new segmen
+    if (!bbmKendaraanSegments.includes(value)) {
+      setNoPlatKendaraan('');
+      setKmAwal('');
+      setKmAkhir('');
+    }
+  };
 
   const handleFileChange = (index: number, file: File | null) => {
     const newFiles = [...files];
@@ -162,27 +179,41 @@ export default function EditNotaPage() {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!notaRef) return;
-    if (!tanggal || !segmen || !noPlatKendaraan || !kmAwal || !kmAkhir || !nominal || !namaPic) {
+    
+    // Dynamic validation
+    let isFormValid = !!(tanggal && segmen && nominal && namaPic);
+    if (isBBMKendaraan) {
+        isFormValid = isFormValid && !!(noPlatKendaraan && kmAwal && kmAkhir);
+    }
+    
+    if (!isFormValid) {
       toast({
         variant: 'destructive',
         title: 'Incomplete Form',
-        description: 'Please fill out all required fields.',
+        description: 'Please fill out all required fields for the selected segment.',
       });
       return;
     }
     setIsSaving(true);
 
-    const updatedData = {
+    const updatedData: Partial<Nota> = {
         tanggal,
         segmen,
-        noPlatKendaraan,
-        kmAwal: Number(kmAwal),
-        kmAkhir: Number(kmAkhir),
         uraianPekerjaan,
         nominal: Number(nominal),
         namaPic,
         // File uploads would be handled here
     };
+    
+    if (isBBMKendaraan) {
+        updatedData.noPlatKendaraan = noPlatKendaraan;
+        updatedData.kmAwal = Number(kmAwal);
+        updatedData.kmAkhir = Number(kmAkhir);
+    } else {
+        updatedData.noPlatKendaraan = '';
+        updatedData.kmAwal = 0;
+        updatedData.kmAkhir = 0;
+    }
     
     updateDocumentNonBlocking(notaRef, updatedData);
 
@@ -283,7 +314,7 @@ export default function EditNotaPage() {
                 </div>
                 <div className="grid gap-3">
                   <Label htmlFor="segmen">Segmen *</Label>
-                  <Select onValueChange={setSegmen} value={segmen} required>
+                  <Select onValueChange={handleSegmenChange} value={segmen} required>
                     <SelectTrigger>
                       <SelectValue placeholder="Pilih segmen" />
                     </SelectTrigger>
@@ -303,42 +334,48 @@ export default function EditNotaPage() {
                   </Select>
                 </div>
               </div>
-                <div className="grid gap-3">
-                  <Label htmlFor="noPlatKendaraan">No Plat Kendaraan *</Label>
-                  <Input
-                    id="noPlatKendaraan"
-                    type="text"
-                    placeholder="B 1234 ABC"
-                    required
-                    value={noPlatKendaraan}
-                    onChange={(e) => setNoPlatKendaraan(e.target.value)}
-                  />
-                </div>
+              
+               {isBBMKendaraan && (
+                <>
+                  <div className="grid gap-3">
+                    <Label htmlFor="noPlatKendaraan">No Plat Kendaraan *</Label>
+                    <Input
+                      id="noPlatKendaraan"
+                      type="text"
+                      placeholder="B 1234 ABC"
+                      required={isBBMKendaraan}
+                      value={noPlatKendaraan}
+                      onChange={(e) => setNoPlatKendaraan(e.target.value)}
+                    />
+                  </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="grid gap-3">
-                        <Label htmlFor="kmAwal">KM Awal *</Label>
-                        <Input
-                            id="kmAwal"
-                            type="number"
-                            placeholder="10000"
-                            required
-                            value={kmAwal}
-                            onChange={(e) => setKmAwal(e.target.value)}
-                        />
-                    </div>
-                    <div className="grid gap-3">
-                        <Label htmlFor="kmAkhir">KM Akhir *</Label>
-                        <Input
-                            id="kmAkhir"
-                            type="number"
-                            placeholder="10050"
-                            required
-                            value={kmAkhir}
-                            onChange={(e) => setKmAkhir(e.target.value)}
-                        />
-                    </div>
-                </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="grid gap-3">
+                          <Label htmlFor="kmAwal">KM Awal *</Label>
+                          <Input
+                              id="kmAwal"
+                              type="number"
+                              placeholder="10000"
+                              required={isBBMKendaraan}
+                              value={kmAwal}
+                              onChange={(e) => setKmAwal(e.target.value)}
+                          />
+                      </div>
+                      <div className="grid gap-3">
+                          <Label htmlFor="kmAkhir">KM Akhir *</Label>
+                          <Input
+                              id="kmAkhir"
+                              type="number"
+                              placeholder="10050"
+                              required={isBBMKendaraan}
+                              value={kmAkhir}
+                              onChange={(e) => setKmAkhir(e.target.value)}
+                          />
+                      </div>
+                  </div>
+                </>
+              )}
+
               <div className="grid gap-3">
                 <Label htmlFor="uraianPekerjaan">Uraian Pekerjaan</Label>
                 <Textarea
@@ -374,50 +411,24 @@ export default function EditNotaPage() {
               </div>
               <div>
                 <Label className="mb-3 block">Upload Foto Bukti</Label>
-                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <PhotoUpload
-                    id="foto1"
-                    label="Foto Keperluan 1"
-                    onFileChange={(file) => handleFileChange(0, file)}
-                    existingImageUrl={nota.fotoEvidenUrls?.[0]}
-                  />
-                  <PhotoUpload
-                    id="foto2"
-                    label="Foto Keperluan 2"
-                    onFileChange={(file) => handleFileChange(1, file)}
-                     existingImageUrl={nota.fotoEvidenUrls?.[1]}
-                  />
-                  <PhotoUpload
-                    id="foto3"
-                    label="Foto Keperluan 3"
-                    onFileChange={(file) => handleFileChange(2, file)}
-                     existingImageUrl={nota.fotoEvidenUrls?.[2]}
-                  />
-                  <PhotoUpload
-                    id="foto4"
-                    label="Foto Keperluan 4"
-                    onFileChange={(file) => handleFileChange(3, file)}
-                     existingImageUrl={nota.fotoEvidenUrls?.[3]}
-                  />
-                  <PhotoUpload
-                    id="foto5"
-                    label="Foto KM Awal Bulan"
-                    onFileChange={(file) => handleFileChange(4, file)}
-                    existingImageUrl={nota.fotoEvidenUrls?.[4]}
-                  />
-                  <PhotoUpload
-                    id="foto6"
-                    label="Foto KM Awal"
-                    onFileChange={(file) => handleFileChange(5, file)}
-                    existingImageUrl={nota.fotoEvidenUrls?.[5]}
-                  />
-                  <PhotoUpload
-                    id="foto7"
-                    label="Foto KM Akhir"
-                    onFileChange={(file) => handleFileChange(6, file)}
-                    existingImageUrl={nota.fotoEvidenUrls?.[6]}
-                  />
-                </div>
+                 {isBBMKendaraan ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <PhotoUpload id="foto1" label="Foto Keperluan 1" onFileChange={(file) => handleFileChange(0, file)} existingImageUrl={nota.fotoEvidenUrls?.[0]} />
+                        <PhotoUpload id="foto2" label="Foto Keperluan 2" onFileChange={(file) => handleFileChange(1, file)} existingImageUrl={nota.fotoEvidenUrls?.[1]} />
+                        <PhotoUpload id="foto3" label="Foto Keperluan 3" onFileChange={(file) => handleFileChange(2, file)} existingImageUrl={nota.fotoEvidenUrls?.[2]} />
+                        <PhotoUpload id="foto4" label="Foto Keperluan 4" onFileChange={(file) => handleFileChange(3, file)} existingImageUrl={nota.fotoEvidenUrls?.[3]} />
+                        <PhotoUpload id="foto5" label="Foto KM Awal Bulan" onFileChange={(file) => handleFileChange(4, file)} existingImageUrl={nota.fotoEvidenUrls?.[4]} />
+                        <PhotoUpload id="foto6" label="Foto KM Awal" onFileChange={(file) => handleFileChange(5, file)} existingImageUrl={nota.fotoEvidenUrls?.[5]} />
+                        <PhotoUpload id="foto7" label="Foto KM Akhir" onFileChange={(file) => handleFileChange(6, file)} existingImageUrl={nota.fotoEvidenUrls?.[6]} />
+                    </div>
+                 ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <PhotoUpload id="foto1" label="Foto Eviden 1" onFileChange={(file) => handleFileChange(0, file)} existingImageUrl={nota.fotoEvidenUrls?.[0]} />
+                        <PhotoUpload id="foto2" label="Foto Eviden 2" onFileChange={(file) => handleFileChange(1, file)} existingImageUrl={nota.fotoEvidenUrls?.[1]} />
+                        <PhotoUpload id="foto3" label="Foto Eviden 3" onFileChange={(file) => handleFileChange(2, file)} existingImageUrl={nota.fotoEvidenUrls?.[2]} />
+                        <PhotoUpload id="foto4" label="Foto Eviden 4" onFileChange={(file) => handleFileChange(3, file)} existingImageUrl={nota.fotoEvidenUrls?.[3]} />
+                    </div>
+                 )}
               </div>
             </div>
           </CardContent>
