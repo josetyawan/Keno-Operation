@@ -42,7 +42,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Nota",
       "type": "object",
-      "description": "Represents a single nota (receipt) in the NotaKu application.",
+      "description": "Represents a single nota (receipt/report) in the NotaKu application.",
       "properties": {
         "id": {
           "type": "string",
@@ -56,13 +56,34 @@
           "type": "string",
           "description": "Denormalized email of the user for display purposes."
         },
-        "title": {
+        "tanggal": {
           "type": "string",
-          "description": "Title of the nota."
+          "description": "Date of the report.",
+          "format": "date-time"
         },
-        "content": {
+        "segmen": {
           "type": "string",
-          "description": "Full text content of the nota."
+          "description": "The segment/department for the report."
+        },
+        "keterangan": {
+          "type": "string",
+          "description": "Description or details of the report."
+        },
+        "nominal": {
+          "type": "number",
+          "description": "The nominal value/amount of the report."
+        },
+        "namaPic": {
+          "type": "string",
+          "description": "Name of the Person in Charge."
+        },
+        "fotoEvidenUrls": {
+          "type": "array",
+          "description": "A list of URLs for the evidence photos.",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          }
         },
         "dateCreated": {
           "type": "string",
@@ -82,8 +103,10 @@
         "id",
         "userId",
         "userEmail",
-        "title",
-        "content",
+        "tanggal",
+        "segmen",
+        "nominal",
+        "namaPic",
         "dateCreated",
         "status"
       ]
@@ -122,7 +145,7 @@
           },
           "description": "A global collection of all notas from all users. Access is controlled by security rules based on ownership and roles.",
           "params": [
-             {
+            {
               "name": "notaId",
               "description": "The unique identifier for the nota."
             }

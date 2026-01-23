@@ -12,14 +12,79 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, CalendarIcon, Upload } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useUser, useFirestore, useDoc, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { Nota, UserProfile } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import Image from 'next/image';
+
+
+// Simplified upload component for edit page
+function PhotoUpload({
+  id,
+  label,
+  onFileChange,
+  existingImageUrl
+}: {
+  id: string;
+  label: string;
+  onFileChange: (file: File | null) => void;
+  existingImageUrl?: string;
+}) {
+
+  const [preview, setPreview] = useState<string | null>(existingImageUrl || null);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      onFileChange(file);
+      setPreview(URL.createObjectURL(file));
+    }
+  };
+
+  return (
+    <div className="grid gap-2">
+      <Label htmlFor={id}>{label}</Label>
+      <div className="relative flex justify-center items-center h-32 w-full rounded-md border-2 border-dashed border-muted-foreground/50 overflow-hidden">
+        <input
+          type="file"
+          id={id}
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          onChange={handleFileChange}
+          accept="image/*"
+        />
+        {preview ? (
+            <Image src={preview} alt={label} fill className="object-cover" />
+        ) : (
+          <div className="text-center text-muted-foreground">
+            <Upload className="mx-auto h-8 w-8" />
+            <span className="text-sm">Upload</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 
 export default function EditNotaPage() {
   const router = useRouter();
@@ -29,9 +94,15 @@ export default function EditNotaPage() {
   const { user } = useUser();
   const firestore = useFirestore();
 
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  // Form state
+  const [tanggal, setTanggal] = useState<Date | undefined>();
+  const [segmen, setSegmen] = useState('');
+  const [keterangan, setKeterangan] = useState('');
+  const [nominal, setNominal] = useState('');
+  const [namaPic, setNamaPic] = useState('');
+  const [files, setFiles] = useState<(File | null)[]>([null, null, null, null]);
 
   // Get user profile to check for admin role
   const userDocRef = useMemoFirebase(() => {
@@ -52,8 +123,12 @@ export default function EditNotaPage() {
   // Populate form when nota data is loaded
   useEffect(() => {
     if (nota) {
-      setTitle(nota.title);
-      setContent(nota.content);
+      setTanggal(nota.tanggal?.toDate());
+      setSegmen(nota.segmen);
+      setKeterangan(nota.keterangan || '');
+      setNominal(nota.nominal.toString());
+      setNamaPic(nota.namaPic);
+      // We don't handle file re-population, just show existing URLs if any.
     }
   }, [nota]);
   
@@ -65,30 +140,46 @@ export default function EditNotaPage() {
             toast({
                 variant: 'destructive',
                 title: 'Unauthorized',
-                description: "You don't have permission to edit this nota.",
+                description: "You don't have permission to edit this report.",
             });
             router.push('/dashboard');
         }
     }
   }, [isNotaLoading, nota, user, isAdmin, router, toast]);
 
+  const handleFileChange = (index: number, file: File | null) => {
+    const newFiles = [...files];
+    newFiles[index] = file;
+    setFiles(newFiles);
+  };
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!notaRef) return;
-    
+    if (!tanggal || !segmen || !nominal || !namaPic) {
+      toast({
+        variant: 'destructive',
+        title: 'Incomplete Form',
+        description: 'Please fill out all required fields.',
+      });
+      return;
+    }
     setIsSaving(true);
 
     const updatedData = {
-        title,
-        content,
+        tanggal,
+        segmen,
+        keterangan,
+        nominal: Number(nominal),
+        namaPic,
+        // File uploads would be handled here
     };
     
     updateDocumentNonBlocking(notaRef, updatedData);
 
     toast({
-      title: 'Nota Updated!',
-      description: 'Your nota has been saved successfully.',
+      title: 'Laporan Diperbarui!',
+      description: 'Laporan Anda telah berhasil disimpan.',
     });
     
     // Redirect immediately, optimistic update
@@ -117,7 +208,7 @@ export default function EditNotaPage() {
                         </div>
                         <div className="grid gap-3">
                             <Skeleton className="h-4 w-12" />
-                            <Skeleton className="h-72 w-full" />
+                            <Skeleton className="h-40 w-full" />
                         </div>
                     </div>
                 </CardContent>
@@ -127,7 +218,7 @@ export default function EditNotaPage() {
   }
 
   return (
-    <div className="mx-auto grid max-w-4xl flex-1 auto-rows-max gap-4">
+    <div className="mx-auto grid w-full flex-1 auto-rows-max gap-4">
       <form onSubmit={handleSubmit}>
         <div className="flex items-center gap-4 mb-4">
           <Link href={`/dashboard/notas/${id}`}>
@@ -137,7 +228,7 @@ export default function EditNotaPage() {
             </Button>
           </Link>
           <h1 className="flex-1 shrink-0 whitespace-nowrap text-xl font-semibold tracking-tight sm:grow-0 font-headline">
-            Edit Nota
+            Edit Laporan
           </h1>
           <div className="hidden items-center gap-2 md:ml-auto md:flex">
             <Link href={`/dashboard/notas/${id}`}>
@@ -148,33 +239,115 @@ export default function EditNotaPage() {
         </div>
         <Card>
           <CardHeader>
-            <CardTitle>Edit Nota Details</CardTitle>
+            <CardTitle>Detail Laporan</CardTitle>
             <CardDescription>
-              Make changes to your nota below.
+              Ubah detail laporan Anda di bawah ini.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-6">
             <div className="grid gap-6">
-              <div className="grid gap-3">
-                <Label htmlFor="title">Title</Label>
-                <Input
-                  id="title"
-                  type="text"
-                  className="w-full"
-                  required
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid gap-3">
+                  <Label htmlFor="tanggal">Tanggal *</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={'outline'}
+                        className={cn(
+                          'justify-start text-left font-normal',
+                          !tanggal && 'text-muted-foreground'
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {tanggal ? format(tanggal, 'dd/MM/yyyy') : <span>Pilih tanggal</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={tanggal}
+                        onSelect={setTanggal}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div className="grid gap-3">
+                  <Label htmlFor="segmen">Segmen *</Label>
+                  <Select onValueChange={setSegmen} value={segmen} required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih segmen" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Operasional">Operasional</SelectItem>
+                      <SelectItem value="Marketing">Marketing</SelectItem>
+                      <SelectItem value="IT">IT</SelectItem>
+                      <SelectItem value="HRD">HRD</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div className="grid gap-3">
-                <Label htmlFor="content">Content</Label>
+                <Label htmlFor="keterangan">Keterangan</Label>
                 <Textarea
-                  id="content"
-                  className="min-h-72"
-                  required
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
+                  id="keterangan"
+                  placeholder="Keterangan..."
+                  value={keterangan}
+                  onChange={(e) => setKeterangan(e.target.value)}
                 />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid gap-3">
+                  <Label htmlFor="nominal">Nominal (Rp) *</Label>
+                  <Input
+                    id="nominal"
+                    type="number"
+                    placeholder="50000"
+                    required
+                    value={nominal}
+                    onChange={(e) => setNominal(e.target.value)}
+                  />
+                </div>
+                <div className="grid gap-3">
+                  <Label htmlFor="namaPic">Nama PIC *</Label>
+                  <Input
+                    id="namaPic"
+                    type="text"
+                    placeholder="Nama penanggung jawab"
+                    required
+                    value={namaPic}
+                    onChange={(e) => setNamaPic(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div>
+                <Label className="mb-3 block">Upload Foto Bukti</Label>
+                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <PhotoUpload
+                    id="foto1"
+                    label="Foto Eviden 1"
+                    onFileChange={(file) => handleFileChange(0, file)}
+                    existingImageUrl={nota.fotoEvidenUrls?.[0]}
+                  />
+                  <PhotoUpload
+                    id="foto2"
+                    label="Foto Eviden 2"
+                    onFileChange={(file) => handleFileChange(1, file)}
+                     existingImageUrl={nota.fotoEvidenUrls?.[1]}
+                  />
+                  <PhotoUpload
+                    id="foto3"
+                    label="Foto Eviden 3"
+                    onFileChange={(file) => handleFileChange(2, file)}
+                     existingImageUrl={nota.fotoEvidenUrls?.[2]}
+                  />
+                  <PhotoUpload
+                    id="foto4"
+                    label="Foto Eviden 4"
+                    onFileChange={(file) => handleFileChange(3, file)}
+                     existingImageUrl={nota.fotoEvidenUrls?.[3]}
+                  />
+                </div>
               </div>
             </div>
           </CardContent>

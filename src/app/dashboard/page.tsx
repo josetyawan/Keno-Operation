@@ -17,27 +17,35 @@ import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Terminal } from "lucide-react"
 
 function NotaCard({ nota }: { nota: Nota }) {
-  const dateCreatedDate = nota.dateCreated?.toDate ? nota.dateCreated.toDate() : new Date();
+  const tanggalLaporan = nota.tanggal?.toDate ? nota.tanggal.toDate() : new Date();
   
   return (
     <Card className="flex flex-col transition-all hover:shadow-md">
       <CardHeader>
-        <CardTitle className="text-xl">{nota.title}</CardTitle>
+        <CardTitle className="text-xl line-clamp-1">Laporan: {nota.segmen}</CardTitle>
         <CardDescription>
-          Created by: {nota.userEmail || '...'} on {format(dateCreatedDate, 'PPP')}
+          {format(tanggalLaporan, 'PPP')}
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex-grow">
-        <p className="text-sm text-muted-foreground line-clamp-3">
-          {nota.content}
+      <CardContent className="flex-grow space-y-2">
+        <p className="text-sm text-muted-foreground line-clamp-2 h-10">
+          {nota.keterangan || <span className="italic">Tidak ada keterangan.</span>}
+        </p>
+         <p className="text-lg font-semibold">
+            Rp {nota.nominal.toLocaleString('id-ID')}
         </p>
       </CardContent>
-      <CardFooter>
+      <CardFooter className="flex-col items-start gap-2 pt-4">
+         <div className="text-xs text-muted-foreground w-full truncate">
+            Oleh: {nota.userEmail || '...'}
+          </div>
         <Link href={`/dashboard/notas/${nota.id}`} className="w-full">
           <Button variant="outline" className="w-full">
-            View Nota
+            Lihat Detail
             <ArrowUpRight className="ml-2 h-4 w-4" />
           </Button>
         </Link>
@@ -56,9 +64,10 @@ export default function DashboardPage() {
   }, [user, firestore]);
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
+  const isAdmin = userProfile?.role === 'admin';
 
+  // For admins, query all notas. For regular users, this query is filtered by security rules.
   const notasQuery = useMemoFirebase(() => {
-    // Query the top-level 'notas' collection for everyone
     return query(collection(firestore, 'notas'), orderBy('dateCreated', 'desc'));
   }, [firestore]);
 
@@ -68,25 +77,34 @@ export default function DashboardPage() {
 
   return (
     <>
+       {isAdmin && (
+        <Alert className="mb-6">
+            <Terminal className="h-4 w-4" />
+            <AlertTitle>Anda adalah Admin</AlertTitle>
+            <AlertDescription>
+                Anda dapat melihat, mengedit, dan memverifikasi semua laporan dari semua pengguna.
+            </AlertDescription>
+        </Alert>
+       )}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
             <h1 className="text-2xl font-semibold md:text-3xl font-headline">
-                {userProfile?.role === 'admin' ? "All User Notas" : "Nota Feed"}
+                {isAdmin ? "Semua Laporan" : "Laporan Anda"}
             </h1>
-            {userProfile?.role === 'admin' && <Badge>Admin</Badge>}
         </div>
         <Link href="/dashboard/new">
             <Button className="flex items-center gap-2">
               <PlusCircle className="h-4 w-4"/>
-              New Nota
+              Laporan Baru
             </Button>
           </Link>
       </div>
       {isLoading && (
          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          <Skeleton className="h-64 w-full" />
-          <Skeleton className="h-64 w-full" />
-          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-72 w-full" />
+          <Skeleton className="h-72 w-full" />
+          <Skeleton className="h-72 w-full" />
+          <Skeleton className="h-72 w-full" />
         </div>
       )}
       {!isLoading && notas && notas.length > 0 ? (
@@ -99,13 +117,13 @@ export default function DashboardPage() {
         !isLoading && (
         <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/50 p-12 text-center h-[400px]">
           <h3 className="text-xl font-semibold tracking-tight">
-            No notas have been created yet.
+            Belum ada laporan yang dibuat.
           </h3>
           <p className="text-sm text-muted-foreground mb-4">
-            Be the first one to create a nota!
+            Jadilah yang pertama membuat laporan!
           </p>
           <Link href="/dashboard/new">
-            <Button>Create Nota</Button>
+            <Button>Buat Laporan</Button>
           </Link>
         </div>
         )

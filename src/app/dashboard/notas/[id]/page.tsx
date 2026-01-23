@@ -10,16 +10,16 @@ import {
   CardFooter,
 } from '@/components/ui/card';
 import { format } from 'date-fns';
-import { SummarizeButton } from './summarize-button';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import { ArrowLeft, CheckCircle, Edit, Printer, Trash2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useDoc, useFirestore, useUser, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { Nota, UserProfile } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import Image from 'next/image';
 
 export default function NotaDetailPage({ params }: { params: { id: string } }) {
   const { user } = useUser();
@@ -44,8 +44,8 @@ export default function NotaDetailPage({ params }: { params: { id: string } }) {
     if (!isAdmin || !notaRef) return;
     updateDocumentNonBlocking(notaRef, { status: 'verified' });
     toast({
-      title: 'Nota Verified',
-      description: 'The nota status has been updated to "verified".',
+      title: 'Laporan Diverifikasi',
+      description: 'Status laporan telah diperbarui menjadi "verified".',
     });
   };
 
@@ -71,7 +71,7 @@ export default function NotaDetailPage({ params }: { params: { id: string } }) {
     notFound();
   }
 
-  const dateCreatedDate = nota.dateCreated?.toDate ? nota.dateCreated.toDate() : new Date();
+  const tanggalLaporan = nota.tanggal?.toDate ? nota.tanggal.toDate() : new Date();
   const isOwner = user?.uid === nota.userId;
 
   return (
@@ -84,7 +84,7 @@ export default function NotaDetailPage({ params }: { params: { id: string } }) {
           </Button>
          </Link>
         <h1 className="flex-1 shrink-0 whitespace-nowrap text-xl font-semibold tracking-tight sm:grow-0 font-headline truncate">
-          {nota.title}
+          Detail Laporan
         </h1>
         <Badge 
           variant={nota.status === 'verified' ? 'default' : 'secondary'} 
@@ -96,22 +96,48 @@ export default function NotaDetailPage({ params }: { params: { id: string } }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>{nota.title}</CardTitle>
-          <div className="flex items-center justify-between flex-wrap gap-2">
+          <CardTitle>Laporan Segmen: {nota.segmen}</CardTitle>
             <CardDescription>
-              By {nota.userEmail} on {format(dateCreatedDate, 'PPPPp')}
+              Oleh {nota.userEmail} pada {format(tanggalLaporan, 'PPPPp')}
             </CardDescription>
-            <SummarizeButton notaContent={nota.content} />
-          </div>
         </CardHeader>
-        <CardContent>
-          <div className="text-foreground whitespace-pre-wrap text-sm">
-            {nota.content}
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <p className="text-muted-foreground">Nama PIC</p>
+              <p className="font-medium">{nota.namaPic}</p>
+            </div>
+             <div>
+              <p className="text-muted-foreground">Nominal</p>
+              <p className="font-medium">Rp {nota.nominal.toLocaleString('id-ID')}</p>
+            </div>
           </div>
+          {nota.keterangan && (
+            <div>
+                <p className="text-muted-foreground text-sm">Keterangan</p>
+                <div className="text-foreground whitespace-pre-wrap text-sm border p-3 rounded-md bg-muted/50">
+                    {nota.keterangan}
+                </div>
+            </div>
+          )}
+
+           {(nota.fotoEvidenUrls && nota.fotoEvidenUrls.length > 0) && (
+            <div>
+                <p className="text-muted-foreground text-sm mb-2">Foto Bukti</p>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    {nota.fotoEvidenUrls.map((url, index) => (
+                        <div key={index} className="relative aspect-square w-full rounded-md overflow-hidden border">
+                            <Image src={url} alt={`Evidence ${index + 1}`} fill className="object-cover" />
+                        </div>
+                    ))}
+                </div>
+            </div>
+          )}
+          
         </CardContent>
          <CardFooter className="border-t pt-6 flex-col sm:flex-row gap-2">
             <div className="flex-grow text-xs text-muted-foreground">
-                Nota ID: {nota.id}
+                Laporan ID: {nota.id}
             </div>
             <div className="flex gap-2">
                 {(isOwner || isAdmin) && (
@@ -123,7 +149,7 @@ export default function NotaDetailPage({ params }: { params: { id: string } }) {
                 )}
                 {isAdmin && nota.status === 'pending' && (
                     <Button onClick={handleVerify}>
-                        <CheckCircle /> Verify Nota
+                        <CheckCircle /> Verify Laporan
                     </Button>
                 )}
             </div>

@@ -2,8 +2,12 @@ export type Nota = {
   id: string;
   userId: string;
   userEmail: string;
-  title: string;
-  content: string;
+  tanggal: any; // Using `any` to accommodate Firestore's serverTimestamp
+  segmen: string;
+  keterangan?: string;
+  nominal: number;
+  namaPic: string;
+  fotoEvidenUrls?: string[];
   dateCreated: any; // Using `any` to accommodate Firestore's serverTimestamp
   status: 'pending' | 'verified';
 };
