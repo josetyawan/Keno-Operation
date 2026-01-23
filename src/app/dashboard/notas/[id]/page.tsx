@@ -114,10 +114,12 @@ export default function NotaDetailPage({ params }: { params: { id: string } }) {
                 Nota ID: {nota.id}
             </div>
             <div className="flex gap-2">
-                {isOwner && (
-                     <Button variant="outline" disabled>
-                        <Edit /> Edit
-                    </Button>
+                {(isOwner || isAdmin) && (
+                     <Link href={`/dashboard/notas/${params.id}/edit`}>
+                        <Button variant="outline">
+                            <Edit /> Edit
+                        </Button>
+                     </Link>
                 )}
                 {isAdmin && nota.status === 'pending' && (
                     <Button onClick={handleVerify}>
