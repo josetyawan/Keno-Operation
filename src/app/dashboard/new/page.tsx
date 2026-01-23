@@ -211,10 +211,11 @@ export default function NewNotaPage() {
                       <SelectValue placeholder="Pilih segmen" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="Sekretariat">Sekretariat</SelectItem>
                       <SelectItem value="Operasional">Operasional</SelectItem>
-                      <SelectItem value="Marketing">Marketing</SelectItem>
-                      <SelectItem value="IT">IT</SelectItem>
-                      <SelectItem value="HRD">HRD</SelectItem>
+                      <SelectItem value="Perencanaan">Perencanaan</SelectItem>
+                      <SelectItem value="Keuangan">Keuangan</SelectItem>
+                      <SelectItem value="Pengawasan">Pengawasan</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
