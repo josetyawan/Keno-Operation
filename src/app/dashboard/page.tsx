@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import type { Nota } from '@/lib/types';
+import type { Nota, UserProfile } from '@/lib/types';
 import {
   Card,
   CardContent,
@@ -11,13 +11,13 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowUpRight, PlusCircle } from 'lucide-react';
+import { ArrowUpRight, PlusCircle, ShieldCheck } from 'lucide-react';
 import { format } from 'date-fns';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, collectionGroup, query, orderBy, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 
-function NotaCard({ nota }: { nota: Nota }) {
+function NotaCard({ nota, isAdmin }: { nota: Nota, isAdmin: boolean }) {
   const dateCreatedDate = nota.dateCreated?.toDate ? nota.dateCreated.toDate() : new Date();
   
   return (
@@ -25,6 +25,7 @@ function NotaCard({ nota }: { nota: Nota }) {
       <CardHeader>
         <CardTitle className="text-xl">{nota.title}</CardTitle>
         <CardDescription>
+          {isAdmin && <span className="text-xs block truncate mb-1">User: {nota.userId}</span>}
           Created on {format(dateCreatedDate, 'PPP')}
         </CardDescription>
       </CardHeader>
@@ -49,17 +50,38 @@ export default function DashboardPage() {
   const { user } = useUser();
   const firestore = useFirestore();
 
-  const notasQuery = useMemoFirebase(() => {
+  const userDocRef = useMemoFirebase(() => {
     if (!user) return null;
-    return query(collection(firestore, 'users', user.uid, 'notas'), orderBy('dateCreated', 'desc'));
+    return doc(firestore, 'users', user.uid);
   }, [user, firestore]);
 
-  const { data: notas, isLoading } = useCollection<Nota>(notasQuery);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
+
+  const isAdmin = userProfile?.role === 'admin';
+
+  const notasQuery = useMemoFirebase(() => {
+    if (!user || isProfileLoading) return null;
+
+    if (isAdmin) {
+      return query(collectionGroup(firestore, 'notas'), orderBy('dateCreated', 'desc'));
+    }
+    
+    return query(collection(firestore, 'users', user.uid, 'notas'), orderBy('dateCreated', 'desc'));
+  }, [user, firestore, isProfileLoading, isAdmin]);
+
+  const { data: notas, isLoading: areNotasLoading } = useCollection<Nota>(notasQuery);
+
+  const isLoading = isProfileLoading || areNotasLoading;
 
   return (
     <>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold md:text-3xl font-headline">Your Notas</h1>
+        <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-semibold md:text-3xl font-headline">
+                {isAdmin ? "All User Notas" : "Your Notas"}
+            </h1>
+            {isAdmin && <ShieldCheck className="h-6 w-6 text-primary" />}
+        </div>
         <Link href="/dashboard/new">
             <Button className="flex items-center gap-2">
               <PlusCircle className="h-4 w-4"/>
@@ -77,14 +99,14 @@ export default function DashboardPage() {
       {!isLoading && notas && notas.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {notas.map((nota) => (
-            <NotaCard key={nota.id} nota={nota} />
+            <NotaCard key={nota.id} nota={nota} isAdmin={isAdmin} />
           ))}
         </div>
       ) : (
         !isLoading && (
         <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/50 p-12 text-center h-[400px]">
           <h3 className="text-xl font-semibold tracking-tight">
-            You have no notas yet.
+            {isAdmin ? "No notas found across all users." : "You have no notas yet."}
           </h3>
           <p className="text-sm text-muted-foreground mb-4">
             Get started by creating a new one.

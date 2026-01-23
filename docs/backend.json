@@ -22,11 +22,20 @@
         "lastName": {
           "type": "string",
           "description": "User's last name."
+        },
+        "role": {
+          "type": "string",
+          "description": "The role of the user, defaults to 'user'.",
+          "enum": [
+            "admin",
+            "user"
+          ]
         }
       },
       "required": [
         "id",
-        "email"
+        "email",
+        "role"
       ]
     },
     "Nota": {
@@ -81,7 +90,7 @@
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "Stores user profiles.  The 'userId' parameter corresponds to the Firebase Auth UID.",
+          "description": "Stores user profiles. The 'userId' parameter corresponds to the Firebase Auth UID.",
           "params": [
             {
               "name": "userId",

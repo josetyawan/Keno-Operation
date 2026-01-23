@@ -61,6 +61,13 @@ service cloud.firestore {
     }
 
     /**
+     * Checks if the requesting user has an 'admin' role in their profile document.
+     */
+    function isAdmin() {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    /**
      * Validates that on user document creation, the document's internal `id`
      * field correctly matches the document's ID in the path ({userId}).
      * This enforces relational integrity from the start.
@@ -100,34 +107,26 @@ service cloud.firestore {
     // -------------------------------------------------------------------------
 
     /**
-     * @description Manages user profile documents. A user can create, read, and
-     *   update their own profile, but cannot delete it or see other users' profiles.
+     * @description Manages user profile documents. A user can read their own
+     *   profile. An admin can read any user profile.
      * @path /users/{userId}
-     * @allow (get) A logged-in user requests their own document: `/users/user_abc`. (auth.uid == 'user_abc')
-     * @deny (list) Any user attempts to list all users: `/users`.
-     * @deny (get) A user requests another user's document: `/users/user_xyz`. (auth.uid == 'user_abc')
-     * @principle Restricts access to a user's own profile document.
      */
     match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow list: if false;
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
       allow create: if isOwner(userId) && isCreatingOwnUserDocument(userId);
       allow update: if isOwner(userId) && resource != null && isUpdatingOwnUserDocument();
-      allow delete: if false;
+      allow delete: if false; // Deletion is a server-side action
     }
 
     /**
-     * @description Manages user-specific notes (notas). Only the owner of the
-     *   note can perform any action (read, list, create, update, delete) on it.
+     * @description Manages user-specific notes (notas). Only the owner can
+     *   manage their notas. Admins have read-only access to all notas via
+     *   collection group queries for recap/audit purposes.
      * @path /users/{userId}/notas/{notaId}
-     * @allow (create) User 'user_abc' creates a new note in their own subcollection: `/users/user_abc/notas/new_nota`.
-     * @deny (get) User 'user_xyz' tries to read a note belonging to 'user_abc': `/users/user_abc/notas/some_nota`.
-     * @deny (update) User 'user_abc' tries to change the `userId` field on an existing note.
-     * @principle Enforces strict document ownership within a user's private data tree.
      */
     match /users/{userId}/notas/{notaId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
+      allow get, list: if isOwner(userId) || isAdmin();
       allow create: if isOwner(userId) && isCreatingOwnNota(userId);
       allow update: if isOwner(userId) && resource != null && isUpdatingOwnNota();
       allow delete: if isOwner(userId) && resource != null;

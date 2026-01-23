@@ -14,16 +14,14 @@ async function createUserDocument(user: User) {
     const db = getFirestore(app);
     const userDocRef = doc(db, 'users', user.uid);
     
-    // Corresponds to the 'User' entity in backend.json
     const userData = {
         id: user.uid,
         email: user.email || '',
         firstName: '',
         lastName: '',
+        role: 'user',
     };
 
-    // Await this to ensure the signup process is complete before the user is redirected.
-    // If this fails, the catch block on the signup page will handle the error.
     await setDoc(userDocRef, userData);
 }
 
@@ -35,10 +33,7 @@ export async function signUpWithEmail(auth: Auth, email: string, password: strin
   try {
     await createUserDocument(userCredential.user);
   } catch (firestoreError) {
-    // If document creation fails, we inform the developer.
-    // The UI's catch block will show a generic error to the user.
     console.error("Critical: Failed to create user document in Firestore after user creation in Auth.", firestoreError);
-    // This makes the signup fail, and the UI will show an error.
     throw firestoreError;
   }
   return userCredential;

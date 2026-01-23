@@ -8,14 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-
-// Define a type for the user profile data stored in Firestore
-type UserProfile = {
-    id: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-};
+import type { UserProfile } from '@/lib/types';
 
 export default function ProfilePage() {
   const { user, isUserLoading: isAuthLoading } = useUser();
@@ -111,6 +104,7 @@ export default function ProfilePage() {
                         <p><strong>Email:</strong> {userProfile.email}</p>
                         <p><strong>First Name:</strong> {userProfile.firstName || <span className="text-muted-foreground italic">Not set</span>}</p>
                         <p><strong>Last Name:</strong> {userProfile.lastName || <span className="text-muted-foreground italic">Not set</span>}</p>
+                        <p><strong>Role:</strong> <Badge variant={userProfile.role === 'admin' ? 'default' : 'secondary'}>{userProfile.role}</Badge></p>
                     </div>
                 ): (
                     <p className="text-sm text-destructive">Could not find a user profile document in Firestore.</p>
