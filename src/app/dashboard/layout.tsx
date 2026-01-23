@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import {
   FileText,
@@ -5,7 +7,6 @@ import {
   PlusCircle,
   LogOut,
 } from 'lucide-react';
-
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -17,12 +18,68 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { UserNav } from '@/components/user-nav';
 import { Logo } from '@/components/logo';
+import { useUser, useAuth } from '@/firebase';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { user, isUserLoading } = useUser();
+  const auth = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, isUserLoading, router]);
+
+  const handleLogout = () => {
+    auth.signOut();
+  };
+
+  if (isUserLoading || !user) {
+    return (
+        <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
+        <div className="hidden border-r bg-card md:block">
+          <div className="flex h-full max-h-screen flex-col gap-2">
+            <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
+               <Skeleton className="h-8 w-32" />
+            </div>
+            <div className="flex-1 p-4">
+              <Skeleton className="h-8 w-full mb-2" />
+              <Skeleton className="h-8 w-full" />
+            </div>
+            <div className="mt-auto p-4">
+              <Skeleton className="h-32 w-full" />
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-col">
+          <header className="flex h-14 items-center gap-4 border-b bg-card px-4 lg:h-[60px] lg:px-6">
+            <Skeleton className="h-8 w-8 md:hidden" />
+            <div className="w-full flex-1">
+             {/* Search */}
+            </div>
+            <Skeleton className="h-9 w-9 rounded-full" />
+          </header>
+          <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-background">
+            <Skeleton className="h-8 w-48 mb-4" />
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                <Skeleton className="h-64 w-full" />
+                <Skeleton className="h-64 w-full" />
+                <Skeleton className="h-64 w-full" />
+            </div>
+          </main>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
       <div className="hidden border-r bg-card md:block">
@@ -59,12 +116,10 @@ export default function DashboardLayout({
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-2 pt-0 md:p-4 md:pt-0">
-                <Link href="/login">
-                  <Button size="sm" className="w-full">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Logout
-                  </Button>
-                </Link>
+                <Button size="sm" className="w-full" onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Logout
+                </Button>
               </CardContent>
             </Card>
           </div>
@@ -115,12 +170,10 @@ export default function DashboardLayout({
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <Link href="/login">
-                      <Button size="sm" className="w-full">
-                         <LogOut className="mr-2 h-4 w-4" />
-                         Logout
-                      </Button>
-                    </Link>
+                    <Button size="sm" className="w-full" onClick={handleLogout}>
+                       <LogOut className="mr-2 h-4 w-4" />
+                       Logout
+                    </Button>
                   </CardContent>
                 </Card>
               </div>

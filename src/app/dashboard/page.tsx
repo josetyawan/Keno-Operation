@@ -1,5 +1,6 @@
+'use client';
+
 import Link from 'next/link';
-import { getNotas } from '@/lib/data';
 import type { Nota } from '@/lib/types';
 import {
   Card,
@@ -12,14 +13,19 @@ import {
 import { Button } from '@/components/ui/button';
 import { ArrowUpRight, PlusCircle } from 'lucide-react';
 import { format } from 'date-fns';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, orderBy } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
 
 function NotaCard({ nota }: { nota: Nota }) {
+  const createdAtDate = nota.createdAt?.toDate ? nota.createdAt.toDate() : new Date();
+  
   return (
     <Card className="flex flex-col transition-all hover:shadow-md">
       <CardHeader>
         <CardTitle className="text-xl">{nota.title}</CardTitle>
         <CardDescription>
-          Created on {format(new Date(nota.createdAt), 'PPP')}
+          Created on {format(createdAtDate, 'PPP')}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow">
@@ -39,8 +45,16 @@ function NotaCard({ nota }: { nota: Nota }) {
   );
 }
 
-export default async function DashboardPage() {
-  const notas = await getNotas();
+export default function DashboardPage() {
+  const { user } = useUser();
+  const firestore = useFirestore();
+
+  const notasQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(firestore, 'users', user.uid, 'notas'), orderBy('createdAt', 'desc'));
+  }, [user, firestore]);
+
+  const { data: notas, isLoading } = useCollection<Nota>(notasQuery);
 
   return (
     <>
@@ -53,13 +67,21 @@ export default async function DashboardPage() {
             </Button>
           </Link>
       </div>
-      {notas.length > 0 ? (
+      {isLoading && (
+         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      )}
+      {!isLoading && notas && notas.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {notas.map((nota) => (
             <NotaCard key={nota.id} nota={nota} />
           ))}
         </div>
       ) : (
+        !isLoading && (
         <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/50 p-12 text-center h-[400px]">
           <h3 className="text-xl font-semibold tracking-tight">
             You have no notas yet.
@@ -71,6 +93,7 @@ export default async function DashboardPage() {
             <Button>Create Nota</Button>
           </Link>
         </div>
+        )
       )}
     </>
   );

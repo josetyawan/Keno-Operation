@@ -15,25 +15,49 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { useState } from 'react';
+import { useUser, useFirestore, addDocumentNonBlocking } from '@/firebase';
+import { collection, serverTimestamp } from 'firebase/firestore';
 
 export default function NewNotaPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    // Here you would typically send the data to your backend API
-    // For now, we'll just simulate a success and redirect.
+    if (!user) {
+        toast({
+            variant: 'destructive',
+            title: 'Not Authenticated',
+            description: 'You must be logged in to create a nota.',
+        });
+        return;
+    }
+    setIsSaving(true);
+
+    const notasCollection = collection(firestore, 'users', user.uid, 'notas');
     
+    const newNota = {
+        userId: user.uid,
+        title,
+        content,
+        createdAt: serverTimestamp(),
+    };
+
+    addDocumentNonBlocking(notasCollection, newNota)
+
     toast({
       title: 'Nota Created!',
       description: 'Your new nota has been saved successfully.',
     });
-
-    // We use a timeout to let the user see the toast before redirecting
-    setTimeout(() => {
-      router.push('/dashboard');
-    }, 1000);
+    
+    // Redirect immediately, optimistic update
+    router.push('/dashboard');
   }
 
   return (
@@ -41,7 +65,7 @@ export default function NewNotaPage() {
       <form onSubmit={handleSubmit}>
         <div className="flex items-center gap-4 mb-4">
           <Link href="/dashboard">
-            <Button variant="outline" size="icon" className="h-7 w-7">
+            <Button variant="outline" size="icon" className="h-7 w-7" type="button">
                 <ArrowLeft className="h-4 w-4" />
                 <span className="sr-only">Back</span>
             </Button>
@@ -51,9 +75,9 @@ export default function NewNotaPage() {
           </h1>
           <div className="hidden items-center gap-2 md:ml-auto md:flex">
             <Link href="/dashboard">
-              <Button variant="outline">Cancel</Button>
+              <Button variant="outline" type="button">Cancel</Button>
             </Link>
-            <Button type="submit">Save Nota</Button>
+            <Button type="submit" disabled={isSaving}>{isSaving ? "Saving..." : "Save Nota"}</Button>
           </div>
         </div>
         <Card>
@@ -73,6 +97,8 @@ export default function NewNotaPage() {
                   className="w-full"
                   placeholder="e.g., Q3 Project Kick-off"
                   required
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
                 />
               </div>
               <div className="grid gap-3">
@@ -82,6 +108,8 @@ export default function NewNotaPage() {
                   placeholder="Write down your notes here..."
                   className="min-h-72"
                   required
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
                 />
               </div>
             </div>
@@ -89,9 +117,9 @@ export default function NewNotaPage() {
         </Card>
         <div className="flex items-center justify-end gap-2 mt-4 md:hidden">
           <Link href="/dashboard">
-            <Button variant="outline">Cancel</Button>
+            <Button variant="outline" type="button">Cancel</Button>
           </Link>
-          <Button type="submit">Save Nota</Button>
+          <Button type="submit" disabled={isSaving}>{isSaving ? "Saving..." : "Save Nota"}</Button>
         </div>
       </form>
     </div>
