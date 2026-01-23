@@ -79,7 +79,7 @@ export default function ProfilePage() {
             <div className="py-4">
                 <h3 className="text-lg font-medium mb-2 flex items-center gap-2">
                     Firebase Authentication
-                    <Badge variant="secondary">Source</Badge>
+                    <Badge variant="outline">Source</Badge>
                 </h3>
                 <p className="text-sm text-muted-foreground mb-2">
                     This data comes directly from the logged-in user object provided by Firebase Authentication.
@@ -93,7 +93,7 @@ export default function ProfilePage() {
              <div className="py-4">
                 <h3 className="text-lg font-medium mb-2 flex items-center gap-2">
                     Firestore Database
-                    <Badge variant="secondary">Source</Badge>
+                    <Badge variant="outline">Source</Badge>
                 </h3>
                 <p className="text-sm text-muted-foreground mb-2">
                    This data is fetched from the `/users/{user.uid}` document in your Firestore database.
@@ -104,7 +104,7 @@ export default function ProfilePage() {
                         <p><strong>Email:</strong> {userProfile.email}</p>
                         <p><strong>First Name:</strong> {userProfile.firstName || <span className="text-muted-foreground italic">Not set</span>}</p>
                         <p><strong>Last Name:</strong> {userProfile.lastName || <span className="text-muted-foreground italic">Not set</span>}</p>
-                        <p><strong>Role:</strong> <Badge variant={userProfile.role === 'admin' ? 'default' : 'secondary'}>{userProfile.role}</Badge></p>
+                        <p><strong>Role:</strong> <Badge variant={userProfile.role === 'admin' ? 'default' : 'secondary'} className="capitalize">{userProfile.role}</Badge></p>
                     </div>
                 ): (
                     <p className="text-sm text-destructive">Could not find a user profile document in Firestore.</p>
