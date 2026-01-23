@@ -84,4 +84,47 @@ export default function DashboardPage() {
             <AlertTitle>Anda adalah Admin</AlertTitle>
             <AlertDescription>
                 Anda dapat melihat, mengedit, dan memverifikasi semua laporan dari semua pengguna.
-            </Aler
+            </AlertDescription>
+        </Alert>
+       )}
+
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold font-headline tracking-tight">
+          Dashboard Laporan
+        </h1>
+        <Link href="/dashboard/new">
+            <Button>
+                <PlusCircle className="mr-2" />
+                Buat Laporan Baru
+            </Button>
+        </Link>
+      </div>
+
+      {isLoading ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <Skeleton className="h-64 w-full" />
+            <Skeleton className="h-64 w-full" />
+            <Skeleton className="h-64 w-full" />
+            <Skeleton className="h-64 w-full" />
+        </div>
+      ) : notas && notas.length > 0 ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {notas.map(nota => (
+            <NotaCard key={nota.id} nota={nota} />
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-16 border-2 border-dashed rounded-lg">
+            <h2 className="text-xl font-semibold">Belum Ada Laporan</h2>
+            <p className="text-muted-foreground mt-2">Mulai buat laporan pertama Anda.</p>
+            <Link href="/dashboard/new" className="mt-4 inline-block">
+                <Button>
+                    <PlusCircle className="mr-2" />
+                    Buat Laporan
+                </Button>
+            </Link>
+        </div>
+      )}
+    </>
+  );
+}
