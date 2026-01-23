@@ -8,7 +8,8 @@ export type Nota = {
   noPlatKendaraan?: string;
   kmAwal?: number;
   kmAkhir?: number;
-  uraianPekerjaan?: string;
+  namaBarang?: string;
+  keterangan?: string;
   nominal: number;
   namaPic: string;
   fotoEvidenUrls?: string[];
@@ -18,8 +19,4 @@ export type Nota = {
 
 export type UserProfile = {
     id: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-    role: 'admin' | 'user';
-};
+    

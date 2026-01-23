@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useRouter, useParams } from 'next/navigation';
@@ -106,13 +105,17 @@ export default function EditNotaPage() {
   const [noPlatKendaraan, setNoPlatKendaraan] = useState('');
   const [kmAwal, setKmAwal] = useState('');
   const [kmAkhir, setKmAkhir] = useState('');
-  const [uraianPekerjaan, setUraianPekerjaan] = useState('');
+  const [namaBarang, setNamaBarang] = useState('');
+  const [keterangan, setKeterangan] = useState('');
   const [nominal, setNominal] = useState('');
   const [namaPic, setNamaPic] = useState('');
   const [files, setFiles] = useState<(File | null)[]>(Array(7).fill(null));
   
   const bbmKendaraanSegments = ['BBM R2', 'BBM R4 Harian', 'BBM R4 Turlap', 'BBM R4 UT'];
+  const nonBbmKendaraanSegments = ['Material', 'BBM Genset', 'jasa', 'Konsumsi Turlap', 'Konsumsi UT', 'Konsumsi Lembur', 'Material SPPG'];
+  
   const isBBMKendaraan = segmen && bbmKendaraanSegments.includes(segmen);
+  const isNonBBMKendaraan = segmen && nonBbmKendaraanSegments.includes(segmen);
 
   // Get user profile to check for admin role
   const userDocRef = useMemoFirebase(() => {
@@ -138,7 +141,8 @@ export default function EditNotaPage() {
       setNoPlatKendaraan(nota.noPlatKendaraan || '');
       setKmAwal(nota.kmAwal?.toString() || '');
       setKmAkhir(nota.kmAkhir?.toString() || '');
-      setUraianPekerjaan(nota.uraianPekerjaan || '');
+      setNamaBarang(nota.namaBarang || '');
+      setKeterangan(nota.keterangan || '');
       setNominal(nota.nominal.toString());
       setNamaPic(nota.namaPic);
       // We don't handle file re-population, just show existing URLs if any.
@@ -167,6 +171,12 @@ export default function EditNotaPage() {
       setNoPlatKendaraan('');
       setKmAwal('');
       setKmAkhir('');
+    }
+    
+    if (value === 'Material') {
+        setKeterangan('Material SA Kudus');
+    } else if (value === 'Material SPPG') {
+        setKeterangan('Material SPPG SA Kudus');
     }
   };
 
@@ -199,7 +209,7 @@ export default function EditNotaPage() {
     const updatedData: Partial<Nota> = {
         tanggal,
         segmen,
-        uraianPekerjaan,
+        keterangan,
         nominal: Number(nominal),
         namaPic,
         // File uploads would be handled here
@@ -213,6 +223,12 @@ export default function EditNotaPage() {
         updatedData.noPlatKendaraan = '';
         updatedData.kmAwal = 0;
         updatedData.kmAkhir = 0;
+    }
+    
+    if(isNonBBMKendaraan) {
+        updatedData.namaBarang = namaBarang;
+    } else {
+        updatedData.namaBarang = '';
     }
     
     updateDocumentNonBlocking(notaRef, updatedData);
@@ -376,15 +392,30 @@ export default function EditNotaPage() {
                 </>
               )}
 
+              {isNonBBMKendaraan && (
+                <div className="grid gap-3">
+                    <Label htmlFor="namaBarang">{segmen === 'jasa' ? 'Nama Jasa' : 'Nama Barang'}</Label>
+                    <Input
+                        id="namaBarang"
+                        type="text"
+                        placeholder={segmen === 'jasa' ? 'Contoh: Jasa perbaikan AC' : 'Nama barang yang dibeli...'}
+                        value={namaBarang}
+                        onChange={(e) => setNamaBarang(e.target.value)}
+                    />
+                </div>
+              )}
+
               <div className="grid gap-3">
-                <Label htmlFor="uraianPekerjaan">Uraian Pekerjaan</Label>
+                <Label htmlFor="keterangan">Keterangan</Label>
                 <Textarea
-                  id="uraianPekerjaan"
-                  placeholder="Detail pekerjaan..."
-                  value={uraianPekerjaan}
-                  onChange={(e) => setUraianPekerjaan(e.target.value)}
+                  id="keterangan"
+                  placeholder="Keterangan tambahan..."
+                  value={keterangan}
+                  onChange={(e) => setKeterangan(e.target.value)}
+                  readOnly={segmen === 'Material' || segmen === 'Material SPPG'}
                 />
               </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="grid gap-3">
                   <Label htmlFor="nominal">Nominal (Rp) *</Label>

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -89,13 +88,17 @@ export default function NewNotaPage() {
   const [noPlatKendaraan, setNoPlatKendaraan] = useState('');
   const [kmAwal, setKmAwal] = useState('');
   const [kmAkhir, setKmAkhir] = useState('');
-  const [uraianPekerjaan, setUraianPekerjaan] = useState('');
+  const [namaBarang, setNamaBarang] = useState('');
+  const [keterangan, setKeterangan] = useState('');
   const [nominal, setNominal] = useState('');
   const [namaPic, setNamaPic] = useState('');
   const [files, setFiles] = useState<(File | null)[]>(Array(7).fill(null));
 
   const bbmKendaraanSegments = ['BBM R2', 'BBM R4 Harian', 'BBM R4 Turlap', 'BBM R4 UT'];
+  const nonBbmKendaraanSegments = ['Material', 'BBM Genset', 'jasa', 'Konsumsi Turlap', 'Konsumsi UT', 'Konsumsi Lembur', 'Material SPPG'];
+  
   const isBBMKendaraan = segmen && bbmKendaraanSegments.includes(segmen);
+  const isNonBBMKendaraan = segmen && nonBbmKendaraanSegments.includes(segmen);
   
   const handleSegmenChange = (value: string) => {
     setSegmen(value);
@@ -104,6 +107,17 @@ export default function NewNotaPage() {
       setNoPlatKendaraan('');
       setKmAwal('');
       setKmAkhir('');
+    }
+    
+    if (value === 'Material') {
+        setKeterangan('Material SA Kudus');
+    } else if (value === 'Material SPPG') {
+        setKeterangan('Material SPPG SA Kudus');
+    } else {
+        // If switching away from a static segment, clear the text area
+        if (keterangan === 'Material SA Kudus' || keterangan === 'Material SPPG SA Kudus') {
+            setKeterangan('');
+        }
     }
   };
 
@@ -149,7 +163,7 @@ export default function NewNotaPage() {
       userEmail: user.email,
       tanggal: tanggal,
       segmen,
-      uraianPekerjaan,
+      keterangan,
       nominal: Number(nominal),
       namaPic,
       fotoEvidenUrls: [], // Placeholder for file URLs
@@ -161,6 +175,10 @@ export default function NewNotaPage() {
         newNota.noPlatKendaraan = noPlatKendaraan;
         newNota.kmAwal = Number(kmAwal);
         newNota.kmAkhir = Number(kmAkhir);
+    }
+    
+    if(isNonBBMKendaraan) {
+        newNota.namaBarang = namaBarang;
     }
 
     addDocumentNonBlocking(notasCollection, newNota);
@@ -295,16 +313,31 @@ export default function NewNotaPage() {
                   </div>
                 </>
               )}
+              
+              {isNonBBMKendaraan && (
+                <div className="grid gap-3">
+                    <Label htmlFor="namaBarang">{segmen === 'jasa' ? 'Nama Jasa' : 'Nama Barang'}</Label>
+                    <Input
+                        id="namaBarang"
+                        type="text"
+                        placeholder={segmen === 'jasa' ? 'Contoh: Jasa perbaikan AC' : 'Nama barang yang dibeli...'}
+                        value={namaBarang}
+                        onChange={(e) => setNamaBarang(e.target.value)}
+                    />
+                </div>
+              )}
 
               <div className="grid gap-3">
-                <Label htmlFor="uraianPekerjaan">Uraian Pekerjaan</Label>
+                <Label htmlFor="keterangan">Keterangan</Label>
                 <Textarea
-                  id="uraianPekerjaan"
-                  placeholder="Detail pekerjaan..."
-                  value={uraianPekerjaan}
-                  onChange={(e) => setUraianPekerjaan(e.target.value)}
+                  id="keterangan"
+                  placeholder="Keterangan tambahan..."
+                  value={keterangan}
+                  onChange={(e) => setKeterangan(e.target.value)}
+                  readOnly={segmen === 'Material' || segmen === 'Material SPPG'}
                 />
               </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="grid gap-3">
                   <Label htmlFor="nominal">Nominal (Rp) *</Label>

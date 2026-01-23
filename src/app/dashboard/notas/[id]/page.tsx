@@ -124,12 +124,18 @@ export default function NotaDetailPage({ params }: { params: { id: string } }) {
                     <p className="font-medium">{nota.kmAwal} / {nota.kmAkhir}</p>
                 </div>
              )}
+             {nota.namaBarang && (
+                <div className="col-span-2">
+                    <p className="text-muted-foreground">{nota.segmen === 'jasa' ? 'Nama Jasa' : 'Nama Barang'}</p>
+                    <p className="font-medium">{nota.namaBarang}</p>
+                </div>
+             )}
           </div>
-          {nota.uraianPekerjaan && (
+          {nota.keterangan && (
             <div>
-                <p className="text-muted-foreground text-sm">Uraian Pekerjaan</p>
+                <p className="text-muted-foreground text-sm">Keterangan</p>
                 <div className="text-foreground whitespace-pre-wrap text-sm border p-3 rounded-md bg-muted/50">
-                    {nota.uraianPekerjaan}
+                    {nota.keterangan}
                 </div>
             </div>
           )}
@@ -164,10 +170,4 @@ export default function NotaDetailPage({ params }: { params: { id: string } }) {
                     <Button onClick={handleVerify}>
                         <CheckCircle /> Verify Laporan
                     </Button>
-                )}
-            </div>
-        </CardFooter>
-      </Card>
-    </div>
-  );
-}
+                

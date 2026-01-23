@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -33,7 +34,7 @@ function NotaCard({ nota }: { nota: Nota }) {
       </CardHeader>
       <CardContent className="flex-grow space-y-2">
         <p className="text-sm text-muted-foreground line-clamp-2 h-10">
-          {nota.uraianPekerjaan || <span className="italic">Tidak ada uraian pekerjaan.</span>}
+          {nota.keterangan || <span className="italic">Tidak ada keterangan.</span>}
         </p>
          <p className="text-lg font-semibold">
             Rp {nota.nominal.toLocaleString('id-ID')}
@@ -83,51 +84,4 @@ export default function DashboardPage() {
             <AlertTitle>Anda adalah Admin</AlertTitle>
             <AlertDescription>
                 Anda dapat melihat, mengedit, dan memverifikasi semua laporan dari semua pengguna.
-            </AlertDescription>
-        </Alert>
-       )}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-semibold md:text-3xl font-headline">
-                {isAdmin ? "Semua Laporan" : "Laporan Anda"}
-            </h1>
-        </div>
-        <Link href="/dashboard/new">
-            <Button className="flex items-center gap-2">
-              <PlusCircle className="h-4 w-4"/>
-              Laporan Baru
-            </Button>
-          </Link>
-      </div>
-      {isLoading && (
-         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          <Skeleton className="h-72 w-full" />
-          <Skeleton className="h-72 w-full" />
-          <Skeleton className="h-72 w-full" />
-          <Skeleton className="h-72 w-full" />
-        </div>
-      )}
-      {!isLoading && notas && notas.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {notas.map((nota) => (
-            <NotaCard key={nota.id} nota={nota} />
-          ))}
-        </div>
-      ) : (
-        !isLoading && (
-        <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/50 p-12 text-center h-[400px]">
-          <h3 className="text-xl font-semibold tracking-tight">
-            Belum ada laporan yang dibuat.
-          </h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            Jadilah yang pertama membuat laporan!
-          </p>
-          <Link href="/dashboard/new">
-            <Button>Buat Laporan</Button>
-          </Link>
-        </div>
-        )
-      )}
-    </>
-  );
-}
+            </Aler
