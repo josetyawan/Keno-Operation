@@ -36,18 +36,36 @@ export default function LoginPage() {
       let title = 'Login Failed';
       let description = 'An unexpected error occurred. Please try again.';
       if (error instanceof FirebaseError) {
-        if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        switch (error.code) {
+          case 'auth/invalid-credential':
+          case 'auth/user-not-found':
+          case 'auth/wrong-password':
             title = 'Invalid Credentials';
-            description = 'The email or password you entered is incorrect. Please check your credentials and try again.';
+            description =
+              'The email or password you entered is incorrect. Please check your credentials and try again.';
+            break;
+          case 'auth/invalid-api-key':
+            title = 'Configuration Error';
+            description =
+              'The API key for Firebase is invalid. Please contact support.';
+            break;
+          case 'auth/network-request-failed':
+            title = 'Network Error';
+            description =
+              'Could not connect to the login service. Please check your internet connection.';
+            break;
+          default:
+            // Keep the generic message for other Firebase errors
+            break;
         }
       }
       toast({
-          variant: 'destructive',
-          title,
-          description,
+        variant: 'destructive',
+        title,
+        description,
       });
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   };
 

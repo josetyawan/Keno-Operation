@@ -36,12 +36,24 @@ export default function SignupPage() {
         let title = 'Sign Up Failed';
         let description = 'An unexpected error occurred. Please try again.';
         if (error instanceof FirebaseError) {
-          if (error.code === 'auth/email-already-in-use') {
+          switch (error.code) {
+            case 'auth/email-already-in-use':
               title = 'Email Already in Use';
-              description = 'This email address is already registered. Please login or use a different email.';
-          } else if (error.code === 'auth/weak-password') {
+              description =
+                'This email address is already registered. Please login or use a different email.';
+              break;
+            case 'auth/weak-password':
               title = 'Weak Password';
               description = 'The password must be at least 6 characters long.';
+              break;
+            case 'auth/invalid-email':
+              title = 'Invalid Email';
+              description = 'Please enter a valid email address.';
+              break;
+            default:
+              // This will catch other errors, like Firestore permission errors during createUserDocument
+              description = `An error occurred during sign up. (${error.code})`;
+              break;
           }
         }
         toast({
