@@ -170,4 +170,10 @@ export default function NotaDetailPage({ params }: { params: { id: string } }) {
                     <Button onClick={handleVerify}>
                         <CheckCircle /> Verify Laporan
                     </Button>
-                
+                )}
+            </div>
+         </CardFooter>
+      </Card>
+    </div>
+  );
+}
