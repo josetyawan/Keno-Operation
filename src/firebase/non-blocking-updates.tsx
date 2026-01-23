@@ -24,7 +24,7 @@ export function setDocumentNonBlocking(docRef: DocumentReference, data: any, opt
         path: docRef.path,
         operation: 'write', // or 'create'/'update' based on options
         requestResourceData: data,
-      })
+      }, error)
     )
   })
   // Execution continues immediately
@@ -45,7 +45,7 @@ export function addDocumentNonBlocking(colRef: CollectionReference, data: any) {
           path: colRef.path,
           operation: 'create',
           requestResourceData: data,
-        })
+        }, error)
       )
     });
   return promise;
@@ -65,7 +65,7 @@ export function updateDocumentNonBlocking(docRef: DocumentReference, data: any) 
           path: docRef.path,
           operation: 'update',
           requestResourceData: data,
-        })
+        }, error)
       )
     });
 }
@@ -83,7 +83,7 @@ export function deleteDocumentNonBlocking(docRef: DocumentReference) {
         new FirestorePermissionError({
           path: docRef.path,
           operation: 'delete',
-        })
+        }, error)
       )
     });
 }
