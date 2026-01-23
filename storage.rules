@@ -2,16 +2,12 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Allow public read access on all files. This is necessary so that
-    // anyone with the URL (like your app's users) can view the evidence photos.
-    match /{allPaths=**} {
-      allow read;
-    }
-
-    // Restrict write access. Only an authenticated user can write files,
-    // and they can only write to a path that is prefixed with their own user ID.
-    // This prevents a user from overwriting another user's files.
+    // Matches all files in the 'notas' folder
     match /notas/{userId}/{allPaths=**} {
+      // Public read access is allowed.
+      allow read;
+
+      // Write access is only allowed for the authenticated user who owns this path.
       allow write: if request.auth != null && request.auth.uid == userId;
     }
   }
