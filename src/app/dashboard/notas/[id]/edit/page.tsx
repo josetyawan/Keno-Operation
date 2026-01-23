@@ -112,7 +112,7 @@ export default function EditNotaPage() {
   const [files, setFiles] = useState<(File | null)[]>(Array(7).fill(null));
   
   const bbmKendaraanSegments = ['BBM R2', 'BBM R4 Harian', 'BBM R4 Turlap', 'BBM R4 UT'];
-  const nonBbmKendaraanSegments = ['Material', 'BBM Genset', 'jasa', 'Konsumsi Turlap', 'Konsumsi UT', 'Konsumsi Lembur', 'Material SPPG'];
+  const nonBbmKendaraanSegments = ['MATERIAL SA KUDUS', 'BBM Genset', 'jasa', 'Konsumsi Turlap', 'Konsumsi UT', 'Konsumsi Lembur', 'MATERIAL SPPG SA KUDUS'];
   
   const isBBMKendaraan = segmen && bbmKendaraanSegments.includes(segmen);
   const isNonBBMKendaraan = segmen && nonBbmKendaraanSegments.includes(segmen);
@@ -173,10 +173,15 @@ export default function EditNotaPage() {
       setKmAkhir('');
     }
     
-    if (value === 'Material') {
+    if (value === 'MATERIAL SA KUDUS') {
         setKeterangan('Material SA Kudus');
-    } else if (value === 'Material SPPG') {
+    } else if (value === 'MATERIAL SPPG SA KUDUS') {
         setKeterangan('Material SPPG SA Kudus');
+    } else {
+        // If switching away from a static segment, clear the text area
+        if (keterangan === 'Material SA Kudus' || keterangan === 'Material SPPG SA Kudus') {
+            setKeterangan('');
+        }
     }
   };
 
@@ -339,13 +344,13 @@ export default function EditNotaPage() {
                         <SelectItem value="BBM R4 Harian">BBM R4 Harian</SelectItem>
                         <SelectItem value="BBM R4 Turlap">BBM R4 Turlap</SelectItem>
                         <SelectItem value="BBM R4 UT">BBM R4 UT</SelectItem>
-                        <SelectItem value="Material">Material</SelectItem>
+                        <SelectItem value="MATERIAL SA KUDUS">MATERIAL SA KUDUS</SelectItem>
                         <SelectItem value="BBM Genset">BBM Genset</SelectItem>
                         <SelectItem value="jasa">Jasa</SelectItem>
                         <SelectItem value="Konsumsi Turlap">Konsumsi Turlap</SelectItem>
                         <SelectItem value="Konsumsi UT">Konsumsi UT</SelectItem>
                         <SelectItem value="Konsumsi Lembur">Konsumsi Lembur</SelectItem>
-                        <SelectItem value="Material SPPG">Material SPPG</SelectItem>
+                        <SelectItem value="MATERIAL SPPG SA KUDUS">MATERIAL SPPG SA KUDUS</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -412,7 +417,7 @@ export default function EditNotaPage() {
                   placeholder="Keterangan tambahan..."
                   value={keterangan}
                   onChange={(e) => setKeterangan(e.target.value)}
-                  readOnly={segmen === 'Material' || segmen === 'Material SPPG'}
+                  readOnly={segmen === 'MATERIAL SA KUDUS' || segmen === 'MATERIAL SPPG SA KUDUS'}
                 />
               </div>
 
