@@ -11,14 +11,14 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowUpRight, PlusCircle, ShieldCheck, Terminal } from 'lucide-react';
+import { ArrowUpRight, PlusCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 
-function NotaCard({ nota, isAdmin }: { nota: Nota, isAdmin: boolean }) {
+function NotaCard({ nota }: { nota: Nota }) {
   const dateCreatedDate = nota.dateCreated?.toDate ? nota.dateCreated.toDate() : new Date();
   
   return (
@@ -26,8 +26,7 @@ function NotaCard({ nota, isAdmin }: { nota: Nota, isAdmin: boolean }) {
       <CardHeader>
         <CardTitle className="text-xl">{nota.title}</CardTitle>
         <CardDescription>
-          {isAdmin && <span className="text-xs block truncate mb-1">User: {nota.userId}</span>}
-          Created on {format(dateCreatedDate, 'PPP')}
+          Created by: {nota.userEmail || '...'} on {format(dateCreatedDate, 'PPP')}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow">
@@ -58,15 +57,10 @@ export default function DashboardPage() {
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
-  const isAdmin = userProfile?.role === 'admin';
-
-  // To prevent crashing for admins who have not set up Custom Claims,
-  // we will only query the user's own notas. This stops the permission error.
   const notasQuery = useMemoFirebase(() => {
-    if (!user) return null;
-    // For now, all users (including admins) only see their own notas.
-    return query(collection(firestore, 'users', user.uid, 'notas'), orderBy('dateCreated', 'desc'));
-  }, [user, firestore]);
+    // Query the top-level 'notas' collection for everyone
+    return query(collection(firestore, 'notas'), orderBy('dateCreated', 'desc'));
+  }, [firestore]);
 
   const { data: notas, isLoading: areNotasLoading } = useCollection<Nota>(notasQuery);
 
@@ -74,21 +68,12 @@ export default function DashboardPage() {
 
   return (
     <>
-      {isAdmin && (
-        <Alert className="mb-6">
-          <Terminal className="h-4 w-4" />
-          <AlertTitle className="font-semibold">Admin Recap Feature Requires Configuration</AlertTitle>
-          <AlertDescription>
-            The "All User Notas" view is disabled. Your security rules are correctly set up, but this feature requires a Firebase **Custom Claim** of `role: 'admin'` on your user account. Since I cannot set this for you, the app is currently only showing your own notas.
-          </AlertDescription>
-        </Alert>
-      )}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
             <h1 className="text-2xl font-semibold md:text-3xl font-headline">
-                {isAdmin ? "Admin Dashboard" : "Your Notas"}
+                {userProfile?.role === 'admin' ? "All User Notas" : "Nota Feed"}
             </h1>
-            {isAdmin && <ShieldCheck className="h-6 w-6 text-primary" title="You are an admin" />}
+            {userProfile?.role === 'admin' && <Badge>Admin</Badge>}
         </div>
         <Link href="/dashboard/new">
             <Button className="flex items-center gap-2">
@@ -107,17 +92,17 @@ export default function DashboardPage() {
       {!isLoading && notas && notas.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {notas.map((nota) => (
-            <NotaCard key={nota.id} nota={nota} isAdmin={isAdmin} />
+            <NotaCard key={nota.id} nota={nota} />
           ))}
         </div>
       ) : (
         !isLoading && (
         <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/50 p-12 text-center h-[400px]">
           <h3 className="text-xl font-semibold tracking-tight">
-            {isAdmin ? "No notas found for your account." : "You have no notas yet."}
+            No notas have been created yet.
           </h3>
           <p className="text-sm text-muted-foreground mb-4">
-            Get started by creating a new one.
+            Be the first one to create a nota!
           </p>
           <Link href="/dashboard/new">
             <Button>Create Nota</Button>

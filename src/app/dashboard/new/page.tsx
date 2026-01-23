@@ -30,7 +30,7 @@ export default function NewNotaPage() {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!user) {
+    if (!user || !user.email) {
         toast({
             variant: 'destructive',
             title: 'Not Authenticated',
@@ -40,13 +40,15 @@ export default function NewNotaPage() {
     }
     setIsSaving(true);
 
-    const notasCollection = collection(firestore, 'users', user.uid, 'notas');
+    const notasCollection = collection(firestore, 'notas');
     
     const newNota = {
         userId: user.uid,
+        userEmail: user.email,
         title,
         content,
         dateCreated: serverTimestamp(),
+        status: 'pending',
     };
 
     addDocumentNonBlocking(notasCollection, newNota)

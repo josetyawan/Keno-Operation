@@ -2,39 +2,24 @@
  * # Firestore Security Rules: NotaKu App
  *
  * ## Core Philosophy
- * This ruleset enforces a strict user-ownership security model. All user-generated
- * content, specifically 'notas' (notes), is stored in a private data silo accessible
- * only to the user who created it. There is no concept of shared or public data in
- * this model. The primary goal is to guarantee data privacy and isolation between users.
+ * This ruleset allows any authenticated user to view all public data ('notas'),
+ * but strictly controls who can create, modify, or delete that data. This
+ * facilitates a collaborative or admin-reviewed environment.
  *
  * ## Data Structure
- * The data is organized hierarchically under a top-level `users` collection. Each user
- * has a single profile document, and all their private content is stored in subcollections
- * under that document.
- *   - `/users/{userId}`: Stores the user's public profile information.
- *   - `/users/{userId}/notas/{notaId}`: Stores the user's private notes.
+ *   - `/users/{userId}`: Stores user profile information, including roles.
+ *   - `/notas/{notaId}`: A global collection of all notas from all users.
  *
  * ## Key Security Decisions
- * - **No User Listing**: To protect user privacy, it is impossible for any client to
- *   list all documents in the top-level `/users` collection unless they are an admin.
- * - **Strict Ownership**: A user can only read, create, update, or delete their own data.
- *   Access is strictly controlled by matching the authenticated user's UID with the
- *   `{userId}` wildcard in the document path.
- * - **Default Deny**: Any path not explicitly defined in these rules is inaccessible.
- * - **Profile Deletion Disabled**: User profile deletion from the client is disabled
- *   as a security precaution. This critical action should be handled by a trusted
- *   server environment (e.g., a Cloud Function) to manage data cleanup properly.
- *
- * ## Denormalization for Authorization
- * To ensure fast and simple authorization checks, the `userId` is denormalized and stored
- * directly on every `Nota` document. This allows security rules to validate ownership
- * for write operations without performing costly `get()` calls to parent documents,
- * adhering to the principle of "Authorization Independence."
- *
- * ## Structural Segregation
- * This ruleset uses path-based segregation. All of a user's private data (`notas`) is
- * nested within a subcollection under their unique `/users/{userId}` path, creating a
- * clear and secure boundary between different users' data.
+ * - **Public Read, Private Write**: Any signed-in user can read any nota. This is
+ *   a key business requirement. Write operations (create, update, delete) are
+ *   restricted.
+ * - **Strict Ownership for Writes**: A user can only create notas under their own
+ *   ID. They can only update or delete notas they already own.
+ * - **Admin Override**: Users with the 'admin' role (defined in their /users/
+ *   document) have elevated privileges, specifically the ability to update any
+ *   nota for verification purposes.
+ * - **Default Deny**: Any path not explicitly defined is inaccessible.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -53,27 +38,22 @@ service cloud.firestore {
 
     /**
      * Checks if the authenticated user's UID matches the provided userId.
-     * This is the foundation of the user-ownership model.
-     * @param userId The user ID to check against the authenticated user.
      */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
     /**
-     * Checks if the requesting user has an 'admin' role via Custom Claims.
-     * This is the performant and secure way to handle roles, and is required
-     * for collection group queries.
+     * Checks if the user has an 'admin' role by reading their profile document.
+     * This is used for granting elevated permissions.
      */
     function isAdmin() {
-      return isSignedIn() && request.auth.token.role == 'admin';
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     /**
      * Validates that on user document creation, the document's internal `id`
-     * field correctly matches the document's ID in the path ({userId}).
-     * This enforces relational integrity from the start.
-     * @param userId The wildcard userId from the document path.
+     * field correctly matches the document's ID in the path.
      */
     function isCreatingOwnUserDocument(userId) {
       return request.resource.data.id == userId;
@@ -81,36 +61,32 @@ service cloud.firestore {
 
     /**
      * Enforces immutability of the user `id` field during updates.
-     * This prevents re-assigning the document's ownership link.
      */
     function isUpdatingOwnUserDocument() {
       return request.resource.data.id == resource.data.id;
     }
-
+    
     /**
-     * Validates that on nota creation, the document's internal `userId` field
-     * correctly matches the owner's ID from the path.
-     * @param userId The wildcard userId from the document path.
+     * Validates that a user is creating a nota with their own userId.
      */
-    function isCreatingOwnNota(userId) {
-      return request.resource.data.userId == userId;
+    function isCreatingOwnNota() {
+        return request.resource.data.userId == request.auth.uid;
     }
 
     /**
-     * Enforces immutability of the `userId` field on a nota during updates.
-     * This prevents a note from being transferred to another user.
+     * Validates that a user is updating a nota they own.
      */
     function isUpdatingOwnNota() {
-      return request.resource.data.userId == resource.data.userId;
+        return resource.data.userId == request.auth.uid;
     }
+
 
     // -------------------------------------------------------------------------
     // Collection Rules
     // -------------------------------------------------------------------------
 
     /**
-     * @description Manages user profile documents. A user can read their own
-     *   profile. An admin can read any user profile.
+     * @description Manages user profile documents.
      * @path /users/{userId}
      */
     match /users/{userId} {
@@ -122,16 +98,21 @@ service cloud.firestore {
     }
 
     /**
-     * @description Manages user-specific notes (notas). Only the owner can
-     *   manage their notas. Admins have read-only access to all notas via
-     *   collection group queries for recap/audit purposes.
-     * @path /users/{userId}/notas/{notaId}
+     * @description Global collection for all user notas.
+     * @path /notas/{notaId}
      */
-    match /users/{userId}/notas/{notaId} {
-      allow get, list: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId) && isCreatingOwnNota(userId);
-      allow update: if isOwner(userId) && resource != null && isUpdatingOwnNota();
-      allow delete: if isOwner(userId) && resource != null;
+    match /notas/{notaId} {
+      // Anyone signed in can read the list of notas or a single nota.
+      allow get, list: if isSignedIn();
+      
+      // A user can only create a nota if the nota's userId matches their own.
+      allow create: if isSignedIn() && isCreatingOwnNota();
+
+      // A user can update a nota if they are the owner OR if they are an admin.
+      allow update: if isSignedIn() && (isUpdatingOwnNota() || isAdmin());
+      
+      // A user can only delete a nota if they are the owner.
+      allow delete: if isSignedIn() && isUpdatingOwnNota();
     }
   }
 }
