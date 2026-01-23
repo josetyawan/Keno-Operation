@@ -2,13 +2,11 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Matches all files in the 'notas' folder
-    match /notas/{userId}/{allPaths=**} {
-      // Public read access is allowed.
-      allow read;
-
-      // Write access is only allowed for the authenticated user who owns this path.
-      allow write: if request.auth != null && request.auth.uid == userId;
+    // Aturan sementara untuk diagnostik:
+    // Izinkan semua pengguna yang terautentikasi untuk membaca dan menulis.
+    // Ini akan diganti dengan aturan yang lebih aman setelah masalah CORS teratasi.
+    match /{allPaths=**} {
+      allow read, write: if request.auth != null;
     }
   }
 }
