@@ -1,0 +1,16 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Izinkan siapa saja untuk membaca file. Ini berguna untuk menampilkan gambar.
+    match /{allPaths=**} {
+      allow read;
+    }
+
+    // Izinkan pengguna yang terautentikasi untuk menulis hanya ke folder mereka sendiri di dalam 'notas'.
+    // Nama folder harus cocok dengan ID pengguna mereka.
+    match /notas/{userId}/{allPaths=**} {
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
