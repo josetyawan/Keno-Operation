@@ -1,0 +1,116 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the NotaKu application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "User's email address.",
+          "format": "email"
+        },
+        "firstName": {
+          "type": "string",
+          "description": "User's first name."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "User's last name."
+        }
+      },
+      "required": [
+        "id",
+        "email"
+      ]
+    },
+    "Nota": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Nota",
+      "type": "object",
+      "description": "Represents a single nota (receipt) in the NotaKu application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Nota entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Nota)"
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the nota."
+        },
+        "content": {
+          "type": "string",
+          "description": "Full text content of the nota."
+        },
+        "dateCreated": {
+          "type": "string",
+          "description": "Date and time the nota was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "title",
+        "content",
+        "dateCreated"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profiles.  The 'userId' parameter corresponds to the Firebase Auth UID.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user, matching the Firebase Auth UID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/notas/{notaId}",
+        "definition": {
+          "entityName": "Nota",
+          "schema": {
+            "$ref": "#/backend/entities/Nota"
+          },
+          "description": "Stores user's notas. Includes denormalized 'userId' for authorization independence. The 'userId' must match the authenticated user's UID.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user, matching the Firebase Auth UID. Denormalized and duplicated in each Nota document for access control."
+            },
+            {
+              "name": "notaId",
+              "description": "The unique identifier for the nota."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure is designed to ensure secure access, scalability, and ease of debugging, adhering to the principles of Authorization Independence, Clarity of Intent, DBAC (Database-Based Access Control), and QAPs (Rules are not Filters). This design avoids hierarchical authorization dependencies by denormalizing authorization-related data, making security rules simpler and more robust.\n\nThe structure leverages path-based ownership for user-specific data.  All `Nota` documents are stored within a user-specific subcollection, enabling simple and efficient security rules based on the authenticated user's ID. Since a user is only able to access their own notas, this achieves Authorization Independence as the `Nota` documents contain the `userId` of their owner, enabling rules to validate ownership without `get()` calls.\n\nThis structure supports QAPs by ensuring all documents within a collection share the same security requirements. List operations are secured by validating the `request.auth.uid` against the `userId` stored within each `Nota` document."
+  }
+}

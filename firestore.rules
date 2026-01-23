@@ -1,0 +1,136 @@
+/**
+ * # Firestore Security Rules: NotaKu App
+ *
+ * ## Core Philosophy
+ * This ruleset enforces a strict user-ownership security model. All user-generated
+ * content, specifically 'notas' (notes), is stored in a private data silo accessible
+ * only to the user who created it. There is no concept of shared or public data in
+ * this model. The primary goal is to guarantee data privacy and isolation between users.
+ *
+ * ## Data Structure
+ * The data is organized hierarchically under a top-level `users` collection. Each user
+ * has a single profile document, and all their private content is stored in subcollections
+ * under that document.
+ *   - `/users/{userId}`: Stores the user's public profile information.
+ *   - `/users/{userId}/notas/{notaId}`: Stores the user's private notes.
+ *
+ * ## Key Security Decisions
+ * - **No User Listing**: To protect user privacy, it is impossible for any client to
+ *   list all documents in the top-level `/users` collection.
+ * - **Strict Ownership**: A user can only read, create, update, or delete their own data.
+ *   Access is strictly controlled by matching the authenticated user's UID with the
+ *   `{userId}` wildcard in the document path.
+ * - **Default Deny**: Any path not explicitly defined in these rules is inaccessible.
+ * - **Profile Deletion Disabled**: User profile deletion from the client is disabled
+ *   as a security precaution. This critical action should be handled by a trusted
+ *   server environment (e.g., a Cloud Function) to manage data cleanup properly.
+ *
+ * ## Denormalization for Authorization
+ * To ensure fast and simple authorization checks, the `userId` is denormalized and stored
+ * directly on every `Nota` document. This allows security rules to validate ownership
+ * for write operations without performing costly `get()` calls to parent documents,
+ * adhering to the principle of "Authorization Independence."
+ *
+ * ## Structural Segregation
+ * This ruleset uses path-based segregation. All of a user's private data (`notas`) is
+ * nested within a subcollection under their unique `/users/{userId}` path, creating a
+ * clear and secure boundary between different users' data.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // -------------------------------------------------------------------------
+    // Helper Functions
+    // -------------------------------------------------------------------------
+
+    /**
+     * Checks if the user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the authenticated user's UID matches the provided userId.
+     * This is the foundation of the user-ownership model.
+     * @param userId The user ID to check against the authenticated user.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * Validates that on user document creation, the document's internal `id`
+     * field correctly matches the document's ID in the path ({userId}).
+     * This enforces relational integrity from the start.
+     * @param userId The wildcard userId from the document path.
+     */
+    function isCreatingOwnUserDocument(userId) {
+      return request.resource.data.id == userId;
+    }
+
+    /**
+     * Enforces immutability of the user `id` field during updates.
+     * This prevents re-assigning the document's ownership link.
+     */
+    function isUpdatingOwnUserDocument() {
+      return request.resource.data.id == resource.data.id;
+    }
+
+    /**
+     * Validates that on nota creation, the document's internal `userId` field
+     * correctly matches the owner's ID from the path.
+     * @param userId The wildcard userId from the document path.
+     */
+    function isCreatingOwnNota(userId) {
+      return request.resource.data.userId == userId;
+    }
+
+    /**
+     * Enforces immutability of the `userId` field on a nota during updates.
+     * This prevents a note from being transferred to another user.
+     */
+    function isUpdatingOwnNota() {
+      return request.resource.data.userId == resource.data.userId;
+    }
+
+    // -------------------------------------------------------------------------
+    // Collection Rules
+    // -------------------------------------------------------------------------
+
+    /**
+     * @description Manages user profile documents. A user can create, read, and
+     *   update their own profile, but cannot delete it or see other users' profiles.
+     * @path /users/{userId}
+     * @allow (get) A logged-in user requests their own document: `/users/user_abc`. (auth.uid == 'user_abc')
+     * @deny (list) Any user attempts to list all users: `/users`.
+     * @deny (get) A user requests another user's document: `/users/user_xyz`. (auth.uid == 'user_abc')
+     * @principle Restricts access to a user's own profile document.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && isCreatingOwnUserDocument(userId);
+      allow update: if isOwner(userId) && resource != null && isUpdatingOwnUserDocument();
+      allow delete: if false;
+    }
+
+    /**
+     * @description Manages user-specific notes (notas). Only the owner of the
+     *   note can perform any action (read, list, create, update, delete) on it.
+     * @path /users/{userId}/notas/{notaId}
+     * @allow (create) User 'user_abc' creates a new note in their own subcollection: `/users/user_abc/notas/new_nota`.
+     * @deny (get) User 'user_xyz' tries to read a note belonging to 'user_abc': `/users/user_abc/notas/some_nota`.
+     * @deny (update) User 'user_abc' tries to change the `userId` field on an existing note.
+     * @principle Enforces strict document ownership within a user's private data tree.
+     */
+    match /users/{userId}/notas/{notaId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && isCreatingOwnNota(userId);
+      allow update: if isOwner(userId) && resource != null && isUpdatingOwnNota();
+      allow delete: if isOwner(userId) && resource != null;
+    }
+  }
+}
