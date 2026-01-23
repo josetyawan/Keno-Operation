@@ -11,11 +11,12 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowUpRight, PlusCircle, ShieldCheck } from 'lucide-react';
+import { ArrowUpRight, PlusCircle, ShieldCheck, Terminal } from 'lucide-react';
 import { format } from 'date-fns';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, collectionGroup, query, orderBy, doc } from 'firebase/firestore';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 function NotaCard({ nota, isAdmin }: { nota: Nota, isAdmin: boolean }) {
   const dateCreatedDate = nota.dateCreated?.toDate ? nota.dateCreated.toDate() : new Date();
@@ -59,15 +60,13 @@ export default function DashboardPage() {
 
   const isAdmin = userProfile?.role === 'admin';
 
+  // To prevent crashing for admins who have not set up Custom Claims,
+  // we will only query the user's own notas. This stops the permission error.
   const notasQuery = useMemoFirebase(() => {
-    if (!user || isProfileLoading) return null;
-
-    if (isAdmin) {
-      return query(collectionGroup(firestore, 'notas'), orderBy('dateCreated', 'desc'));
-    }
-    
+    if (!user) return null;
+    // For now, all users (including admins) only see their own notas.
     return query(collection(firestore, 'users', user.uid, 'notas'), orderBy('dateCreated', 'desc'));
-  }, [user, firestore, isProfileLoading, isAdmin]);
+  }, [user, firestore]);
 
   const { data: notas, isLoading: areNotasLoading } = useCollection<Nota>(notasQuery);
 
@@ -75,12 +74,21 @@ export default function DashboardPage() {
 
   return (
     <>
+      {isAdmin && (
+        <Alert className="mb-6">
+          <Terminal className="h-4 w-4" />
+          <AlertTitle className="font-semibold">Admin Recap Feature Requires Configuration</AlertTitle>
+          <AlertDescription>
+            The "All User Notas" view is disabled. Your security rules are correctly set up, but this feature requires a Firebase **Custom Claim** of `role: 'admin'` on your user account. Since I cannot set this for you, the app is currently only showing your own notas.
+          </AlertDescription>
+        </Alert>
+      )}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
             <h1 className="text-2xl font-semibold md:text-3xl font-headline">
-                {isAdmin ? "All User Notas" : "Your Notas"}
+                {isAdmin ? "Admin Dashboard" : "Your Notas"}
             </h1>
-            {isAdmin && <ShieldCheck className="h-6 w-6 text-primary" />}
+            {isAdmin && <ShieldCheck className="h-6 w-6 text-primary" title="You are an admin" />}
         </div>
         <Link href="/dashboard/new">
             <Button className="flex items-center gap-2">
@@ -106,7 +114,7 @@ export default function DashboardPage() {
         !isLoading && (
         <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/50 p-12 text-center h-[400px]">
           <h3 className="text-xl font-semibold tracking-tight">
-            {isAdmin ? "No notas found across all users." : "You have no notas yet."}
+            {isAdmin ? "No notas found for your account." : "You have no notas yet."}
           </h3>
           <p className="text-sm text-muted-foreground mb-4">
             Get started by creating a new one.
