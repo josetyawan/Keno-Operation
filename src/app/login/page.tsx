@@ -42,7 +42,7 @@ export default function LoginPage() {
           case 'auth/wrong-password':
             title = 'Invalid Credentials';
             description =
-              'The email or password you entered is incorrect. Please check your credentials and try again.';
+              'The email or password you entered is incorrect. If you do not have an account, please sign up.';
             break;
           case 'auth/invalid-api-key':
             title = 'Configuration Error';

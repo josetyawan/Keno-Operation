@@ -28,7 +28,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             alt={loginBg.description}
             data-ai-hint={loginBg.imageHint}
             fill
-            sizes="50vw"
+            sizes="(max-width: 1023px) 0vw, 50vw"
             className="object-cover"
           />
         )}
