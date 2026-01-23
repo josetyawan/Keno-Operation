@@ -65,9 +65,21 @@
           "type": "string",
           "description": "The segment/department for the report."
         },
-        "keterangan": {
+        "noPlatKendaraan": {
           "type": "string",
-          "description": "Description or details of the report."
+          "description": "Vehicle license plate number."
+        },
+        "kmAwal": {
+          "type": "number",
+          "description": "Starting odometer reading."
+        },
+        "kmAkhir": {
+          "type": "number",
+          "description": "Ending odometer reading."
+        },
+        "uraianPekerjaan": {
+          "type": "string",
+          "description": "Job description or details."
         },
         "nominal": {
           "type": "number",
@@ -105,6 +117,9 @@
         "userEmail",
         "tanggal",
         "segmen",
+        "noPlatKendaraan",
+        "kmAwal",
+        "kmAkhir",
         "nominal",
         "namaPic",
         "dateCreated",

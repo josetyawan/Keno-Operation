@@ -102,7 +102,7 @@ export default function NotaDetailPage({ params }: { params: { id: string } }) {
             </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-6 text-sm">
             <div>
               <p className="text-muted-foreground">Nama PIC</p>
               <p className="font-medium">{nota.namaPic}</p>
@@ -111,12 +111,20 @@ export default function NotaDetailPage({ params }: { params: { id: string } }) {
               <p className="text-muted-foreground">Nominal</p>
               <p className="font-medium">Rp {nota.nominal.toLocaleString('id-ID')}</p>
             </div>
+             <div>
+              <p className="text-muted-foreground">No Plat Kendaraan</p>
+              <p className="font-medium">{nota.noPlatKendaraan}</p>
+            </div>
+             <div>
+              <p className="text-muted-foreground">KM Awal / Akhir</p>
+              <p className="font-medium">{nota.kmAwal} / {nota.kmAkhir}</p>
+            </div>
           </div>
-          {nota.keterangan && (
+          {nota.uraianPekerjaan && (
             <div>
-                <p className="text-muted-foreground text-sm">Keterangan</p>
+                <p className="text-muted-foreground text-sm">Uraian Pekerjaan</p>
                 <div className="text-foreground whitespace-pre-wrap text-sm border p-3 rounded-md bg-muted/50">
-                    {nota.keterangan}
+                    {nota.uraianPekerjaan}
                 </div>
             </div>
           )}

@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -85,10 +84,13 @@ export default function NewNotaPage() {
   // Form state
   const [tanggal, setTanggal] = useState<Date | undefined>();
   const [segmen, setSegmen] = useState('');
-  const [keterangan, setKeterangan] = useState('');
+  const [noPlatKendaraan, setNoPlatKendaraan] = useState('');
+  const [kmAwal, setKmAwal] = useState('');
+  const [kmAkhir, setKmAkhir] = useState('');
+  const [uraianPekerjaan, setUraianPekerjaan] = useState('');
   const [nominal, setNominal] = useState('');
   const [namaPic, setNamaPic] = useState('');
-  const [files, setFiles] = useState<(File | null)[]>([null, null, null, null]);
+  const [files, setFiles] = useState<(File | null)[]>(Array(7).fill(null));
 
   const handleFileChange = (index: number, file: File | null) => {
     const newFiles = [...files];
@@ -107,7 +109,7 @@ export default function NewNotaPage() {
       return;
     }
     // Basic validation
-    if (!tanggal || !segmen || !nominal || !namaPic) {
+    if (!tanggal || !segmen || !noPlatKendaraan || !kmAwal || !kmAkhir || !nominal || !namaPic) {
       toast({
         variant: 'destructive',
         title: 'Incomplete Form',
@@ -127,7 +129,10 @@ export default function NewNotaPage() {
       userEmail: user.email,
       tanggal: tanggal,
       segmen,
-      keterangan,
+      noPlatKendaraan,
+      kmAwal: Number(kmAwal),
+      kmAkhir: Number(kmAkhir),
+      uraianPekerjaan,
       nominal: Number(nominal),
       namaPic,
       fotoEvidenUrls: [], // Placeholder for file URLs
@@ -157,7 +162,7 @@ export default function NewNotaPage() {
             </Button>
           </Link>
           <h1 className="flex-1 shrink-0 whitespace-nowrap text-xl font-bold tracking-tight sm:grow-0">
-            Tambah Laporan Baru
+            Input Laporan Nota
           </h1>
           <div className="hidden items-center gap-2 md:ml-auto md:flex">
             <Link href="/dashboard">
@@ -211,22 +216,66 @@ export default function NewNotaPage() {
                       <SelectValue placeholder="Pilih segmen" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Sekretariat">Sekretariat</SelectItem>
-                      <SelectItem value="Operasional">Operasional</SelectItem>
-                      <SelectItem value="Perencanaan">Perencanaan</SelectItem>
-                      <SelectItem value="Keuangan">Keuangan</SelectItem>
-                      <SelectItem value="Pengawasan">Pengawasan</SelectItem>
+                        <SelectItem value="BBM R2">BBM R2</SelectItem>
+                        <SelectItem value="BBM R4 Harian">BBM R4 Harian</SelectItem>
+                        <SelectItem value="BBM R4 Turlap">BBM R4 Turlap</SelectItem>
+                        <SelectItem value="BBM R4 UT">BBM R4 UT</SelectItem>
+                        <SelectItem value="Material">Material</SelectItem>
+                        <SelectItem value="BBM Genset">BBM Genset</SelectItem>
+                        <SelectItem value="jasa">Jasa</SelectItem>
+                        <SelectItem value="Konsumsi Turlap">Konsumsi Turlap</SelectItem>
+                        <SelectItem value="Konsumsi UT">Konsumsi UT</SelectItem>
+                        <SelectItem value="Konsumsi Lembur">Konsumsi Lembur</SelectItem>
+                        <SelectItem value="Material SPPG">Material SPPG</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
+
+               <div className="grid gap-3">
+                  <Label htmlFor="noPlatKendaraan">No Plat Kendaraan *</Label>
+                  <Input
+                    id="noPlatKendaraan"
+                    type="text"
+                    placeholder="B 1234 ABC"
+                    required
+                    value={noPlatKendaraan}
+                    onChange={(e) => setNoPlatKendaraan(e.target.value)}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid gap-3">
+                        <Label htmlFor="kmAwal">KM Awal *</Label>
+                        <Input
+                            id="kmAwal"
+                            type="number"
+                            placeholder="10000"
+                            required
+                            value={kmAwal}
+                            onChange={(e) => setKmAwal(e.target.value)}
+                        />
+                    </div>
+                    <div className="grid gap-3">
+                        <Label htmlFor="kmAkhir">KM Akhir *</Label>
+                        <Input
+                            id="kmAkhir"
+                            type="number"
+                            placeholder="10050"
+                            required
+                            value={kmAkhir}
+                            onChange={(e) => setKmAkhir(e.target.value)}
+                        />
+                    </div>
+                </div>
+
               <div className="grid gap-3">
-                <Label htmlFor="keterangan">Keterangan</Label>
+                <Label htmlFor="uraianPekerjaan">Uraian Pekerjaan</Label>
                 <Textarea
-                  id="keterangan"
-                  placeholder="Keterangan..."
-                  value={keterangan}
-                  onChange={(e) => setKeterangan(e.target.value)}
+                  id="uraianPekerjaan"
+                  placeholder="Detail pekerjaan..."
+                  value={uraianPekerjaan}
+                  onChange={(e) => setUraianPekerjaan(e.target.value)}
                 />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -258,27 +307,45 @@ export default function NewNotaPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <PhotoUpload
                     id="foto1"
-                    label="Foto Eviden 1"
+                    label="Foto Keperluan 1"
                     file={files[0]}
                     onFileChange={(file) => handleFileChange(0, file)}
                   />
                   <PhotoUpload
                     id="foto2"
-                    label="Foto Eviden 2"
+                    label="Foto Keperluan 2"
                     file={files[1]}
                     onFileChange={(file) => handleFileChange(1, file)}
                   />
                   <PhotoUpload
                     id="foto3"
-                    label="Foto Eviden 3"
+                    label="Foto Keperluan 3"
                     file={files[2]}
                     onFileChange={(file) => handleFileChange(2, file)}
                   />
                   <PhotoUpload
                     id="foto4"
-                    label="Foto Eviden 4"
+                    label="Foto Keperluan 4"
                     file={files[3]}
                     onFileChange={(file) => handleFileChange(3, file)}
+                  />
+                   <PhotoUpload
+                    id="foto5"
+                    label="Foto KM Awal Bulan"
+                    file={files[4]}
+                    onFileChange={(file) => handleFileChange(4, file)}
+                  />
+                   <PhotoUpload
+                    id="foto6"
+                    label="Foto KM Awal"
+                    file={files[5]}
+                    onFileChange={(file) => handleFileChange(5, file)}
+                  />
+                   <PhotoUpload
+                    id="foto7"
+                    label="Foto KM Akhir"
+                    file={files[6]}
+                    onFileChange={(file) => handleFileChange(6, file)}
                   />
                 </div>
               </div>

@@ -33,7 +33,7 @@ function NotaCard({ nota }: { nota: Nota }) {
       </CardHeader>
       <CardContent className="flex-grow space-y-2">
         <p className="text-sm text-muted-foreground line-clamp-2 h-10">
-          {nota.keterangan || <span className="italic">Tidak ada keterangan.</span>}
+          {nota.uraianPekerjaan || <span className="italic">Tidak ada uraian pekerjaan.</span>}
         </p>
          <p className="text-lg font-semibold">
             Rp {nota.nominal.toLocaleString('id-ID')}
