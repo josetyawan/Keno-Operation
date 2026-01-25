@@ -2,14 +2,15 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
+    // Rules for the 'notas' directory
     match /notas/{userId}/{allPaths=**} {
-      // Izinkan siapa saja untuk membaca (melihat) gambar jika mereka memiliki URL.
-      // Ini penting agar gambar dapat ditampilkan di dasbor untuk semua pengguna.
+      // Allow anyone to read files if they have the URL.
+      // This is necessary for displaying images in the app for all users.
       allow read: if true;
 
-      // Izinkan penulisan (unggah, perbarui, hapus) HANYA jika ID pengguna yang
-      // sedang login (request.auth.uid) sama dengan ID pengguna di path file (userId).
-      // Ini memastikan pengguna hanya bisa menulis ke folder mereka sendiri.
+      // Allow write operations (create, update, delete) only if the
+      // requesting user is authenticated and their UID matches the 'userId'
+      // in the file path. This ensures users can only write to their own folder.
       allow write: if request.auth != null && request.auth.uid == userId;
     }
   }

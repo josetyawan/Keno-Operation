@@ -28,7 +28,7 @@ import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { ArrowLeft, CalendarIcon, Camera, Upload } from 'lucide-react';
 import { useState } from 'react';
-import { useFirestore, addDocumentNonBlocking, useAuth, useStorage } from '@/firebase';
+import { useFirestore, addDocumentNonBlocking, useUser, useStorage } from '@/firebase';
 import { collection, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { cn } from '@/lib/utils';
@@ -80,7 +80,7 @@ export default function NewNotaPage() {
   const router = useRouter();
   const { toast } = useToast();
   const firestore = useFirestore();
-  const auth = useAuth();
+  const { user } = useUser();
   const storage = useStorage();
   const [isSaving, setIsSaving] = useState(false);
 
@@ -133,8 +133,6 @@ export default function NewNotaPage() {
     event.preventDefault();
     setIsSaving(true);
     
-    const user = auth.currentUser;
-
     if (!user || !user.uid || !user.email) {
       toast({
         variant: 'destructive',
