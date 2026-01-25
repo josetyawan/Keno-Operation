@@ -12,14 +12,26 @@ import {
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import { ArrowLeft, CheckCircle, Edit } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Edit, Trash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useDoc, useFirestore, useUser, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { useDoc, useFirestore, useUser, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { Nota, UserProfile } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
+import { useState } from 'react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function NotaDetailPage() {
   const params = useParams();
@@ -29,6 +41,8 @@ export default function NotaDetailPage() {
   const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const userDocRef = useMemoFirebase(() => {
     if (!user) return null;
@@ -50,6 +64,29 @@ export default function NotaDetailPage() {
       title: 'Laporan Diverifikasi',
       description: 'Status laporan telah diperbarui menjadi "verified".',
     });
+  };
+
+  const handleDelete = () => {
+    if (!notaRef) return;
+    if (!isOwner && !isAdmin) {
+      toast({
+        variant: 'destructive',
+        title: 'Unauthorized',
+        description: "You don't have permission to delete this report.",
+      });
+      return;
+    }
+    
+    setIsDeleting(true);
+    deleteDocumentNonBlocking(notaRef);
+    
+    toast({
+      title: 'Laporan Dihapus',
+      description: 'Laporan ini telah berhasil dihapus.',
+    });
+    
+    setIsDeleteDialogOpen(false);
+    router.push('/dashboard');
   };
 
   if (isLoading) {
@@ -162,11 +199,38 @@ export default function NotaDetailPage() {
             </div>
             <div className="flex gap-2">
                 {(isOwner || isAdmin) && (
-                     <Link href={`/dashboard/notas/${id}/edit`}>
-                        <Button variant="outline">
-                            <Edit /> Edit
-                        </Button>
-                     </Link>
+                    <>
+                        <Link href={`/dashboard/notas/${id}/edit`}>
+                            <Button variant="outline">
+                                <Edit /> Edit
+                            </Button>
+                        </Link>
+                        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive">
+                                    <Trash /> Hapus
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                <AlertDialogTitle>Anda yakin ingin menghapus?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    Tindakan ini tidak dapat dibatalkan. Laporan ini akan dihapus secara permanen.
+                                </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                                    <AlertDialogAction
+                                        onClick={handleDelete}
+                                        disabled={isDeleting}
+                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                        {isDeleting ? 'Menghapus...' : 'Hapus'}
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </>
                 )}
                 {isAdmin && nota.status === 'pending' && (
                     <Button onClick={handleVerify}>

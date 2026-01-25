@@ -19,4 +19,8 @@ export type Nota = {
 
 export type UserProfile = {
     id: string;
-    
+    email: string;
+    firstName?: string;
+    lastName?: string;
+    role: 'admin' | 'user';
+};
