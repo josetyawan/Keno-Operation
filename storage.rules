@@ -2,13 +2,18 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
+    // Files are stored in folders named after the user's ID.
+    // e.g., /notas/USER_UID/image.jpg
     match /notas/{userId}/{allPaths=**} {
-      // Allow public read access to anyone.
+
+      // Allow public read access for all files within the 'notas' path.
+      // This is required so that images can be displayed in the app by anyone.
       allow read: if true;
-      
-      // Allow write access to any authenticated user.
-      // This is a temporary, permissive rule for debugging the 'storage/unauthorized' error.
-      allow write: if request.auth != null;
+
+      // Allow write (create, update, delete) operations only if the
+      // authenticated user's UID matches the {userId} in the file path.
+      // This ensures users can only write to their own folder.
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
