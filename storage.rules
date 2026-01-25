@@ -2,16 +2,11 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Matches all files in the 'notas' folder
-    match /notas/{userId}/{allPaths=**} {
-
-      // Anyone can read any file. This is necessary for displaying images
-      // to all users in the application.
-      allow read: if true;
-
-      // Only the authenticated user whose UID matches the {userId} in the path
-      // can write (upload, update, delete) to their own folder.
-      allow write: if request.auth != null && request.auth.uid == userId;
+    match /{allPaths=**} {
+      // PERINGATAN: Aturan ini tidak aman dan hanya untuk tujuan diagnosis.
+      // Aturan ini mengizinkan siapa saja di internet untuk membaca dan menulis
+      // ke Storage Anda.
+      allow read, write: if true;
     }
   }
 }
