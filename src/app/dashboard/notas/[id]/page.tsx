@@ -32,6 +32,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { SummarizeButton } from './summarize-button';
 
 export default function NotaDetailPage() {
   const params = useParams();
@@ -102,17 +103,25 @@ export default function NotaDetailPage() {
       )
   }
 
-  if (error) {
-    console.error(error);
-    notFound();
-  }
-
-  if (!nota) {
+  if (error || !nota) {
+    // This will be caught by the not-found mechanism
     notFound();
   }
 
   const tanggalLaporan = nota.tanggal?.toDate ? nota.tanggal.toDate() : new Date();
   const isOwner = user?.uid === nota.userId;
+  
+  const notaContentForSummary = `
+  Tanggal: ${format(tanggalLaporan, 'dd MMMM yyyy')}
+  Segmen: ${nota.segmen}
+  PIC: ${nota.namaPic}
+  Nominal: Rp ${nota.nominal.toLocaleString('id-ID')}
+  ${nota.noPlatKendaraan ? `No. Plat: ${nota.noPlatKendaraan}` : ''}
+  ${(nota.kmAwal && nota.kmAkhir) ? `KM: ${nota.kmAwal} - ${nota.kmAkhir}` : ''}
+  ${nota.namaBarang ? `Barang/Jasa: ${nota.namaBarang}` : ''}
+  Keterangan: ${nota.keterangan || '-'}
+  Status: ${nota.status}
+  `.trim();
 
   return (
     <div className="mx-auto grid max-w-4xl flex-1 auto-rows-max gap-6">
@@ -197,7 +206,8 @@ export default function NotaDetailPage() {
             <div className="flex-grow text-xs text-muted-foreground">
                 Laporan ID: {nota.id}
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap justify-end">
+                <SummarizeButton notaContent={notaContentForSummary} />
                 {(isOwner || isAdmin) && (
                     <>
                         <Link href={`/dashboard/notas/${id}/edit`}>

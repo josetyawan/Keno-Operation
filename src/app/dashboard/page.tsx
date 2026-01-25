@@ -121,9 +121,11 @@ export default function DashboardPage() {
                     Tambah Nota
                 </Button>
             </Link>
-            <Button variant="outline">
-                Buat Laporan Rekap
-            </Button>
+            <Link href="/dashboard/rekap">
+              <Button variant="outline">
+                  Buat Laporan Rekap
+              </Button>
+            </Link>
         </div>
       </div>
 
@@ -163,7 +165,9 @@ export default function DashboardPage() {
                       {nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd MMM yyyy', { locale: idLocale }) : '-'}
                     </TableCell>
                     <TableCell className="text-center pr-6">
-                      <NotaActions notaId={nota.id} />
+                      <Link href={`/dashboard/notas/${nota.id}`}>
+                        <Button variant="ghost" size="sm">Detail</Button>
+                      </Link>
                     </TableCell>
                   </TableRow>
                 ))}
