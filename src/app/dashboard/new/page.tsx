@@ -132,7 +132,6 @@ export default function NewNotaPage() {
     event.preventDefault();
     setIsSaving(true);
     
-    // Direct auth check as per AI analysis to ensure auth state is not stale
     const auth = getAuth();
     const user = auth.currentUser;
 
@@ -146,7 +145,6 @@ export default function NewNotaPage() {
       return;
     }
     
-    // Dynamic validation
     let isFormValid = !!(tanggal && segmen && nominal && namaPic);
     if (isBBMKendaraan) {
         isFormValid = isFormValid && !!(noPlatKendaraan && kmAwal && kmAkhir);
@@ -172,6 +170,8 @@ export default function NewNotaPage() {
           const filePath = `notas/${user.uid}/${fileName}`;
           const storageRef = ref(storage, filePath);
           
+          console.log(`[VERIFICATION] Preparing to upload to path: ${storageRef.fullPath}`);
+
           await uploadBytes(storageRef, file);
           const downloadURL = await getDownloadURL(storageRef);
           return downloadURL;
