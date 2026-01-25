@@ -2,17 +2,15 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Files are uploaded to paths like: /notas/{userId}/{fileName}
-    
-    // Anyone can read any file if they have the URL. This is necessary
-    // for the images to be displayed in the app.
-    match /{allPaths=**} {
-        allow read: if true;
-    }
-
-    // A user can only write (create, update, delete) files inside their own
-    // user-specific folder within the 'notas' directory.
+    // Match files within the 'notas' directory, structured by user ID.
     match /notas/{userId}/{allPaths=**} {
+      
+      // Allow anyone to read files. This is required for displaying images
+      // in the app via their public URL.
+      allow read: if true;
+      
+      // Only allow a user to write (create, update, delete) to their own folder.
+      // The user's auth UID must match the {userId} in the file path.
       allow write: if request.auth != null && request.auth.uid == userId;
     }
   }
