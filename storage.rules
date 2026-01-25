@@ -1,12 +1,14 @@
 rules_version = '2';
-
 service firebase.storage {
   match /b/{bucket}/o {
+    // Allow public read access for all files so images can be displayed.
     match /{allPaths=**} {
-      // Temporary rule for diagnostics.
-      // Allows any read or write to see if the request succeeds at all.
-      // WARNING: This is insecure and for testing only.
-      allow read, write: if true;
+      allow read: if true;
+    }
+
+    // Secure write access. Only the authenticated owner of the folder can write.
+    match /notas/{userId}/{allPaths=**} {
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
