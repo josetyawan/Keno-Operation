@@ -21,7 +21,7 @@
  *   nota for verification purposes.
  * - **Default Deny**: Any path not explicitly defined is inaccessible.
  *
- * Trivial change to force rule deployment. Deployment refresh again.
+ * TRIGGERING REDEPLOYMENT FOR STORAGE RULES v4.
  */
 rules_version = '2';
 service cloud.firestore {

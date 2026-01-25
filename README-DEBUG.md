@@ -1,27 +1,53 @@
-# Panduan Debugging Masalah Izin Firebase Storage (Error 403 / Unauthorized)
+# Panduan Darurat: Memperbaiki Izin Unggah Foto Secara Manual
 
-Jika Anda melihat file ini, itu berarti kita telah mencoba semua perbaikan dari sisi kode, tetapi masalah izin unggah file masih berlanjut. Ini sangat menunjukkan masalahnya ada pada konfigurasi proyek Firebase Anda di **Google Cloud Console**.
+Jika Anda melihat file ini, itu berarti sistem penerapan aturan otomatis kami gagal menyinkronkan perubahan ke server Firebase. Ini adalah situasi yang sangat jarang terjadi.
 
-Ikuti langkah-langkah ini untuk memeriksanya:
+Kesalahan `storage/unauthorized` yang terus-menerus Anda lihat disebabkan karena aturan di server Firebase Anda masih menolak unggahan, meskipun file `storage.rules` di proyek Anda sudah benar.
 
-### Langkah 1: Pastikan API yang Diperlukan Aktif
+**Untuk mengatasi ini, Anda perlu menyalin dan menempelkan aturan yang benar secara manual ke Firebase Console.**
 
-Firebase Storage bergantung pada API Google Cloud. Jika API ini tidak aktif, semua permintaan akan gagal.
+Ikuti langkah-langkah berikut:
 
-1.  Buka Google Cloud Console: [https://console.cloud.google.com/](https://console.cloud.google.com/)
-2.  Pastikan Anda telah memilih proyek yang benar. Nama proyek Anda adalah **`studio-7759201113-b7263`**.
-3.  Di bilah pencarian di bagian atas, cari dan buka **"APIs & Services"**.
-4.  Klik **"Enabled APIs & services"** (atau "Library" jika Anda tidak dapat menemukannya, lalu cari API-nya).
-5.  Pastikan API berikut ada di daftar dan berstatus **Enabled**:
-    *   **Cloud Storage API**
-    *   **Firebase Storage API** (Terkadang disebut "Cloud Storage for Firebase API")
-    *   **Identity and Access Management (IAM) API**
-    *   **Firebase Management API**
+### Langkah 1: Salin Aturan yang Benar
 
-Jika salah satu dari API di atas tidak aktif (disabled), klik API tersebut dan klik tombol **"ENABLE"**. Tunggu beberapa menit setelah mengaktifkannya, lalu coba unggah file lagi di aplikasi Anda.
+Salin **seluruh teks** di dalam kotak di bawah ini. Ini adalah aturan keamanan yang benar untuk Firebase Storage Anda.
 
-### Langkah 2: Coba Lagi
+```rules
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Izinkan siapa saja untuk MEMBACA file (agar gambar bisa tampil)
+    match /{allPaths=**} {
+      allow read: if true;
+    }
 
-Setelah memeriksa dan memastikan API sudah aktif, coba lagi untuk mengunggah file di aplikasi NotaKu. Ini adalah penyebab paling umum untuk masalah yang membandel seperti ini.
+    // Hanya izinkan pengguna yang login untuk MENULIS ke folder notas MEREKA SENDIRI
+    match /notas/{userId}/{allPaths=**} {
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
 
-Jika setelah mengikuti langkah-langkah ini masalah masih berlanjut, ini menandakan masalah yang sangat langka pada proyek Anda yang mungkin memerlukan dukungan langsung dari Firebase.
+    // Hanya izinkan pengguna yang login untuk MENULIS foto profil MEREKA SENDIRI
+    match /profile-pictures/{userId} {
+       allow write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
+```
+
+### Langkah 2: Buka Firebase Console
+
+Buka [Firebase Console](https://console.firebase.google.com/) dan navigasikan ke proyek Anda.
+
+1.  Di menu sebelah kiri, klik **Build** > **Storage**.
+2.  Di bagian atas halaman Storage, klik tab **Rules**.
+
+### Langkah 3: Tempel dan Publikasikan Aturan Baru
+
+1.  Anda akan melihat editor teks dengan aturan yang ada saat ini (kemungkinan besar yang berisi `allow read, write: if false;`).
+2.  **Hapus seluruh teks** yang ada di editor tersebut.
+3.  **Tempel (paste)** aturan yang Anda salin dari Langkah 1 ke dalam editor.
+4.  Klik tombol **Publish** (atau "Publikasikan").
+
+Setelah Anda mempublikasikan aturan baru, tunggu sekitar satu menit, lalu coba unggah foto profil Anda lagi di aplikasi. Kali ini seharusnya berhasil.
+
+Saya mohon maaf atas ketidaknyamanan yang luar biasa ini. Langkah manual ini seharusnya tidak diperlukan, dan saya berterima kasih atas kesabaran Anda.
