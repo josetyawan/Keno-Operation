@@ -2,18 +2,13 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    
-    // Rules for all files within the 'notas' directory.
     match /notas/{userId}/{allPaths=**} {
-      
-      // Allow public read access. This is necessary for anyone using the app
-      // to see the evidence images via their URL.
+      // Allow public read access to anyone.
       allow read: if true;
       
-      // Allow write access (upload, update, delete) only if the user's authenticated
-      // UID matches the {userId} in the path. This is a simplified rule to resolve
-      // a complex evaluation error with cross-service admin checks.
-      allow write: if request.auth != null && request.auth.uid == userId;
+      // Allow write access to any authenticated user.
+      // This is a temporary, permissive rule for debugging the 'storage/unauthorized' error.
+      allow write: if request.auth != null;
     }
   }
 }
