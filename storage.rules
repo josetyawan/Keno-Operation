@@ -2,7 +2,6 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Aturan yang Benar dan Aman
     match /notas/{userId}/{allPaths=**} {
       // Izinkan siapa saja untuk membaca (melihat) gambar jika mereka memiliki URL.
       // Ini penting agar gambar dapat ditampilkan di dasbor untuk semua pengguna.
