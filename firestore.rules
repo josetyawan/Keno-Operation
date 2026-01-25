@@ -20,6 +20,8 @@
  *   document) have elevated privileges, specifically the ability to update any
  *   nota for verification purposes.
  * - **Default Deny**: Any path not explicitly defined is inaccessible.
+ *
+ * Trivial change to force rule deployment.
  */
 rules_version = '2';
 service cloud.firestore {

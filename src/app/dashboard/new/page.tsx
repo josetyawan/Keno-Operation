@@ -133,11 +133,14 @@ export default function NewNotaPage() {
     event.preventDefault();
     setIsSaving(true);
     
+    // Detailed check of user object before upload attempt
+    console.log('User object at time of submission:', JSON.stringify(user, null, 2));
+
     if (!user || !user.uid || !user.email) {
       toast({
         variant: 'destructive',
         title: 'Authentication Error',
-        description: 'User information not found. Please try logging out and back in.',
+        description: 'User information not found. Please log out and log back in, then try again.',
       });
       setIsSaving(false);
       return;
