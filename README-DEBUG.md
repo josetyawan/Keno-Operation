@@ -25,11 +25,6 @@ service firebase.storage {
     match /notas/{userId}/{allPaths=**} {
       allow write: if request.auth != null && request.auth.uid == userId;
     }
-
-    // Hanya izinkan pengguna yang login untuk MENULIS foto profil MEREKA SENDIRI
-    match /profile-pictures/{userId} {
-       allow write: if request.auth != null && request.auth.uid == userId;
-    }
   }
 }
 ```
@@ -48,6 +43,6 @@ Buka [Firebase Console](https://console.firebase.google.com/) dan navigasikan ke
 3.  **Tempel (paste)** aturan yang Anda salin dari Langkah 1 ke dalam editor.
 4.  Klik tombol **Publish** (atau "Publikasikan").
 
-Setelah Anda mempublikasikan aturan baru, tunggu sekitar satu menit, lalu coba unggah foto profil Anda lagi di aplikasi. Kali ini seharusnya berhasil.
+Setelah Anda mempublikasikan aturan baru, tunggu sekitar satu menit, lalu coba unggah foto nota Anda lagi di aplikasi. Kali ini seharusnya berhasil.
 
 Saya mohon maaf atas ketidaknyamanan yang luar biasa ini. Langkah manual ini seharusnya tidak diperlukan, dan saya berterima kasih atas kesabaran Anda.

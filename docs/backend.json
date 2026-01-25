@@ -27,11 +27,6 @@
           "type": "string",
           "description": "User's full display name."
         },
-        "photoURL": {
-          "type": "string",
-          "description": "URL for the user's profile picture.",
-          "format": "uri"
-        },
         "role": {
           "type": "string",
           "description": "The role of the user, defaults to 'user'.",

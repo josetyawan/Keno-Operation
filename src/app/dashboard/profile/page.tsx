@@ -1,30 +1,25 @@
 'use client';
 
-import { useUser, useDoc, useFirestore, useMemoFirebase, useStorage, updateDocumentNonBlocking } from '@/firebase';
+import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import Image from 'next/image';
-import { ArrowLeft, Camera, Loader2 } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import type { UserProfile } from '@/lib/types';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function ProfilePage() {
   const { user, isUserLoading: isAuthLoading } = useUser();
   const firestore = useFirestore();
-  const storage = useStorage();
   const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [isSaving, setIsSaving] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
 
   // Form state
   const [firstName, setFirstName] = useState('');
@@ -80,41 +75,6 @@ export default function ProfilePage() {
     }
   };
 
-  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!event.target.files || !event.target.files[0] || !user || !userDocRef) return;
-    
-    const file = event.target.files[0];
-    setIsUploading(true);
-
-    const filePath = `profile-pictures/${user.uid}`;
-    const storageRef = ref(storage, filePath);
-
-    try {
-      await uploadBytes(storageRef, file);
-      const photoURL = await getDownloadURL(storageRef);
-      await updateDoc(userDocRef, { photoURL });
-
-      toast({
-        title: 'Photo Uploaded',
-        description: 'Your new profile picture has been saved.',
-      });
-
-    } catch (error) {
-      console.error('Error uploading photo:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Upload Failed',
-        description: 'Could not upload your photo. Please try again.',
-      });
-    } finally {
-      setIsUploading(false);
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  };
-
 
   if (isLoading) {
     return (
@@ -129,9 +89,6 @@ export default function ProfilePage() {
                     <Skeleton className="h-4 w-3/4" />
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="flex justify-center">
-                      <Skeleton className="h-32 w-32 rounded-full" />
-                    </div>
                      <div className="space-y-2">
                         <Skeleton className="h-4 w-1/4" />
                         <Skeleton className="h-10 w-full" />
@@ -165,38 +122,10 @@ export default function ProfilePage() {
           <CardHeader>
             <CardTitle>Your Profile</CardTitle>
             <CardDescription>
-              Update your photo and personal details here.
+              Update your personal details here.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-8">
-              <div className="flex flex-col items-center gap-4">
-                  <div className="relative">
-                      <Image
-                        src={userProfile?.photoURL || `https://ui-avatars.com/api/?name=${displayName || user?.email}&background=random`}
-                        alt="Profile picture"
-                        width={128}
-                        height={128}
-                        className="h-32 w-32 rounded-full object-cover border-4 border-card-foreground/10"
-                      />
-                      <Button
-                        type="button"
-                        size="icon"
-                        className="absolute bottom-1 right-1 h-8 w-8 rounded-full"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={isUploading}
-                      >
-                         {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
-                      </Button>
-                      <Input
-                        type="file"
-                        ref={fileInputRef}
-                        className="hidden"
-                        onChange={handlePhotoUpload}
-                        accept="image/png, image/jpeg, image/gif"
-                      />
-                  </div>
-              </div>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="grid gap-2">
                       <Label htmlFor="firstName">First Name</Label>
