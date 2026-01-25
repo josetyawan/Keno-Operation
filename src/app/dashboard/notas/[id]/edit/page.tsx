@@ -30,7 +30,7 @@ import Link from 'next/link';
 import { ArrowLeft, CalendarIcon, Upload } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useUser, useFirestore, useDoc, useMemoFirebase, updateDocumentNonBlocking, useStorage } from '@/firebase';
-import { doc, serverTimestamp } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { Nota, UserProfile } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -118,6 +118,16 @@ export default function EditNotaPage() {
   
   const isBBMKendaraan = segmen && bbmKendaraanSegments.includes(segmen);
   const isNonBBMKendaraan = segmen && nonBbmKendaraanSegments.includes(segmen);
+
+  const photoUploadSlots = [
+    { id: 'foto1', bbmLabel: 'Foto Keperluan 1', nonBbmLabel: 'Foto Eviden 1', isBbmOnly: false },
+    { id: 'foto2', bbmLabel: 'Foto Keperluan 2', nonBbmLabel: 'Foto Eviden 2', isBbmOnly: false },
+    { id: 'foto3', bbmLabel: 'Foto Keperluan 3', nonBbmLabel: 'Foto Eviden 3', isBbmOnly: false },
+    { id: 'foto4', bbmLabel: 'Foto Keperluan 4', nonBbmLabel: 'Foto Eviden 4', isBbmOnly: false },
+    { id: 'foto5', bbmLabel: 'Foto KM Awal Bulan', nonBbmLabel: '', isBbmOnly: true },
+    { id: 'foto6', bbmLabel: 'Foto KM Awal', nonBbmLabel: '', isBbmOnly: true },
+    { id: 'foto7', bbmLabel: 'Foto KM Akhir', nonBbmLabel: '', isBbmOnly: true },
+  ];
 
   // Get user profile to check for admin role
   const userDocRef = useMemoFirebase(() => {
@@ -214,58 +224,59 @@ export default function EditNotaPage() {
     setIsSaving(true);
 
     try {
-        const existingUrls = nota?.fotoEvidenUrls || [];
-        const finalUrls = [...existingUrls];
-
-        const uploadPromises = files.map(async (file, index) => {
-            if (file) {
-                const fileExtension = file.name.split('.').pop();
-                const fileName = `${user.uid}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExtension}`;
-                const filePath = `notas/${user.uid}/${fileName}`;
-                const storageRef = ref(storage, filePath);
-                
-                await uploadBytes(storageRef, file);
-                const downloadURL = await getDownloadURL(storageRef);
-                
-                finalUrls[index] = downloadURL;
-            }
-        });
-        
-        await Promise.all(uploadPromises);
-
-        const updatedData: Partial<Nota> = {
-            tanggal,
-            segmen,
-            keterangan,
-            nominal: Number(nominal),
-            namaPic,
-            fotoEvidenUrls: finalUrls,
-        };
-        
-        if (isBBMKendaraan) {
-            updatedData.noPlatKendaraan = noPlatKendaraan;
-            updatedData.kmAwal = Number(kmAwal);
-            updatedData.kmAkhir = Number(kmAkhir);
-        } else {
-            updatedData.noPlatKendaraan = '';
-            updatedData.kmAwal = 0;
-            updatedData.kmAkhir = 0;
+      const uploadPromises = files.map(async (file, index) => {
+        if (file) {
+          // Upload new file and return its URL
+          const fileExtension = file.name.split('.').pop();
+          const fileName = `${user.uid}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExtension}`;
+          const filePath = `notas/${user.uid}/${fileName}`;
+          const storageRef = ref(storage, filePath);
+          
+          await uploadBytes(storageRef, file);
+          return getDownloadURL(storageRef);
         }
-        
-        if(isNonBBMKendaraan) {
-            updatedData.namaBarang = namaBarang;
-        } else {
-            updatedData.namaBarang = '';
-        }
-        
-        updateDocumentNonBlocking(notaRef, updatedData);
+        // No new file, so return the existing URL for this slot, if it exists
+        return nota?.fotoEvidenUrls?.[index] ?? null;
+      });
+      
+      const allPossibleUrls = await Promise.all(uploadPromises);
+      
+      // Filter out any nulls (slots that never had an image and weren't updated)
+      const finalUrls = allPossibleUrls.filter((url): url is string => !!url);
 
-        toast({
-          title: 'Laporan Diperbarui!',
-          description: 'Laporan Anda telah berhasil disimpan.',
-        });
-        
-        router.push(`/dashboard/notas/${id}`);
+      const updatedData: Partial<Nota> = {
+          tanggal,
+          segmen,
+          keterangan,
+          nominal: Number(nominal),
+          namaPic,
+          fotoEvidenUrls: finalUrls,
+      };
+      
+      if (isBBMKendaraan) {
+          updatedData.noPlatKendaraan = noPlatKendaraan;
+          updatedData.kmAwal = Number(kmAwal);
+          updatedData.kmAkhir = Number(kmAkhir);
+      } else {
+          updatedData.noPlatKendaraan = '';
+          updatedData.kmAwal = 0;
+          updatedData.kmAkhir = 0;
+      }
+      
+      if(isNonBBMKendaraan) {
+          updatedData.namaBarang = namaBarang;
+      } else {
+          updatedData.namaBarang = '';
+      }
+      
+      updateDocumentNonBlocking(notaRef, updatedData);
+
+      toast({
+        title: 'Laporan Diperbarui!',
+        description: 'Laporan Anda telah berhasil disimpan.',
+      });
+      
+      router.push(`/dashboard/notas/${id}`);
     } catch(error) {
         console.error("Error updating nota:", error);
         toast({
@@ -477,24 +488,21 @@ export default function EditNotaPage() {
               </div>
               <div>
                 <Label className="mb-3 block">Upload Foto Bukti</Label>
-                 {isBBMKendaraan ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <PhotoUpload id="foto1" label="Foto Keperluan 1" onFileChange={(file) => handleFileChange(0, file)} existingImageUrl={nota.fotoEvidenUrls?.[0]} />
-                        <PhotoUpload id="foto2" label="Foto Keperluan 2" onFileChange={(file) => handleFileChange(1, file)} existingImageUrl={nota.fotoEvidenUrls?.[1]} />
-                        <PhotoUpload id="foto3" label="Foto Keperluan 3" onFileChange={(file) => handleFileChange(2, file)} existingImageUrl={nota.fotoEvidenUrls?.[2]} />
-                        <PhotoUpload id="foto4" label="Foto Keperluan 4" onFileChange={(file) => handleFileChange(3, file)} existingImageUrl={nota.fotoEvidenUrls?.[3]} />
-                        <PhotoUpload id="foto5" label="Foto KM Awal Bulan" onFileChange={(file) => handleFileChange(4, file)} existingImageUrl={nota.fotoEvidenUrls?.[4]} />
-                        <PhotoUpload id="foto6" label="Foto KM Awal" onFileChange={(file) => handleFileChange(5, file)} existingImageUrl={nota.fotoEvidenUrls?.[5]} />
-                        <PhotoUpload id="foto7" label="Foto KM Akhir" onFileChange={(file) => handleFileChange(6, file)} existingImageUrl={nota.fotoEvidenUrls?.[6]} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {photoUploadSlots.map((slot, index) => (
+                    <div
+                      key={slot.id}
+                      className={cn(slot.isBbmOnly && !isBBMKendaraan && 'hidden')}
+                    >
+                      <PhotoUpload
+                        id={slot.id}
+                        label={isBBMKendaraan ? slot.bbmLabel : slot.nonBbmLabel}
+                        onFileChange={(file) => handleFileChange(index, file)}
+                        existingImageUrl={nota.fotoEvidenUrls?.[index]}
+                      />
                     </div>
-                 ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <PhotoUpload id="foto1" label="Foto Eviden 1" onFileChange={(file) => handleFileChange(0, file)} existingImageUrl={nota.fotoEvidenUrls?.[0]} />
-                        <PhotoUpload id="foto2" label="Foto Eviden 2" onFileChange={(file) => handleFileChange(1, file)} existingImageUrl={nota.fotoEvidenUrls?.[1]} />
-                        <PhotoUpload id="foto3" label="Foto Eviden 3" onFileChange={(file) => handleFileChange(2, file)} existingImageUrl={nota.fotoEvidenUrls?.[2]} />
-                        <PhotoUpload id="foto4" label="Foto Eviden 4" onFileChange={(file) => handleFileChange(3, file)} existingImageUrl={nota.fotoEvidenUrls?.[3]} />
-                    </div>
-                 )}
+                  ))}
+                </div>
               </div>
             </div>
           </CardContent>

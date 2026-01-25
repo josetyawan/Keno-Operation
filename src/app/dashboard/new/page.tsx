@@ -101,6 +101,16 @@ export default function NewNotaPage() {
   
   const isBBMKendaraan = segmen && bbmKendaraanSegments.includes(segmen);
   const isNonBBMKendaraan = segmen && nonBbmKendaraanSegments.includes(segmen);
+
+  const photoUploadSlots = [
+    { id: 'foto1', bbmLabel: 'Foto Keperluan 1', nonBbmLabel: 'Foto Eviden 1', isBbmOnly: false },
+    { id: 'foto2', bbmLabel: 'Foto Keperluan 2', nonBbmLabel: 'Foto Eviden 2', isBbmOnly: false },
+    { id: 'foto3', bbmLabel: 'Foto Keperluan 3', nonBbmLabel: 'Foto Eviden 3', isBbmOnly: false },
+    { id: 'foto4', bbmLabel: 'Foto Keperluan 4', nonBbmLabel: 'Foto Eviden 4', isBbmOnly: false },
+    { id: 'foto5', bbmLabel: 'Foto KM Awal Bulan', nonBbmLabel: '', isBbmOnly: true },
+    { id: 'foto6', bbmLabel: 'Foto KM Awal', nonBbmLabel: '', isBbmOnly: true },
+    { id: 'foto7', bbmLabel: 'Foto KM Akhir', nonBbmLabel: '', isBbmOnly: true },
+  ];
   
   const handleSegmenChange = (value: string) => {
     setSegmen(value);
@@ -394,79 +404,21 @@ export default function NewNotaPage() {
               </div>
               <div>
                 <Label className="mb-3 block">Upload Foto Bukti</Label>
-                {isBBMKendaraan ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <PhotoUpload
-                      id="foto1"
-                      label="Foto Keperluan 1"
-                      file={files[0]}
-                      onFileChange={(file) => handleFileChange(0, file)}
-                    />
-                    <PhotoUpload
-                      id="foto2"
-                      label="Foto Keperluan 2"
-                      file={files[1]}
-                      onFileChange={(file) => handleFileChange(1, file)}
-                    />
-                    <PhotoUpload
-                      id="foto3"
-                      label="Foto Keperluan 3"
-                      file={files[2]}
-                      onFileChange={(file) => handleFileChange(2, file)}
-                    />
-                    <PhotoUpload
-                      id="foto4"
-                      label="Foto Keperluan 4"
-                      file={files[3]}
-                      onFileChange={(file) => handleFileChange(3, file)}
-                    />
-                    <PhotoUpload
-                      id="foto5"
-                      label="Foto KM Awal Bulan"
-                      file={files[4]}
-                      onFileChange={(file) => handleFileChange(4, file)}
-                    />
-                    <PhotoUpload
-                      id="foto6"
-                      label="Foto KM Awal"
-                      file={files[5]}
-                      onFileChange={(file) => handleFileChange(5, file)}
-                    />
-                    <PhotoUpload
-                      id="foto7"
-                      label="Foto KM Akhir"
-                      file={files[6]}
-                      onFileChange={(file) => handleFileChange(6, file)}
-                    />
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <PhotoUpload
-                      id="foto1"
-                      label="Foto Eviden 1"
-                      file={files[0]}
-                      onFileChange={(file) => handleFileChange(0, file)}
-                    />
-                    <PhotoUpload
-                      id="foto2"
-                      label="Foto Eviden 2"
-                      file={files[1]}
-                      onFileChange={(file) => handleFileChange(1, file)}
-                    />
-                    <PhotoUpload
-                      id="foto3"
-                      label="Foto Eviden 3"
-                      file={files[2]}
-                      onFileChange={(file) => handleFileChange(2, file)}
-                    />
-                    <PhotoUpload
-                      id="foto4"
-                      label="Foto Eviden 4"
-                      file={files[3]}
-                      onFileChange={(file) => handleFileChange(3, file)}
-                    />
-                  </div>
-                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {photoUploadSlots.map((slot, index) => (
+                    <div
+                      key={slot.id}
+                      className={cn(slot.isBbmOnly && !isBBMKendaraan && 'hidden')}
+                    >
+                      <PhotoUpload
+                        id={slot.id}
+                        label={isBBMKendaraan ? slot.bbmLabel : slot.nonBbmLabel}
+                        file={files[index]}
+                        onFileChange={(file) => handleFileChange(index, file)}
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </CardContent>
