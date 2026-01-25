@@ -131,12 +131,15 @@ export default function NewNotaPage() {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!user || !user.email) {
+    setIsSaving(true);
+    
+    if (!user || !user.uid || !user.email) {
       toast({
         variant: 'destructive',
-        title: 'Not Authenticated',
-        description: 'You must be logged in to create a report.',
+        title: 'Authentication Error',
+        description: 'User information not found. Please try logging out and back in.',
       });
+      setIsSaving(false);
       return;
     }
     
@@ -152,10 +155,9 @@ export default function NewNotaPage() {
         title: 'Incomplete Form',
         description: 'Please fill out all required fields for the selected segment.',
       });
+      setIsSaving(false);
       return;
     }
-
-    setIsSaving(true);
 
     try {
       const uploadPromises = files
