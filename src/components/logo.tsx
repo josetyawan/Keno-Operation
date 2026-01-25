@@ -1,10 +1,10 @@
-import { FileText } from 'lucide-react';
+import { cn } from "@/lib/utils"
 
-export function Logo() {
+export function Logo({ className }: { className?: string }) {
   return (
-    <div className="flex items-center gap-2 text-lg font-bold text-primary">
-      <FileText className="h-6 w-6" />
-      <h1 className="font-headline">NotaKu</h1>
+    <div className={cn("flex flex-col", className)}>
+      <span className="text-2xl font-bold text-primary">Telkom Akses</span>
+      <span className="text-xs text-muted-foreground">by Telkom Indonesia</span>
     </div>
   );
 }

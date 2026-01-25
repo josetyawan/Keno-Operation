@@ -11,9 +11,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="mx-auto grid w-[350px] gap-6">
           <div className="grid gap-2 text-center">
              <div className="flex justify-center">
-               <Logo />
+               <Logo className="items-center" />
             </div>
-            <h1 className="text-3xl font-bold font-headline">Welcome</h1>
+            <h1 className="text-3xl font-bold font-headline mt-4">Welcome</h1>
             <p className="text-balance text-muted-foreground">
               Enter your details to manage your notas
             </p>

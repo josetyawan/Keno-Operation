@@ -2,9 +2,8 @@
 
 import Link from 'next/link';
 import {
-  FileText,
-  Home,
-  PlusCircle,
+  LayoutGrid,
+  Menu,
   LogOut,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -47,15 +46,11 @@ export default function DashboardLayout({
         <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
         <div className="hidden border-r bg-card md:block">
           <div className="flex h-full max-h-screen flex-col gap-2">
-            <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
-               <Skeleton className="h-8 w-32" />
+            <div className="flex h-16 items-center border-b px-6">
+               <Skeleton className="h-10 w-32" />
             </div>
             <div className="flex-1 p-4">
               <Skeleton className="h-8 w-full mb-2" />
-              <Skeleton className="h-8 w-full" />
-            </div>
-            <div className="mt-auto p-4">
-              <Skeleton className="h-32 w-full" />
             </div>
           </div>
         </div>
@@ -69,10 +64,9 @@ export default function DashboardLayout({
           </header>
           <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-background">
             <Skeleton className="h-8 w-48 mb-4" />
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                <Skeleton className="h-64 w-full" />
-                <Skeleton className="h-64 w-full" />
-                <Skeleton className="h-64 w-full" />
+            <div className="border rounded-lg p-2">
+                <Skeleton className="h-12 w-full mb-2" />
+                <Skeleton className="h-12 w-full" />
             </div>
           </main>
         </div>
@@ -82,46 +76,23 @@ export default function DashboardLayout({
 
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
-      <div className="hidden border-r bg-card md:block">
+      <div className="hidden border-r bg-secondary/50 md:block">
         <div className="flex h-full max-h-screen flex-col gap-2">
-          <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
+          <div className="flex h-16 items-center border-b px-6">
             <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
               <Logo />
             </Link>
           </div>
           <div className="flex-1">
-            <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
+            <nav className="grid items-start px-4 py-4 text-sm font-medium">
               <Link
                 href="/dashboard"
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+                className="flex items-center gap-3 rounded-lg bg-primary/10 px-3 py-2 text-primary transition-all hover:text-primary"
               >
-                <Home className="h-4 w-4" />
+                <LayoutGrid className="h-4 w-4" />
                 Dashboard
               </Link>
-              <Link
-                href="/dashboard/new"
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
-              >
-                <PlusCircle className="h-4 w-4" />
-                New Nota
-              </Link>
             </nav>
-          </div>
-          <div className="mt-auto p-4">
-             <Card>
-              <CardHeader className="p-2 pt-0 md:p-4">
-                <CardTitle>Log Out</CardTitle>
-                <CardDescription>
-                  Ready to leave? Click below to sign out.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-2 pt-0 md:p-4 md:pt-0">
-                <Button size="sm" className="w-full" onClick={handleLogout}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Logout
-                </Button>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </div>
@@ -134,7 +105,7 @@ export default function DashboardLayout({
                 size="icon"
                 className="shrink-0 md:hidden"
               >
-                <FileText className="h-5 w-5" />
+                <Menu className="h-5 w-5" />
                 <span className="sr-only">Toggle navigation menu</span>
               </Button>
             </SheetTrigger>
@@ -150,15 +121,8 @@ export default function DashboardLayout({
                   href="/dashboard"
                   className="mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground"
                 >
-                  <Home className="h-5 w-5" />
+                  <LayoutGrid className="h-5 w-5" />
                   Dashboard
-                </Link>
-                <Link
-                  href="/dashboard/new"
-                  className="mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground"
-                >
-                  <PlusCircle className="h-5 w-5" />
-                  New Nota
                 </Link>
               </nav>
               <div className="mt-auto">
