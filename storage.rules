@@ -2,11 +2,16 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    match /{allPaths=**} {
-      // PERINGATAN: Aturan ini tidak aman dan hanya untuk tujuan diagnosis.
-      // Aturan ini mengizinkan siapa saja di internet untuk membaca dan menulis
-      // ke Storage Anda.
-      allow read, write: if true;
+    // Aturan yang Benar dan Aman
+    match /notas/{userId}/{allPaths=**} {
+      // Izinkan siapa saja untuk membaca (melihat) gambar jika mereka memiliki URL.
+      // Ini penting agar gambar dapat ditampilkan di dasbor untuk semua pengguna.
+      allow read: if true;
+
+      // Izinkan penulisan (unggah, perbarui, hapus) HANYA jika ID pengguna yang
+      // sedang login (request.auth.uid) sama dengan ID pengguna di path file (userId).
+      // Ini memastikan pengguna hanya bisa menulis ke folder mereka sendiri.
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }

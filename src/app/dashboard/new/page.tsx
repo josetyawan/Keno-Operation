@@ -28,9 +28,10 @@ import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { ArrowLeft, CalendarIcon, Camera, Upload } from 'lucide-react';
 import { useState } from 'react';
-import { useUser, useFirestore, addDocumentNonBlocking, useStorage } from '@/firebase';
+import { useFirestore, addDocumentNonBlocking } from '@/firebase';
 import { collection, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, getStorage } from 'firebase/storage';
+import { getAuth } from 'firebase/auth';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import type { Nota } from '@/lib/types';
@@ -79,9 +80,7 @@ function PhotoUpload({
 export default function NewNotaPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { user } = useUser();
   const firestore = useFirestore();
-  const storage = useStorage();
   const [isSaving, setIsSaving] = useState(false);
 
   // Form state
@@ -133,14 +132,15 @@ export default function NewNotaPage() {
     event.preventDefault();
     setIsSaving(true);
     
-    // Detailed check of user object before upload attempt
-    console.log('User object at time of submission:', JSON.stringify(user, null, 2));
+    // Direct auth check as per AI analysis to ensure auth state is not stale
+    const auth = getAuth();
+    const user = auth.currentUser;
 
     if (!user || !user.uid || !user.email) {
       toast({
         variant: 'destructive',
         title: 'Authentication Error',
-        description: 'User information not found. Please log out and log back in, then try again.',
+        description: 'User session not found. Please log out and log back in, then try again.',
       });
       setIsSaving(false);
       return;
@@ -163,6 +163,7 @@ export default function NewNotaPage() {
     }
 
     try {
+      const storage = getStorage();
       const uploadPromises = files
         .filter((file): file is File => file !== null)
         .map(async (file) => {
