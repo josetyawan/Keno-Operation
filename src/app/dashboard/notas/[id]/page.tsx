@@ -1,7 +1,6 @@
-
 'use client';
 
-import { notFound, useRouter } from 'next/navigation';
+import { notFound, useRouter, useParams } from 'next/navigation';
 import {
   Card,
   CardContent,
@@ -22,7 +21,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 
-export default function NotaDetailPage({ params }: { params: { id: string } }) {
+export default function NotaDetailPage() {
+  const params = useParams();
+  const id = params.id as string;
+  
   const { user } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
@@ -36,8 +38,8 @@ export default function NotaDetailPage({ params }: { params: { id: string } }) {
   const isAdmin = userProfile?.role === 'admin';
 
   const notaRef = useMemoFirebase(() => {
-    return doc(firestore, 'notas', params.id);
-  }, [firestore, params.id]);
+    return doc(firestore, 'notas', id);
+  }, [firestore, id]);
 
   const { data: nota, isLoading, error } = useDoc<Nota>(notaRef);
 
@@ -160,7 +162,7 @@ export default function NotaDetailPage({ params }: { params: { id: string } }) {
             </div>
             <div className="flex gap-2">
                 {(isOwner || isAdmin) && (
-                     <Link href={`/dashboard/notas/${params.id}/edit`}>
+                     <Link href={`/dashboard/notas/${id}/edit`}>
                         <Button variant="outline">
                             <Edit /> Edit
                         </Button>
