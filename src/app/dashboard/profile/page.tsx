@@ -1,18 +1,35 @@
 'use client';
 
-import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useUser, useDoc, useFirestore, useMemoFirebase, useStorage, updateDocumentNonBlocking } from '@/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import Image from 'next/image';
+import { ArrowLeft, Camera, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
 import type { UserProfile } from '@/lib/types';
+import { useState, useEffect, useRef } from 'react';
 
 export default function ProfilePage() {
   const { user, isUserLoading: isAuthLoading } = useUser();
   const firestore = useFirestore();
+  const storage = useStorage();
+  const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+
+  // Form state
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [displayName, setDisplayName] = useState('');
 
   // Memoize the document reference to prevent re-renders
   const userDocRef = useMemoFirebase(() => {
@@ -22,7 +39,82 @@ export default function ProfilePage() {
 
   const { data: userProfile, isLoading: isFirestoreLoading } = useDoc<UserProfile>(userDocRef);
 
+  // Populate form when user profile loads
+  useEffect(() => {
+    if (userProfile) {
+      setFirstName(userProfile.firstName || '');
+      setLastName(userProfile.lastName || '');
+      setDisplayName(userProfile.displayName || '');
+    }
+  }, [userProfile]);
+
   const isLoading = isAuthLoading || isFirestoreLoading;
+
+  const handleProfileUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userDocRef) return;
+
+    setIsSaving(true);
+    const updatedData: Partial<UserProfile> = {
+      firstName,
+      lastName,
+      displayName,
+    };
+
+    try {
+      // Using updateDoc directly here since non-blocking isn't as crucial for a profile save
+      await updateDoc(userDocRef, updatedData);
+      toast({
+        title: 'Profile Updated',
+        description: 'Your profile information has been saved.',
+      });
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Update Failed',
+        description: 'Could not save your profile. Please try again.',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || !event.target.files[0] || !user || !userDocRef) return;
+    
+    const file = event.target.files[0];
+    setIsUploading(true);
+
+    const filePath = `profile-pictures/${user.uid}`;
+    const storageRef = ref(storage, filePath);
+
+    try {
+      await uploadBytes(storageRef, file);
+      const photoURL = await getDownloadURL(storageRef);
+      await updateDoc(userDocRef, { photoURL });
+
+      toast({
+        title: 'Photo Uploaded',
+        description: 'Your new profile picture has been saved.',
+      });
+
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Upload Failed',
+        description: 'Could not upload your photo. Please try again.',
+      });
+    } finally {
+      setIsUploading(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
 
   if (isLoading) {
     return (
@@ -37,17 +129,16 @@ export default function ProfilePage() {
                     <Skeleton className="h-4 w-3/4" />
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                        <Skeleton className="h-4 w-1/4" />
-                        <Skeleton className="h-5 w-full" />
+                    <div className="flex justify-center">
+                      <Skeleton className="h-32 w-32 rounded-full" />
                     </div>
                      <div className="space-y-2">
                         <Skeleton className="h-4 w-1/4" />
-                        <Skeleton className="h-5 w-full" />
+                        <Skeleton className="h-10 w-full" />
                     </div>
                      <div className="space-y-2">
                         <Skeleton className="h-4 w-1/4" />
-                        <Skeleton className="h-5 w-full" />
+                        <Skeleton className="h-10 w-full" />
                     </div>
                 </CardContent>
             </Card>
@@ -65,52 +156,70 @@ export default function ProfilePage() {
             </Button>
             </Link>
             <h1 className="flex-1 shrink-0 whitespace-nowrap text-xl font-semibold tracking-tight sm:grow-0 font-headline">
-            User Profile
+                Edit Profile
             </h1>
+            {userProfile?.role === 'admin' && <Badge variant="secondary" className="ml-auto sm:ml-0">Admin</Badge>}
         </div>
       <Card>
-        <CardHeader>
-          <CardTitle>Authentication & Database Details</CardTitle>
-          <CardDescription>
-            This page demonstrates the connection between Firebase Authentication and Firestore Database.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="divide-y">
-            <div className="py-4">
-                <h3 className="text-lg font-medium mb-2 flex items-center gap-2">
-                    Firebase Authentication
-                    <Badge variant="outline">Source</Badge>
-                </h3>
-                <p className="text-sm text-muted-foreground mb-2">
-                    This data comes directly from the logged-in user object provided by Firebase Authentication.
-                </p>
-                <div className="space-y-1 text-sm">
-                    <p><strong>User ID (UID):</strong> {user?.uid || 'N/A'}</p>
-                    <p><strong>Email:</strong> {user?.email || 'N/A'}</p>
-                    <p><strong>Email Verified:</strong> {user?.emailVerified ? 'Yes' : 'No'}</p>
-                </div>
-            </div>
-             <div className="py-4">
-                <h3 className="text-lg font-medium mb-2 flex items-center gap-2">
-                    Firestore Database
-                    <Badge variant="outline">Source</Badge>
-                </h3>
-                <p className="text-sm text-muted-foreground mb-2">
-                   This data is fetched from the `/users/{user.uid}` document in your Firestore database.
-                </p>
-                {userProfile ? (
-                     <div className="space-y-1 text-sm">
-                        <p><strong>Document ID:</strong> {userProfile.id}</p>
-                        <p><strong>Email:</strong> {userProfile.email}</p>
-                        <p><strong>First Name:</strong> {userProfile.firstName || <span className="text-muted-foreground italic">Not set</span>}</p>
-                        <p><strong>Last Name:</strong> {userProfile.lastName || <span className="text-muted-foreground italic">Not set</span>}</p>
-                        <p><strong>Role:</strong> <Badge variant={userProfile.role === 'admin' ? 'default' : 'secondary'} className="capitalize">{userProfile.role}</Badge></p>
-                    </div>
-                ): (
-                    <p className="text-sm text-destructive">Could not find a user profile document in Firestore.</p>
-                )}
-            </div>
-        </CardContent>
+        <form onSubmit={handleProfileUpdate}>
+          <CardHeader>
+            <CardTitle>Your Profile</CardTitle>
+            <CardDescription>
+              Update your photo and personal details here.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-8">
+              <div className="flex flex-col items-center gap-4">
+                  <div className="relative">
+                      <Image
+                        src={userProfile?.photoURL || `https://ui-avatars.com/api/?name=${displayName || user?.email}&background=random`}
+                        alt="Profile picture"
+                        width={128}
+                        height={128}
+                        className="h-32 w-32 rounded-full object-cover border-4 border-card-foreground/10"
+                      />
+                      <Button
+                        type="button"
+                        size="icon"
+                        className="absolute bottom-1 right-1 h-8 w-8 rounded-full"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploading}
+                      >
+                         {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                      </Button>
+                      <Input
+                        type="file"
+                        ref={fileInputRef}
+                        className="hidden"
+                        onChange={handlePhotoUpload}
+                        accept="image/png, image/jpeg, image/gif"
+                      />
+                  </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                      <Label htmlFor="firstName">First Name</Label>
+                      <Input id="firstName" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="John" />
+                  </div>
+                   <div className="grid gap-2">
+                      <Label htmlFor="lastName">Last Name</Label>
+                      <Input id="lastName" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Doe" />
+                  </div>
+              </div>
+               <div className="grid gap-2">
+                  <Label htmlFor="displayName">Display Name</Label>
+                  <Input id="displayName" value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="john.doe" required />
+              </div>
+              <div className="grid gap-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" value={user?.email || ''} readOnly disabled />
+              </div>
+              <Button type="submit" className="w-full" disabled={isSaving}>
+                  {isSaving ? 'Saving...' : 'Save Changes'}
+              </Button>
+          </CardContent>
+        </form>
       </Card>
     </div>
   );

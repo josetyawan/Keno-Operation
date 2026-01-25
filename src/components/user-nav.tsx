@@ -1,6 +1,6 @@
 'use client';
 
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -46,8 +46,9 @@ export function UserNav() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-9 w-9">
+            {userProfile?.photoURL && <AvatarImage src={userProfile.photoURL} alt={userProfile.displayName || 'User profile picture'} />}
             <AvatarFallback className="bg-primary text-primary-foreground">
-              {user.email?.charAt(0).toUpperCase() || 'U'}
+              {userProfile?.displayName?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || 'U'}
             </AvatarFallback>
           </Avatar>
         </Button>
@@ -56,7 +57,7 @@ export function UserNav() {
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
             <div className="flex items-center gap-2">
-               <p className="text-sm font-medium leading-none">{user.displayName || 'User'}</p>
+               <p className="text-sm font-medium leading-none">{userProfile?.displayName || 'User'}</p>
                {isAdmin && <ShieldCheck className="h-4 w-4 text-primary" />}
             </div>
             <p className="text-xs leading-none text-muted-foreground">

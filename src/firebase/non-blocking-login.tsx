@@ -19,6 +19,8 @@ async function createUserDocument(user: User) {
         email: user.email || '',
         firstName: '',
         lastName: '',
+        displayName: user.email?.split('@')[0] || 'New User',
+        photoURL: '',
         role: 'user',
     };
 

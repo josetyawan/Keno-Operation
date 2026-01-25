@@ -22,5 +22,7 @@ export type UserProfile = {
     email: string;
     firstName?: string;
     lastName?: string;
+    displayName?: string;
+    photoURL?: string;
     role: 'admin' | 'user';
 };
