@@ -133,6 +133,8 @@ export default function NewNotaPage() {
     event.preventDefault();
     setIsSaving(true);
     
+    console.log('[DIAGNOSTIC] handleSubmit triggered. Current user object from useUser():', user);
+
     if (!user || !user.uid || !user.email) {
       toast({
         variant: 'destructive',
