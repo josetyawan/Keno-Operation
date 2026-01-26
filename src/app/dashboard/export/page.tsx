@@ -146,7 +146,7 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; padding: 1cm; width: 210mm; min-height: 297mm; background-color: white; box-shadow: 0 0 5px rgba(0,0,0,0.1);">
-        <h2 style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left;">${title}</h2>
+        <h2 style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${title}</h2>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
             <thead style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
@@ -205,7 +205,7 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
         const mainRow = `
             <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <td style="padding: 4px; border: 1px solid black; text-align: center;">${index + 1}</td>
-                <td style="padding: 4px; border: 1px solid black;">${format(nota.tanggal.toDate(), 'dd MMM yy', { locale: idLocale })}</td>
+                <td style="padding: 4px; border: 1px solid black;">${format(nota.tanggal.toDate(), 'dd-MMM-yy', { locale: idLocale })}</td>
                 <td style="padding: 4px; border: 1px solid black;">${staticKeterangan}</td>
                 <td style="padding: 4px; border: 1px solid black;">${nota.noPlatKendaraan || '-'}</td>
                 <td style="padding: 4px; border: 1px solid black; text-align: center;">${nota.kmAwal || '-'}</td>
@@ -231,7 +231,7 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; padding: 1cm; width: 210mm; min-height: 297mm; background-color: white; box-shadow: 0 0 5px rgba(0,0,0,0.1);">
-        <h2 style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left;">${title}</h2>
+        <h2 style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${title}</h2>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
             <thead style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
@@ -288,7 +288,7 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; padding: 1cm; width: 210mm; min-height: 297mm; background-color: white; box-shadow: 0 0 5px rgba(0,0,0,0.1);">
-        <h2 style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left;">${title}</h2>
+        <h2 style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${title}</h2>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
             <thead style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
@@ -441,7 +441,7 @@ function ReportPreview({
                     size: A4 portrait;
                     margin: 0;
                 }
-                .report-page-container + .report-page-container {
+                .report-page-container:not(:first-child) {
                     break-before: page;
                 }
             }
@@ -530,34 +530,33 @@ export default function ExportPage() {
 
     const filteredNotas = useMemo(() => {
         if (!notas) return [];
+        let result = [];
         if (filterType === 'monthly') {
             const currentMonth = selectedMonth || (monthOptions.length > 0 ? monthOptions[0] : '');
             if (!currentMonth) return [];
 
             const [year, month] = currentMonth.split('-').map(Number);
-            return notas.filter(nota => {
+            result = notas.filter(nota => {
                 if (!nota.tanggal?.toDate) return false;
                 const date = nota.tanggal.toDate();
                 return getYear(date) === year && getMonth(date) === month - 1;
             });
-        }
-        if (filterType === 'range') {
+        } else if (filterType === 'range') {
             if (!dateRange?.from || !dateRange?.to) return [];
-            return notas.filter(nota => {
+            result = notas.filter(nota => {
                 if (!nota.tanggal?.toDate) return false;
                 const date = nota.tanggal.toDate();
                 return date >= dateRange.from! && date <= dateRange.to!;
             });
-        }
-        if (filterType === 'verified') {
+        } else if (filterType === 'verified') {
             if (!verifiedDate) return [];
-             return notas.filter(nota => {
+             result = notas.filter(nota => {
                 if (nota.status !== 'verified' || !nota.tanggalVerifikasi?.toDate) return false;
                 const date = nota.tanggalVerifikasi.toDate();
                 return isSameDay(date, verifiedDate);
             });
         }
-        return [];
+        return result.sort((a,b) => a.tanggal.toDate().getTime() - b.tanggal.toDate().getTime());
     }, [notas, filterType, selectedMonth, monthOptions, dateRange, verifiedDate]);
 
     const handleSelectNota = (id: string, checked: boolean) => {
@@ -584,7 +583,7 @@ export default function ExportPage() {
     const handleGenerateReport = async (reportType: string) => {
         setIsGenerating(true);
         setReportTypeBeingGenerated(reportType);
-        const selectedNotas = notas?.filter(n => selectedNotaIds.includes(n.id)) || [];
+        const selectedNotas = filteredNotas.filter(n => selectedNotaIds.includes(n.id)) || [];
         if (selectedNotas.length === 0) {
             toast({
                 variant: "destructive",
@@ -599,7 +598,68 @@ export default function ExportPage() {
         const pages: string[] = [];
 
         try {
-            if (reportType === 'rekap') {
+            if (reportType === 'all') {
+                // 1. Generate Rekap (if applicable)
+                if (filterType === 'monthly') {
+                    const [year, monthNum] = selectedMonth.split('-');
+                    const monthName = format(new Date(Number(year), Number(monthNum)-1, 1), 'MMMM', {locale: idLocale});
+                    const rekapHtml = generateRekapitulasiReport(selectedNotas, monthName, year);
+                    pages.push(rekapHtml);
+                }
+
+                // 2. Generate Perincian
+                const perincianGrouped = selectedNotas.reduce((acc, nota) => {
+                    const seg = nota.segmen;
+                    if (!acc[seg]) acc[seg] = [];
+                    acc[seg].push(nota);
+                    return acc;
+                }, {} as Record<string, Nota[]>);
+
+                for (const segment of Object.keys(perincianGrouped).sort()) {
+                    const notasInSegment = perincianGrouped[segment];
+                    if (notasInSegment.length === 0) continue;
+                    let segmentHtml = '';
+                    const title = `Perincian Nota ${segment}`;
+                    const bbmR2R4Segments = ['BBM R2', 'BBM R4 Harian', 'BBM R4 Turlap', 'BBM R4 UT'];
+
+                    if (segment === 'jasa') {
+                        segmentHtml = generateJasaReport(notasInSegment, title);
+                    } else if (bbmR2R4Segments.includes(segment)) {
+                        segmentHtml = generateBBMReport(notasInSegment, title);
+                    } else {
+                         const modifiedNotas = notasInSegment.map(nota => {
+                             if (segment === 'BBM Genset') return { ...nota, keterangan: '' };
+                             return nota;
+                         });
+                        segmentHtml = generateMaterialReport(modifiedNotas, title);
+                    }
+                    pages.push(segmentHtml);
+                }
+
+                // 3. Generate Eviden
+                const evidenGrouped = selectedNotas.reduce((acc, nota) => {
+                    const seg = nota.segmen;
+                    if (!acc[seg]) acc[seg] = [];
+                    acc[seg].push(nota);
+                    return acc;
+                }, {} as Record<string, Nota[]>);
+                 const bbmR2R4Segments = ['BBM R2', 'BBM R4 Harian', 'BBM R4 Turlap', 'BBM R4 UT'];
+
+                for (const segment of Object.keys(evidenGrouped).sort()) {
+                    const notasInSegment = evidenGrouped[segment];
+                    if (notasInSegment.length === 0) continue;
+                    let segmentHtml = '';
+                    const title = `Eviden Foto - Perincian Nota ${segment}`;
+
+                    if (bbmR2R4Segments.includes(segment)) {
+                        segmentHtml = generateEvidenReport(notasInSegment, title);
+                    } else {
+                        segmentHtml = generateSimpleEvidenReport(notasInSegment, title);
+                    }
+                    pages.push(segmentHtml);
+                }
+
+            } else if (reportType === 'rekap') {
                 const [year, monthNum] = selectedMonth.split('-');
                 const monthName = format(new Date(Number(year), Number(monthNum)-1, 1), 'MMMM', {locale: idLocale});
                 const html = generateRekapitulasiReport(selectedNotas, monthName, year);
@@ -614,10 +674,8 @@ export default function ExportPage() {
                     return acc;
                 }, {} as Record<string, Nota[]>);
 
-                const sortedSegments = Object.keys(groupedBySegment).sort();
-
-                for (const segment of sortedSegments) {
-                    const notasInSegment = groupedBySegment[segment].sort((a,b) => a.tanggal.toDate().getTime() - b.tanggal.toDate().getTime());
+                for (const segment of Object.keys(groupedBySegment).sort()) {
+                    const notasInSegment = groupedBySegment[segment];
                     if (notasInSegment.length === 0) continue;
 
                     let segmentHtml = '';
@@ -648,11 +706,10 @@ export default function ExportPage() {
                     return acc;
                 }, {} as Record<string, Nota[]>);
 
-                const sortedSegments = Object.keys(groupedBySegment).sort();
                 const bbmR2R4Segments = ['BBM R2', 'BBM R4 Harian', 'BBM R4 Turlap', 'BBM R4 UT'];
 
-                for (const segment of sortedSegments) {
-                    const notasInSegment = groupedBySegment[segment].sort((a,b) => a.tanggal.toDate().getTime() - b.tanggal.toDate().getTime());
+                for (const segment of Object.keys(groupedBySegment).sort()) {
+                    const notasInSegment = groupedBySegment[segment];
                     if (notasInSegment.length === 0) continue;
 
                     let segmentHtml = '';
@@ -683,7 +740,6 @@ export default function ExportPage() {
     };
 
     return (
-        <>
         <div className="print:hidden">
             <div className="mx-auto grid w-full flex-1 auto-rows-max gap-6">
                 <div className="flex items-center gap-4 sticky top-0 bg-background py-4 z-10 border-b -mx-6 px-6">
@@ -863,8 +919,8 @@ export default function ExportPage() {
 
                 <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm py-3 mt-auto border-t -mx-6 px-6">
                     <div className="max-w-4xl mx-auto flex justify-around items-center">
-                        <Button variant="outline" size="lg" disabled>
-                            <FileArchive className="mr-2" /> Semua (1 File)
+                        <Button variant="outline" size="lg" onClick={() => handleGenerateReport('all')} disabled={isGenerating || selectedNotaIds.length === 0}>
+                           {isGenerating && reportTypeBeingGenerated === 'all' ? <Loader2 className="mr-2 animate-spin"/> : <FileArchive className="mr-2" />} Semua (1 File)
                         </Button>
                         <Button variant="outline" size="lg" onClick={() => handleGenerateReport('rekap')} disabled={isGenerating || selectedNotaIds.length === 0 || filterType !== 'monthly'}>
                             {isGenerating && reportTypeBeingGenerated === 'rekap' ? <Loader2 className="mr-2 animate-spin"/> : <FileText className="mr-2" />} Rekap
@@ -878,8 +934,7 @@ export default function ExportPage() {
                     </div>
                 </div>
             </div>
+            {reportPages.length > 0 && <ReportPreview pages={reportPages} onClose={() => setReportPages([])} />}
         </div>
-        {reportPages.length > 0 && <ReportPreview pages={reportPages} onClose={() => setReportPages([])} />}
-        </>
     );
 }
