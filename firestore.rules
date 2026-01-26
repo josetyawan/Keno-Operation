@@ -53,11 +53,12 @@ service cloud.firestore {
     /**
      * Checks if the user has an 'admin' role by reading their profile document.
      * This is used for granting elevated permissions.
+     * This check is now case-insensitive.
      */
     function isAdmin() {
       // This rule is safe from recursion because the ability to 'get' one's own
       // document is granted separately without needing to check for admin status.
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.lower() == 'admin';
     }
 
     /**
