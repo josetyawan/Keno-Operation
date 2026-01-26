@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Card,
@@ -63,11 +62,11 @@ export default function ExportPage() {
     }, [notas]);
 
     // Set default month to the latest one
-    useState(() => {
+    useEffect(() => {
         if (monthOptions.length > 0 && !selectedMonth) {
             setSelectedMonth(monthOptions[0]);
         }
-    });
+    }, [monthOptions, selectedMonth]);
     
     const filteredNotas = useMemo(() => {
         if (!notas) return [];
