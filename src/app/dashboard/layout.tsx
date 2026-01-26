@@ -43,71 +43,51 @@ export default function DashboardLayout({
   }, [user, firestore]);
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
+  
+  const isLoading = isUserLoading || isProfileLoading;
 
   useEffect(() => {
-    const isAuthChecked = !isUserLoading;
-    
-    // If auth is checked and there's no user, redirect to login
-    if (isAuthChecked && !user) {
-      router.push('/login');
+    // Wait until loading is complete before running any checks
+    if (isLoading) {
       return;
     }
 
-    const isProfileChecked = !isProfileLoading;
-    // If both auth and profile are checked, and the user's status is pending
-    if (isAuthChecked && isProfileChecked && userProfile && userProfile.registrationStatus === 'pending') {
-      auth.signOut(); // Sign them out
+    // Case 1: No user is logged in. Redirect to login.
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+    
+    // Case 2: A user is logged in, but their profile document doesn't exist.
+    // This is an error state, so we sign them out.
+    if (!userProfile) {
+        auth.signOut();
+        toast({
+            title: 'Gagal Memuat Profil',
+            description: 'Tidak dapat menemukan data pengguna. Silakan login kembali.',
+            variant: 'destructive',
+        });
+        router.push('/login');
+        return;
+    }
+
+    // Case 3: The user's registration is still pending.
+    // Sign them out and show a notification.
+    if (userProfile.registrationStatus === 'pending') {
+      auth.signOut();
       toast({
         title: 'Akun Menunggu Persetujuan',
         description: 'Akun Anda telah didaftarkan dan sedang menunggu persetujuan dari admin.',
         duration: 5000,
       });
-      router.push('/login'); // Redirect to login
+      router.push('/login');
     }
-  }, [user, isUserLoading, userProfile, isProfileLoading, router, auth, toast]);
+  }, [user, userProfile, isLoading, router, auth, toast]);
 
-  const handleLogout = () => {
-    auth.signOut();
-  };
+  const showDashboard = !isLoading && userProfile?.registrationStatus === 'approved';
 
-  const isLoading = isUserLoading || isProfileLoading || (user && !userProfile);
-
-
-  if (isLoading) {
-    return (
-        <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
-        <div className="hidden border-r bg-card md:block">
-          <div className="flex h-full max-h-screen flex-col gap-2">
-            <div className="flex h-16 items-center border-b px-6">
-               <Skeleton className="h-10 w-32" />
-            </div>
-            <div className="flex-1 p-4">
-              <Skeleton className="h-8 w-full mb-2" />
-            </div>
-          </div>
-        </div>
-        <div className="flex flex-col">
-          <header className="flex h-14 items-center gap-4 border-b bg-card px-4 lg:h-[60px] lg:px-6">
-            <Skeleton className="h-8 w-8 md:hidden" />
-            <div className="w-full flex-1">
-             {/* Search */}
-            </div>
-            <Skeleton className="h-9 w-9 rounded-full" />
-          </header>
-          <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-background">
-            <Skeleton className="h-8 w-48 mb-4" />
-            <div className="border rounded-lg p-2">
-                <Skeleton className="h-12 w-full mb-2" />
-                <Skeleton className="h-12 w-full" />
-            </div>
-          </main>
-        </div>
-      </div>
-    )
-  }
-
-  // If user is not pending, render the dashboard
-  if (userProfile && userProfile.registrationStatus === 'approved') {
+  // If the user is fully approved, render the dashboard.
+  if (showDashboard) {
     return (
       <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
         <div className="hidden border-r bg-secondary/50 md:block">
@@ -168,7 +148,7 @@ export default function DashboardLayout({
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <Button size="sm" className="w-full" onClick={handleLogout}>
+                      <Button size="sm" className="w-full" onClick={() => auth.signOut()}>
                          <LogOut className="mr-2 h-4 w-4" />
                          Logout
                       </Button>
@@ -190,6 +170,36 @@ export default function DashboardLayout({
     );
   }
 
-  // Fallback for loading state or if user is being redirected
-  return null;
+  // In ALL other cases (loading, redirecting, etc.), render the skeleton layout.
+  // This prevents the blank screen from ever appearing.
+  return (
+    <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
+      <div className="hidden border-r bg-card md:block">
+        <div className="flex h-full max-h-screen flex-col gap-2">
+          <div className="flex h-16 items-center border-b px-6">
+             <Skeleton className="h-10 w-32" />
+          </div>
+          <div className="flex-1 p-4">
+            <Skeleton className="h-8 w-full mb-2" />
+          </div>
+        </div>
+      </div>
+      <div className="flex flex-col">
+        <header className="flex h-14 items-center gap-4 border-b bg-card px-4 lg:h-[60px] lg:px-6">
+          <Skeleton className="h-8 w-8 md:hidden" />
+          <div className="w-full flex-1">
+           {/* Search */}
+          </div>
+          <Skeleton className="h-9 w-9 rounded-full" />
+        </header>
+        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-background">
+          <Skeleton className="h-8 w-48 mb-4" />
+          <div className="border rounded-lg p-2">
+              <Skeleton className="h-12 w-full mb-2" />
+              <Skeleton className="h-12 w-full" />
+          </div>
+        </main>
+      </div>
+    </div>
+  );
 }
