@@ -1,12 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import {
-  LayoutGrid,
-  Menu,
-  LogOut,
-  Users
-} from 'lucide-react';
+import { LayoutGrid, Menu, LogOut, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -32,6 +27,44 @@ const navLinks = [
   { href: '/dashboard/admin/users', label: 'Manajemen User', icon: Users, adminOnly: true },
 ];
 
+function DashboardSkeleton() {
+    return (
+        <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
+          <div className="hidden border-r bg-card md:block">
+            <div className="flex h-full max-h-screen flex-col gap-2">
+              <div className="flex h-16 items-center border-b px-6">
+                <Skeleton className="h-10 w-32" />
+              </div>
+              <div className="flex-1 p-4">
+                <Skeleton className="h-8 w-full mb-2" />
+                 <Skeleton className="h-8 w-full" />
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-col">
+            <header className="flex h-14 items-center gap-4 border-b bg-card px-4 lg:h-[60px] lg:px-6">
+              <Skeleton className="h-8 w-8 md:hidden" />
+              <div className="w-full flex-1">
+              {/* Search */}
+              </div>
+              <Skeleton className="h-9 w-9 rounded-full" />
+            </header>
+            <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-background">
+              <div className="flex justify-between items-center mb-4">
+                <Skeleton className="h-8 w-64" />
+                <Skeleton className="h-10 w-32" />
+              </div>
+              <div className="border rounded-lg p-2">
+                  <Skeleton className="h-12 w-full mb-2" />
+                  <Skeleton className="h-12 w-full" />
+              </div>
+            </main>
+          </div>
+        </div>
+      );
+}
+
+
 export default function DashboardLayout({
   children,
 }: {
@@ -43,7 +76,6 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const firestore = useFirestore();
   const { toast } = useToast();
-  const [isSigningOut, setIsSigningOut] = useState(false);
 
   const userDocRef = useMemoFirebase(() => {
     if (!user) return null;
@@ -51,6 +83,23 @@ export default function DashboardLayout({
   }, [user, firestore]);
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
+
+  const handleSignOutAndRedirect = useCallback((title: string, description: string) => {
+    // Prevent multiple sign-outs
+    if (auth.currentUser) {
+        auth.signOut().then(() => {
+            toast({
+                title,
+                description,
+                variant: title.includes('Gagal') ? 'destructive' : 'default',
+                duration: 5000,
+            });
+            router.push('/login');
+        });
+    } else {
+        router.push('/login');
+    }
+  }, [auth, router, toast]);
 
   // Effect to automatically promote the super admin user
   useEffect(() => {
@@ -74,89 +123,52 @@ export default function DashboardLayout({
     }
   }, [user, userProfile, firestore, toast]);
 
-  const handleSignOutAndRedirect = useCallback((title: string, description: string) => {
-    setIsSigningOut(true);
-    auth.signOut().then(() => {
-        toast({
-            title,
-            description,
-            variant: title.includes('Gagal') ? 'destructive' : 'default',
-            duration: 5000,
-        });
-        router.push('/login');
-    });
-  }, [auth, router, toast]);
-
-  useEffect(() => {
-    // Wait until initial auth check is complete.
-    if (isUserLoading || isSigningOut) {
+  // Use effect for redirection logic
+   useEffect(() => {
+    // Don't do anything until both auth and profile loading are complete
+    if (isUserLoading || isProfileLoading) {
       return;
     }
 
-    // If auth is resolved and there is no user, redirect to login.
+    // Case 1: No authenticated user found after loading
     if (!user) {
       router.push('/login');
       return;
     }
 
-    // Now we have a user. Wait for their profile to load.
-    if (isProfileLoading) {
+    // Case 2: User is authenticated, but their profile document doesn't exist
+    if (!userProfile) {
+      handleSignOutAndRedirect(
+        'Gagal Memuat Profil',
+        'Tidak dapat menemukan data pengguna. Silakan login kembali.'
+      );
       return;
     }
-
-    // At this point, both user auth and profile loading are finished.
-    // We can now make decisions based on the profile data.
-    if (!userProfile) {
-      // This is an invalid state: authenticated user with no profile document.
-      handleSignOutAndRedirect(
-          'Gagal Memuat Profil',
-          'Tidak dapat menemukan data pengguna. Silakan login kembali.'
-      );
-    } else if (userProfile.registrationStatus === 'pending') {
-      // The user has a profile, but it's not approved yet.
+    
+    // Case 3: User has a profile, but it's not approved yet
+    if (userProfile.registrationStatus === 'pending') {
       handleSignOutAndRedirect(
         'Akun Menunggu Persetujuan',
         'Akun Anda telah didaftarkan dan sedang menunggu persetujuan dari admin.'
       );
+      return;
     }
-  }, [user, isUserLoading, userProfile, isProfileLoading, isSigningOut, router, handleSignOutAndRedirect]);
 
-  const showDashboard = !isUserLoading && !isProfileLoading && user && userProfile?.registrationStatus === 'approved';
+  }, [user, isUserLoading, userProfile, isProfileLoading, router, handleSignOutAndRedirect]);
 
-  if (!showDashboard) {
-      return (
-        <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
-          <div className="hidden border-r bg-card md:block">
-            <div className="flex h-full max-h-screen flex-col gap-2">
-              <div className="flex h-16 items-center border-b px-6">
-                <Skeleton className="h-10 w-32" />
-              </div>
-              <div className="flex-1 p-4">
-                <Skeleton className="h-8 w-full mb-2" />
-              </div>
-            </div>
-          </div>
-          <div className="flex flex-col">
-            <header className="flex h-14 items-center gap-4 border-b bg-card px-4 lg:h-[60px] lg:px-6">
-              <Skeleton className="h-8 w-8 md:hidden" />
-              <div className="w-full flex-1">
-              {/* Search */}
-              </div>
-              <Skeleton className="h-9 w-9 rounded-full" />
-            </header>
-            <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-background">
-              <Skeleton className="h-8 w-48 mb-4" />
-              <div className="border rounded-lg p-2">
-                  <Skeleton className="h-12 w-full mb-2" />
-                  <Skeleton className="h-12 w-full" />
-              </div>
-            </main>
-          </div>
-        </div>
-      );
+
+  // Show skeleton while loading auth or profile (if user object exists)
+  if (isUserLoading || (user && isProfileLoading)) {
+      return <DashboardSkeleton />;
   }
 
-  // If the user is fully approved, render the dashboard.
+  // Do not render the dashboard if the user is not approved or doesn't exist
+  // The useEffect above will handle the redirection.
+  if (!user || !userProfile || userProfile.registrationStatus !== 'approved') {
+      return <DashboardSkeleton />;
+  }
+
+  // If all checks pass, render the dashboard.
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
       <div className="hidden border-r bg-secondary/50 md:block">
