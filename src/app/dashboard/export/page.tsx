@@ -434,22 +434,28 @@ function ReportPreview({
         <style>
             {`
             @media print {
-                .no-print {
-                    display: none;
+                body * {
+                    visibility: hidden;
+                }
+                #print-section, #print-section * {
+                    visibility: visible;
+                }
+                #print-section {
+                    position: static;
+                }
+                .report-page-container:not(:first-child) {
+                    break-before: page;
                 }
                 @page {
                     size: A4 portrait;
                     margin: 0;
-                }
-                .report-page-container:not(:first-child) {
-                    break-before: page;
                 }
             }
             `}
         </style>
       
       {/* On-screen modal, hidden on print */}
-      <div className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4 no-print">
+      <div className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4 print:hidden">
         <Card className="w-full max-w-5xl h-[90vh] flex flex-col">
             <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Pratinjau Laporan</CardTitle>
@@ -596,19 +602,19 @@ export default function ExportPage() {
         }
 
         const pages: string[] = [];
+        const sortedNotas = selectedNotas.sort((a,b) => a.tanggal.toDate().getTime() - b.tanggal.toDate().getTime());
+
 
         try {
             if (reportType === 'all') {
                 // 1. Generate Rekap (if applicable)
-                if (filterType === 'monthly') {
-                    const [year, monthNum] = selectedMonth.split('-');
-                    const monthName = format(new Date(Number(year), Number(monthNum)-1, 1), 'MMMM', {locale: idLocale});
-                    const rekapHtml = generateRekapitulasiReport(selectedNotas, monthName, year);
+                if (filterType === 'monthly' || filterType === 'verified') {
+                    const rekapHtml = generateRekapitulasiReport(sortedNotas, "Rekapitulasi", "");
                     pages.push(rekapHtml);
                 }
 
                 // 2. Generate Perincian
-                const perincianGrouped = selectedNotas.reduce((acc, nota) => {
+                const perincianGrouped = sortedNotas.reduce((acc, nota) => {
                     const seg = nota.segmen;
                     if (!acc[seg]) acc[seg] = [];
                     acc[seg].push(nota);
@@ -637,7 +643,7 @@ export default function ExportPage() {
                 }
 
                 // 3. Generate Eviden
-                const evidenGrouped = selectedNotas.reduce((acc, nota) => {
+                const evidenGrouped = sortedNotas.reduce((acc, nota) => {
                     const seg = nota.segmen;
                     if (!acc[seg]) acc[seg] = [];
                     acc[seg].push(nota);
@@ -660,12 +666,14 @@ export default function ExportPage() {
                 }
 
             } else if (reportType === 'rekap') {
-                const [year, monthNum] = selectedMonth.split('-');
-                const monthName = format(new Date(Number(year), Number(monthNum)-1, 1), 'MMMM', {locale: idLocale});
-                const html = generateRekapitulasiReport(selectedNotas, monthName, year);
-                pages.push(html);
+                 if (filterType === 'monthly' || filterType === 'verified') {
+                    const html = generateRekapitulasiReport(sortedNotas, "Rekapitulasi", "");
+                    pages.push(html);
+                } else {
+                    toast({ variant: "destructive", title: "Tidak dapat membuat rekap", description: "Filter saat ini tidak mendukung pembuatan rekap."});
+                }
             } else if (reportType === 'perincian') {
-                const groupedBySegment = selectedNotas.reduce((acc, nota) => {
+                const groupedBySegment = sortedNotas.reduce((acc, nota) => {
                     const seg = nota.segmen;
                     if (!acc[seg]) {
                         acc[seg] = [];
@@ -697,7 +705,7 @@ export default function ExportPage() {
                     pages.push(segmentHtml);
                 }
             } else if (reportType === 'eviden') {
-                const groupedBySegment = selectedNotas.reduce((acc, nota) => {
+                const groupedBySegment = sortedNotas.reduce((acc, nota) => {
                     const seg = nota.segmen;
                     if (!acc[seg]) {
                         acc[seg] = [];
@@ -922,7 +930,7 @@ export default function ExportPage() {
                         <Button variant="outline" size="lg" onClick={() => handleGenerateReport('all')} disabled={isGenerating || selectedNotaIds.length === 0}>
                            {isGenerating && reportTypeBeingGenerated === 'all' ? <Loader2 className="mr-2 animate-spin"/> : <FileArchive className="mr-2" />} Semua (1 File)
                         </Button>
-                        <Button variant="outline" size="lg" onClick={() => handleGenerateReport('rekap')} disabled={isGenerating || selectedNotaIds.length === 0 || filterType !== 'monthly'}>
+                        <Button variant="outline" size="lg" onClick={() => handleGenerateReport('rekap')} disabled={isGenerating || selectedNotaIds.length === 0 || !['monthly', 'verified'].includes(filterType)}>
                             {isGenerating && reportTypeBeingGenerated === 'rekap' ? <Loader2 className="mr-2 animate-spin"/> : <FileText className="mr-2" />} Rekap
                         </Button>
                         <Button variant="outline" size="lg" onClick={() => handleGenerateReport('perincian')} disabled={isGenerating || selectedNotaIds.length === 0}>
