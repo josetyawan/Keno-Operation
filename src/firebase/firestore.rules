@@ -1,0 +1,130 @@
+/**
+ * # Firestore Security Rules: NotaKu App
+ *
+ * ## Core Philosophy
+ * This ruleset allows any authenticated user to view all public data ('notas'),
+ * but strictly controls who can create, modify, or delete that data. This
+ * facilitates a collaborative or admin-reviewed environment.
+ *
+ * ## Data Structure
+ *   - `/users/{userId}`: Stores user profile information, including roles.
+ *   - `/notas/{notaId}`: A global collection of all notas from all users.
+ *
+ * ## Key Security Decisions
+ * - **Public Read, Private Write**: Any signed-in user can read any nota. This is
+ *   a key business requirement. Write operations (create, update, delete) are
+ *   restricted.
+ * - **Strict Ownership for Writes**: A user can only create notas under their own
+ *   ID. They can only update or delete notas they already own.
+ * - **Admin Override**: Users with the 'admin' role (defined in their /users/
+ *   document) have elevated privileges, specifically the ability to update any
+ *   nota for verification purposes.
+ * - **Default Deny**: Any path not explicitly defined is inaccessible.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // -------------------------------------------------------------------------
+    // Helper Functions
+    // -------------------------------------------------------------------------
+
+    /**
+     * Checks if the user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the user's registration has been approved by an admin.
+     */
+    function isApproved() {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.registrationStatus == 'approved';
+    }
+
+    /**
+     * Checks if the authenticated user's UID matches the provided userId.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * Checks if the user has an 'admin' role by reading their profile document.
+     * This is used for granting elevated permissions.
+     * This check is now case-insensitive.
+     */
+    function isAdmin() {
+      // This rule is safe from recursion because the ability to 'get' one's own
+      // document is granted separately without needing to check for admin status.
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.lower() == 'admin';
+    }
+
+    /**
+     * Validates that a user is creating a nota with their own userId.
+     */
+    function isCreatingOwnNota() {
+        return request.resource.data.userId == request.auth.uid;
+    }
+
+    /**
+     * Validates that a user is updating a nota they own.
+     */
+    function isUpdatingOwnNota() {
+        return resource.data.userId == request.auth.uid;
+    }
+
+
+    // -------------------------------------------------------------------------
+    // Collection Rules
+    // -------------------------------------------------------------------------
+
+    /**
+     * @description Manages user profile documents.
+     * @path /users/{userId}
+     */
+    match /users/{userId} {
+      // CREATE: Allow a user to create their own document upon signup with strict validation.
+      // This rule ensures only the essential fields are written on creation.
+      allow create: if request.auth.uid == userId &&
+                      request.resource.data.email == request.auth.token.email &&
+                      request.resource.data.displayName == request.auth.token.email &&
+                      request.resource.data.role == 'user' &&
+                      request.resource.data.registrationStatus == 'pending' &&
+                      request.resource.data.keys().hasOnly(['email', 'displayName', 'role', 'registrationStatus']);
+      
+      // READ (OWNER): Any authenticated user can read their OWN document.
+      // This is CRITICAL for isAdmin() to work without causing a recursive loop.
+      allow get: if isOwner(userId);
+
+      // READ (ADMIN): An admin can list and get any user document. This now works because
+      // the 'get' inside isAdmin() is satisfied by the rule above for the admin's own document.
+      allow list, get: if isAdmin();
+      
+      // UPDATE (OWNER/ADMIN): An authenticated user can update their own document, or an admin can update any.
+      allow update: if isOwner(userId) || isAdmin();
+      
+      // DELETION: Deleting users is a server-side or console action, not allowed from the client.
+      allow delete: if false;
+    }
+
+    /**
+     * @description Global collection for all user notas.
+     * @path /notas/{notaId}
+     */
+    match /notas/{notaId} {
+      // Only approved users can read notas.
+      allow get, list: if isApproved() || isAdmin();
+      
+      // An approved user can only create a nota if the nota's userId matches their own.
+      allow create: if isApproved() && isCreatingOwnNota();
+
+      // An approved user can update their own nota. Admins can update any nota.
+      allow update: if (isApproved() && isUpdatingOwnNota()) || isAdmin();
+      
+      // An approved user can only delete a nota if they are the owner.
+      allow delete: if isApproved() && isUpdatingOwnNota();
+    }
+  }
+}
