@@ -15,8 +15,6 @@ import { ToastAction } from '@/components/ui/toast';
 export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [nik, setNik] = useState('');
-  const [phone, setPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const auth = useAuth();
@@ -32,7 +30,7 @@ export default function SignupPage() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nik || !phone || !email || !password) {
+    if (!email || !password) {
         toast({
             variant: 'destructive',
             title: 'Form Belum Lengkap',
@@ -42,7 +40,8 @@ export default function SignupPage() {
     }
     setIsLoading(true);
     try {
-      await signUpWithEmail(auth, firestore, password, { email, nik, phone });
+      // Pass only the essential details
+      await signUpWithEmail(auth, firestore, password, { email });
       toast({
         title: 'Pendaftaran Berhasil!',
         description: 'Akun Anda sedang menunggu persetujuan dari admin. Anda akan dialihkan ke halaman login.',
@@ -93,14 +92,6 @@ export default function SignupPage() {
     <AuthLayout>
       <form onSubmit={handleSignUp}>
         <div className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="nik">NIK</Label>
-            <Input id="nik" type="text" placeholder="Nomor Induk Kependudukan" required value={nik} onChange={(e) => setNik(e.target.value)} />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="phone">No. HP</Label>
-            <Input id="phone" type="tel" placeholder="081234567890" required value={phone} onChange={(e) => setPhone(e.target.value)} />
-          </div>
           <div className="grid gap-2">
             <Label htmlFor="email">Email</Label>
             <Input id="email" type="email" placeholder="email@contoh.com" required value={email} onChange={(e) => setEmail(e.target.value)} />

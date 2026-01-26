@@ -97,16 +97,11 @@ service cloud.firestore {
 
       // READ (ADMIN): An admin can list and get any user document. This now works because
       // the 'get' inside isAdmin() is satisfied by the rule above for the admin's own document.
-      allow list: if isAdmin();
-      allow get: if isAdmin();
+      allow list, get: if isAdmin();
       
-      // UPDATE (OWNER): An authenticated user can update their own document. This rule is now corrected
-      // to allow the super-admin promotion logic to succeed.
-      allow update: if isOwner(userId);
+      // UPDATE (OWNER/ADMIN): An authenticated user can update their own document, or an admin can update any.
+      allow update: if isOwner(userId) || isAdmin();
       
-      // UPDATE (ADMIN): An admin can update any user's document.
-      allow update: if isAdmin();
-
       // DELETION: Deleting users is a server-side or console action, not allowed from the client.
       allow delete: if false;
     }

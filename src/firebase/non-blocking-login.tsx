@@ -10,23 +10,22 @@ import { doc, setDoc, Firestore } from 'firebase/firestore';
 
 interface SignUpDetails {
     email: string;
-    nik: string;
-    phone: string;
+    nik?: string; // Now optional
+    phone?: string; // Now optional
 }
 
 async function createUserDocument(firestore: Firestore, user: User, details: SignUpDetails) {
     const userDocRef = doc(firestore, 'users', user.uid);
     
+    // Create a minimal user document
     const userData = {
         id: user.uid,
         email: user.email || '',
-        nik: details.nik,
-        phone: details.phone,
         firstName: '',
         lastName: '',
         displayName: user.email?.split('@')[0] || 'User Baru',
-        role: 'user',
-        registrationStatus: 'pending', // Pengguna baru dimulai sebagai 'pending'
+        role: 'user', // Default role
+        registrationStatus: 'pending', // Always start as 'pending'
     };
 
     await setDoc(userDocRef, userData);
@@ -38,6 +37,7 @@ async function createUserDocument(firestore: Firestore, user: User, details: Sig
 export async function signUpWithEmail(auth: Auth, firestore: Firestore, password: string, details: SignUpDetails): Promise<UserCredential> {
   const userCredential = await createUserWithEmailAndPassword(auth, details.email, password);
   try {
+    // Creates the user document with minimal information
     await createUserDocument(firestore, userCredential.user, details);
   } catch (firestoreError) {
     console.error("Kritis: Gagal membuat dokumen pengguna di Firestore setelah pembuatan pengguna di Auth.", firestoreError);
