@@ -30,6 +30,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             fill
             sizes="(max-width: 1023px) 0vw, 50vw"
             className="object-cover"
+            priority
           />
         )}
       </div>
