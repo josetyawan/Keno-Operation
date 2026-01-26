@@ -5,6 +5,7 @@ import {
   LayoutGrid,
   Menu,
   LogOut,
+  Users
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,12 +19,13 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { UserNav } from '@/components/user-nav';
 import { Logo } from '@/components/logo';
 import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { doc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 
 export default function DashboardLayout({
@@ -34,6 +36,7 @@ export default function DashboardLayout({
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -92,6 +95,11 @@ export default function DashboardLayout({
 
   const showDashboard = !isLoading && userProfile?.registrationStatus === 'approved';
 
+  const navLinks = [
+    { href: '/dashboard', label: 'Dashboard', icon: LayoutGrid, adminOnly: false },
+    { href: '/dashboard/admin/users', label: 'Manajemen User', icon: Users, adminOnly: true },
+  ];
+
   // If the user is fully approved, render the dashboard.
   if (showDashboard) {
     return (
@@ -105,13 +113,24 @@ export default function DashboardLayout({
             </div>
             <div className="flex-1">
               <nav className="grid items-start px-4 py-4 text-sm font-medium">
-                <Link
-                  href="/dashboard"
-                  className="flex items-center gap-3 rounded-lg bg-primary/10 px-3 py-2 text-primary transition-all hover:text-primary"
-                >
-                  <LayoutGrid className="h-4 w-4" />
-                  Dashboard
-                </Link>
+                {navLinks.map(link => {
+                  if (link.adminOnly && userProfile?.role !== 'admin') return null;
+                  const isActive = pathname.startsWith(link.href) && (link.href === '/dashboard' ? pathname === link.href : true);
+
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className={cn(
+                        "flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:text-primary",
+                        isActive ? "bg-primary/10 text-primary" : "text-muted-foreground"
+                      )}
+                    >
+                      <link.icon className="h-4 w-4" />
+                      {link.label}
+                    </Link>
+                  )
+                })}
               </nav>
             </div>
           </div>
@@ -137,13 +156,23 @@ export default function DashboardLayout({
                   >
                     <Logo />
                   </Link>
-                  <Link
-                    href="/dashboard"
-                    className="mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground"
-                  >
-                    <LayoutGrid className="h-5 w-5" />
-                    Dashboard
-                  </Link>
+                  {navLinks.map(link => {
+                    if (link.adminOnly && userProfile?.role !== 'admin') return null;
+                    const isActive = pathname.startsWith(link.href);
+                    return (
+                       <Link
+                        key={link.href}
+                        href={link.href}
+                        className={cn(
+                          "mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground",
+                          isActive && "bg-muted"
+                        )}
+                      >
+                        <link.icon className="h-5 w-5" />
+                        {link.label}
+                      </Link>
+                    )
+                  })}
                 </nav>
                 <div className="mt-auto">
                    <Card>
