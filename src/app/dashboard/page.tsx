@@ -121,7 +121,7 @@ export default function DashboardPage() {
                     Tambah Nota
                 </Button>
             </Link>
-            <Link href="/dashboard/rekap">
+            <Link href="/dashboard/export">
               <Button variant="outline">
                   Buat Laporan Rekap
               </Button>
