@@ -17,13 +17,12 @@ interface SignUpDetails {
 async function createUserDocument(firestore: Firestore, user: User, details: SignUpDetails) {
     const userDocRef = doc(firestore, 'users', user.uid);
     
-    // Create a minimal user document
+    // Create a minimal user document, only with fields required by security rules
+    // to ensure the creation process is robust.
     const userData = {
         id: user.uid,
         email: user.email || '',
-        firstName: '',
-        lastName: '',
-        displayName: user.email?.split('@')[0] || 'User Baru',
+        displayName: user.email?.split('@')[0] || 'User Baru', // Set a default display name
         role: 'user', // Default role
         registrationStatus: 'pending', // Always start as 'pending'
     };
