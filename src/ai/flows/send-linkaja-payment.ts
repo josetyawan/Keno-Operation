@@ -43,8 +43,8 @@ const sendLinkAjaPaymentFlow = ai.defineFlow(
         LINKAJA_ACCOUNT_NUMBER 
     } = process.env;
 
-    if (!LINKAJA_API_KEY || LINKAJA_API_KEY === 'GANTI_DENGAN_API_KEY_ANDA' || !LINKAJA_SECRET_KEY || !LINKAJA_API_ENDPOINT || !LINKAJA_ACCOUNT_NUMBER) {
-      const errorMsg = 'Kredensial API LinkAja belum dikonfigurasi di file .env.';
+    if (!LINKAJA_API_KEY || !LINKAJA_SECRET_KEY || !LINKAJA_API_ENDPOINT || LINKAJA_API_ENDPOINT.includes('GANTI_DENGAN') || !LINKAJA_ACCOUNT_NUMBER || LINKAJA_ACCOUNT_NUMBER.includes('GANTI_DENGAN')) {
+      const errorMsg = 'Kredensial atau konfigurasi API LinkAja belum lengkap di file .env. Mohon isi LINKAJA_API_ENDPOINT dan LINKAJA_ACCOUNT_NUMBER.';
       console.error(errorMsg);
       return { success: false, message: errorMsg };
     }
