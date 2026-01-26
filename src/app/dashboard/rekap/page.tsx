@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState } from 'react';
@@ -141,6 +142,10 @@ export default function RekapPage() {
             height: 100%;
             padding: 0;
             margin: 0;
+          }
+          .bg-yellow-300 {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
         }
       `}</style>
