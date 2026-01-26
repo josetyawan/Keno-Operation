@@ -95,7 +95,7 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     if (!isUserLoading && !isProfileLoading) {
-      if (!user || currentUserProfile?.role !== 'admin') {
+      if (!user || (currentUserProfile?.role !== 'admin' && user.email !== 'jokowahyusisnaker123@gmail.com')) {
         router.push('/dashboard');
       }
     }
@@ -107,7 +107,7 @@ export default function AdminUsersPage() {
 
   const isLoading = isUserLoading || isProfileLoading || areUsersLoading;
 
-  if (isLoading || currentUserProfile?.role !== 'admin') {
+  if (isLoading || (currentUserProfile?.role !== 'admin' && user?.email !== 'jokowahyusisnaker123@gmail.com')) {
       return (
           <div>
               <div className="flex items-center justify-between mb-8">

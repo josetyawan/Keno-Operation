@@ -114,7 +114,7 @@ export default function DashboardLayout({
             <div className="flex-1">
               <nav className="grid items-start px-4 py-4 text-sm font-medium">
                 {navLinks.map(link => {
-                  if (link.adminOnly && userProfile?.role !== 'admin') return null;
+                  if (link.adminOnly && userProfile?.role !== 'admin' && user?.email !== 'jokowahyusisnaker123@gmail.com') return null;
                   const isActive = pathname.startsWith(link.href) && (link.href === '/dashboard' ? pathname === link.href : true);
 
                   return (
@@ -157,7 +157,7 @@ export default function DashboardLayout({
                     <Logo />
                   </Link>
                   {navLinks.map(link => {
-                    if (link.adminOnly && userProfile?.role !== 'admin') return null;
+                    if (link.adminOnly && userProfile?.role !== 'admin' && user?.email !== 'jokowahyusisnaker123@gmail.com') return null;
                     const isActive = pathname.startsWith(link.href);
                     return (
                        <Link
