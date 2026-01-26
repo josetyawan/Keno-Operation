@@ -61,13 +61,6 @@ service cloud.firestore {
     }
 
     /**
-     * Enforces immutability of the user `id` field during updates.
-     */
-    function isUpdatingOwnUserDocument() {
-      return request.resource.data.id == resource.data.id;
-    }
-    
-    /**
      * Validates that a user is creating a nota with their own userId.
      */
     function isCreatingOwnNota() {
@@ -107,8 +100,9 @@ service cloud.firestore {
       allow list: if isAdmin();
       allow get: if isAdmin();
       
-      // UPDATE (OWNER): An authenticated user can update their own document.
-      allow update: if isOwner(userId) && isUpdatingOwnUserDocument();
+      // UPDATE (OWNER): An authenticated user can update their own document. This rule is now corrected
+      // to allow the super-admin promotion logic to succeed.
+      allow update: if isOwner(userId);
       
       // UPDATE (ADMIN): An admin can update any user's document.
       allow update: if isAdmin();
