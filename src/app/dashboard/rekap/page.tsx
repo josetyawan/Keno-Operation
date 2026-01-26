@@ -17,7 +17,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { ArrowLeft, Calendar as CalendarIcon, Loader2, Bot } from 'lucide-react';
+import { ArrowLeft, Calendar as CalendarIcon, Loader2, Bot, Wallet } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where, Timestamp } from 'firebase/firestore';
 import { format, startOfDay, endOfDay } from 'date-fns';
@@ -27,6 +27,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { sendTelegramReport } from '@/ai/flows/send-telegram-report';
+import { sendLinkAjaPayment } from '@/ai/flows/send-linkaja-payment';
 
 type RekapDataItem = {
     phone: string;
@@ -34,6 +35,7 @@ type RekapDataItem = {
     segmen: string;
     tanggal: string;
     nominal: number;
+    userId: string;
 };
 
 export default function RekapPage() {
@@ -44,6 +46,7 @@ export default function RekapPage() {
     const [grandTotal, setGrandTotal] = useState(0);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSending, setIsSending] = useState(false);
+    const [isPaying, setIsPaying] = useState(false);
 
     useEffect(() => {
         // Set initial date on client-side to avoid hydration mismatch
@@ -56,7 +59,6 @@ export default function RekapPage() {
         const end = endOfDay(verificationDate);
         return query(
             collection(firestore, 'notas'),
-            // Removed: where('status', '==', 'verified'), to avoid composite index requirement.
             where('tanggalVerifikasi', '>=', Timestamp.fromDate(start)),
             where('tanggalVerifikasi', '<=', Timestamp.fromDate(end))
         );
@@ -64,7 +66,6 @@ export default function RekapPage() {
 
     const { data: notasFromQuery, isLoading: isNotasLoading } = useCollection<Nota>(notasQuery);
 
-    // Filter for verified notas on the client-side
     const notas = useMemo(() => {
         if (!notasFromQuery) return null;
         return notasFromQuery.filter(nota => nota.status === 'verified');
@@ -86,7 +87,6 @@ export default function RekapPage() {
 
         const userMap = new Map(users.map(u => [u.id, u]));
 
-        // New format: one line per nota
         const formattedData: RekapDataItem[] = notas.map(nota => {
             const user = userMap.get(nota.userId);
             return {
@@ -95,6 +95,7 @@ export default function RekapPage() {
                 segmen: (nota.segmen || '').replace(/\s/g, ''),
                 tanggal: format(nota.tanggal.toDate(), 'dd/MM/yy'),
                 nominal: nota.nominal,
+                userId: nota.userId,
             };
         }).sort((a,b) => a.name.localeCompare(b.name));
         
@@ -120,7 +121,7 @@ export default function RekapPage() {
         setIsSending(true);
         try {
             const result = await sendTelegramReport({ 
-                rekapData, 
+                rekapData: rekapData.map(({ phone, name, segmen, tanggal, nominal }) => ({ phone, name, segmen, tanggal, nominal })),
                 grandTotal,
                 rekapDate: verificationDate ? format(verificationDate, 'dd MMMM yyyy', {locale: idLocale}) : 'N/A'
              });
@@ -136,6 +137,38 @@ export default function RekapPage() {
             setIsSending(false);
         }
     };
+
+    const handleLinkAjaPayment = async () => {
+        if (rekapData.length === 0 || grandTotal <= 0) {
+            toast({ variant: 'destructive', title: 'Tidak ada data pembayaran', description: 'Pastikan ada rekap dengan total lebih dari nol.' });
+            return;
+        }
+        setIsPaying(true);
+        try {
+            // Logika pembayaran di sini. Untuk saat ini, kita akan membuat satu pembayaran
+            // untuk total keseluruhan. Anda mungkin perlu logika yang lebih kompleks
+            // untuk membayar setiap individu.
+            // Di sini kita asumsikan membayar ke satu rekening tujuan, misal rekening perusahaan.
+            const result = await sendLinkAjaPayment({ 
+                amount: grandTotal,
+                description: `Pembayaran rekap tanggal ${verificationDate ? format(verificationDate, 'dd/MM/yyyy') : 'N/A'}`,
+                // Anda perlu menentukan rekening penerima di sini.
+                // Ini bisa berupa variabel statis atau diambil dari suatu tempat.
+                recipientAccount: 'NOMOR_REKENING_PENERIMA_UTAMA' 
+            });
+
+            if (result.success) {
+                toast({ title: 'Pembayaran Diproses', description: result.message });
+            } else {
+                throw new Error(result.message || 'Pembayaran LinkAja gagal karena alasan yang tidak diketahui.');
+            }
+        } catch (error: any) {
+            console.error('LinkAja payment error:', error);
+            toast({ variant: 'destructive', title: 'Gagal Membayar', description: error.message });
+        } finally {
+            setIsPaying(false);
+        }
+    }
     
     const isLoading = isNotasLoading || isUsersLoading;
 
@@ -219,14 +252,20 @@ export default function RekapPage() {
                     )}
                 </CardContent>
                 {(notas && notas.length > 0 && rekapData.length > 0) && (
-                     <CardFooter className="border-t pt-6 flex justify-between items-center">
+                     <CardFooter className="border-t pt-6 flex flex-col sm:flex-row gap-4 justify-between items-center">
                         <div className="text-lg font-bold">
                             Total: Rp {grandTotal.toLocaleString('id-ID')}
                         </div>
-                        <Button onClick={handleSendToTelegram} disabled={isSending}>
-                            {isSending ? <Loader2 className="mr-2 animate-spin"/> : <Bot className="mr-2" />}
-                            {isSending ? 'Mengirim...' : 'Kirim ke Telegram'}
-                        </Button>
+                        <div className="flex gap-2">
+                            <Button onClick={handleSendToTelegram} disabled={isSending}>
+                                {isSending ? <Loader2 className="mr-2 animate-spin"/> : <Bot className="mr-2" />}
+                                {isSending ? 'Mengirim...' : 'Kirim ke Telegram'}
+                            </Button>
+                             <Button onClick={handleLinkAjaPayment} disabled={isPaying} variant="destructive">
+                                {isPaying ? <Loader2 className="mr-2 animate-spin"/> : <Wallet className="mr-2" />}
+                                {isPaying ? 'Membayar...' : 'Bayar via LinkAja'}
+                            </Button>
+                        </div>
                     </CardFooter>
                 )}
             </Card>
