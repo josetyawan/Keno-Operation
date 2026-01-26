@@ -57,7 +57,12 @@ export default function RekapPage() {
     }, [firestore, verificationDate]);
 
     const { data: notas, isLoading: isNotasLoading } = useCollection<Nota>(notasQuery);
-    const { data: users, isLoading: isUsersLoading } = useCollection<UserProfile>(collection(firestore, 'users'));
+    
+    const usersCollection = useMemoFirebase(() => {
+      if (!firestore) return null;
+      return collection(firestore, 'users');
+    }, [firestore]);
+    const { data: users, isLoading: isUsersLoading } = useCollection<UserProfile>(usersCollection);
 
     const handleGenerateRekap = () => {
         if (!notas || !users) return;
