@@ -104,7 +104,8 @@ service cloud.firestore {
 
       // READ (ADMIN): An admin can list and get any user document. This now works because
       // the 'get' inside isAdmin() is satisfied by the rule above for the admin's own document.
-      allow list, get: if isAdmin();
+      allow list: if isAdmin();
+      allow get: if isAdmin();
       
       // UPDATE (OWNER): An authenticated user can update their own document.
       allow update: if isOwner(userId) && isUpdatingOwnUserDocument();
