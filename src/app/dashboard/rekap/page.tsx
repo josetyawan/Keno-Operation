@@ -169,7 +169,12 @@ export default function RekapPage() {
         const bbmSegments = ['BBM R2', 'BBM R4 Harian', 'BBM R4 Turlap', 'BBM R4 UT'];
         const filteredBbmNotas = notas
             .filter(nota => bbmSegments.includes(nota.segmen))
-            .sort((a, b) => a.tanggal.toDate().getTime() - b.tanggal.toDate().getTime());
+            .sort((a, b) => {
+                if (a.segmen < b.segmen) return -1;
+                if (a.segmen > b.segmen) return 1;
+                // If segments are equal, sort by date
+                return a.tanggal.toDate().getTime() - b.tanggal.toDate().getTime();
+            });
         
         const totalAmount = filteredBbmNotas.reduce((sum, item) => sum + item.nominal, 0);
 
