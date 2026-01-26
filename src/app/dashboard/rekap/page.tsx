@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   Card,
   CardContent,
@@ -62,6 +63,15 @@ type DetailRekapItem = Nota & {
   displayKeterangan: string;
 };
 
+// Type for the Eviden BBM report
+type EvidenBbmRekapItem = Nota & {
+  selisih: number;
+  keperluanUrls: string[];
+  kmAwalBulanUrl?: string;
+  kmAwalUrl?: string;
+  kmAkhirUrl?: string;
+};
+
 const bbmReportTypes: Record<string, { title: string, segment: string }> = {
   'bbm-r2': { title: 'Perincian Nota BBM R2', segment: 'BBM R2' },
   'bbm-r4-harian': { title: 'Perincian Nota BBM R4 Harian', segment: 'BBM R4 Harian' },
@@ -98,6 +108,13 @@ const detailReportTypes: Record<string, { title: string, segment: string, static
     }
 };
 
+const evidenBbmReportTypes: Record<string, { title: string, segment: string }> = {
+  'eviden-bbm-r2': { title: 'Eviden Foto - Perincian Nota BBM R2', segment: 'BBM R2' },
+  'eviden-bbm-r4-harian': { title: 'Eviden Foto - Perincian Nota BBM R4 Harian', segment: 'BBM R4 Harian' },
+  'eviden-bbm-r4-turlap': { title: 'Eviden Foto - Perincian Nota BBM R4 Turlap', segment: 'BBM R4 Turlap' },
+  'eviden-bbm-r4-ut': { title: 'Eviden Foto - Perincian Nota BBM R4 UT', segment: 'BBM R4 UT' },
+};
+
 
 export default function RekapPage() {
   const { toast } = useToast();
@@ -119,6 +136,8 @@ export default function RekapPage() {
   const [detailData, setDetailData] = useState<DetailRekapItem[] | null>(null);
   const [detailTotal, setDetailTotal] = useState<number>(0);
   const [detailTitle, setDetailTitle] = useState<string>('');
+  const [evidenData, setEvidenData] = useState<EvidenBbmRekapItem[] | null>(null);
+  const [evidenTitle, setEvidenTitle] = useState<string>('');
   
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerated, setIsGenerated] = useState(false);
@@ -137,6 +156,7 @@ export default function RekapPage() {
 
   const isBbmReport = Object.keys(bbmReportTypes).includes(reportType);
   const isDetailReport = Object.keys(detailReportTypes).includes(reportType);
+  const isEvidenBbmReport = Object.keys(evidenBbmReportTypes).includes(reportType);
 
   const handleGenerateRekap = () => {
     if (!startDate || !endDate) {
@@ -154,12 +174,14 @@ export default function RekapPage() {
     setJasaData(null);
     setBbmData(null);
     setDetailData(null);
+    setEvidenData(null);
     setSummaryTotal(0);
     setJasaTotal(0);
     setBbmTotal(0);
     setBbmTitle('');
     setDetailTotal(0);
     setDetailTitle('');
+    setEvidenTitle('');
 
     if (areNotasLoading) return;
     
@@ -260,6 +282,35 @@ export default function RekapPage() {
             toast({
                 title: 'Tidak Ada Data',
                 description: `Tidak ada laporan "${config.segment}" yang ditemukan.`,
+            });
+        }
+    } else if (notas && isEvidenBbmReport) {
+        const config = evidenBbmReportTypes[reportType];
+        const filteredNotas = notas.filter(nota => nota.segmen === config.segment);
+    
+        filteredNotas.sort((a, b) => a.tanggal.toDate().getTime() - b.tanggal.toDate().getTime());
+    
+        const rekapArray = filteredNotas.map(nota => {
+            const selisih = (nota.kmAkhir ?? 0) - (nota.kmAwal ?? 0);
+            const urls = nota.fotoEvidenUrls ?? [];
+            return {
+                ...nota,
+                selisih,
+                keperluanUrls: urls.slice(0, 4),
+                kmAwalBulanUrl: urls[4],
+                kmAwalUrl: urls[5],
+                kmAkhirUrl: urls[6],
+            };
+        });
+    
+        setEvidenData(rekapArray);
+        setEvidenTitle(config.title);
+        setIsGenerated(true);
+    
+        if (rekapArray.length === 0) {
+            toast({
+                title: 'Tidak Ada Data',
+                description: `Tidak ada laporan "${config.segment}" dengan foto yang ditemukan.`,
             });
         }
     } else {
@@ -525,6 +576,70 @@ export default function RekapPage() {
                 </div>
             </div>
           );
+      } else if (isEvidenBbmReport && evidenData) {
+          reportContent = (
+            <div className="max-w-7xl mx-auto font-serif text-black" style={{ fontSize: '10px' }}>
+                <h1 className="font-bold text-base text-center mb-6">{evidenTitle}</h1>
+                <Table className="border-2 border-black mb-4">
+                    <TableHeader>
+                        <TableRow className="border-b-2 border-black bg-yellow-300">
+                            <TableHead className="p-1 border-r-2 border-black text-black font-bold text-center">No</TableHead>
+                            <TableHead className="p-1 border-r-2 border-black text-black font-bold text-center">TANGGAL</TableHead>
+                            <TableHead className="p-1 border-r-2 border-black text-black font-bold text-center">KET</TableHead>
+                            <TableHead className="p-1 border-r-2 border-black text-black font-bold text-center">NO PLAT</TableHead>
+                            <TableHead className="p-1 border-r-2 border-black text-black font-bold text-center">SELISIH</TableHead>
+                            <TableHead className="p-1 border-r-2 border-black text-black font-bold text-center">KM AWAL</TableHead>
+                            <TableHead className="p-1 border-r-2 border-black text-black font-bold text-center">KM AKHIR</TableHead>
+                            <TableHead className="p-1 border-r-2 border-black text-black font-bold text-center">KEPERLUAN</TableHead>
+                            <TableHead className="p-1 border-r-2 border-black text-black font-bold text-center">Eviden KM Awal Bulan</TableHead>
+                            <TableHead className="p-1 border-r-2 border-black text-black font-bold text-center">Eviden KM Awal</TableHead>
+                            <TableHead className="p-1 border-r-2 border-black text-black font-bold text-center">Eviden KM Akhir</TableHead>
+                            <TableHead className="p-1 border-r-2 border-black text-black font-bold text-center">PIC</TableHead>
+                            <TableHead className="p-1 text-black font-bold text-center">Nilai</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {(evidenData && evidenData.length > 0) ? (
+                            evidenData.map((item, index) => (
+                                <TableRow key={item.id} className="border-b border-black">
+                                    <TableCell className="p-1 border-r-2 border-black text-center">{index + 1}</TableCell>
+                                    <TableCell className="p-1 border-r-2 border-black text-center">{format(item.tanggal.toDate(), 'dd MMMM yyyy')}</TableCell>
+                                    <TableCell className="p-1 border-r-2 border-black text-center">{item.segmen.replace('BBM ', '').replace('R4 ', '')}</TableCell>
+                                    <TableCell className="p-1 border-r-2 border-black text-center">{item.noPlatKendaraan}</TableCell>
+                                    <TableCell className="p-1 border-r-2 border-black text-center">{item.selisih}</TableCell>
+                                    <TableCell className="p-1 border-r-2 border-black text-center">{item.kmAwal}</TableCell>
+                                    <TableCell className="p-1 border-r-2 border-black text-center">{item.kmAkhir}</TableCell>
+                                    <TableCell className="p-1 border-r-2 border-black">
+                                        <div className="grid grid-cols-2 gap-1 w-48">
+                                            {item.keperluanUrls.map((url, i) => (
+                                                <div key={i} className="relative aspect-square w-full">
+                                                    <Image src={url} alt={`Keperluan ${i + 1}`} layout="fill" objectFit="cover" />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="p-1 border-r-2 border-black text-center">
+                                        {item.kmAwalBulanUrl && <div className="relative aspect-square w-24 mx-auto"><Image src={item.kmAwalBulanUrl} alt="KM Awal Bulan" layout="fill" objectFit="cover" /></div>}
+                                    </TableCell>
+                                    <TableCell className="p-1 border-r-2 border-black text-center">
+                                        {item.kmAwalUrl && <div className="relative aspect-square w-24 mx-auto"><Image src={item.kmAwalUrl} alt="KM Awal" layout="fill" objectFit="cover" /></div>}
+                                    </TableCell>
+                                    <TableCell className="p-1 border-r-2 border-black text-center">
+                                        {item.kmAkhirUrl && <div className="relative aspect-square w-24 mx-auto"><Image src={item.kmAkhirUrl} alt="KM Akhir" layout="fill" objectFit="cover" /></div>}
+                                    </TableCell>
+                                    <TableCell className="p-1 border-r-2 border-black text-center">{item.namaPic}</TableCell>
+                                    <TableCell className="p-1 text-right">Rp{item.nominal.toLocaleString('id-ID')}</TableCell>
+                                </TableRow>
+                            ))
+                        ) : (
+                             <TableRow className="border-b border-black">
+                                <TableCell colSpan={13} className="text-center h-24">Tidak ada data untuk ditampilkan.</TableCell>
+                             </TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+            </div>
+          );
       } else {
           reportContent = (
               <div className="text-center py-10">Tidak ada data untuk ditampilkan pada kriteria yang dipilih.</div>
@@ -611,6 +726,10 @@ export default function RekapPage() {
                             <SelectItem value="bbm-r4-harian">Perincian Nota BBM R4 Harian</SelectItem>
                             <SelectItem value="bbm-r4-turlap">Perincian Nota BBM R4 Turlap</SelectItem>
                             <SelectItem value="bbm-r4-ut">Perincian Nota BBM R4 UT</SelectItem>
+                            <SelectItem value="eviden-bbm-r2">Eviden Foto - BBM R2</SelectItem>
+                            <SelectItem value="eviden-bbm-r4-harian">Eviden Foto - BBM R4 Harian</SelectItem>
+                            <SelectItem value="eviden-bbm-r4-turlap">Eviden Foto - BBM R4 Turlap</SelectItem>
+                            <SelectItem value="eviden-bbm-r4-ut">Eviden Foto - BBM R4 UT</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
@@ -666,11 +785,11 @@ export default function RekapPage() {
               <CardTitle>Pratinjau Laporan</CardTitle>
               <CardDescription>Ini adalah pratinjau dari laporan yang akan dicetak. Klik tombol cetak untuk hasil akhir.</CardDescription>
             </CardHeader>
-            <CardContent id="printable-area" className="bg-white text-black p-8">
+            <CardContent id="printable-area" className="bg-white text-black p-4 sm:p-8">
                 {reportContent}
             </CardContent>
             <CardFooter className="print:hidden justify-end">
-              <Button onClick={handlePrint} disabled={!reportContent || (reportType === 'jasa' && !jasaData?.length) || (reportType === 'summary' && !summaryData?.length) || (isBbmReport && (!bbmData || bbmData.length === 0)) || (isDetailReport && (!detailData || detailData.length === 0))}><Printer className="mr-2 h-4 w-4" /> Cetak Laporan</Button>
+              <Button onClick={handlePrint} disabled={!reportContent || (reportType === 'jasa' && !jasaData?.length) || (reportType === 'summary' && !summaryData?.length) || (isBbmReport && (!bbmData || bbmData.length === 0)) || (isDetailReport && (!detailData || detailData.length === 0)) || (isEvidenBbmReport && (!evidenData || evidenData.length === 0))}><Printer className="mr-2 h-4 w-4" /> Cetak Laporan</Button>
             </CardFooter>
           </Card>
       )}
