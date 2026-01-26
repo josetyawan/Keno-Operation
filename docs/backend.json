@@ -117,6 +117,11 @@
             "pending",
             "verified"
           ]
+        },
+        "tanggalVerifikasi": {
+            "type": "string",
+            "description": "Date the nota was verified by an admin.",
+            "format": "date-time"
         }
       },
       "required": [

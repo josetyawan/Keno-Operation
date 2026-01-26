@@ -33,6 +33,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { SummarizeButton } from './summarize-button';
+import { Calendar } from '@/components/ui/calendar';
+
 
 export default function NotaDetailPage() {
   const params = useParams();
@@ -44,6 +46,9 @@ export default function NotaDetailPage() {
   const { toast } = useToast();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  const [isVerifyDialogOpen, setIsVerifyDialogOpen] = useState(false);
+  const [verificationDate, setVerificationDate] = useState<Date | undefined>(new Date());
 
   const userDocRef = useMemoFirebase(() => {
     if (!user) return null;
@@ -58,13 +63,17 @@ export default function NotaDetailPage() {
 
   const { data: nota, isLoading, error } = useDoc<Nota>(notaRef);
 
-  const handleVerify = () => {
-    if (!isAdmin || !notaRef) return;
-    updateDocumentNonBlocking(notaRef, { status: 'verified' });
+  const handleConfirmVerify = () => {
+    if (!isAdmin || !notaRef || !verificationDate) return;
+    updateDocumentNonBlocking(notaRef, { 
+        status: 'verified',
+        tanggalVerifikasi: verificationDate
+    });
     toast({
       title: 'Laporan Diverifikasi',
       description: 'Status laporan telah diperbarui menjadi "verified".',
     });
+    setIsVerifyDialogOpen(false);
   };
 
   const handleDelete = () => {
@@ -148,6 +157,9 @@ export default function NotaDetailPage() {
           <CardTitle>Laporan Segmen: {nota.segmen}</CardTitle>
             <CardDescription>
               Oleh {nota.userEmail} pada {format(tanggalLaporan, 'PPPPp')}
+               {nota.status === 'verified' && nota.tanggalVerifikasi?.toDate && (
+                    ` | Diverifikasi pada: ${format(nota.tanggalVerifikasi.toDate(), 'dd MMM yyyy')}`
+                )}
             </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -243,9 +255,35 @@ export default function NotaDetailPage() {
                     </>
                 )}
                 {isAdmin && nota.status === 'pending' && (
-                    <Button onClick={handleVerify}>
-                        <CheckCircle /> Verify Laporan
-                    </Button>
+                     <AlertDialog open={isVerifyDialogOpen} onOpenChange={setIsVerifyDialogOpen}>
+                        <AlertDialogTrigger asChild>
+                            <Button>
+                                <CheckCircle /> Verify Laporan
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Pilih Tanggal Verifikasi</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    Pilih tanggal kapan laporan ini dianggap telah diverifikasi. Tanggal ini akan digunakan untuk filter laporan terverifikasi.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <div className="flex justify-center py-4">
+                                <Calendar
+                                    mode="single"
+                                    selected={verificationDate}
+                                    onSelect={setVerificationDate}
+                                    initialFocus
+                                />
+                            </div>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Batal</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleConfirmVerify} disabled={!verificationDate}>
+                                    Konfirmasi Verifikasi
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
                 )}
             </div>
          </CardFooter>
