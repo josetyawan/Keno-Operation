@@ -19,7 +19,7 @@ import { UserNav } from '@/components/user-nav';
 import { Logo } from '@/components/logo';
 import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { doc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
@@ -36,6 +36,7 @@ export default function DashboardLayout({
   const router = useRouter();
   const firestore = useFirestore();
   const { toast } = useToast();
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   const userDocRef = useMemoFirebase(() => {
     if (!user) return null;
@@ -47,8 +48,8 @@ export default function DashboardLayout({
   const isLoading = isUserLoading || isProfileLoading;
 
   useEffect(() => {
-    // Wait until loading is complete before running any checks
-    if (isLoading) {
+    // Wait until loading is complete and not in the process of signing out
+    if (isLoading || isSigningOut) {
       return;
     }
 
@@ -58,31 +59,36 @@ export default function DashboardLayout({
       return;
     }
     
-    // Case 2: A user is logged in, but their profile document doesn't exist.
-    // This is an error state, so we sign them out.
-    if (!userProfile) {
-        auth.signOut();
-        toast({
-            title: 'Gagal Memuat Profil',
-            description: 'Tidak dapat menemukan data pengguna. Silakan login kembali.',
-            variant: 'destructive',
+    const handleSignOutAndRedirect = (title: string, description: string) => {
+        setIsSigningOut(true); // Prevent this from running again
+        auth.signOut().then(() => {
+            toast({
+                title,
+                description,
+                variant: title.includes('Gagal') ? 'destructive' : 'default',
+                duration: 5000,
+            });
+            router.push('/login');
         });
-        router.push('/login');
+    };
+
+    // Case 2: A user is logged in, but their profile document doesn't exist.
+    if (!userProfile) {
+        handleSignOutAndRedirect(
+            'Gagal Memuat Profil',
+            'Tidak dapat menemukan data pengguna. Silakan login kembali.'
+        );
         return;
     }
 
     // Case 3: The user's registration is still pending.
-    // Sign them out and show a notification.
     if (userProfile.registrationStatus === 'pending') {
-      auth.signOut();
-      toast({
-        title: 'Akun Menunggu Persetujuan',
-        description: 'Akun Anda telah didaftarkan dan sedang menunggu persetujuan dari admin.',
-        duration: 5000,
-      });
-      router.push('/login');
+      handleSignOutAndRedirect(
+        'Akun Menunggu Persetujuan',
+        'Akun Anda telah didaftarkan dan sedang menunggu persetujuan dari admin.'
+      );
     }
-  }, [user, userProfile, isLoading, router, auth, toast]);
+  }, [user, userProfile, isLoading, isSigningOut, router, auth, toast]);
 
   const showDashboard = !isLoading && userProfile?.registrationStatus === 'approved';
 
@@ -170,7 +176,7 @@ export default function DashboardLayout({
     );
   }
 
-  // In ALL other cases (loading, redirecting, etc.), render the skeleton layout.
+  // In ALL other cases (loading, signing out, redirecting, etc.), render the skeleton layout.
   // This prevents the blank screen from ever appearing.
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
