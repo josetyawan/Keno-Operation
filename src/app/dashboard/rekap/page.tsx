@@ -56,13 +56,19 @@ export default function RekapPage() {
         const end = endOfDay(verificationDate);
         return query(
             collection(firestore, 'notas'),
-            where('status', '==', 'verified'),
+            // Removed: where('status', '==', 'verified'), to avoid composite index requirement.
             where('tanggalVerifikasi', '>=', Timestamp.fromDate(start)),
             where('tanggalVerifikasi', '<=', Timestamp.fromDate(end))
         );
     }, [firestore, verificationDate]);
 
-    const { data: notas, isLoading: isNotasLoading } = useCollection<Nota>(notasQuery);
+    const { data: notasFromQuery, isLoading: isNotasLoading } = useCollection<Nota>(notasQuery);
+
+    // Filter for verified notas on the client-side
+    const notas = useMemo(() => {
+        if (!notasFromQuery) return null;
+        return notasFromQuery.filter(nota => nota.status === 'verified');
+    }, [notasFromQuery]);
     
     const usersCollection = useMemoFirebase(() => {
       if (!firestore) return null;
@@ -200,7 +206,7 @@ export default function RekapPage() {
                             <Skeleton className="h-4 w-full" />
                             <Skeleton className="h-4 w-2/3" />
                          </div>
-                    ) : rekapData.length > 0 ? (
+                    ) : (notas && notas.length > 0) ? (
                         <div className="space-y-2 text-sm font-mono bg-muted p-4 rounded-md overflow-x-auto">
                             {rekapData.map((item, index) => (
                                 <p key={index}>
@@ -212,7 +218,7 @@ export default function RekapPage() {
                         <p className="text-muted-foreground text-center py-8">Tidak ada data terverifikasi untuk tanggal yang dipilih.</p>
                     )}
                 </CardContent>
-                {rekapData.length > 0 && (
+                {(notas && notas.length > 0 && rekapData.length > 0) && (
                      <CardFooter className="border-t pt-6 flex justify-between items-center">
                         <div className="text-lg font-bold">
                             Total: Rp {grandTotal.toLocaleString('id-ID')}
