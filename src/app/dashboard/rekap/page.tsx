@@ -113,7 +113,14 @@ export default function RekapPage() {
     
     if (notas && reportType === 'summary') {
         const grouped = notas.reduce((acc, nota) => {
-            const keterangan = `${nota.segmen} SA Kudus`;
+            let keterangan = '';
+            // Handle specific material segments differently
+            if (nota.segmen === 'MATERIAL SA KUDUS' || nota.segmen === 'MATERIAL SPPG SA KUDUS') {
+                keterangan = nota.segmen;
+            } else {
+                keterangan = `${nota.segmen} SA Kudus`;
+            }
+
             if (!acc[keterangan]) {
                 acc[keterangan] = 0;
             }
@@ -167,22 +174,36 @@ export default function RekapPage() {
         }
     } else if (notas && reportType === 'bbm') {
         const bbmSegments = ['BBM R2', 'BBM R4 Harian', 'BBM R4 Turlap', 'BBM R4 UT'];
-        const filteredBbmNotas = notas
-            .filter(nota => bbmSegments.includes(nota.segmen))
-            .sort((a, b) => {
-                if (a.segmen < b.segmen) return -1;
-                if (a.segmen > b.segmen) return 1;
-                // If segments are equal, sort by date
-                return a.tanggal.toDate().getTime() - b.tanggal.toDate().getTime();
-            });
-        
-        const totalAmount = filteredBbmNotas.reduce((sum, item) => sum + item.nominal, 0);
+        const filteredBbmNotas = notas.filter(nota => bbmSegments.includes(nota.segmen));
 
-        setBbmData(filteredBbmNotas);
+        // Group by segment
+        const groupedBySegment = filteredBbmNotas.reduce((acc, nota) => {
+            const segment = nota.segmen;
+            if (!acc[segment]) {
+                acc[segment] = [];
+            }
+            acc[segment].push(nota);
+            return acc;
+        }, {} as Record<string, BbmRekapItem[]>);
+
+        // Sort notes within each group by date
+        for (const segment in groupedBySegment) {
+            groupedBySegment[segment].sort((a, b) => a.tanggal.toDate().getTime() - b.tanggal.toDate().getTime());
+        }
+
+        // Get the segment names and sort them to ensure a consistent order
+        const sortedSegments = Object.keys(groupedBySegment).sort();
+
+        // Create a new flat array in the correct grouped and sorted order
+        const sortedAndGroupedNotas = sortedSegments.flatMap(segment => groupedBySegment[segment]);
+        
+        const totalAmount = sortedAndGroupedNotas.reduce((sum, item) => sum + item.nominal, 0);
+
+        setBbmData(sortedAndGroupedNotas);
         setBbmTotal(totalAmount);
         setIsGenerated(true);
 
-        if (filteredBbmNotas.length === 0) {
+        if (sortedAndGroupedNotas.length === 0) {
             toast({
                 title: 'Tidak Ada Data',
                 description: 'Tidak ada laporan "BBM" yang ditemukan pada rentang tanggal yang dipilih.',
