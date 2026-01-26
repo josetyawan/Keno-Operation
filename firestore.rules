@@ -99,23 +99,25 @@ service cloud.firestore {
      * @path /users/{userId}
      */
     match /users/{userId} {
-      // Admins can read all user documents and list the collection.
-      allow get, list: if isAdmin();
+      // ADMIN ACCESS: Admins can list all users and get any individual user profile.
+      allow list, get: if isAdmin();
       
-      // A regular user can only get their own document.
+      // USER ACCESS: A regular user can only get their own document. This rule is also
+      // essential for the isAdmin() function to work correctly without causing recursion,
+      // as it allows the function's internal `get` to succeed.
       allow get: if isOwner(userId);
       
-      // Allow user creation if the document ID matches the user's UID being created.
-      // This is crucial for the sign-up flow to succeed, as the user is not fully
-      // authenticated in the rules engine's context immediately after creation.
+      // CREATION: Allow user document creation if the document ID matches the user's UID.
+      // This is crucial for the sign-up flow to succeed, as it allows the creation of
+      // a user profile document immediately after authentication is complete.
       allow create: if isCreatingOwnUserDocument(userId) &&
                       request.resource.data.role == 'user' &&
                       request.resource.data.registrationStatus == 'pending';
 
-      // An admin can update any user profile. A user can only update their own.
+      // UPDATE: An admin can update any user profile. A user can only update their own.
       allow update: if isAdmin() || (isOwner(userId) && isUpdatingOwnUserDocument());
       
-      // Deleting users is a server-side or console action, not allowed from the client.
+      // DELETION: Deleting users is a server-side or console action, not allowed from the client.
       allow delete: if false;
     }
 
