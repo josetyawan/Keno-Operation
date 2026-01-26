@@ -89,7 +89,7 @@ const generateRekapitulasiReport = (notas: Nota[], month: string, year: string):
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 1px solid black;">
             <thead>
-                <tr style="background-color: #FEE2E2; font-weight: bold;">
+                <tr style="background-color: #FED7AA; font-weight: bold;">
                     <th style="padding: 4px 8px; border: 1px solid black; width: 5%;">NO</th>
                     <th style="padding: 4px 8px; border: 1px solid black;">KETERANGAN</th>
                     <th style="padding: 4px 8px; border: 1px solid black; width: 25%;">JUMLAH</th>
@@ -99,7 +99,7 @@ const generateRekapitulasiReport = (notas: Nota[], month: string, year: string):
                 ${tableRows}
             </tbody>
             <tfoot>
-                <tr style="background-color: #FEE2E2; font-weight: bold;">
+                <tr style="background-color: #FED7AA; font-weight: bold;">
                     <td colspan="2" style="padding: 4px 8px; border: 1px solid black; text-align: center;">TOTAL</td>
                     <td style="padding: 4px 8px; border: 1px solid black; text-align: left;">Rp${grandTotal.toLocaleString('id-ID')}</td>
                 </tr>
