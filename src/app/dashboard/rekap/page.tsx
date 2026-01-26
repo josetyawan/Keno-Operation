@@ -86,12 +86,12 @@ export default function RekapPage() {
         }, {} as Record<string, { phone: string; name: string; total: number; notas: Nota[] }>);
 
         const formattedData: RekapData[] = Object.values(dataByUser).map(userData => {
-             const details = userData.notas.map(n => `${n.segmen} ${format(n.tanggal.toDate(), 'dd/MM/yy')}: ${n.nominal.toLocaleString('id-ID')}`).join(' + ');
+             const details = userData.notas.map(n => `${n.segmen} ${format(n.tanggal.toDate(), 'dd/MM')}: ${n.nominal.toLocaleString('id-ID')}`).join(' + ');
              return {
                  phone: userData.phone,
                  name: userData.name,
                  total: userData.total,
-                 details: `${details} Total : ${userData.total.toLocaleString('id-ID')}rb`
+                 details: `${details} | Total : ${userData.total.toLocaleString('id-ID')}`
              }
         });
 
