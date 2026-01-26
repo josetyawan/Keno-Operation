@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import AuthLayout from '@/components/auth-layout';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth, useUser, signUpWithEmail } from '@/firebase';
+import { useAuth, useFirestore, useUser, signUpWithEmail } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { FirebaseError } from 'firebase/app';
 import { ToastAction } from '@/components/ui/toast';
@@ -20,6 +20,7 @@ export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const auth = useAuth();
+  const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const { toast } = useToast();
 
@@ -41,7 +42,7 @@ export default function SignupPage() {
     }
     setIsLoading(true);
     try {
-      await signUpWithEmail(auth, password, { email, nik, phone });
+      await signUpWithEmail(auth, firestore, password, { email, nik, phone });
       toast({
         title: 'Pendaftaran Berhasil!',
         description: 'Akun Anda sedang menunggu persetujuan dari admin. Anda akan dialihkan ke halaman login.',
