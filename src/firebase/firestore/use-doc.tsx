@@ -49,15 +49,18 @@ export function useDoc<T = any>(
 
   useEffect(() => {
     if (!memoizedDocRef) {
+      // If the document reference isn't available yet (e.g., waiting for user ID),
+      // we should be in a loading state. Reset data/error but keep loading.
       setData(null);
-      setIsLoading(false);
       setError(null);
+      setIsLoading(true);
       return;
     }
 
+    // A valid docRef is provided, so start the real-time listener.
+    // We set loading to true at the beginning of the fetch.
     setIsLoading(true);
     setError(null);
-    // Optional: setData(null); // Clear previous data instantly
 
     const unsubscribe = onSnapshot(
       memoizedDocRef,
@@ -65,11 +68,11 @@ export function useDoc<T = any>(
         if (snapshot.exists()) {
           setData({ ...(snapshot.data() as T), id: snapshot.id });
         } else {
-          // Document does not exist
+          // Document does not exist, this is a valid final state.
           setData(null);
         }
-        setError(null); // Clear any previous error on successful snapshot (even if doc doesn't exist)
-        setIsLoading(false);
+        setError(null); // Clear any previous error.
+        setIsLoading(false); // Data fetch is complete.
       },
       (error: FirestoreError) => {
         const contextualError = new FirestorePermissionError({
@@ -79,7 +82,7 @@ export function useDoc<T = any>(
 
         setError(contextualError)
         setData(null)
-        setIsLoading(false)
+        setIsLoading(false) // Data fetch is complete (with an error).
 
         // trigger global error propagation
         errorEmitter.emit('permission-error', contextualError);
