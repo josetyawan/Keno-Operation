@@ -1,8 +1,8 @@
 
-const ones = ['', 'Satu', 'Dua', 'Tiga', 'Empat', 'Lima', 'Enam', 'Tujuh', 'Delapan', 'Sembilan'];
-const teens = ['Sepuluh', 'Sebelas', 'Dua Belas', 'Tiga Belas', 'Empat Belas', 'Lima Belas', 'Enam Belas', 'Tujuh Belas', 'Delapan Belas', 'Sembilan Belas'];
-const tens = ['', 'Sepuluh', 'Dua Puluh', 'Tiga Puluh', 'Empat Puluh', 'Lima Puluh', 'Enam Puluh', 'Tujuh Puluh', 'Delapan Puluh', 'Sembilan Puluh'];
-const thousands = ['', 'Ribu', 'Juta', 'Miliar', 'Triliun'];
+const ones = ['', 'satu', 'dua', 'tiga', 'empat', 'lima', 'enam', 'tujuh', 'delapan', 'sembilan'];
+const teens = ['sepuluh', 'sebelas', 'dua belas', 'tiga belas', 'empat belas', 'lima belas', 'enam belas', 'tujuh belas', 'delapan belas', 'sembilan belas'];
+const tens = ['', 'sepuluh', 'dua puluh', 'tiga puluh', 'empat puluh', 'lima puluh', 'enam puluh', 'tujuh puluh', 'delapan puluh', 'sembilan puluh'];
+const thousands = ['', 'ribu', 'juta', 'miliar', 'triliun'];
 
 function convertLessThanOneThousand(n: number): string {
     if (n === 0) return '';
@@ -11,7 +11,7 @@ function convertLessThanOneThousand(n: number): string {
     
     const hundred = Math.floor(n / 100);
     if (hundred > 0) {
-        result += (hundred === 1 ? 'Seratus' : ones[hundred] + ' Ratus');
+        result += (hundred === 1 ? 'seratus' : ones[hundred] + ' ratus');
     }
     
     const remainder = n % 100;
@@ -39,19 +39,22 @@ export function toWords(num: number): string {
     let result = '';
     let i = 0;
 
-    while (num > 0) {
-        if (num % 1000 !== 0) {
-            let chunk = convertLessThanOneThousand(num % 1000);
-            if (i === 1 && num % 1000 === 1) { // Handle "Seribu"
-                chunk = 'Seribu';
+    do {
+        const chunk = num % 1000;
+        if (chunk !== 0) {
+            let chunkStr = '';
+            if (i === 1 && chunk === 1) {
+                chunkStr = 'seribu';
             } else {
-                chunk += (i > 0 ? ' ' + thousands[i] : '');
+                 chunkStr = convertLessThanOneThousand(chunk) + (thousands[i] ? ` ${thousands[i]}` : '');
             }
-            result = chunk + (result ? ' ' + result : '');
+            result = `${chunkStr} ${result}`;
         }
         num = Math.floor(num / 1000);
         i++;
-    }
+    } while (num > 0);
 
-    return result.trim();
+    // Capitalize first letter and trim
+    const finalResult = result.trim();
+    return finalResult.charAt(0).toUpperCase() + finalResult.slice(1);
 }

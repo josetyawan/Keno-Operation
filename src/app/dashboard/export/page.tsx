@@ -155,7 +155,7 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
         <h2 style="text-align: center; font-size: 14pt; margin: 0; text-decoration: underline;">${title.toUpperCase()}</h2>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
-            <thead>
+            <thead style="background-color: #FED7AA; font-weight: bold;">
                 <tr>
                     <th style="padding: 4px; border: 1px solid black; width: 5%;">NO</th>
                     <th style="padding: 4px; border: 1px solid black; width: 10%;">TANGGAL</th>
@@ -167,7 +167,7 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
             </thead>
             <tbody>${tableRows}</tbody>
             <tfoot>
-                <tr>
+                <tr style="background-color: #FED7AA; font-weight: bold;">
                     <td colspan="5" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">TOTAL</td>
                     <td style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">${grandTotal.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 </tr>
@@ -223,14 +223,14 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
         <h2 style="text-align: center; font-size: 14pt; margin: 0; text-decoration: underline;">${title.toUpperCase()}</h2>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
-            <thead>
+            <thead style="background-color: #FED7AA; font-weight: bold;">
                 <tr>
                     ${['NO', 'TANGGAL', 'NO PLAT', 'KM AWAL', 'KM AKHIR', 'URAIAN PEKERJAAN', 'JUMLAH', 'NAMA'].map(h => `<th style="padding: 4px; border: 1px solid black;">${h}</th>`).join('')}
                 </tr>
             </thead>
             <tbody>${tableRows}</tbody>
             <tfoot>
-                <tr>
+                <tr style="background-color: #FED7AA; font-weight: bold;">
                     <td colspan="6" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">TOTAL</td>
                     <td style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
                     <td style="padding: 4px; border: 1px solid black;"></td>
@@ -283,14 +283,14 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
         <h2 style="text-align: center; font-size: 14pt; margin: 0; text-decoration: underline;">${title.toUpperCase()}</h2>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
-            <thead>
+            <thead style="background-color: #FED7AA; font-weight: bold;">
                 <tr>
                     ${['NO', 'TANGGAL', 'Nama Barang', 'Keterangan', 'Jumlah'].map(h => `<th style="padding: 4px; border: 1px solid black;">${h}</th>`).join('')}
                 </tr>
             </thead>
             <tbody>${tableRows}</tbody>
             <tfoot>
-                <tr>
+                <tr style="background-color: #FED7AA; font-weight: bold;">
                     <td colspan="4" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">TOTAL</td>
                     <td style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
                 </tr>
@@ -349,7 +349,7 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
         <h2 style="text-align: center; font-size: 14pt; margin: 0; text-decoration: underline;">${title.toUpperCase()}</h2>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black;">
-            <thead>
+            <thead style="background-color: #FED7AA; font-weight: bold;">
                 <tr>
                     ${['No', 'Tanggal', 'Ket', 'No Plat', 'Selisih', 'KM Awal', 'KM Akhir', 'Keperluan (1-4)', 'Eviden KM Awal Bln', 'Eviden KM Awal', 'Eviden KM Akhir', 'PIC', 'Nilai'].map(h => `<th style="border: 1px solid black; padding: 4px; font-size: 8pt;">${h}</th>`).join('')}
                 </tr>
@@ -378,17 +378,27 @@ function ReportPreview({
         <style>
             {`
             @media print {
-                body * {
+                body > *:not(#print-section-parent) {
                     visibility: hidden;
                 }
-                #print-section, #print-section * {
+                #print-section-parent, #print-section, #print-section * {
                     visibility: visible;
                 }
+                #print-section-parent {
+                    position: fixed;
+                    inset: 0;
+                }
                 #print-section {
-                    position: absolute;
-                    left: 0;
-                    top: 0;
-                    width: 100%;
+                   width: 100%;
+                   height: 100%;
+                   overflow: auto;
+                }
+                .report-page-container {
+                    page-break-after: always;
+                    page-break-inside: avoid;
+                }
+                 .report-page-container:last-child {
+                    page-break-after: auto;
                 }
                 @page {
                     size: A4 portrait;
@@ -396,9 +406,6 @@ function ReportPreview({
                 }
                 .no-print {
                     display: none !important;
-                }
-                .page-break {
-                    page-break-after: always;
                 }
             }
             `}
@@ -412,14 +419,16 @@ function ReportPreview({
           </div>
         </CardHeader>
         <CardContent className="flex-grow overflow-auto bg-gray-200 p-4">
-            <div id="print-section" ref={printRef} className="mx-auto flex flex-col items-center gap-y-4">
-                {pages.map((pageHtml, index) => (
-                    <div 
-                        key={index}
-                        className={index < pages.length - 1 ? 'page-break' : ''}
-                        dangerouslySetInnerHTML={{ __html: pageHtml }}
-                    />
-                ))}
+            <div id="print-section-parent">
+                <div id="print-section" ref={printRef} className="mx-auto flex flex-col items-center gap-y-4">
+                    {pages.map((pageHtml, index) => (
+                        <div 
+                            key={index}
+                            className="report-page-container"
+                            dangerouslySetInnerHTML={{ __html: pageHtml }}
+                        />
+                    ))}
+                </div>
             </div>
         </CardContent>
       </Card>
@@ -564,7 +573,7 @@ export default function ExportPage() {
                     
                     if (segment === 'jasa') {
                         segmentHtml = generateJasaReport(notasInSegment, title);
-                    } else if (segment.startsWith('BBM R')) {
+                    } else if (segment.startsWith('BBM')) {
                         segmentHtml = generateBBMReport(notasInSegment, title);
                     } else { // All other material-like reports
                         segmentHtml = generateMaterialReport(notasInSegment, title);
