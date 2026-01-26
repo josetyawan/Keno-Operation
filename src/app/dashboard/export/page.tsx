@@ -23,12 +23,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Calendar } from '@/components/ui/calendar';
 import {
     Tabs,
@@ -88,7 +82,7 @@ const generateRekapitulasiReport = (notas: Nota[], month: string, year: string):
         </div>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 1px solid black;">
-            <thead>
+            <thead style="background-color: #FED7AA; font-weight: bold;">
                 <tr style="background-color: #FED7AA; font-weight: bold;">
                     <th style="padding: 4px 8px; border: 1px solid black; width: 5%;">NO</th>
                     <th style="padding: 4px 8px; border: 1px solid black;">KETERANGAN</th>
@@ -153,7 +147,7 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; padding: 1cm; width: 210mm; min-height: 297mm; background-color: white; box-shadow: 0 0 5px rgba(0,0,0,0.1);">
-        <h2 style="font-size: 14pt; margin: 0; font-weight: bold;">${title}</h2>
+        <h2 style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left;">${title}</h2>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
             <thead style="background-color: #FED7AA; font-weight: bold;">
@@ -215,7 +209,7 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
         const mainRow = `
             <tr>
                 <td style="padding: 4px; border: 1px solid black; text-align: center;">${index + 1}</td>
-                <td style="padding: 4px; border: 1px solid black;">${format(nota.tanggal.toDate(), 'dd MMMM yyyy', { locale: idLocale })}</td>
+                <td style="padding: 4px; border: 1px solid black;">${format(nota.tanggal.toDate(), 'dd MMM yy', { locale: idLocale })}</td>
                 <td style="padding: 4px; border: 1px solid black;">${staticKeterangan}</td>
                 <td style="padding: 4px; border: 1px solid black;">${nota.noPlatKendaraan || '-'}</td>
                 <td style="padding: 4px; border: 1px solid black; text-align: center;">${nota.kmAwal || '-'}</td>
@@ -241,7 +235,7 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; padding: 1cm; width: 210mm; min-height: 297mm; background-color: white; box-shadow: 0 0 5px rgba(0,0,0,0.1);">
-        <h2 style="font-size: 14pt; margin: 0; font-weight: bold;">${title}</h2>
+        <h2 style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left;">${title}</h2>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
             <thead style="background-color: #FED7AA; font-weight: bold;">
@@ -299,7 +293,7 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; padding: 1cm; width: 210mm; min-height: 297mm; background-color: white; box-shadow: 0 0 5px rgba(0,0,0,0.1);">
-        <h2 style="font-size: 14pt; margin: 0; font-weight: bold;">${title}</h2>
+        <h2 style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left;">${title}</h2>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
             <thead style="background-color: #FED7AA; font-weight: bold;">
@@ -383,9 +377,43 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 9pt; padding: 1cm; width: 210mm; min-height: 297mm; background-color: white; box-shadow: 0 0 5px rgba(0,0,0,0.1);">
-        <h2 style="text-align: center; font-size: 14pt; margin: 0; text-decoration: underline; font-weight: bold;">${title}</h2>
+        <h2 style="text-align: left; font-size: 14pt; margin: 0; font-weight: bold;">${title}</h2>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 1px solid black; font-size: 8pt;">
+            <thead style="background-color: #FED7AA; font-weight: bold; text-align: center;">
+                <tr>
+                    ${headers.map(h => `<th style="border: 1px solid black; padding: 4px; vertical-align: middle;">${h}</th>`).join('')}
+                </tr>
+            </thead>
+            <tbody>${tableRows}</tbody>
+        </table>
+    </div>`;
+};
+
+const generateSimpleEvidenReport = (notas: Nota[], title: string): string => {
+    const tableRows = notas.map((nota, index) => {
+        const evidenImageHtml = (nota.fotoEvidenUrls && nota.fotoEvidenUrls[0])
+            ? `<img src="${nota.fotoEvidenUrls[0]}" style="width: 100px; height: auto; object-fit: contain; border: 1px solid #eee; margin: auto;"/>`
+            : '';
+
+        return `
+        <tr>
+            <td style="border: 1px solid black; padding: 4px; text-align: center; vertical-align: top;">${index + 1}</td>
+            <td style="border: 1px solid black; padding: 4px; vertical-align: top; white-space: nowrap;">${format(nota.tanggal.toDate(), 'dd MMMM yyyy', { locale: idLocale })}</td>
+            <td style="border: 1px solid black; padding: 4px; vertical-align: top;">${nota.namaBarang || nota.keterangan || '-'}</td>
+            <td style="border: 1px solid black; padding: 4px; text-align: center; vertical-align: top;">${evidenImageHtml}</td>
+            <td style="border: 1px solid black; padding: 4px; vertical-align: top;">${nota.namaPic}</td>
+            <td style="border: 1px solid black; padding: 4px; text-align: right; vertical-align: top;">Rp${nota.nominal.toLocaleString('id-ID')}</td>
+        </tr>`;
+    }).join('');
+
+    const headers = ['No', 'Tanggal', 'Keterangan', 'Eviden', 'PIC', 'Nilai'];
+
+    return `
+    <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; padding: 1cm; width: 210mm; min-height: 297mm; background-color: white; box-shadow: 0 0 5px rgba(0,0,0,0.1);">
+        <h2 style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left;">${title}</h2>
+        <br/>
+        <table style="width: 100%; border-collapse: collapse; border: 1px solid black; font-size: 10pt;">
             <thead style="background-color: #FED7AA; font-weight: bold; text-align: center;">
                 <tr>
                     ${headers.map(h => `<th style="border: 1px solid black; padding: 4px; vertical-align: middle;">${h}</th>`).join('')}
@@ -573,7 +601,7 @@ export default function ExportPage() {
         return { count: selectedCount, total };
     }, [selectedNotaIds, notas]);
 
-    const handleGenerateReport = async (reportType: string, subType: string = '') => {
+    const handleGenerateReport = async (reportType: string) => {
         setIsGenerating(true);
         setReportTypeBeingGenerated(reportType);
         const selectedNotas = notas?.filter(n => selectedNotaIds.includes(n.id)) || [];
@@ -628,21 +656,38 @@ export default function ExportPage() {
                     pages.push(segmentHtml);
                 }
             } else if (reportType === 'eviden') {
-                 const notasInSegment = selectedNotas
-                    .filter(n => n.segmen === subType)
-                    .sort((a,b) => a.tanggal.toDate().getTime() - b.tanggal.toDate().getTime());
-                if (notasInSegment.length > 0) {
-                    const html = generateEvidenReport(notasInSegment, `Eviden Foto - Perincian Nota ${subType}`);
-                    pages.push(html);
-                } else {
-                     toast({ variant: "destructive", title: `Tidak ada data untuk segmen ${subType}` });
+                const groupedBySegment = selectedNotas.reduce((acc, nota) => {
+                    const seg = nota.segmen;
+                    if (!acc[seg]) {
+                        acc[seg] = [];
+                    }
+                    acc[seg].push(nota);
+                    return acc;
+                }, {} as Record<string, Nota[]>);
+
+                const sortedSegments = Object.keys(groupedBySegment).sort();
+                const bbmR2R4Segments = ['BBM R2', 'BBM R4 Harian', 'BBM R4 Turlap', 'BBM R4 UT'];
+
+                for (const segment of sortedSegments) {
+                    const notasInSegment = groupedBySegment[segment].sort((a,b) => a.tanggal.toDate().getTime() - b.tanggal.toDate().getTime());
+                    if (notasInSegment.length === 0) continue;
+
+                    let segmentHtml = '';
+                    const title = `Eviden Foto - Perincian Nota ${segment}`;
+
+                    if (bbmR2R4Segments.includes(segment)) {
+                        segmentHtml = generateEvidenReport(notasInSegment, title);
+                    } else {
+                        segmentHtml = generateSimpleEvidenReport(notasInSegment, title);
+                    }
+                    pages.push(segmentHtml);
                 }
             } else {
                  toast({ variant: "destructive", title: "Tipe Laporan Tidak Didukung" });
             }
             if (pages.length > 0) {
                 setReportPages(pages);
-            } else if (reportType !== 'eviden') { // Eviden shows its own toast
+            } else {
                  toast({ variant: "destructive", title: "Tidak ada data untuk laporan ini" });
             }
         } catch (error) {
@@ -653,11 +698,6 @@ export default function ExportPage() {
             setReportTypeBeingGenerated('');
         }
     };
-
-    // --- Report Menus ---
-    const perincianSegments = [...new Set(filteredNotas.filter(n=>selectedNotaIds.includes(n.id)).map(n => n.segmen))];
-    const evidenSegments = perincianSegments.filter(s => s.startsWith('BBM R2') || s.startsWith('BBM R4'));
-
 
     return (
         <>
@@ -848,20 +888,9 @@ export default function ExportPage() {
                     <Button variant="outline" size="lg" onClick={() => handleGenerateReport('perincian')} disabled={isGenerating || selectedNotaIds.length === 0}>
                         {isGenerating && reportTypeBeingGenerated === 'perincian' ? <Loader2 className="mr-2 animate-spin"/> : <Printer className="mr-2" />} Perincian
                     </Button>
-                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="lg" disabled={isGenerating || evidenSegments.length === 0}>
-                            {isGenerating && reportTypeBeingGenerated === 'eviden' ? <Loader2 className="mr-2 animate-spin"/> : <FileText className="mr-2" />} Eviden
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        {evidenSegments.map(seg => (
-                           <DropdownMenuItem key={seg} onClick={() => handleGenerateReport('eviden', seg)}>
-                                {seg}
-                           </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                     <Button variant="outline" size="lg" onClick={() => handleGenerateReport('eviden')} disabled={isGenerating || selectedNotaIds.length === 0}>
+                        {isGenerating && reportTypeBeingGenerated === 'eviden' ? <Loader2 className="mr-2 animate-spin"/> : <FileText className="mr-2" />} Eviden
+                    </Button>
                 </div>
             </div>
         </div>
