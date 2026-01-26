@@ -25,6 +25,8 @@ export default function ProfilePage() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [nik, setNik] = useState('');
+  const [phone, setPhone] = useState('');
 
   // Memoize the document reference to prevent re-renders
   const userDocRef = useMemoFirebase(() => {
@@ -40,6 +42,8 @@ export default function ProfilePage() {
       setFirstName(userProfile.firstName || '');
       setLastName(userProfile.lastName || '');
       setDisplayName(userProfile.displayName || '');
+      setNik(userProfile.nik || '');
+      setPhone(userProfile.phone || '');
     }
   }, [userProfile]);
 
@@ -54,6 +58,8 @@ export default function ProfilePage() {
       firstName,
       lastName,
       displayName,
+      nik,
+      phone,
     };
 
     try {
@@ -139,6 +145,15 @@ export default function ProfilePage() {
                <div className="grid gap-2">
                   <Label htmlFor="displayName">Display Name</Label>
                   <Input id="displayName" value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="john.doe" required />
+              </div>
+              <div className="grid gap-2">
+                  <Label htmlFor="nik">NIK (Nomor Induk Pegawai)</Label>
+                  <Input id="nik" value={nik} onChange={e => setNik(e.target.value)} placeholder="e.g. 12345678" />
+              </div>
+
+              <div className="grid gap-2">
+                  <Label htmlFor="phone">No. HP</Label>
+                  <Input id="phone" value={phone} onChange={e => setPhone(e.target.value)} placeholder="e.g. 08123456789" />
               </div>
               <div className="grid gap-2">
                   <Label htmlFor="email">Email</Label>

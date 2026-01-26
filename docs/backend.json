@@ -27,6 +27,14 @@
           "type": "string",
           "description": "User's full display name."
         },
+        "nik": {
+          "type": "string",
+          "description": "User's NIK (Nomor Induk Pegawai - Employee ID Number)."
+        },
+        "phone": {
+          "type": "string",
+          "description": "User's phone number."
+        },
         "role": {
           "type": "string",
           "description": "The role of the user, defaults to 'user'.",
