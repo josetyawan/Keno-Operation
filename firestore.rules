@@ -99,12 +99,20 @@ service cloud.firestore {
      * @path /users/{userId}
      */
     match /users/{userId} {
-      allow get: if isOwner(userId) || isAdmin();
-      allow list: if isAdmin();
+      // Admins can read all user documents and list the collection.
+      allow get, list: if isAdmin();
+      
+      // A regular user can only get their own document.
+      allow get: if isOwner(userId);
+      
+      // A new user can create their own user document upon signup.
       allow create: if isOwner(userId) && isCreatingOwnUserDocument(userId);
-      // Allow owner to update their own non-critical fields, and admin to update anything (like status).
-      allow update: if (isOwner(userId) && isUpdatingOwnUserDocument()) || isAdmin();
-      allow delete: if false; // Deletion is a server-side action
+
+      // An admin can update any user profile. A user can only update their own.
+      allow update: if isAdmin() || (isOwner(userId) && isUpdatingOwnUserDocument());
+      
+      // Deleting users is a server-side or console action, not allowed from the client.
+      allow delete: if false;
     }
 
     /**
