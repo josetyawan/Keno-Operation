@@ -153,7 +153,7 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; padding: 1cm; width: 210mm; min-height: 297mm; background-color: white; box-shadow: 0 0 5px rgba(0,0,0,0.1);">
-        <h2 style="text-align: center; font-size: 14pt; margin: 0; text-decoration: underline;">${title.toUpperCase()}</h2>
+        <h2 style="font-size: 14pt; margin: 0; font-weight: bold;">${title}</h2>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
             <thead style="background-color: #FED7AA; font-weight: bold;">
@@ -200,106 +200,64 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
 
 
 const generateBBMReport = (notas: Nota[], title: string): string => {
-    const isGroupedReport = title.includes('BBM R2') || title.includes('BBM R4');
-    let tableRows = '';
     let grandTotal = 0;
+    const bbmKeteranganMap: Record<string, string> = {
+        'BBM R2': 'BBM Harian BBM R2',
+        'BBM R4 Harian': 'BBM Harian BBM R4',
+        'BBM R4 Turlap': 'BBM Turlap BBM R4',
+        'BBM R4 UT': 'BBM UT BBM R4',
+    };
 
-    if (isGroupedReport) {
-        const groupedByDate = notas.reduce((acc, nota) => {
-            const dateStr = format(nota.tanggal.toDate(), 'yyyy-MM-dd');
-            if (!acc[dateStr]) {
-                acc[dateStr] = {
-                    tanggal: nota.tanggal.toDate(),
-                    noPlatKendaraan: nota.noPlatKendaraan || '-',
-                    kmAwal: nota.kmAwal || Infinity,
-                    kmAkhir: nota.kmAkhir || 0,
-                    keterangan: [],
-                    nominal: 0,
-                    namaPic: nota.namaPic,
-                };
-            }
+    const tableRows = notas.map((nota, index) => {
+        grandTotal += nota.nominal;
+        const staticKeterangan = bbmKeteranganMap[nota.segmen] || nota.segmen;
 
-            acc[dateStr].kmAwal = Math.min(acc[dateStr].kmAwal, nota.kmAwal || Infinity);
-            acc[dateStr].kmAkhir = Math.max(acc[dateStr].kmAkhir, nota.kmAkhir || 0);
-            if (nota.keterangan) {
-                acc[dateStr].keterangan.push(nota.keterangan);
-            }
-            acc[dateStr].nominal += nota.nominal;
-
-            return acc;
-        }, {} as Record<string, {
-            tanggal: Date;
-            noPlatKendaraan: string;
-            kmAwal: number;
-            kmAkhir: number;
-            keterangan: string[];
-            nominal: number;
-            namaPic: string;
-        }>);
-
-        Object.values(groupedByDate).forEach(group => {
-            if (group.kmAwal === Infinity) {
-                group.kmAwal = 0;
-            }
-        });
-
-        const groupedNotas = Object.values(groupedByDate);
-        grandTotal = groupedNotas.reduce((sum, group) => sum + group.nominal, 0);
-
-        tableRows = groupedNotas.map((group, index) => `
+        const mainRow = `
             <tr>
                 <td style="padding: 4px; border: 1px solid black; text-align: center;">${index + 1}</td>
-                <td style="padding: 4px; border: 1px solid black;">${format(group.tanggal, 'dd-MMM-yy', { locale: idLocale })}</td>
-                <td style="padding: 4px; border: 1px solid black;">${group.noPlatKendaraan}</td>
-                <td style="padding: 4px; border: 1px solid black; text-align: center;">${group.kmAwal || '-'}</td>
-                <td style="padding: 4px; border: 1px solid black; text-align: center;">${group.kmAkhir || '-'}</td>
-                <td style="padding: 4px; border: 1px solid black; white-space: normal; word-break: break-all;">${group.keterangan.join(' | ')}</td>
-                <td style="padding: 4px; border: 1px solid black; text-align: right;">${group.nominal.toLocaleString('id-ID')}</td>
-                <td style="padding: 4px; border: 1px solid black;">${group.namaPic}</td>
-            </tr>`
-        ).join('');
-    } else {
-        grandTotal = notas.reduce((sum, nota) => sum + nota.nominal, 0);
-        tableRows = notas.map((nota, index) => `
-            <tr>
-                <td style="padding: 4px; border: 1px solid black; text-align: center;">${index + 1}</td>
-                <td style="padding: 4px; border: 1px solid black;">${format(nota.tanggal.toDate(), 'dd-MMM-yy', { locale: idLocale })}</td>
+                <td style="padding: 4px; border: 1px solid black;">${format(nota.tanggal.toDate(), 'dd MMMM yyyy', { locale: idLocale })}</td>
+                <td style="padding: 4px; border: 1px solid black;">${staticKeterangan}</td>
                 <td style="padding: 4px; border: 1px solid black;">${nota.noPlatKendaraan || '-'}</td>
                 <td style="padding: 4px; border: 1px solid black; text-align: center;">${nota.kmAwal || '-'}</td>
                 <td style="padding: 4px; border: 1px solid black; text-align: center;">${nota.kmAkhir || '-'}</td>
-                <td style="padding: 4px; border: 1px solid black;">${nota.keterangan || '-'}</td>
-                <td style="padding: 4px; border: 1px solid black; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
+                <td style="padding: 4px; border: 1px solid black; white-space: normal; word-break: break-all;">${nota.keterangan || '-'}</td>
+                <td style="padding: 4px; border: 1px solid black; text-align: right;">Rp${nota.nominal.toLocaleString('id-ID')}</td>
                 <td style="padding: 4px; border: 1px solid black;">${nota.namaPic}</td>
-            </tr>`
-        ).join('');
-    }
+            </tr>
+        `;
+        const subTotalRow = `
+            <tr style="font-weight: bold;">
+                <td colspan="7" style="padding: 4px; border: 1px solid black; text-align: right;">JUMLAH</td>
+                <td style="padding: 4px; border: 1px solid black; text-align: right;">Rp${nota.nominal.toLocaleString('id-ID')}</td>
+                <td style="padding: 4px; border: 1px solid black;"></td>
+            </tr>
+        `;
+        return mainRow + subTotalRow;
+    }).join('');
+
 
     const today = new Date();
     const formattedDate = format(today, 'dd MMMM yyyy', { locale: idLocale });
-    const terbilangText = toWords(grandTotal);
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; padding: 1cm; width: 210mm; min-height: 297mm; background-color: white; box-shadow: 0 0 5px rgba(0,0,0,0.1);">
-        <h2 style="text-align: center; font-size: 14pt; margin: 0; text-decoration: underline;">${title.toUpperCase()}</h2>
+        <h2 style="font-size: 14pt; margin: 0; font-weight: bold;">${title}</h2>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
             <thead style="background-color: #FED7AA; font-weight: bold;">
                 <tr>
-                    ${['NO', 'TANGGAL', 'NO PLAT', 'KM AWAL', 'KM AKHIR', 'URAIAN PEKERJAAN', 'JUMLAH', 'NAMA'].map(h => `<th style="padding: 4px; border: 1px solid black;">${h}</th>`).join('')}
+                    ${['NO', 'TANGGAL', 'KETERANGAN', 'NO PLAT', 'KM AWAL', 'KM AKHIR', 'URAIAN PEKERJAAN', 'JUMLAH', 'NAMA'].map(h => `<th style="padding: 4px; border: 1px solid black;">${h}</th>`).join('')}
                 </tr>
             </thead>
             <tbody>${tableRows}</tbody>
             <tfoot>
                 <tr style="background-color: #FED7AA; font-weight: bold;">
-                    <td colspan="6" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">TOTAL</td>
-                    <td style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
+                    <td colspan="7" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">TOTAL</td>
+                    <td style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">Rp${grandTotal.toLocaleString('id-ID')}</td>
                     <td style="padding: 4px; border: 1px solid black;"></td>
                 </tr>
             </tfoot>
         </table>
-         <div style="margin-top: 20px;">
-            <p style="margin: 0; font-style: italic; font-weight: bold;">Terbilang: ${terbilangText} Rupiah</p>
-        </div>
         <br/><br/>
         <table style="width: 100%; text-align: center; font-size: 11pt;">
             <tr>
@@ -341,7 +299,7 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; padding: 1cm; width: 210mm; min-height: 297mm; background-color: white; box-shadow: 0 0 5px rgba(0,0,0,0.1);">
-        <h2 style="text-align: center; font-size: 14pt; margin: 0; text-decoration: underline;">${title.toUpperCase()}</h2>
+        <h2 style="font-size: 14pt; margin: 0; font-weight: bold;">${title}</h2>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
             <thead style="background-color: #FED7AA; font-weight: bold;">
@@ -641,6 +599,9 @@ export default function ExportPage() {
 
                     if (segment === 'jasa') {
                         segmentHtml = generateJasaReport(notasInSegment, title);
+                    } else if (segment === 'BBM Genset') {
+                        const modifiedNotas = notasInSegment.map(nota => ({ ...nota, keterangan: '' }));
+                        segmentHtml = generateMaterialReport(modifiedNotas, title);
                     } else if (segment.startsWith('BBM')) {
                         segmentHtml = generateBBMReport(notasInSegment, title);
                     } else { // All other material-like reports
