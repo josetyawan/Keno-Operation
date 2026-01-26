@@ -99,24 +99,26 @@ service cloud.firestore {
      * @path /users/{userId}
      */
     match /users/{userId} {
-      // ADMIN ACCESS: Admins can list all users and get any individual user profile.
-      allow list, get: if isAdmin();
+      // ADMIN ACCESS: An admin can list all users. The read permission for each
+      // individual document is checked via the `get` rule below.
+      allow list: if isAdmin();
       
-      // USER ACCESS: A regular user can only get their own document. This rule is also
-      // essential for the isAdmin() function to work correctly without causing recursion,
-      // as it allows the function's internal `get` to succeed.
-      allow get: if isOwner(userId);
+      // READ ACCESS: A user can read a document if they are an admin OR they are the owner.
+      // The isOwner() check is what prevents infinite recursion when isAdmin() is evaluated
+      // for the admin's own document during a list or get operation.
+      allow get: if isAdmin() || isOwner(userId);
       
-      // CREATION: Allow user document creation if the document ID matches the user's UID.
-      // This is crucial for the sign-up flow to succeed, as it allows the creation of
-      // a user profile document immediately after authentication is complete.
-      allow create: if isCreatingOwnUserDocument(userId) &&
+      // UPDATE ACCESS: An admin can update any user's document. A regular user can
+      // only update their own document.
+      allow update: if isAdmin() || (isOwner(userId) && isUpdatingOwnUserDocument());
+      
+      // CREATE ACCESS: A newly authenticated user must be the owner of the document they
+      // are creating, ensuring users can only create their own profiles.
+      allow create: if isOwner(userId) &&
+                      isCreatingOwnUserDocument(userId) &&
                       request.resource.data.role == 'user' &&
                       request.resource.data.registrationStatus == 'pending';
 
-      // UPDATE: An admin can update any user profile. A user can only update their own.
-      allow update: if isAdmin() || (isOwner(userId) && isUpdatingOwnUserDocument());
-      
       // DELETION: Deleting users is a server-side or console action, not allowed from the client.
       allow delete: if false;
     }
