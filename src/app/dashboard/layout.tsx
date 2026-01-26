@@ -17,10 +17,14 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { UserNav } from '@/components/user-nav';
 import { Logo } from '@/components/logo';
-import { useUser, useAuth } from '@/firebase';
+import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { doc } from 'firebase/firestore';
+import type { UserProfile } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
+
 
 export default function DashboardLayout({
   children,
@@ -30,18 +34,46 @@ export default function DashboardLayout({
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
   const router = useRouter();
+  const firestore = useFirestore();
+  const { toast } = useToast();
+
+  const userDocRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [user, firestore]);
+
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
   useEffect(() => {
-    if (!isUserLoading && !user) {
+    const isAuthChecked = !isUserLoading;
+    
+    // If auth is checked and there's no user, redirect to login
+    if (isAuthChecked && !user) {
       router.push('/login');
+      return;
     }
-  }, [user, isUserLoading, router]);
+
+    const isProfileChecked = !isProfileLoading;
+    // If both auth and profile are checked, and the user's status is pending
+    if (isAuthChecked && isProfileChecked && userProfile && userProfile.registrationStatus === 'pending') {
+      auth.signOut(); // Sign them out
+      toast({
+        title: 'Akun Menunggu Persetujuan',
+        description: 'Akun Anda telah didaftarkan dan sedang menunggu persetujuan dari admin.',
+        duration: 5000,
+      });
+      router.push('/login'); // Redirect to login
+    }
+  }, [user, isUserLoading, userProfile, isProfileLoading, router, auth, toast]);
 
   const handleLogout = () => {
     auth.signOut();
   };
 
-  if (isUserLoading || !user) {
+  const isLoading = isUserLoading || isProfileLoading || (user && !userProfile);
+
+
+  if (isLoading) {
     return (
         <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
         <div className="hidden border-r bg-card md:block">
@@ -74,84 +106,90 @@ export default function DashboardLayout({
     )
   }
 
-  return (
-    <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
-      <div className="hidden border-r bg-secondary/50 md:block">
-        <div className="flex h-full max-h-screen flex-col gap-2">
-          <div className="flex h-16 items-center border-b px-6">
-            <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
-              <Logo />
-            </Link>
-          </div>
-          <div className="flex-1">
-            <nav className="grid items-start px-4 py-4 text-sm font-medium">
-              <Link
-                href="/dashboard"
-                className="flex items-center gap-3 rounded-lg bg-primary/10 px-3 py-2 text-primary transition-all hover:text-primary"
-              >
-                <LayoutGrid className="h-4 w-4" />
-                Dashboard
+  // If user is not pending, render the dashboard
+  if (userProfile && userProfile.registrationStatus === 'approved') {
+    return (
+      <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
+        <div className="hidden border-r bg-secondary/50 md:block">
+          <div className="flex h-full max-h-screen flex-col gap-2">
+            <div className="flex h-16 items-center border-b px-6">
+              <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
+                <Logo />
               </Link>
-            </nav>
-          </div>
-        </div>
-      </div>
-      <div className="flex flex-col">
-        <header className="flex h-14 items-center gap-4 border-b bg-card px-4 lg:h-[60px] lg:px-6">
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                className="shrink-0 md:hidden"
-              >
-                <Menu className="h-5 w-5" />
-                <span className="sr-only">Toggle navigation menu</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="flex flex-col">
-              <nav className="grid gap-2 text-lg font-medium">
-                <Link
-                  href="#"
-                  className="flex items-center gap-2 text-lg font-semibold mb-4"
-                >
-                  <Logo />
-                </Link>
+            </div>
+            <div className="flex-1">
+              <nav className="grid items-start px-4 py-4 text-sm font-medium">
                 <Link
                   href="/dashboard"
-                  className="mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground"
+                  className="flex items-center gap-3 rounded-lg bg-primary/10 px-3 py-2 text-primary transition-all hover:text-primary"
                 >
-                  <LayoutGrid className="h-5 w-5" />
+                  <LayoutGrid className="h-4 w-4" />
                   Dashboard
                 </Link>
               </nav>
-              <div className="mt-auto">
-                 <Card>
-                  <CardHeader>
-                    <CardTitle>Log Out</CardTitle>
-                    <CardDescription>
-                      Ready to leave? Click below to sign out.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button size="sm" className="w-full" onClick={handleLogout}>
-                       <LogOut className="mr-2 h-4 w-4" />
-                       Logout
-                    </Button>
-                  </CardContent>
-                </Card>
-              </div>
-            </SheetContent>
-          </Sheet>
-          <div className="w-full flex-1">
-            {/* Can add a search bar here if needed */}
+            </div>
           </div>
-          <UserNav />
-        </header>
-        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-background">
-          {children}
-        </main>
+        </div>
+        <div className="flex flex-col">
+          <header className="flex h-14 items-center gap-4 border-b bg-card px-4 lg:h-[60px] lg:px-6">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="shrink-0 md:hidden"
+                >
+                  <Menu className="h-5 w-5" />
+                  <span className="sr-only">Toggle navigation menu</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="flex flex-col">
+                <nav className="grid gap-2 text-lg font-medium">
+                  <Link
+                    href="#"
+                    className="flex items-center gap-2 text-lg font-semibold mb-4"
+                  >
+                    <Logo />
+                  </Link>
+                  <Link
+                    href="/dashboard"
+                    className="mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground"
+                  >
+                    <LayoutGrid className="h-5 w-5" />
+                    Dashboard
+                  </Link>
+                </nav>
+                <div className="mt-auto">
+                   <Card>
+                    <CardHeader>
+                      <CardTitle>Log Out</CardTitle>
+                      <CardDescription>
+                        Ready to leave? Click below to sign out.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <Button size="sm" className="w-full" onClick={handleLogout}>
+                         <LogOut className="mr-2 h-4 w-4" />
+                         Logout
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </div>
+              </SheetContent>
+            </Sheet>
+            <div className="w-full flex-1">
+              {/* Can add a search bar here if needed */}
+            </div>
+            <UserNav />
+          </header>
+          <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-background">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  // Fallback for loading state or if user is being redirected
+  return null;
 }

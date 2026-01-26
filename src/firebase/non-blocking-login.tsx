@@ -9,7 +9,13 @@ import {
 import { getFirestore, doc, setDoc } from 'firebase/firestore';
 import { getApp } from 'firebase/app';
 
-async function createUserDocument(user: User) {
+interface SignUpDetails {
+    email: string;
+    nik: string;
+    phone: string;
+}
+
+async function createUserDocument(user: User, details: SignUpDetails) {
     const app = getApp();
     const db = getFirestore(app);
     const userDocRef = doc(db, 'users', user.uid);
@@ -17,10 +23,13 @@ async function createUserDocument(user: User) {
     const userData = {
         id: user.uid,
         email: user.email || '',
+        nik: details.nik,
+        phone: details.phone,
         firstName: '',
         lastName: '',
-        displayName: user.email?.split('@')[0] || 'New User',
+        displayName: user.email?.split('@')[0] || 'User Baru',
         role: 'user',
+        registrationStatus: 'pending', // Pengguna baru dimulai sebagai 'pending'
     };
 
     await setDoc(userDocRef, userData);
@@ -29,12 +38,14 @@ async function createUserDocument(user: User) {
 /**
  * Signs up a user with email and password and creates their user document.
  */
-export async function signUpWithEmail(auth: Auth, email: string, password: string): Promise<UserCredential> {
-  const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+export async function signUpWithEmail(auth: Auth, password: string, details: SignUpDetails): Promise<UserCredential> {
+  const userCredential = await createUserWithEmailAndPassword(auth, details.email, password);
   try {
-    await createUserDocument(userCredential.user);
+    await createUserDocument(userCredential.user, details);
   } catch (firestoreError) {
-    console.error("Critical: Failed to create user document in Firestore after user creation in Auth.", firestoreError);
+    console.error("Kritis: Gagal membuat dokumen pengguna di Firestore setelah pembuatan pengguna di Auth.", firestoreError);
+    // Hapus pengguna auth jika pembuatan dokumen gagal untuk menghindari akun yatim piatu.
+    await userCredential.user.delete();
     throw firestoreError;
   }
   return userCredential;

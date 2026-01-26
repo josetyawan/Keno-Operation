@@ -15,6 +15,8 @@ import { ToastAction } from '@/components/ui/toast';
 export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [nik, setNik] = useState('');
+  const [phone, setPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const auth = useAuth();
@@ -29,20 +31,32 @@ export default function SignupPage() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!nik || !phone || !email || !password) {
+        toast({
+            variant: 'destructive',
+            title: 'Form Belum Lengkap',
+            description: 'Mohon isi semua kolom yang diperlukan.',
+        });
+        return;
+    }
     setIsLoading(true);
     try {
-      await signUpWithEmail(auth, email, password);
-      // Successful sign-up will trigger onAuthStateChanged, and the useEffect will redirect.
+      await signUpWithEmail(auth, password, { email, nik, phone });
+      toast({
+        title: 'Pendaftaran Berhasil!',
+        description: 'Akun Anda sedang menunggu persetujuan dari admin. Anda akan dialihkan ke halaman login.',
+      });
+      router.push('/login');
     } catch (error) {
-        let title = 'Sign Up Failed';
-        let description = 'An unexpected error occurred. Please try again.';
+        let title = 'Pendaftaran Gagal';
+        let description = 'Terjadi kesalahan. Silakan coba lagi.';
         if (error instanceof FirebaseError) {
           switch (error.code) {
             case 'auth/email-already-in-use':
                 toast({
                     variant: 'destructive',
-                    title: 'Email Already in Use',
-                    description: 'This email is already registered. Please login.',
+                    title: 'Email Sudah Terdaftar',
+                    description: 'Email ini sudah digunakan. Silakan login.',
                     action: (
                         <ToastAction altText="Login">
                             <Link href="/login">Login</Link>
@@ -52,15 +66,15 @@ export default function SignupPage() {
                 setIsLoading(false);
                 return;
             case 'auth/weak-password':
-              title = 'Weak Password';
-              description = 'The password must be at least 6 characters long.';
+              title = 'Password Lemah';
+              description = 'Password harus terdiri dari minimal 6 karakter.';
               break;
             case 'auth/invalid-email':
-              title = 'Invalid Email';
-              description = 'Please enter a valid email address.';
+              title = 'Email Tidak Valid';
+              description = 'Mohon masukkan alamat email yang valid.';
               break;
             default:
-              description = `An error occurred during sign up. (${error.code})`;
+              description = `Terjadi kesalahan saat pendaftaran. (${error.code})`;
               break;
           }
         }
@@ -79,20 +93,28 @@ export default function SignupPage() {
       <form onSubmit={handleSignUp}>
         <div className="grid gap-4">
           <div className="grid gap-2">
+            <Label htmlFor="nik">NIK</Label>
+            <Input id="nik" type="text" placeholder="Nomor Induk Kependudukan" required value={nik} onChange={(e) => setNik(e.target.value)} />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="phone">No. HP</Label>
+            <Input id="phone" type="tel" placeholder="081234567890" required value={phone} onChange={(e) => setPhone(e.target.value)} />
+          </div>
+          <div className="grid gap-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="m@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
+            <Input id="email" type="email" placeholder="email@contoh.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="password">Password</Label>
             <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
           <Button type="submit" className="w-full" disabled={isUserLoading || isLoading}>
-            {isLoading ? 'Creating Account...' : 'Create an account'}
+            {isLoading ? 'Mendaftarkan...' : 'Daftar Akun'}
           </Button>
         </div>
       </form>
       <div className="mt-4 text-center text-sm">
-        Already have an account?{' '}
+        Sudah punya akun?{' '}
         <Link href="/login" className="underline">
           Login
         </Link>

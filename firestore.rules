@@ -39,6 +39,13 @@ service cloud.firestore {
     }
 
     /**
+     * Checks if the user's registration has been approved by an admin.
+     */
+    function isApproved() {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.registrationStatus == 'approved';
+    }
+
+    /**
      * Checks if the authenticated user's UID matches the provided userId.
      */
     function isOwner(userId) {
@@ -95,7 +102,8 @@ service cloud.firestore {
       allow get: if isOwner(userId) || isAdmin();
       allow list: if isAdmin();
       allow create: if isOwner(userId) && isCreatingOwnUserDocument(userId);
-      allow update: if isOwner(userId) && resource != null && isUpdatingOwnUserDocument();
+      // Allow owner to update their own non-critical fields, and admin to update anything (like status).
+      allow update: if (isOwner(userId) && isUpdatingOwnUserDocument()) || isAdmin();
       allow delete: if false; // Deletion is a server-side action
     }
 
@@ -104,17 +112,17 @@ service cloud.firestore {
      * @path /notas/{notaId}
      */
     match /notas/{notaId} {
-      // Anyone signed in can read the list of notas or a single nota.
-      allow get, list: if isSignedIn();
+      // Only approved users can read notas.
+      allow get, list: if isApproved() || isAdmin();
       
-      // A user can only create a nota if the nota's userId matches their own.
-      allow create: if isSignedIn() && isCreatingOwnNota();
+      // An approved user can only create a nota if the nota's userId matches their own.
+      allow create: if isApproved() && isCreatingOwnNota();
 
-      // A user can update a nota if they are the owner OR if they are an admin.
-      allow update: if isSignedIn() && (isUpdatingOwnNota() || isAdmin());
+      // An approved user can update their own nota. Admins can update any nota.
+      allow update: if (isApproved() && isUpdatingOwnNota()) || isAdmin();
       
-      // A user can only delete a nota if they are the owner.
-      allow delete: if isSignedIn() && isUpdatingOwnNota();
+      // An approved user can only delete a nota if they are the owner.
+      allow delete: if isApproved() && isUpdatingOwnNota();
     }
   }
 }

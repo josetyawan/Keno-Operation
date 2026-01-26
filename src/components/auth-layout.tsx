@@ -13,9 +13,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
              <div className="flex justify-center">
                <Logo className="items-center" />
             </div>
-            <h1 className="text-3xl font-bold font-headline mt-4">Welcome</h1>
+            <h1 className="text-3xl font-bold font-headline mt-4">Aplikasi Pelaporan Nota</h1>
             <p className="text-balance text-muted-foreground">
-              Enter your details to manage your notas
+              Silakan masuk atau daftar untuk melanjutkan.
             </p>
           </div>
           {children}

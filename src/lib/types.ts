@@ -25,4 +25,7 @@ export type UserProfile = {
     lastName?: string;
     displayName?: string;
     role: 'admin' | 'user';
+    nik?: string;
+    phone?: string;
+    registrationStatus: 'pending' | 'approved';
 };

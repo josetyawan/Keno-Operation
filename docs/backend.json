@@ -34,12 +34,29 @@
             "admin",
             "user"
           ]
+        },
+        "nik": {
+          "type": "string",
+          "description": "User's National Identification Number (NIK)."
+        },
+        "phone": {
+          "type": "string",
+          "description": "User's phone number."
+        },
+        "registrationStatus": {
+          "type": "string",
+          "description": "The registration status of the user's account.",
+          "enum": [
+            "pending",
+            "approved"
+          ]
         }
       },
       "required": [
         "id",
         "email",
-        "role"
+        "role",
+        "registrationStatus"
       ]
     },
     "Nota": {
