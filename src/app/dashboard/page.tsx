@@ -31,29 +31,16 @@ import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 
-function NotaActions({ notaId }: { notaId: string }) {
+function NotaActions({ nota, userProfile }: { nota: Nota, userProfile: UserProfile | null }) {
   const { toast } = useToast();
   const firestore = useFirestore();
   const { user } = useUser();
 
-  const userDocRef = useMemoFirebase(() => {
-    if (!user) return null;
-    return doc(firestore, 'users', user.uid);
-  }, [user, firestore]);
-  const { data: userProfile } = useDoc<UserProfile>(userDocRef);
   const isAdmin = userProfile?.role === 'admin';
-
-  // Get the nota document to check ownership
-  const notaRef = useMemoFirebase(() => {
-    if (!firestore || !notaId) return null;
-    return doc(firestore, 'notas', notaId);
-  }, [firestore, notaId]);
-  const { data: nota } = useDoc<Nota>(notaRef);
-  const isOwner = user?.uid === nota?.userId;
-
+  const isOwner = user?.uid === nota.userId;
 
   const handleDelete = () => {
-    if (!notaRef) return;
+    const notaRef = doc(firestore, 'notas', nota.id);
     deleteDocumentNonBlocking(notaRef);
     toast({
       title: 'Laporan Dihapus',
@@ -62,37 +49,54 @@ function NotaActions({ notaId }: { notaId: string }) {
   };
 
   if (!isOwner && !isAdmin) {
-    return null;
+    // Render the detail button for everyone
+    return (
+      <Link href={`/dashboard/notas/${nota.id}`}>
+        <Button variant="ghost" size="sm">Detail</Button>
+      </Link>
+    );
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button aria-haspopup="true" size="icon" variant="ghost">
-          <MoreHorizontal className="h-4 w-4" />
-          <span className="sr-only">Toggle menu</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-        <Link href={`/dashboard/notas/${notaId}/edit`}>
-          <DropdownMenuItem>
-            <Edit className="mr-2 h-4 w-4" />
-            Edit
-          </DropdownMenuItem>
+    <div className="flex justify-end items-center">
+        <Link href={`/dashboard/notas/${nota.id}`}>
+            <Button variant="ghost" size="sm">Detail</Button>
         </Link>
-        <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:text-destructive focus:bg-destructive/10">
-          <Trash2 className="mr-2 h-4 w-4" />
-          Hapus
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+        <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+            <Button aria-haspopup="true" size="icon" variant="ghost">
+            <MoreHorizontal className="h-4 w-4" />
+            <span className="sr-only">Toggle menu</span>
+            </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <Link href={`/dashboard/notas/${nota.id}/edit`}>
+            <DropdownMenuItem>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit
+            </DropdownMenuItem>
+            </Link>
+            <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+            <Trash2 className="mr-2 h-4 w-4" />
+            Hapus
+            </DropdownMenuItem>
+        </DropdownMenuContent>
+        </DropdownMenu>
+    </div>
   );
 }
 
 
 export default function DashboardPage() {
   const firestore = useFirestore();
+  const { user } = useUser();
+
+  const userDocRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [user, firestore]);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
   // For admins, query all notas. For regular users, this query is filtered by security rules.
   const notasQuery = useMemoFirebase(() => {
@@ -101,7 +105,7 @@ export default function DashboardPage() {
 
   const { data: notas, isLoading: areNotasLoading } = useCollection<Nota>(notasQuery);
 
-  const isLoading = areNotasLoading;
+  const isLoading = areNotasLoading || isProfileLoading;
 
   return (
     <>
@@ -145,7 +149,7 @@ export default function DashboardPage() {
                   <TableHead>Deskripsi</TableHead>
                   <TableHead className="text-right">Jumlah</TableHead>
                   <TableHead className="hidden md:table-cell w-[160px]">Tanggal</TableHead>
-                  <TableHead className="w-[100px] text-center pr-6">Actions</TableHead>
+                  <TableHead className="w-[150px] text-center pr-6">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -165,9 +169,7 @@ export default function DashboardPage() {
                       {nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd MMM yyyy', { locale: idLocale }) : '-'}
                     </TableCell>
                     <TableCell className="text-center pr-6">
-                      <Link href={`/dashboard/notas/${nota.id}`}>
-                        <Button variant="ghost" size="sm">Detail</Button>
-                      </Link>
+                      <NotaActions nota={nota} userProfile={userProfile} />
                     </TableCell>
                   </TableRow>
                 ))}

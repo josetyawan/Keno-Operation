@@ -62,6 +62,7 @@ export default function NotaDetailPage() {
   }, [firestore, id]);
 
   const { data: nota, isLoading, error } = useDoc<Nota>(notaRef);
+  const isOwner = user?.uid === nota?.userId;
 
   const handleConfirmVerify = () => {
     if (!isAdmin || !notaRef || !verificationDate) return;
@@ -118,7 +119,6 @@ export default function NotaDetailPage() {
   }
 
   const tanggalLaporan = nota.tanggal?.toDate ? nota.tanggal.toDate() : new Date();
-  const isOwner = user?.uid === nota.userId;
   
   const notaContentForSummary = `
   Tanggal: ${format(tanggalLaporan, 'dd MMMM yyyy')}
