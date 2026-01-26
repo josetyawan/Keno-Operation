@@ -435,31 +435,28 @@ function ReportPreview({
         <style>
             {`
             @media print {
-                body > *:not(#print-section-parent) {
-                    visibility: hidden;
+                /* Hide everything on the page that is not for printing */
+                .no-print {
+                    display: none !important;
                 }
-                #print-section-parent, #print-section, #print-section * {
-                    visibility: visible;
-                }
+                /* Ensure the print container is visible and takes up the whole page */
                 #print-section-parent {
-                    position: fixed;
-                    inset: 0;
-                    margin: 0;
-                    padding: 0;
-                }
-                #print-section {
-                   width: 100%;
-                   height: 100%;
-                   overflow: visible;
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    width: 100%;
+                    height: auto;
+                    background: white;
                 }
                 .report-page-container {
                     page-break-after: always;
                     page-break-inside: avoid;
                     width: 210mm;
                     height: 297mm;
-                    margin: 0;
+                    margin: 0 auto;
                     padding: 0;
                     overflow: hidden;
+                    box-shadow: none; /* remove shadow for print */
                 }
                  .report-page-container:last-child {
                     page-break-after: auto;
@@ -468,12 +465,11 @@ function ReportPreview({
                     size: A4 portrait;
                     margin: 0;
                 }
-                .no-print {
-                    display: none !important;
-                }
             }
             `}
         </style>
+      
+      {/* UI for screen, hidden on print */}
       <Card className="w-full max-w-5xl h-[90vh] flex flex-col no-print">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Pratinjau Laporan</CardTitle>
@@ -483,19 +479,31 @@ function ReportPreview({
           </div>
         </CardHeader>
         <CardContent className="flex-grow overflow-auto bg-gray-200 p-4">
-            <div id="print-section-parent">
-                <div id="print-section" ref={printRef} className="mx-auto flex flex-col items-center gap-y-4">
-                    {pages.map((pageHtml, index) => (
-                        <div
-                            key={index}
-                            className="report-page-container bg-white shadow-lg"
-                            dangerouslySetInnerHTML={{ __html: pageHtml }}
-                        />
-                    ))}
-                </div>
+            <div className="mx-auto flex flex-col items-center gap-y-4">
+                {pages.map((pageHtml, index) => (
+                    <div
+                        key={index}
+                        className="bg-white shadow-lg"
+                        style={{width: '210mm', height: '297mm'}}
+                        dangerouslySetInnerHTML={{ __html: pageHtml }}
+                    />
+                ))}
             </div>
         </CardContent>
       </Card>
+
+      {/* Content for printing, hidden on screen */}
+      <div id="print-section-parent" className="hidden print:block">
+          <div id="print-section" ref={printRef} className="mx-auto flex flex-col items-center">
+              {pages.map((pageHtml, index) => (
+                  <div
+                      key={index}
+                      className="report-page-container bg-white"
+                      dangerouslySetInnerHTML={{ __html: pageHtml }}
+                  />
+              ))}
+          </div>
+      </div>
     </div>
   );
 }
