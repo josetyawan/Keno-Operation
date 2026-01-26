@@ -10,27 +10,25 @@ import { doc, setDoc, Firestore } from 'firebase/firestore';
 
 interface SignUpDetails {
     email: string;
-    displayName: string;
-    nik?: string;
-    phone?: string;
 }
 
 async function createUserDocument(firestore: Firestore, user: User, details: SignUpDetails) {
     const userDocRef = doc(firestore, 'users', user.uid);
     
-    // This now includes all the information from the new signup form.
+    // Create a minimal user document.
+    // Other fields can be populated by the user in their profile later.
     const userData = {
         id: user.uid,
         email: details.email,
-        displayName: details.displayName,
-        role: 'user', // Default role
-        registrationStatus: 'pending', // Always start as 'pending'
-        nik: details.nik || '', // Use provided nik or empty string
-        phone: details.phone || '', // Use provided phone or empty string
+        displayName: details.email, // Default display name to email
+        role: 'user',
+        registrationStatus: 'pending',
+        nik: '',
+        phone: '',
+        firstName: '',
+        lastName: '',
     };
 
-    // Firestore does not allow 'undefined' values.
-    // The || '' ensures we always write a string.
     await setDoc(userDocRef, userData);
 }
 
@@ -40,7 +38,7 @@ async function createUserDocument(firestore: Firestore, user: User, details: Sig
 export async function signUpWithEmail(auth: Auth, firestore: Firestore, password: string, details: SignUpDetails): Promise<UserCredential> {
   const userCredential = await createUserWithEmailAndPassword(auth, details.email, password);
   try {
-    // Creates the user document with all the details from the form
+    // Creates the minimal user document
     await createUserDocument(firestore, userCredential.user, details);
   } catch (firestoreError) {
     console.error("Kritis: Gagal membuat dokumen pengguna di Firestore setelah pembuatan pengguna di Auth.", firestoreError);
