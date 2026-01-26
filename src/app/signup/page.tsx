@@ -15,6 +15,10 @@ import { ToastAction } from '@/components/ui/toast';
 export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [nik, setNik] = useState('');
+  const [phone, setPhone] = useState('');
+
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const auth = useAuth();
@@ -30,18 +34,17 @@ export default function SignupPage() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
+    if (!email || !password || !displayName) {
         toast({
             variant: 'destructive',
             title: 'Form Belum Lengkap',
-            description: 'Mohon isi semua kolom yang diperlukan.',
+            description: 'Mohon isi semua kolom yang diperlukan (Email, Password, Nama Tampilan).',
         });
         return;
     }
     setIsLoading(true);
     try {
-      // Pass only the essential details
-      await signUpWithEmail(auth, firestore, password, { email });
+      await signUpWithEmail(auth, firestore, password, { email, displayName, nik, phone });
       toast({
         title: 'Pendaftaran Berhasil!',
         description: 'Akun Anda sedang menunggu persetujuan dari admin. Anda akan dialihkan ke halaman login.',
@@ -93,12 +96,24 @@ export default function SignupPage() {
       <form onSubmit={handleSignUp}>
         <div className="grid gap-4">
           <div className="grid gap-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="displayName">Nama Tampilan *</Label>
+            <Input id="displayName" placeholder="John Doe" required value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="email">Email *</Label>
             <Input id="email" type="email" placeholder="email@contoh.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">Password *</Label>
             <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="nik">NIK (Nomor Induk Pegawai)</Label>
+            <Input id="nik" placeholder="Opsional" value={nik} onChange={(e) => setNik(e.target.value)} />
+          </div>
+           <div className="grid gap-2">
+            <Label htmlFor="phone">No. Pembayaran</Label>
+            <Input id="phone" placeholder="Opsional (No. e-wallet/rekening)" value={phone} onChange={(e) => setPhone(e.target.value)} />
           </div>
           <Button type="submit" className="w-full" disabled={isUserLoading || isLoading}>
             {isLoading ? 'Mendaftarkan...' : 'Daftar Akun'}
