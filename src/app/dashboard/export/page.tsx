@@ -751,28 +751,35 @@ export default function ExportPage() {
                         ))}
                         {!isLoading && filteredNotas.length > 0 ? (
                            filteredNotas.map(nota => (
-                            <Card key={nota.id} className="p-3 flex items-center gap-4 hover:bg-muted/50 transition-colors">
-                                 <Checkbox
-                                     checked={selectedNotaIds.includes(nota.id)}
-                                     onCheckedChange={(checked) => handleSelectNota(nota.id, !!checked)}
-                                 />
-                                 <div className="flex-grow min-w-0">
-                                     <div className="flex items-center gap-2 mb-1">
-                                        <span className="font-medium">{nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd MMM yyyy', { locale: idLocale }) : 'Invalid Date'}</span>
-                                        <Badge variant={nota.status === 'verified' ? 'default' : 'secondary'}>{nota.status}</Badge>
-                                        <Badge variant={nota.segmen.includes('BBM') ? 'destructive' : 'secondary'}>{nota.segmen}</Badge>
-                                     </div>
-                                     <p className="text-sm text-muted-foreground truncate">{nota.keterangan || nota.namaBarang || 'Tanpa keterangan'}</p>
-                                 </div>
-                                 <div className="font-semibold text-base whitespace-nowrap">
-                                     Rp {nota.nominal.toLocaleString('id-ID')}
-                                 </div>
-                                  <div className="flex items-center">
-                                    <Link href={`/dashboard/notas/${nota.id}/edit`}>
-                                        <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
-                                    </Link>
-                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
-                                  </div>
+                            <Card key={nota.id} className="p-3 hover:bg-muted/50 transition-colors">
+                                <div className="flex items-start gap-4">
+                                    <Checkbox
+                                        checked={selectedNotaIds.includes(nota.id)}
+                                        onCheckedChange={(checked) => handleSelectNota(nota.id, !!checked)}
+                                        className="mt-1"
+                                    />
+                                    <div className="flex-grow min-w-0">
+                                        <div className="flex justify-between items-start">
+                                            <div className="flex items-center gap-2 flex-wrap mb-1">
+                                                <span className="font-medium">{nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd MMM yyyy', { locale: idLocale }) : 'Invalid Date'}</span>
+                                                <Badge variant={nota.status === 'verified' ? 'default' : 'secondary'}>{nota.status}</Badge>
+                                                <Badge variant={nota.segmen.includes('BBM') ? 'destructive' : 'secondary'}>{nota.segmen}</Badge>
+                                            </div>
+                                            <div className="font-semibold text-base whitespace-nowrap ml-4">
+                                                Rp {nota.nominal.toLocaleString('id-ID')}
+                                            </div>
+                                        </div>
+                                        <p className="text-sm text-muted-foreground break-all">
+                                            {nota.keterangan || nota.namaBarang || 'Tanpa keterangan'}
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center">
+                                      <Link href={`/dashboard/notas/${nota.id}/edit`}>
+                                          <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
+                                      </Link>
+                                      <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                                    </div>
+                                </div>
                             </Card>
                            ))
                         ) : (
