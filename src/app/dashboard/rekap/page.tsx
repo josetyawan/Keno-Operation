@@ -343,7 +343,6 @@ export default function RekapPage() {
             </div>
           );
       } else if (reportType === 'bbm' && bbmData) {
-          const sortedSegments = Object.keys(bbmData).sort();
           reportContent = (
             <div className="max-w-4xl mx-auto font-serif text-black text-xs">
                 <h1 className="font-bold text-base text-center mb-6">Perincian Nota BBM</h1>
@@ -361,48 +360,53 @@ export default function RekapPage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {sortedSegments.length > 0 ? (
-                            (() => {
-                            let itemCounter = 0;
-                            return sortedSegments.flatMap(segment => {
-                                const items = bbmData[segment];
-                                if (!items || items.length === 0) return [];
-
-                                const headerRow = (
-                                <TableRow key={`segment-header-${segment}`} className="bg-gray-100 font-bold">
-                                    <TableCell colSpan={8} className="p-2 border-b-2 border-t-2 border-black">{segment}</TableCell>
-                                </TableRow>
+                        {(() => {
+                            if (!bbmData || Object.keys(bbmData).length === 0) {
+                                return (
+                                    <TableRow className="border-b border-black">
+                                        <TableCell colSpan={8} className="text-center h-24">Tidak ada data untuk ditampilkan.</TableCell>
+                                    </TableRow>
                                 );
+                            }
+
+                            const sortedSegments = Object.keys(bbmData).sort();
+                            let itemCounter = 0;
+
+                            return sortedSegments.map(segment => {
+                                const items = bbmData[segment];
+                                if (!items || items.length === 0) return null;
 
                                 const itemRows = items.flatMap(item => {
-                                itemCounter++;
-                                return [
-                                    <TableRow key={item.id} className="border-b-0">
-                                    <TableCell className="border-r-2 border-black text-center align-top">{itemCounter}</TableCell>
-                                    <TableCell className="border-r-2 border-black text-center align-top">{format(item.tanggal.toDate(), 'dd/MM/yyyy')}</TableCell>
-                                    <TableCell className="border-r-2 border-black px-2 align-top">{item.noPlatKendaraan}</TableCell>
-                                    <TableCell className="border-r-2 border-black text-center align-top">{item.kmAwal}</TableCell>
-                                    <TableCell className="border-r-2 border-black text-center align-top">{item.kmAkhir}</TableCell>
-                                    <TableCell className="border-r-2 border-black px-2 align-top">{item.keterangan}</TableCell>
-                                    <TableCell className="border-r-2 border-black text-right align-top px-2">Rp{item.nominal.toLocaleString('id-ID')}</TableCell>
-                                    <TableCell className="px-2 align-top">{item.namaPic}</TableCell>
-                                    </TableRow>,
-                                    <TableRow key={`${item.id}-jumlah`} className="border-b-2 border-black">
-                                    <TableCell colSpan={6} className="border-r-2 border-black text-center font-bold">JUMLAH</TableCell>
-                                    <TableCell className="text-right font-bold px-2 border-r-2 border-black">Rp{item.nominal.toLocaleString('id-ID')}</TableCell>
-                                    <TableCell></TableCell>
-                                    </TableRow>
-                                ];
+                                    itemCounter++;
+                                    return [
+                                        <TableRow key={item.id} className="border-b-0">
+                                            <TableCell className="border-r-2 border-black text-center align-top">{itemCounter}</TableCell>
+                                            <TableCell className="border-r-2 border-black text-center align-top">{format(item.tanggal.toDate(), 'dd/MM/yyyy')}</TableCell>
+                                            <TableCell className="border-r-2 border-black px-2 align-top">{item.noPlatKendaraan}</TableCell>
+                                            <TableCell className="border-r-2 border-black text-center align-top">{item.kmAwal}</TableCell>
+                                            <TableCell className="border-r-2 border-black text-center align-top">{item.kmAkhir}</TableCell>
+                                            <TableCell className="border-r-2 border-black px-2 align-top">{item.keterangan}</TableCell>
+                                            <TableCell className="border-r-2 border-black text-right align-top px-2">Rp{item.nominal.toLocaleString('id-ID')}</TableCell>
+                                            <TableCell className="px-2 align-top">{item.namaPic}</TableCell>
+                                        </TableRow>,
+                                        <TableRow key={`${item.id}-jumlah`} className="border-b-2 border-black">
+                                            <TableCell colSpan={6} className="border-r-2 border-black text-center font-bold">JUMLAH</TableCell>
+                                            <TableCell className="text-right font-bold px-2 border-r-2 border-black">Rp{item.nominal.toLocaleString('id-ID')}</TableCell>
+                                            <TableCell></TableCell>
+                                        </TableRow>
+                                    ];
                                 });
 
-                                return [headerRow, ...itemRows];
+                                return (
+                                    <React.Fragment key={`segment-group-${segment}`}>
+                                        <TableRow className="bg-gray-100 font-bold">
+                                            <TableCell colSpan={8} className="p-2 border-b-2 border-t-2 border-black">{segment}</TableCell>
+                                        </TableRow>
+                                        {itemRows}
+                                    </React.Fragment>
+                                );
                             });
-                            })()
-                        ) : (
-                            <TableRow className="border-b border-black">
-                                <TableCell colSpan={8} className="text-center h-24">Tidak ada data untuk ditampilkan.</TableCell>
-                            </TableRow>
-                        )}
+                        })()}
                     </TableBody>
                     <UiTableFooter>
                        <TableRow className="bg-yellow-300 border-t-2 border-black">
