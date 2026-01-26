@@ -20,7 +20,7 @@ import { UserNav } from '@/components/user-nav';
 import { Logo } from '@/components/logo';
 import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { doc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
@@ -47,8 +47,6 @@ export default function DashboardLayout({
   }, [user, firestore]);
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
-  
-  const isLoading = isUserLoading || isProfileLoading;
 
   // Effect to automatically promote the super admin user
   useEffect(() => {
@@ -72,56 +70,54 @@ export default function DashboardLayout({
     }
   }, [user, userProfile, firestore, toast]);
 
+  const handleSignOutAndRedirect = useCallback((title: string, description: string) => {
+    setIsSigningOut(true);
+    auth.signOut().then(() => {
+        toast({
+            title,
+            description,
+            variant: title.includes('Gagal') ? 'destructive' : 'default',
+            duration: 5000,
+        });
+        router.push('/login');
+    });
+  }, [auth, router, toast]);
+
   useEffect(() => {
-    // Wait until ALL loading is complete and not in the process of signing out
-    if (isLoading || isSigningOut) {
+    // Wait until initial auth check is complete.
+    if (isUserLoading || isSigningOut) {
       return;
     }
 
-    const handleSignOutAndRedirect = (title: string, description: string) => {
-        setIsSigningOut(true);
-        auth.signOut().then(() => {
-            toast({
-                title,
-                description,
-                variant: title.includes('Gagal') ? 'destructive' : 'default',
-                duration: 5000,
-            });
-            router.push('/login');
-        });
-    };
-
-    // Case 1: Loading is finished, but no user is logged in.
+    // If auth is resolved and there is no user, redirect to login.
     if (!user) {
       router.push('/login');
       return;
     }
-    
-    // Case 2: User is logged in, but their profile document was not found.
-    // This can happen briefly after signup or if there's a data integrity issue.
-    if (!userProfile) {
-        handleSignOutAndRedirect(
-            'Gagal Memuat Profil',
-            'Tidak dapat menemukan data pengguna. Silakan login kembali.'
-        );
-        return;
+
+    // Now we have a user. Wait for their profile to load.
+    if (isProfileLoading) {
+      return;
     }
 
-    // Case 3: The user's registration is still pending.
-    if (userProfile.registrationStatus === 'pending') {
+    // At this point, both user auth and profile loading are finished.
+    // We can now make decisions based on the profile data.
+    if (!userProfile) {
+      // This is an invalid state: authenticated user with no profile document.
+      handleSignOutAndRedirect(
+          'Gagal Memuat Profil',
+          'Tidak dapat menemukan data pengguna. Silakan login kembali.'
+      );
+    } else if (userProfile.registrationStatus === 'pending') {
+      // The user has a profile, but it's not approved yet.
       handleSignOutAndRedirect(
         'Akun Menunggu Persetujuan',
         'Akun Anda telah didaftarkan dan sedang menunggu persetujuan dari admin.'
       );
     }
-  }, [user, userProfile, isLoading, isSigningOut, router, auth, toast]);
+  }, [user, isUserLoading, userProfile, isProfileLoading, isSigningOut, router, handleSignOutAndRedirect]);
 
-  const showDashboard = !isLoading && user && userProfile?.registrationStatus === 'approved';
-
-  const navLinks = [
-    { href: '/dashboard', label: 'Dashboard', icon: LayoutGrid, adminOnly: false },
-    { href: '/dashboard/admin/users', label: 'Manajemen User', icon: Users, adminOnly: true },
-  ];
+  const showDashboard = !isUserLoading && !isProfileLoading && user && userProfile?.registrationStatus === 'approved';
 
   if (!showDashboard) {
       return (
