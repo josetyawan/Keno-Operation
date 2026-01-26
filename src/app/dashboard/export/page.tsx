@@ -149,6 +149,7 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
 
     const today = new Date();
     const formattedDate = format(today, 'dd MMMM yyyy', { locale: idLocale });
+    const terbilangText = toWords(Math.floor(grandTotal));
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; padding: 1cm; width: 210mm; min-height: 297mm; background-color: white; box-shadow: 0 0 5px rgba(0,0,0,0.1);">
@@ -174,7 +175,7 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
             </tfoot>
         </table>
          <div style="margin-top: 20px;">
-            <p style="margin: 0; font-style: italic; font-weight: bold;">Terbilang: ${toWords(Math.floor(grandTotal))} Rupiah</p>
+            <p style="margin: 0; font-style: italic; font-weight: bold;">Terbilang: ${terbilangText} Rupiah</p>
         </div>
         <br/><br/>
         <table style="width: 100%; text-align: center; font-size: 11pt;">
@@ -217,6 +218,7 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
 
     const today = new Date();
     const formattedDate = format(today, 'dd MMMM yyyy', { locale: idLocale });
+    const terbilangText = toWords(grandTotal);
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; padding: 1cm; width: 210mm; min-height: 297mm; background-color: white; box-shadow: 0 0 5px rgba(0,0,0,0.1);">
@@ -238,7 +240,7 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
             </tfoot>
         </table>
          <div style="margin-top: 20px;">
-            <p style="margin: 0; font-style: italic; font-weight: bold;">Terbilang: ${toWords(grandTotal)} Rupiah</p>
+            <p style="margin: 0; font-style: italic; font-weight: bold;">Terbilang: ${terbilangText} Rupiah</p>
         </div>
         <br/><br/>
         <table style="width: 100%; text-align: center; font-size: 11pt;">
@@ -277,6 +279,7 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
 
     const today = new Date();
     const formattedDate = format(today, 'dd MMMM yyyy', { locale: idLocale });
+    const terbilangText = toWords(grandTotal);
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; padding: 1cm; width: 210mm; min-height: 297mm; background-color: white; box-shadow: 0 0 5px rgba(0,0,0,0.1);">
@@ -297,7 +300,7 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
             </tfoot>
         </table>
          <div style="margin-top: 20px;">
-            <p style="margin: 0; font-style: italic; font-weight: bold;">Terbilang: ${toWords(grandTotal)} Rupiah</p>
+            <p style="margin: 0; font-style: italic; font-weight: bold;">Terbilang: ${terbilangText} Rupiah</p>
         </div>
         <br/><br/>
         <table style="width: 100%; text-align: center; font-size: 11pt;">
@@ -387,15 +390,22 @@ function ReportPreview({
                 #print-section-parent {
                     position: fixed;
                     inset: 0;
+                    margin: 0;
+                    padding: 0;
                 }
                 #print-section {
                    width: 100%;
                    height: 100%;
-                   overflow: auto;
+                   overflow: visible;
                 }
                 .report-page-container {
                     page-break-after: always;
                     page-break-inside: avoid;
+                    width: 210mm;
+                    height: 297mm;
+                    margin: 0;
+                    padding: 0;
+                    overflow: hidden;
                 }
                  .report-page-container:last-child {
                     page-break-after: auto;
@@ -422,9 +432,9 @@ function ReportPreview({
             <div id="print-section-parent">
                 <div id="print-section" ref={printRef} className="mx-auto flex flex-col items-center gap-y-4">
                     {pages.map((pageHtml, index) => (
-                        <div 
+                        <div
                             key={index}
-                            className="report-page-container"
+                            className="report-page-container bg-white shadow-lg"
                             dangerouslySetInnerHTML={{ __html: pageHtml }}
                         />
                     ))}
@@ -463,7 +473,7 @@ export default function ExportPage() {
     const [verifiedDate, setVerifiedDate] = useState<Date | undefined>(undefined);
 
     const [selectedNotaIds, setSelectedNotaIds] = useState<string[]>([]);
-    
+
     const [reportPages, setReportPages] = useState<string[]>([]);
     const [isGenerating, setIsGenerating] = useState(false);
     const [reportTypeBeingGenerated, setReportTypeBeingGenerated] = useState('');
@@ -475,13 +485,13 @@ export default function ExportPage() {
             setSelectedMonth(monthOptions[0]);
         }
     }, [monthOptions, selectedMonth]);
-    
+
     const filteredNotas = useMemo(() => {
         if (!notas) return [];
         if (filterType === 'monthly') {
             const currentMonth = selectedMonth || (monthOptions.length > 0 ? monthOptions[0] : '');
             if (!currentMonth) return [];
-            
+
             const [year, month] = currentMonth.split('-').map(Number);
             return notas.filter(nota => {
                 if (!nota.tanggal?.toDate) return false;
@@ -517,7 +527,7 @@ export default function ExportPage() {
     const handleSelectAll = (checked: boolean) => {
         setSelectedNotaIds(checked ? filteredNotas.map(nota => nota.id) : []);
     };
-    
+
     const isAllSelected = filteredNotas.length > 0 && selectedNotaIds.length === filteredNotas.length;
 
     const selectionSummary = useMemo(() => {
@@ -561,16 +571,16 @@ export default function ExportPage() {
                     acc[seg].push(nota);
                     return acc;
                 }, {} as Record<string, Nota[]>);
-                
+
                 const sortedSegments = Object.keys(groupedBySegment).sort();
-            
+
                 for (const segment of sortedSegments) {
                     const notasInSegment = groupedBySegment[segment];
                     if (notasInSegment.length === 0) continue;
-            
+
                     let segmentHtml = '';
                     const title = `Perincian Nota ${segment}`;
-                    
+
                     if (segment === 'jasa') {
                         segmentHtml = generateJasaReport(notasInSegment, title);
                     } else if (segment.startsWith('BBM')) {
@@ -597,7 +607,7 @@ export default function ExportPage() {
             setReportTypeBeingGenerated('');
         }
     };
-    
+
     // --- Report Menus ---
     const perincianSegments = [...new Set(filteredNotas.filter(n=>selectedNotaIds.includes(n.id)).map(n => n.segmen))];
     const evidenSegments = perincianSegments.filter(s => s.startsWith('BBM'));
@@ -742,11 +752,11 @@ export default function ExportPage() {
                         {!isLoading && filteredNotas.length > 0 ? (
                            filteredNotas.map(nota => (
                             <Card key={nota.id} className="p-3 flex items-center gap-4 hover:bg-muted/50 transition-colors">
-                                 <Checkbox 
+                                 <Checkbox
                                      checked={selectedNotaIds.includes(nota.id)}
                                      onCheckedChange={(checked) => handleSelectNota(nota.id, !!checked)}
                                  />
-                                 <div className="flex-grow">
+                                 <div className="flex-grow min-w-0">
                                      <div className="flex items-center gap-2 mb-1">
                                         <span className="font-medium">{nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd MMM yyyy', { locale: idLocale }) : 'Invalid Date'}</span>
                                         <Badge variant={nota.status === 'verified' ? 'default' : 'secondary'}>{nota.status}</Badge>
@@ -773,7 +783,7 @@ export default function ExportPage() {
                     </CardContent>
                 </Card>
             </div>
-            
+
              <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm py-3 mt-auto border-t -mx-6 px-6 no-print">
                  <div className="max-w-4xl mx-auto flex justify-around items-center">
                     <Button variant="outline" size="lg" disabled>
