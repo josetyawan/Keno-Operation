@@ -143,7 +143,6 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
 
     const today = new Date();
     const formattedDate = format(today, 'dd MMMM yyyy', { locale: idLocale });
-    const terbilangText = toWords(Math.floor(grandTotal));
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; padding: 1cm; width: 210mm; min-height: 297mm; background-color: white; box-shadow: 0 0 5px rgba(0,0,0,0.1);">
@@ -168,9 +167,6 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
                 </tr>
             </tfoot>
         </table>
-         <div style="margin-top: 20px;">
-            <p style="margin: 0; font-style: italic; font-weight: bold;">Terbilang: ${terbilangText} Rupiah</p>
-        </div>
         <br/><br/>
         <table style="width: 100%; text-align: center; font-size: 11pt;">
             <tr>
@@ -289,7 +285,6 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
 
     const today = new Date();
     const formattedDate = format(today, 'dd MMMM yyyy', { locale: idLocale });
-    const terbilangText = toWords(grandTotal);
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; padding: 1cm; width: 210mm; min-height: 297mm; background-color: white; box-shadow: 0 0 5px rgba(0,0,0,0.1);">
@@ -309,9 +304,6 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
                 </tr>
             </tfoot>
         </table>
-         <div style="margin-top: 20px;">
-            <p style="margin: 0; font-style: italic; font-weight: bold;">Terbilang: ${terbilangText} Rupiah</p>
-        </div>
         <br/><br/>
         <table style="width: 100%; text-align: center; font-size: 11pt;">
             <tr>
@@ -377,7 +369,7 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 9pt; padding: 1cm; width: 210mm; min-height: 297mm; background-color: white; box-shadow: 0 0 5px rgba(0,0,0,0.1);">
-        <h2 style="text-align: left; font-size: 14pt; margin: 0; font-weight: bold;">${title}</h2>
+        <h2 style="text-align: left; font-size: 14pt; margin: 0; font-weight: bold; text-decoration: underline;">${title}</h2>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 1px solid black; font-size: 8pt;">
             <thead style="background-color: #FED7AA; font-weight: bold; text-align: center;">
@@ -642,16 +634,19 @@ export default function ExportPage() {
 
                     let segmentHtml = '';
                     const title = `Perincian Nota ${segment}`;
+                    const bbmR2R4Segments = ['BBM R2', 'BBM R4 Harian', 'BBM R4 Turlap', 'BBM R4 UT'];
+
 
                     if (segment === 'jasa') {
                         segmentHtml = generateJasaReport(notasInSegment, title);
-                    } else if (segment === 'BBM Genset') {
-                        const modifiedNotas = notasInSegment.map(nota => ({ ...nota, keterangan: '' }));
-                        segmentHtml = generateMaterialReport(modifiedNotas, title);
-                    } else if (segment.startsWith('BBM')) {
+                    } else if (bbmR2R4Segments.includes(segment)) {
                         segmentHtml = generateBBMReport(notasInSegment, title);
                     } else { // All other material-like reports
-                        segmentHtml = generateMaterialReport(notasInSegment, title);
+                         const modifiedNotas = notasInSegment.map(nota => {
+                             if (segment === 'BBM Genset') return { ...nota, keterangan: '' };
+                             return nota;
+                         });
+                        segmentHtml = generateMaterialReport(modifiedNotas, title);
                     }
                     pages.push(segmentHtml);
                 }
