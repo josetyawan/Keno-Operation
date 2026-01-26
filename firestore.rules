@@ -105,10 +105,11 @@ service cloud.firestore {
       // A regular user can only get their own document.
       allow get: if isOwner(userId);
       
-      // Allow new user creation during sign-up.
-      // This allows an unauthenticated write, but validates that the document
-      // ID matches the user ID in the body, and enforces default roles/status.
-      allow create: if isCreatingOwnUserDocument(userId) &&
+      // Allow user creation by an authenticated user for their own document.
+      // This is crucial for the sign-up flow where a user is created in Auth first,
+      // then immediately creates their own profile document in Firestore.
+      allow create: if isOwner(userId) &&
+                      isCreatingOwnUserDocument(userId) &&
                       request.resource.data.role == 'user' &&
                       request.resource.data.registrationStatus == 'pending';
 
