@@ -9,6 +9,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -21,7 +22,7 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableFooter,
+  TableFooter as UiTableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -77,11 +78,12 @@ export default function RekapPage() {
 
     if (notas) {
       const grouped = notas.reduce((acc, nota) => {
-        const segmen = nota.segmen || 'Lain-lain';
-        if (!acc[segmen]) {
-          acc[segmen] = 0;
+        // Group by 'segmen' and a fixed text for a more consistent report
+        const keterangan = `${nota.segmen} SA Kudus`;
+        if (!acc[keterangan]) {
+          acc[keterangan] = 0;
         }
-        acc[segmen] += nota.nominal;
+        acc[keterangan] += nota.nominal;
         return acc;
       }, {} as Record<string, number>);
 
@@ -91,12 +93,19 @@ export default function RekapPage() {
       }));
 
       const totalAmount = rekapArray.reduce((sum, item) => sum + item.jumlah, 0);
-
+      
       setRekapData(rekapArray);
       setTotal(totalAmount);
       setIsGenerated(true);
+      
+      if(rekapArray.length === 0){
+          toast({
+            title: 'Tidak Ada Data',
+            description: 'Tidak ada laporan yang ditemukan pada rentang tanggal yang dipilih.',
+          });
+      }
+
     } else if (!areNotasLoading) {
-      // Handle case where there are no notas in the date range
       setRekapData([]);
       setTotal(0);
       setIsGenerated(true);
@@ -130,9 +139,12 @@ export default function RekapPage() {
             top: 0;
             width: 100%;
             height: 100%;
+            padding: 0;
+            margin: 0;
           }
         }
       `}</style>
+
       <div className="mx-auto grid w-full flex-1 auto-rows-max gap-4 print:hidden">
         <div className="flex items-center gap-4">
           <Link href="/dashboard">
@@ -199,22 +211,21 @@ export default function RekapPage() {
             </Button>
           </CardContent>
         </Card>
-        
-        {isGenerated && (
-          <div className="flex justify-end">
-            <Button onClick={handlePrint}><Printer className="mr-2 h-4 w-4" /> Cetak Laporan</Button>
-          </div>
-        )}
       </div>
-
-      {isGenerated && rekapData && (
-        <div id="printable-area" className="w-full bg-white text-black p-8 hidden print:block">
-            <div className="max-w-4xl mx-auto font-serif">
+      
+      {isGenerated && (
+          <Card className="mt-6 print:shadow-none print:border-none">
+            <CardHeader className="print:hidden">
+              <CardTitle>Pratinjau Laporan</CardTitle>
+              <CardDescription>Ini adalah pratinjau dari laporan yang akan dicetak. Klik tombol cetak untuk hasil akhir.</CardDescription>
+            </CardHeader>
+            <CardContent id="printable-area" className="bg-white text-black p-8">
+               <div className="max-w-4xl mx-auto font-serif text-black">
                 <div className="text-center mb-8">
-                    <h1 className="font-bold text-lg">PERTANGGUNGAN OPERASIONAL</h1>
-                    <h2 className="font-bold text-lg">SERVICE AREA KUDUS</h2>
-                    <p className="font-bold">PEKERJAAN: SA KUDUS</p>
-                    <p className="font-bold">ID PROJECT: -</p>
+                    <h1 className="font-bold text-lg tracking-wider">PERTANGGUNGAN OPERASIONAL</h1>
+                    <h2 className="font-bold text-lg tracking-wider">SERVICE AREA KUDUS</h2>
+                    <p className="font-bold">PEKERJAAN : SA KUDUS</p>
+                    <p className="font-bold">ID PROJECT : -</p>
                 </div>
 
                 <Table className="border-2 border-black mb-4">
@@ -226,24 +237,30 @@ export default function RekapPage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {rekapData.map((item, index) => (
-                            <TableRow key={index} className="border-b border-black">
-                                <TableCell className="border-r-2 border-black text-center">{index + 1}</TableCell>
-                                <TableCell className="border-r-2 border-black">{item.keterangan}</TableCell>
-                                <TableCell className="text-right">Rp{item.jumlah.toLocaleString('id-ID')}</TableCell>
-                            </TableRow>
-                        ))}
+                        {(rekapData && rekapData.length > 0) ? (
+                            rekapData.map((item, index) => (
+                                <TableRow key={index} className="border-b border-black">
+                                    <TableCell className="border-r-2 border-black text-center">{index + 1}</TableCell>
+                                    <TableCell className="border-r-2 border-black">{item.keterangan}</TableCell>
+                                    <TableCell className="text-right">Rp{item.jumlah.toLocaleString('id-ID')}</TableCell>
+                                </TableRow>
+                            ))
+                        ) : (
+                             <TableRow className="border-b border-black">
+                                <TableCell colSpan={3} className="text-center h-24">Tidak ada data untuk ditampilkan.</TableCell>
+                             </TableRow>
+                        )}
                     </TableBody>
-                    <TableFooter>
-                        <TableRow className="bg-yellow-300">
-                            <TableCell colSpan={2} className="text-center font-bold">TOTAL</TableCell>
-                            <TableCell className="text-right font-bold">Rp{total.toLocaleString('id-ID')}</TableCell>
+                    <UiTableFooter>
+                        <TableRow className="bg-yellow-300 border-t-2 border-black">
+                            <TableCell colSpan={2} className="text-center font-bold text-black">TOTAL</TableCell>
+                            <TableCell className="text-right font-bold text-black">Rp{total.toLocaleString('id-ID')}</TableCell>
                         </TableRow>
-                    </TableFooter>
+                    </UiTableFooter>
                 </Table>
 
                 <div className="mb-16">
-                    <p>Terbilang : ({toWords(total)} Rupiah)</p>
+                    <p><span className="font-bold">Terbilang :</span> ({toWords(total)} Rupiah)</p>
                 </div>
 
                 <div className="flex justify-between">
@@ -262,7 +279,11 @@ export default function RekapPage() {
                     </div>
                 </div>
             </div>
-        </div>
+            </CardContent>
+            <CardFooter className="print:hidden justify-end">
+              <Button onClick={handlePrint}><Printer className="mr-2 h-4 w-4" /> Cetak Laporan</Button>
+            </CardFooter>
+          </Card>
       )}
     </>
   );
