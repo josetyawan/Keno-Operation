@@ -748,201 +748,203 @@ export default function ExportPage() {
     };
 
     return (
-        <div className="print:hidden">
-            <div className="mx-auto grid w-full flex-1 auto-rows-max gap-6">
-                <div className="flex items-center gap-4 sticky top-0 bg-background py-4 z-10 border-b -mx-6 px-6">
-                    <Link href="/dashboard">
-                        <Button variant="outline" size="icon" className="h-8 w-8">
-                        <ArrowLeft className="h-4 w-4" />
-                        <span className="sr-only">Kembali</span>
-                        </Button>
-                    </Link>
-                    <div>
-                        <h1 className="flex-1 shrink-0 whitespace-nowrap text-xl font-bold tracking-tight sm:grow-0">
-                            Pilih Data Rekap
-                        </h1>
-                        <p className="text-muted-foreground text-sm">
-                            Pilih laporan yang akan diexport
-                        </p>
-                    </div>
-                </div>
-
-                <Card>
-                    <CardHeader>
-                        <div className="flex items-center gap-2">
-                            <Filter className="h-5 w-5"/>
-                            <CardTitle>Filter Data</CardTitle>
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <Tabs value={filterType} onValueChange={setFilterType} className="w-full">
-                            <TabsList className="grid w-full grid-cols-3 mb-4">
-                                <TabsTrigger value="monthly">Per Bulan</TabsTrigger>
-                                <TabsTrigger value="range">Rentang Tanggal</TabsTrigger>
-                                <TabsTrigger value="verified">Terverifikasi</TabsTrigger>
-                            </TabsList>
-                            <TabsContent value="monthly">
-                                <Select onValueChange={setSelectedMonth} value={selectedMonth || (monthOptions.length > 0 ? monthOptions[0] : '')}>
-                                    <SelectTrigger>
-                                    <SelectValue placeholder="Pilih bulan..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                    {monthOptions.map(month => (
-                                        <SelectItem key={month} value={month}>
-                                            {format(new Date(`${month}-02`), 'MMMM yyyy', { locale: idLocale })}
-                                        </SelectItem>
-                                    ))}
-                                    </SelectContent>
-                                </Select>
-                            </TabsContent>
-                            <TabsContent value="range">
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            id="date"
-                                            variant={"outline"}
-                                            className={cn(
-                                                "w-full justify-start text-left font-normal",
-                                                !dateRange && "text-muted-foreground"
-                                            )}
-                                        >
-                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {dateRange?.from ? (
-                                                dateRange.to ? (
-                                                    <>
-                                                        {format(dateRange.from, "dd LLL, yy", {locale: idLocale})} -{' '}
-                                                        {format(dateRange.to, "dd LLL, yy", {locale: idLocale})}
-                                                    </>
-                                                ) : (
-                                                    format(dateRange.from, "dd LLL, yy")
-                                                )
-                                            ) : (
-                                                <span>Pilih rentang tanggal</span>
-                                            )}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                        <Calendar
-                                            initialFocus
-                                            mode="range"
-                                            defaultMonth={dateRange?.from}
-                                            selected={dateRange}
-                                            onSelect={setDateRange}
-                                            numberOfMonths={2}
-                                        />
-                                    </PopoverContent>
-                                </Popover>
-                            </TabsContent>
-                            <TabsContent value="verified">
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                    <Button
-                                        variant={'outline'}
-                                        className={cn(
-                                        'w-full justify-start text-left font-normal',
-                                        !verifiedDate && 'text-muted-foreground'
-                                        )}
-                                    >
-                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {verifiedDate ? format(verifiedDate, 'PPP', {locale: idLocale}) : <span>Pilih tanggal verifikasi</span>}
-                                    </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0">
-                                    <Calendar
-                                        mode="single"
-                                        selected={verifiedDate}
-                                        onSelect={setVerifiedDate}
-                                        initialFocus
-                                    />
-                                    </PopoverContent>
-                                </Popover>
-                            </TabsContent>
-                        </Tabs>
-                    </CardContent>
-                </Card>
-
-                <div>
-                    <div className="flex items-center gap-4 mb-4">
-                        <div className="flex items-center gap-2">
-                            <Checkbox id="select-all" onCheckedChange={handleSelectAll} checked={isAllSelected} />
-                            <Label htmlFor="select-all">Pilih Semua</Label>
-                        </div>
-                        <Button variant="outline" size="sm" onClick={() => setSelectedNotaIds([])} disabled={selectedNotaIds.length === 0}>
-                            Hapus Pilihan
-                        </Button>
-                        <div className="ml-auto text-sm text-muted-foreground">
-                            {selectionSummary.count} dipilih | Total: Rp {selectionSummary.total.toLocaleString('id-ID')}
+        <>
+            <div className="print:hidden">
+                <div className="mx-auto grid w-full flex-1 auto-rows-max gap-6">
+                    <div className="flex items-center gap-4 sticky top-0 bg-background py-4 z-10 border-b -mx-6 px-6">
+                        <Link href="/dashboard">
+                            <Button variant="outline" size="icon" className="h-8 w-8">
+                            <ArrowLeft className="h-4 w-4" />
+                            <span className="sr-only">Kembali</span>
+                            </Button>
+                        </Link>
+                        <div>
+                            <h1 className="flex-1 shrink-0 whitespace-nowrap text-xl font-bold tracking-tight sm:grow-0">
+                                Pilih Data Rekap
+                            </h1>
+                            <p className="text-muted-foreground text-sm">
+                                Pilih laporan yang akan diexport
+                            </p>
                         </div>
                     </div>
 
                     <Card>
                         <CardHeader>
-                            <CardTitle>Data Laporan ({filteredNotas.length} laporan)</CardTitle>
+                            <div className="flex items-center gap-2">
+                                <Filter className="h-5 w-5"/>
+                                <CardTitle>Filter Data</CardTitle>
+                            </div>
                         </CardHeader>
-                        <CardContent className="space-y-3">
-                            {isLoading && Array.from({length: 5}).map((_, i) => (
-                                <Skeleton key={i} className="h-20 w-full" />
-                            ))}
-                            {!isLoading && filteredNotas.length > 0 ? (
-                            filteredNotas.map(nota => (
-                                <Card key={nota.id} className="p-3 hover:bg-muted/50 transition-colors">
-                                    <div className="flex items-start gap-4">
-                                        <Checkbox
-                                            checked={selectedNotaIds.includes(nota.id)}
-                                            onCheckedChange={(checked) => handleSelectNota(nota.id, !!checked)}
-                                            className="mt-1"
+                        <CardContent>
+                            <Tabs value={filterType} onValueChange={setFilterType} className="w-full">
+                                <TabsList className="grid w-full grid-cols-3 mb-4">
+                                    <TabsTrigger value="monthly">Per Bulan</TabsTrigger>
+                                    <TabsTrigger value="range">Rentang Tanggal</TabsTrigger>
+                                    <TabsTrigger value="verified">Terverifikasi</TabsTrigger>
+                                </TabsList>
+                                <TabsContent value="monthly">
+                                    <Select onValueChange={setSelectedMonth} value={selectedMonth || (monthOptions.length > 0 ? monthOptions[0] : '')}>
+                                        <SelectTrigger>
+                                        <SelectValue placeholder="Pilih bulan..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                        {monthOptions.map(month => (
+                                            <SelectItem key={month} value={month}>
+                                                {format(new Date(`${month}-02`), 'MMMM yyyy', { locale: idLocale })}
+                                            </SelectItem>
+                                        ))}
+                                        </SelectContent>
+                                    </Select>
+                                </TabsContent>
+                                <TabsContent value="range">
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button
+                                                id="date"
+                                                variant={"outline"}
+                                                className={cn(
+                                                    "w-full justify-start text-left font-normal",
+                                                    !dateRange && "text-muted-foreground"
+                                                )}
+                                            >
+                                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                                {dateRange?.from ? (
+                                                    dateRange.to ? (
+                                                        <>
+                                                            {format(dateRange.from, "dd LLL, yy", {locale: idLocale})} -{' '}
+                                                            {format(dateRange.to, "dd LLL, yy", {locale: idLocale})}
+                                                        </>
+                                                    ) : (
+                                                        format(dateRange.from, "dd LLL, yy")
+                                                    )
+                                                ) : (
+                                                    <span>Pilih rentang tanggal</span>
+                                                )}
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0" align="start">
+                                            <Calendar
+                                                initialFocus
+                                                mode="range"
+                                                defaultMonth={dateRange?.from}
+                                                selected={dateRange}
+                                                onSelect={setDateRange}
+                                                numberOfMonths={2}
+                                            />
+                                        </PopoverContent>
+                                    </Popover>
+                                </TabsContent>
+                                <TabsContent value="verified">
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                        <Button
+                                            variant={'outline'}
+                                            className={cn(
+                                            'w-full justify-start text-left font-normal',
+                                            !verifiedDate && 'text-muted-foreground'
+                                            )}
+                                        >
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {verifiedDate ? format(verifiedDate, 'PPP', {locale: idLocale}) : <span>Pilih tanggal verifikasi</span>}
+                                        </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0">
+                                        <Calendar
+                                            mode="single"
+                                            selected={verifiedDate}
+                                            onSelect={setVerifiedDate}
+                                            initialFocus
                                         />
-                                        <div className="flex-grow min-w-0">
-                                            <div className="flex justify-between items-start flex-wrap gap-x-4 gap-y-1">
-                                                <div className="flex items-center gap-2 flex-wrap">
-                                                    <span className="font-medium">{nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd MMM yyyy', { locale: idLocale }) : 'Invalid Date'}</span>
-                                                    <Badge variant={nota.status === 'verified' ? 'default' : 'secondary'}>{nota.status}</Badge>
-                                                    <Badge variant={nota.segmen.includes('BBM') ? 'destructive' : 'secondary'}>{nota.segmen}</Badge>
-                                                </div>
-                                                <div className="font-semibold text-base whitespace-nowrap">
-                                                    Rp {nota.nominal.toLocaleString('id-ID')}
-                                                </div>
-                                            </div>
-                                            <p className="text-sm text-muted-foreground break-all mt-1">
-                                                {nota.keterangan || nota.namaBarang || 'Tanpa keterangan'}
-                                            </p>
-                                        </div>
-                                        <div className="flex items-center">
-                                        <Link href={`/dashboard/notas/${nota.id}/edit`}>
-                                            <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
-                                        </Link>
-                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
-                                        </div>
-                                    </div>
-                                </Card>
-                            ))
-                            ) : (
-                                <div className="text-center py-10 text-muted-foreground">
-                                    Tidak ada laporan ditemukan untuk filter yang dipilih.
-                                </div>
-                            )}
+                                        </PopoverContent>
+                                    </Popover>
+                                </TabsContent>
+                            </Tabs>
                         </CardContent>
                     </Card>
-                </div>
 
-                <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm py-3 mt-auto border-t -mx-6 px-6">
-                    <div className="max-w-4xl mx-auto flex justify-around items-center">
-                        <Button variant="outline" size="lg" onClick={() => handleGenerateReport('all')} disabled={isGenerating || selectedNotaIds.length === 0}>
-                           {isGenerating && reportTypeBeingGenerated === 'all' ? <Loader2 className="mr-2 animate-spin"/> : <FileArchive className="mr-2" />} Semua (1 File)
-                        </Button>
-                        <Button variant="outline" size="lg" onClick={() => handleGenerateReport('rekap')} disabled={isGenerating || selectedNotaIds.length === 0 || !['monthly', 'verified'].includes(filterType)}>
-                            {isGenerating && reportTypeBeingGenerated === 'rekap' ? <Loader2 className="mr-2 animate-spin"/> : <FileText className="mr-2" />} Rekap
-                        </Button>
-                        <Button variant="outline" size="lg" onClick={() => handleGenerateReport('perincian')} disabled={isGenerating || selectedNotaIds.length === 0}>
-                            {isGenerating && reportTypeBeingGenerated === 'perincian' ? <Loader2 className="mr-2 animate-spin"/> : <Printer className="mr-2" />} Perincian
-                        </Button>
-                        <Button size="lg" onClick={() => handleGenerateReport('eviden')} disabled={isGenerating || selectedNotaIds.length === 0}>
-                            {isGenerating && reportTypeBeingGenerated === 'eviden' ? <Loader2 className="mr-2 animate-spin"/> : <FileText className="mr-2" />} Eviden
-                        </Button>
+                    <div>
+                        <div className="flex items-center gap-4 mb-4">
+                            <div className="flex items-center gap-2">
+                                <Checkbox id="select-all" onCheckedChange={handleSelectAll} checked={isAllSelected} />
+                                <Label htmlFor="select-all">Pilih Semua</Label>
+                            </div>
+                            <Button variant="outline" size="sm" onClick={() => setSelectedNotaIds([])} disabled={selectedNotaIds.length === 0}>
+                                Hapus Pilihan
+                            </Button>
+                            <div className="ml-auto text-sm text-muted-foreground">
+                                {selectionSummary.count} dipilih | Total: Rp {selectionSummary.total.toLocaleString('id-ID')}
+                            </div>
+                        </div>
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Data Laporan ({filteredNotas.length} laporan)</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                                {isLoading && Array.from({length: 5}).map((_, i) => (
+                                    <Skeleton key={i} className="h-20 w-full" />
+                                ))}
+                                {!isLoading && filteredNotas.length > 0 ? (
+                                filteredNotas.map(nota => (
+                                    <Card key={nota.id} className="p-3 hover:bg-muted/50 transition-colors">
+                                        <div className="flex items-start gap-4">
+                                            <Checkbox
+                                                checked={selectedNotaIds.includes(nota.id)}
+                                                onCheckedChange={(checked) => handleSelectNota(nota.id, !!checked)}
+                                                className="mt-1"
+                                            />
+                                            <div className="flex-grow min-w-0">
+                                                <div className="flex justify-between items-start flex-wrap gap-x-4 gap-y-1">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className="font-medium">{nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd MMM yyyy', { locale: idLocale }) : 'Invalid Date'}</span>
+                                                        <Badge variant={nota.status === 'verified' ? 'default' : 'secondary'}>{nota.status}</Badge>
+                                                        <Badge variant={nota.segmen.includes('BBM') ? 'destructive' : 'secondary'}>{nota.segmen}</Badge>
+                                                    </div>
+                                                    <div className="font-semibold text-base whitespace-nowrap">
+                                                        Rp {nota.nominal.toLocaleString('id-ID')}
+                                                    </div>
+                                                </div>
+                                                <p className="text-sm text-muted-foreground break-all mt-1">
+                                                    {nota.keterangan || nota.namaBarang || 'Tanpa keterangan'}
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center">
+                                            <Link href={`/dashboard/notas/${nota.id}/edit`}>
+                                                <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
+                                            </Link>
+                                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                                            </div>
+                                        </div>
+                                    </Card>
+                                ))
+                                ) : (
+                                    <div className="text-center py-10 text-muted-foreground">
+                                        Tidak ada laporan ditemukan untuk filter yang dipilih.
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm py-3 mt-auto border-t -mx-6 px-6">
+                        <div className="max-w-4xl mx-auto flex justify-around items-center">
+                            <Button variant="outline" size="lg" onClick={() => handleGenerateReport('all')} disabled={isGenerating || selectedNotaIds.length === 0}>
+                               {isGenerating && reportTypeBeingGenerated === 'all' ? <Loader2 className="mr-2 animate-spin"/> : <FileArchive className="mr-2" />} Semua (1 File)
+                            </Button>
+                            <Button variant="outline" size="lg" onClick={() => handleGenerateReport('rekap')} disabled={isGenerating || selectedNotaIds.length === 0 || !['monthly', 'verified'].includes(filterType)}>
+                                {isGenerating && reportTypeBeingGenerated === 'rekap' ? <Loader2 className="mr-2 animate-spin"/> : <FileText className="mr-2" />} Rekap
+                            </Button>
+                            <Button variant="outline" size="lg" onClick={() => handleGenerateReport('perincian')} disabled={isGenerating || selectedNotaIds.length === 0}>
+                                {isGenerating && reportTypeBeingGenerated === 'perincian' ? <Loader2 className="mr-2 animate-spin"/> : <Printer className="mr-2" />} Perincian
+                            </Button>
+                            <Button size="lg" onClick={() => handleGenerateReport('eviden')} disabled={isGenerating || selectedNotaIds.length === 0}>
+                                {isGenerating && reportTypeBeingGenerated === 'eviden' ? <Loader2 className="mr-2 animate-spin"/> : <FileText className="mr-2" />} Eviden
+                            </Button>
+                        </div>
                     </div>
                 </div>
             </div>
             {reportPages.length > 0 && <ReportPreview pages={reportPages} onClose={() => setReportPages([])} />}
-        </div>
+        </>
     );
 }
