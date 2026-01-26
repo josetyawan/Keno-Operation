@@ -66,52 +66,63 @@ const generateRekapitulasiReport = (notas: Nota[], month: string, year: string):
     const tableRows = Object.entries(groupedBySegmen).map(([segmen, data], index) => {
         grandTotal += data.total;
         return `
-            <tr style="background-color: #fef9c3;">
-                <td style="padding: 8px; border: 1px solid black; text-align: center;">${index + 1}</td>
-                <td style="padding: 8px; border: 1px solid black;">${segmen}</td>
-                <td style="padding: 8px; border: 1px solid black; text-align: right;">Rp ${data.total.toLocaleString('id-ID')}</td>
+            <tr>
+                <td style="padding: 4px 8px; border: 1px solid black; text-align: center;">${index + 1}</td>
+                <td style="padding: 4px 8px; border: 1px solid black;">${segmen}</td>
+                <td style="padding: 4px 8px; border: 1px solid black; text-align: left;">Rp${data.total.toLocaleString('id-ID')}</td>
             </tr>
         `;
     }).join('');
 
+    const today = new Date();
+    const formattedDate = format(today, 'dd MMMM yyyy', { locale: idLocale });
+    const terbilangText = toWords(grandTotal);
+
     return `
-    <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt;">
-        <h2 style="text-align: center; font-size: 14pt; margin: 0; text-decoration: underline;">REKAPITULASI</h2>
-        <p style="text-align: center; margin:0; font-size: 12pt;">Bulan: ${month} ${year}</p>
+    <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; padding: 1cm;">
+        <div style="text-align: center; font-weight: bold; line-height: 1.2;">
+            <p style="margin: 0; font-size: 12pt; text-decoration: underline;">PERTANGGUNGAN OPERASIONAL</p>
+            <p style="margin: 0; font-size: 12pt;">SERVICE AREA KUDUS</p>
+            <p style="margin: 0; font-size: 12pt;">PEKERJAAN : SA KUDUS</p>
+            <p style="margin: 0; font-size: 12pt;">ID PROJECT : -</p>
+        </div>
         <br/>
-        <table style="width: 100%; border-collapse: collapse; border: 2px solid black;">
+        <table style="width: 100%; border-collapse: collapse; border: 1px solid black;">
             <thead>
-                <tr>
-                    <th style="padding: 8px; border: 1px solid black; width: 5%;">NO</th>
-                    <th style="padding: 8px; border: 1px solid black;">URAIAN</th>
-                    <th style="padding: 8px; border: 1px solid black; width: 25%;">JUMLAH (Rp)</th>
+                <tr style="background-color: #fef9c3; font-weight: bold;">
+                    <th style="padding: 4px 8px; border: 1px solid black; width: 5%;">NO</th>
+                    <th style="padding: 4px 8px; border: 1px solid black;">KETERANGAN</th>
+                    <th style="padding: 4px 8px; border: 1px solid black; width: 25%;">JUMLAH</th>
                 </tr>
             </thead>
             <tbody>
                 ${tableRows}
             </tbody>
             <tfoot>
-                <tr>
-                    <td colspan="2" style="padding: 8px; border: 1px solid black; font-weight: bold; text-align: right;">TOTAL</td>
-                    <td style="padding: 8px; border: 1px solid black; font-weight: bold; text-align: right;">Rp ${grandTotal.toLocaleString('id-ID')}</td>
+                <tr style="background-color: #fef9c3; font-weight: bold;">
+                    <td colspan="2" style="padding: 4px 8px; border: 1px solid black; text-align: center;">TOTAL</td>
+                    <td style="padding: 4px 8px; border: 1px solid black; text-align: left;">Rp${grandTotal.toLocaleString('id-ID')}</td>
                 </tr>
             </tfoot>
         </table>
         <div style="margin-top: 20px;">
-            <p style="margin: 0; font-style: italic; font-weight: bold;">Terbilang: ${toWords(grandTotal)} Rupiah</p>
+            <p style="margin: 0;">Terbilang : (${terbilangText.charAt(0).toUpperCase() + terbilangText.slice(1)} Rupiah)</p>
         </div>
         <br/><br/>
-        <table style="width: 100%; text-align: center;">
+        <table style="width: 100%; text-align: center; font-size: 11pt;">
             <tr>
-                <td style="width: 50%;">
-                    <p>Disetujui,</p>
+                <td style="width: 50%; vertical-align: top;">
+                    <p>Menyetujui,</p>
                     <br/><br/><br/><br/>
-                    <p style="text-decoration: underline; font-weight: bold;">(___________________)</p>
+                    <p style="text-decoration: underline; font-weight: bold; margin: 0;">Lutfi Akhmad</p>
+                    <p style="margin: 0;">HSA Kudus</p>
                 </td>
-                <td style="width: 50%;">
-                    <p>Yang Membuat</p>
+                <td style="width: 50%; vertical-align: top;">
+                    <p>Kudus, ${formattedDate}</p>
+                    <p>Pembuat Rincian</p>
                     <br/><br/><br/><br/>
-                    <p style="text-decoration: underline; font-weight: bold;">(___________________)</p>
+                    <p style="text-decoration: underline; font-weight: bold; margin: 0;">Joko Wahyu Setyawan</p>
+                    <p style="margin: 0;">Officer Kudus</p>
                 </td>
             </tr>
         </table>
