@@ -341,36 +341,54 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
 
 const generateEvidenReport = (notas: Nota[], title: string): string => {
     const tableRows = notas.map((nota, index) => {
-        const keperluanImages = (nota.fotoEvidenUrls || []).slice(0, 4).map(url =>
-            `<div style="width: 100px; height: 100px; overflow: hidden; border: 1px solid #ccc; background-image: url(${url}); background-size: cover; background-position: center;"></div>`
+        // Form supports 4 images for Keperluan, 3 for KM readings.
+        const keperluanImageUrls = (nota.fotoEvidenUrls || []).slice(0, 4);
+        const evidenKmUrl = nota.fotoEvidenUrls?.[4]; // Corresponds to KM Awal Bulan
+        const evidenKmAwalUrl = nota.fotoEvidenUrls?.[5];
+        const evidenKmAkhirUrl = nota.fotoEvidenUrls?.[6];
+
+        const keperluanImagesHtml = keperluanImageUrls.map(url =>
+            `<img src="${url}" style="width: 100px; height: auto; object-fit: contain; border: 1px solid #eee;"/>`
         ).join('');
+
+        const renderImageCell = (url: string | undefined) => {
+            if (!url) return '<div style="width: 100px; height: 100px;"></div>'; // Keep cell height consistent
+            return `<img src="${url}" style="width: 100px; height: auto; object-fit: contain; margin: auto;"/>`;
+        };
+        
+        const selisih = (nota.kmAkhir != null && nota.kmAwal != null && nota.kmAkhir > nota.kmAwal) ? (nota.kmAkhir - nota.kmAwal) : '';
+
+        // Split by space and join with <br/> for multiline effect as in the image.
+        const ketText = nota.segmen.replace(' ', '<br/>');
 
         return `
         <tr>
-            <td style="border: 1px solid black; padding: 4px; text-align: center;">${index + 1}</td>
-            <td style="border: 1px solid black; padding: 4px;">${format(nota.tanggal.toDate(), 'dd-MMM-yy')}</td>
-            <td style="border: 1px solid black; padding: 4px;">${nota.keterangan || '-'}</td>
-            <td style="border: 1px solid black; padding: 4px;">${nota.noPlatKendaraan || '-'}</td>
-            <td style="border: 1px solid black; padding: 4px; text-align: center;">${(nota.kmAkhir || 0) - (nota.kmAwal || 0)}</td>
-            <td style="border: 1px solid black; padding: 4px; text-align: center;">${nota.kmAwal || '-'}</td>
-            <td style="border: 1px solid black; padding: 4px; text-align: center;">${nota.kmAkhir || '-'}</td>
-            <td style="border: 1px solid black; padding: 4px;"><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">${keperluanImages}</div></td>
-            <td style="border: 1px solid black; padding: 4px; text-align: center;">${nota.fotoEvidenUrls?.[4] ? `<div style="width: 100px; height: 100px; overflow: hidden; margin: auto; border: 1px solid #ccc; background-image: url(${nota.fotoEvidenUrls[4]}); background-size: cover; background-position: center;"></div>` : ''}</td>
-            <td style="border: 1px solid black; padding: 4px; text-align: center;">${nota.fotoEvidenUrls?.[5] ? `<div style="width: 100px; height: 100px; overflow: hidden; margin: auto; border: 1px solid #ccc; background-image: url(${nota.fotoEvidenUrls[5]}); background-size: cover; background-position: center;"></div>` : ''}</td>
-            <td style="border: 1px solid black; padding: 4px; text-align: center;">${nota.fotoEvidenUrls?.[6] ? `<div style="width: 100px; height: 100px; overflow: hidden; margin: auto; border: 1px solid #ccc; background-image: url(${nota.fotoEvidenUrls[6]}); background-size: cover; background-position: center;"></div>` : ''}</td>
-            <td style="border: 1px solid black; padding: 4px;">${nota.namaPic}</td>
-            <td style="border: 1px solid black; padding: 4px; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
+            <td style="border: 1px solid black; padding: 4px; text-align: center; vertical-align: top;">${index + 1}</td>
+            <td style="border: 1px solid black; padding: 4px; vertical-align: top; white-space: nowrap;">${format(nota.tanggal.toDate(), 'dd MMMM yyyy', { locale: idLocale })}</td>
+            <td style="border: 1px solid black; padding: 4px; background-color: #FFDDDD; vertical-align: top; text-align: center;">${ketText}</td>
+            <td style="border: 1px solid black; padding: 4px; vertical-align: top;">${nota.noPlatKendaraan || '-'}</td>
+            <td style="border: 1px solid black; padding: 4px; text-align: center; vertical-align: top;">${selisih}</td>
+            <td style="border: 1px solid black; padding: 4px; text-align: center; vertical-align: top;">${nota.kmAwal ?? '-'}</td>
+            <td style="border: 1px solid black; padding: 4px; text-align: center; vertical-align: top;">${nota.kmAkhir ?? '-'}</td>
+            <td style="border: 1px solid black; padding: 4px; vertical-align: top;"><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">${keperluanImagesHtml}</div></td>
+            <td style="border: 1px solid black; padding: 4px; text-align: center; vertical-align: top;">${renderImageCell(evidenKmUrl)}</td>
+            <td style="border: 1px solid black; padding: 4px; text-align: center; vertical-align: top;">${renderImageCell(evidenKmAwalUrl)}</td>
+            <td style="border: 1px solid black; padding: 4px; text-align: center; vertical-align: top;">${renderImageCell(evidenKmAkhirUrl)}</td>
+            <td style="border: 1px solid black; padding: 4px; vertical-align: top;">${nota.namaPic}</td>
+            <td style="border: 1px solid black; padding: 4px; text-align: right; vertical-align: top;">Rp${nota.nominal.toLocaleString('id-ID')}</td>
         </tr>`;
     }).join('');
 
-     return `
+    const headers = ['No', 'TANGGAL', 'KET', 'NO PLAT', 'SELISIH', 'KM AWAL', 'KM AKHIR', 'KEPERLUAN', 'Eviden KM', 'Eviden KM Awal', 'Eviden KM Akhir', 'PIC', 'Nilai'];
+
+    return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 9pt; padding: 1cm; width: 210mm; min-height: 297mm; background-color: white; box-shadow: 0 0 5px rgba(0,0,0,0.1);">
-        <h2 style="text-align: center; font-size: 14pt; margin: 0; text-decoration: underline;">${title.toUpperCase()}</h2>
+        <h2 style="text-align: center; font-size: 14pt; margin: 0; text-decoration: underline; font-weight: bold;">${title}</h2>
         <br/>
-        <table style="width: 100%; border-collapse: collapse; border: 2px solid black;">
-            <thead style="background-color: #FED7AA; font-weight: bold;">
+        <table style="width: 100%; border-collapse: collapse; border: 1px solid black; font-size: 8pt;">
+            <thead style="background-color: #FED7AA; font-weight: bold; text-align: center;">
                 <tr>
-                    ${['No', 'Tanggal', 'Ket', 'No Plat', 'Selisih', 'KM Awal', 'KM Akhir', 'Keperluan (1-4)', 'Eviden KM Awal Bln', 'Eviden KM Awal', 'Eviden KM Akhir', 'PIC', 'Nilai'].map(h => `<th style="border: 1px solid black; padding: 4px; font-size: 8pt;">${h}</th>`).join('')}
+                    ${headers.map(h => `<th style="border: 1px solid black; padding: 4px; vertical-align: middle;">${h}</th>`).join('')}
                 </tr>
             </thead>
             <tbody>${tableRows}</tbody>
@@ -613,13 +631,19 @@ export default function ExportPage() {
                  const notasInSegment = selectedNotas
                     .filter(n => n.segmen === subType)
                     .sort((a,b) => a.tanggal.toDate().getTime() - b.tanggal.toDate().getTime());
-                const html = generateEvidenReport(notasInSegment, `Eviden Foto - ${subType}`);
-                pages.push(html);
+                if (notasInSegment.length > 0) {
+                    const html = generateEvidenReport(notasInSegment, `Eviden Foto - Perincian Nota ${subType}`);
+                    pages.push(html);
+                } else {
+                     toast({ variant: "destructive", title: `Tidak ada data untuk segmen ${subType}` });
+                }
             } else {
                  toast({ variant: "destructive", title: "Tipe Laporan Tidak Didukung" });
             }
             if (pages.length > 0) {
                 setReportPages(pages);
+            } else if (reportType !== 'eviden') { // Eviden shows its own toast
+                 toast({ variant: "destructive", title: "Tidak ada data untuk laporan ini" });
             }
         } catch (error) {
             console.error("Error generating report:", error);
@@ -632,7 +656,7 @@ export default function ExportPage() {
 
     // --- Report Menus ---
     const perincianSegments = [...new Set(filteredNotas.filter(n=>selectedNotaIds.includes(n.id)).map(n => n.segmen))];
-    const evidenSegments = perincianSegments.filter(s => s.startsWith('BBM'));
+    const evidenSegments = perincianSegments.filter(s => s.startsWith('BBM R2') || s.startsWith('BBM R4'));
 
 
     return (
@@ -781,7 +805,7 @@ export default function ExportPage() {
                                         className="mt-1"
                                     />
                                     <div className="flex-grow min-w-0">
-                                        <div className="flex justify-between items-start">
+                                        <div className="flex justify-between items-start flex-wrap">
                                             <div className="flex items-center gap-2 flex-wrap mb-1">
                                                 <span className="font-medium">{nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd MMM yyyy', { locale: idLocale }) : 'Invalid Date'}</span>
                                                 <Badge variant={nota.status === 'verified' ? 'default' : 'secondary'}>{nota.status}</Badge>
@@ -845,3 +869,5 @@ export default function ExportPage() {
         </>
     );
 }
+
+    
