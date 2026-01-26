@@ -27,6 +27,10 @@ import type { UserProfile } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
+const navLinks = [
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutGrid, adminOnly: false },
+  { href: '/dashboard/admin/users', label: 'Manajemen User', icon: Users, adminOnly: true },
+];
 
 export default function DashboardLayout({
   children,
