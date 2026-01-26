@@ -105,8 +105,12 @@ service cloud.firestore {
       // A regular user can only get their own document.
       allow get: if isOwner(userId);
       
-      // A new user can create their own user document upon signup.
-      allow create: if isOwner(userId) && isCreatingOwnUserDocument(userId);
+      // Allow new user creation during sign-up.
+      // This allows an unauthenticated write, but validates that the document
+      // ID matches the user ID in the body, and enforces default roles/status.
+      allow create: if isCreatingOwnUserDocument(userId) &&
+                      request.resource.data.role == 'user' &&
+                      request.resource.data.registrationStatus == 'pending';
 
       // An admin can update any user profile. A user can only update their own.
       allow update: if isAdmin() || (isOwner(userId) && isUpdatingOwnUserDocument());
