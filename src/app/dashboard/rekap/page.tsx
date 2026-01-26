@@ -126,6 +126,10 @@ export default function RekapPage() {
   return (
     <>
       <style jsx global>{`
+        @page {
+          size: A4 portrait;
+          margin: 20mm;
+        }
         @media print {
           body * {
             visibility: hidden;
