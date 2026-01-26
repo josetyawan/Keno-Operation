@@ -95,17 +95,21 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     if (!isUserLoading && !isProfileLoading) {
-      const isSuperAdmin = user?.email === 'jokowahyusisnaker123@gmail.com';
-      const isAdminByRole = currentUserProfile?.role === 'admin';
-      
-      if (!user || (!isAdminByRole && !isSuperAdmin)) {
+      if (!user || currentUserProfile?.role !== 'admin') {
         router.push('/dashboard');
       }
     }
   }, [user, currentUserProfile, isUserLoading, isProfileLoading, router]);
 
   // Fetch all users
-  const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
+  const usersQuery = useMemoFirebase(() => {
+      // Only attempt to query if the user profile is loaded and they are an admin
+      if (currentUserProfile?.role === 'admin') {
+          return query(collection(firestore, 'users'));
+      }
+      return null;
+  }, [firestore, currentUserProfile]);
+
   const { data: users, isLoading: areUsersLoading } = useCollection<UserProfile>(usersQuery);
 
   const isLoading = isUserLoading || isProfileLoading || areUsersLoading;

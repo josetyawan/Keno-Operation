@@ -18,7 +18,7 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { UserNav } from '@/components/user-nav';
 import { Logo } from '@/components/logo';
-import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -49,6 +49,28 @@ export default function DashboardLayout({
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
   
   const isLoading = isUserLoading || isProfileLoading;
+
+  // Effect to automatically promote the super admin user
+  useEffect(() => {
+    if (user && userProfile && firestore) {
+      const isSuperAdminEmail = user.email === 'jokowahyusisnaker123@gmail.com';
+      const isNotAdminRole = userProfile.role !== 'admin';
+      const isNotApproved = userProfile.registrationStatus !== 'approved';
+
+      if (isSuperAdminEmail && (isNotAdminRole || isNotApproved)) {
+        console.log("Super admin detected with incorrect role/status. Upgrading...");
+        const userToUpgradeRef = doc(firestore, 'users', user.uid);
+        updateDocumentNonBlocking(userToUpgradeRef, { 
+          role: 'admin', 
+          registrationStatus: 'approved' 
+        });
+        toast({
+          title: "Admin Privileges Granted",
+          description: "Your account has been automatically upgraded to Admin.",
+        });
+      }
+    }
+  }, [user, userProfile, firestore, toast]);
 
   useEffect(() => {
     // Wait until loading is complete and not in the process of signing out
@@ -114,7 +136,7 @@ export default function DashboardLayout({
             <div className="flex-1">
               <nav className="grid items-start px-4 py-4 text-sm font-medium">
                 {navLinks.map(link => {
-                  if (link.adminOnly && userProfile?.role !== 'admin' && user?.email !== 'jokowahyusisnaker123@gmail.com') return null;
+                  if (link.adminOnly && userProfile?.role !== 'admin') return null;
                   const isActive = pathname.startsWith(link.href) && (link.href === '/dashboard' ? pathname === link.href : true);
 
                   return (
@@ -157,7 +179,7 @@ export default function DashboardLayout({
                     <Logo />
                   </Link>
                   {navLinks.map(link => {
-                    if (link.adminOnly && userProfile?.role !== 'admin' && user?.email !== 'jokowahyusisnaker123@gmail.com') return null;
+                    if (link.adminOnly && userProfile?.role !== 'admin') return null;
                     const isActive = pathname.startsWith(link.href);
                     return (
                        <Link
