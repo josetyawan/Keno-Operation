@@ -60,7 +60,7 @@ const generateRekapitulasiReport = (notas: Nota[], month: string, year: string):
     const tableRows = Object.entries(groupedBySegmen).map(([segmen, data], index) => {
         grandTotal += data.total;
         return `
-            <tr>
+            <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <td style="padding: 4px 8px; border: 1px solid black; text-align: center;">${index + 1}</td>
                 <td style="padding: 4px 8px; border: 1px solid black;">${segmen}</td>
                 <td style="padding: 4px 8px; border: 1px solid black; text-align: left;">Rp${data.total.toLocaleString('id-ID')}</td>
@@ -92,7 +92,7 @@ const generateRekapitulasiReport = (notas: Nota[], month: string, year: string):
             <tbody>
                 ${tableRows}
             </tbody>
-            <tfoot>
+            <tfoot style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                     <td colspan="2" style="padding: 4px 8px; border: 1px solid black; text-align: center;">TOTAL</td>
                     <td style="padding: 4px 8px; border: 1px solid black; text-align: left;">Rp${grandTotal.toLocaleString('id-ID')}</td>
@@ -130,7 +130,7 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
         const pph = nota.nominal - dpp;
         grandTotal += nota.nominal;
         return `
-        <tr>
+        <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
             <td style="padding: 4px; border: 1px solid black; text-align: center;">${index + 1}</td>
             <td style="padding: 4px; border: 1px solid black;">${format(nota.tanggal.toDate(), 'dd/MM/yyyy')}</td>
             <td style="padding: 4px; border: 1px solid black;">${nota.keterangan || nota.namaBarang || '-'}</td>
@@ -160,7 +160,7 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
                 </tr>
             </thead>
             <tbody>${tableRows}</tbody>
-            <tfoot>
+            <tfoot style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                     <td colspan="5" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">TOTAL</td>
                     <td style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">${grandTotal.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
@@ -203,7 +203,7 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
         const staticKeterangan = bbmKeteranganMap[nota.segmen] || nota.segmen;
 
         const mainRow = `
-            <tr>
+            <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <td style="padding: 4px; border: 1px solid black; text-align: center;">${index + 1}</td>
                 <td style="padding: 4px; border: 1px solid black;">${format(nota.tanggal.toDate(), 'dd MMM yy', { locale: idLocale })}</td>
                 <td style="padding: 4px; border: 1px solid black;">${staticKeterangan}</td>
@@ -216,7 +216,7 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
             </tr>
         `;
         const subTotalRow = `
-            <tr style="font-weight: bold;">
+            <tr style="font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <td colspan="7" style="padding: 4px; border: 1px solid black; text-align: right;">JUMLAH</td>
                 <td style="padding: 4px; border: 1px solid black; text-align: right;">Rp${nota.nominal.toLocaleString('id-ID')}</td>
                 <td style="padding: 4px; border: 1px solid black;"></td>
@@ -240,7 +240,7 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
                 </tr>
             </thead>
             <tbody>${tableRows}</tbody>
-            <tfoot>
+            <tfoot style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                     <td colspan="7" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">TOTAL</td>
                     <td style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">Rp${grandTotal.toLocaleString('id-ID')}</td>
@@ -274,7 +274,7 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
     const tableRows = notas.map((nota, index) => {
         grandTotal += nota.nominal;
         return `
-        <tr>
+        <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
             <td style="padding: 4px; border: 1px solid black; text-align: center;">${index + 1}</td>
             <td style="padding: 4px; border: 1px solid black;">${format(nota.tanggal.toDate(), 'dd/MM/yyyy')}</td>
             <td style="padding: 4px; border: 1px solid black;">${nota.namaBarang || '-'}</td>
@@ -297,7 +297,7 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
                 </tr>
             </thead>
             <tbody>${tableRows}</tbody>
-            <tfoot>
+            <tfoot style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                     <td colspan="4" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">TOTAL</td>
                     <td style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
@@ -348,7 +348,7 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
         const ketText = nota.segmen.replace(' ', '<br/>');
 
         return `
-        <tr>
+        <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
             <td style="border: 1px solid black; padding: 4px; text-align: center; vertical-align: top;">${index + 1}</td>
             <td style="border: 1px solid black; padding: 4px; vertical-align: top; white-space: nowrap;">${format(nota.tanggal.toDate(), 'dd MMMM yyyy', { locale: idLocale })}</td>
             <td style="border: 1px solid black; padding: 4px; background-color: #FFDDDD; vertical-align: top; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${ketText}</td>
@@ -389,7 +389,7 @@ const generateSimpleEvidenReport = (notas: Nota[], title: string): string => {
             : '';
 
         return `
-        <tr>
+        <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
             <td style="border: 1px solid black; padding: 4px; text-align: center; vertical-align: top;">${index + 1}</td>
             <td style="border: 1px solid black; padding: 4px; vertical-align: top; white-space: nowrap;">${format(nota.tanggal.toDate(), 'dd MMMM yyyy', { locale: idLocale })}</td>
             <td style="border: 1px solid black; padding: 4px; vertical-align: top;">${nota.namaBarang || nota.keterangan || '-'}</td>
@@ -441,11 +441,8 @@ function ReportPreview({
                     size: A4 portrait;
                     margin: 0;
                 }
-                .report-page-container {
-                    page-break-after: always;
-                }
-                 .report-page-container:last-child {
-                    page-break-after: auto;
+                .report-page-container + .report-page-container {
+                    break-before: page;
                 }
             }
             `}
@@ -467,7 +464,7 @@ function ReportPreview({
                         <div
                             key={index}
                             className="bg-white shadow-lg"
-                            style={{width: '210mm', height: '297mm'}}
+                            style={{width: '210mm', minHeight: '297mm'}}
                             dangerouslySetInnerHTML={{ __html: pageHtml }}
                         />
                     ))}
@@ -832,17 +829,17 @@ export default function ExportPage() {
                                             className="mt-1"
                                         />
                                         <div className="flex-grow min-w-0">
-                                            <div className="flex justify-between items-start flex-wrap">
-                                                <div className="flex items-center gap-2 flex-wrap mb-1">
+                                            <div className="flex justify-between items-start flex-wrap gap-x-4 gap-y-1">
+                                                <div className="flex items-center gap-2 flex-wrap">
                                                     <span className="font-medium">{nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd MMM yyyy', { locale: idLocale }) : 'Invalid Date'}</span>
                                                     <Badge variant={nota.status === 'verified' ? 'default' : 'secondary'}>{nota.status}</Badge>
                                                     <Badge variant={nota.segmen.includes('BBM') ? 'destructive' : 'secondary'}>{nota.segmen}</Badge>
                                                 </div>
-                                                <div className="font-semibold text-base whitespace-nowrap ml-4">
+                                                <div className="font-semibold text-base whitespace-nowrap">
                                                     Rp {nota.nominal.toLocaleString('id-ID')}
                                                 </div>
                                             </div>
-                                            <p className="text-sm text-muted-foreground break-all">
+                                            <p className="text-sm text-muted-foreground break-all mt-1">
                                                 {nota.keterangan || nota.namaBarang || 'Tanpa keterangan'}
                                             </p>
                                         </div>
@@ -875,7 +872,7 @@ export default function ExportPage() {
                         <Button variant="outline" size="lg" onClick={() => handleGenerateReport('perincian')} disabled={isGenerating || selectedNotaIds.length === 0}>
                             {isGenerating && reportTypeBeingGenerated === 'perincian' ? <Loader2 className="mr-2 animate-spin"/> : <Printer className="mr-2" />} Perincian
                         </Button>
-                        <Button variant="outline" size="lg" onClick={() => handleGenerateReport('eviden')} disabled={isGenerating || selectedNotaIds.length === 0}>
+                        <Button size="lg" onClick={() => handleGenerateReport('eviden')} disabled={isGenerating || selectedNotaIds.length === 0}>
                             {isGenerating && reportTypeBeingGenerated === 'eviden' ? <Loader2 className="mr-2 animate-spin"/> : <FileText className="mr-2" />} Eviden
                         </Button>
                     </div>
