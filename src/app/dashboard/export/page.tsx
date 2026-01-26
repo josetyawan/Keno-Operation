@@ -33,7 +33,7 @@ import {
 import { ArrowLeft, Edit, Trash2, Filter, FileText, Printer, FileArchive, Calendar as CalendarIcon, Loader2 } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
-import { format, getMonth, getYear, isSameDay } from 'date-fns';
+import { format, getMonth, getYear, isSameDay, startOfDay } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import type { Nota } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -82,8 +82,8 @@ const generateRekapitulasiReport = (notas: Nota[], month: string, year: string):
         </div>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 1px solid black;">
-            <thead style="background-color: #FED7AA; font-weight: bold;">
-                <tr style="background-color: #FED7AA; font-weight: bold;">
+            <thead style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                <tr>
                     <th style="padding: 4px 8px; border: 1px solid black; width: 5%;">NO</th>
                     <th style="padding: 4px 8px; border: 1px solid black;">KETERANGAN</th>
                     <th style="padding: 4px 8px; border: 1px solid black; width: 25%;">JUMLAH</th>
@@ -93,7 +93,7 @@ const generateRekapitulasiReport = (notas: Nota[], month: string, year: string):
                 ${tableRows}
             </tbody>
             <tfoot>
-                <tr style="background-color: #FED7AA; font-weight: bold;">
+                <tr style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                     <td colspan="2" style="padding: 4px 8px; border: 1px solid black; text-align: center;">TOTAL</td>
                     <td style="padding: 4px 8px; border: 1px solid black; text-align: left;">Rp${grandTotal.toLocaleString('id-ID')}</td>
                 </tr>
@@ -149,7 +149,7 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
         <h2 style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left;">${title}</h2>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
-            <thead style="background-color: #FED7AA; font-weight: bold;">
+            <thead style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr>
                     <th style="padding: 4px; border: 1px solid black; width: 5%;">NO</th>
                     <th style="padding: 4px; border: 1px solid black; width: 10%;">TANGGAL</th>
@@ -161,7 +161,7 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
             </thead>
             <tbody>${tableRows}</tbody>
             <tfoot>
-                <tr style="background-color: #FED7AA; font-weight: bold;">
+                <tr style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                     <td colspan="5" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">TOTAL</td>
                     <td style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">${grandTotal.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 </tr>
@@ -234,14 +234,14 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
         <h2 style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left;">${title}</h2>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
-            <thead style="background-color: #FED7AA; font-weight: bold;">
+            <thead style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr>
                     ${['NO', 'TANGGAL', 'KETERANGAN', 'NO PLAT', 'KM AWAL', 'KM AKHIR', 'URAIAN PEKERJAAN', 'JUMLAH', 'NAMA'].map(h => `<th style="padding: 4px; border: 1px solid black;">${h}</th>`).join('')}
                 </tr>
             </thead>
             <tbody>${tableRows}</tbody>
             <tfoot>
-                <tr style="background-color: #FED7AA; font-weight: bold;">
+                <tr style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                     <td colspan="7" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">TOTAL</td>
                     <td style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">Rp${grandTotal.toLocaleString('id-ID')}</td>
                     <td style="padding: 4px; border: 1px solid black;"></td>
@@ -291,14 +291,14 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
         <h2 style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left;">${title}</h2>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
-            <thead style="background-color: #FED7AA; font-weight: bold;">
+            <thead style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr>
                     ${['NO', 'TANGGAL', 'Nama Barang', 'Keterangan', 'Jumlah'].map(h => `<th style="padding: 4px; border: 1px solid black;">${h}</th>`).join('')}
                 </tr>
             </thead>
             <tbody>${tableRows}</tbody>
             <tfoot>
-                <tr style="background-color: #FED7AA; font-weight: bold;">
+                <tr style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                     <td colspan="4" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">TOTAL</td>
                     <td style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
                 </tr>
@@ -351,7 +351,7 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
         <tr>
             <td style="border: 1px solid black; padding: 4px; text-align: center; vertical-align: top;">${index + 1}</td>
             <td style="border: 1px solid black; padding: 4px; vertical-align: top; white-space: nowrap;">${format(nota.tanggal.toDate(), 'dd MMMM yyyy', { locale: idLocale })}</td>
-            <td style="border: 1px solid black; padding: 4px; background-color: #FFDDDD; vertical-align: top; text-align: center;">${ketText}</td>
+            <td style="border: 1px solid black; padding: 4px; background-color: #FFDDDD; vertical-align: top; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${ketText}</td>
             <td style="border: 1px solid black; padding: 4px; vertical-align: top;">${nota.noPlatKendaraan || '-'}</td>
             <td style="border: 1px solid black; padding: 4px; text-align: center; vertical-align: top;">${selisih}</td>
             <td style="border: 1px solid black; padding: 4px; text-align: center; vertical-align: top;">${nota.kmAwal ?? '-'}</td>
@@ -372,7 +372,7 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
         <h2 style="text-align: left; font-size: 14pt; margin: 0; font-weight: bold; text-decoration: underline;">${title}</h2>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 1px solid black; font-size: 8pt;">
-            <thead style="background-color: #FED7AA; font-weight: bold; text-align: center;">
+            <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr>
                     ${headers.map(h => `<th style="border: 1px solid black; padding: 4px; vertical-align: middle;">${h}</th>`).join('')}
                 </tr>
@@ -406,7 +406,7 @@ const generateSimpleEvidenReport = (notas: Nota[], title: string): string => {
         <h2 style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left;">${title}</h2>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 1px solid black; font-size: 10pt;">
-            <thead style="background-color: #FED7AA; font-weight: bold; text-align: center;">
+            <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr>
                     ${headers.map(h => `<th style="border: 1px solid black; padding: 4px; vertical-align: middle;">${h}</th>`).join('')}
                 </tr>
@@ -424,7 +424,6 @@ function ReportPreview({
   pages: string[];
   onClose: () => void;
 }) {
-  const printRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = () => {
     window.print();
@@ -435,25 +434,24 @@ function ReportPreview({
         <style>
             {`
             @media print {
-                /* Hide everything on the page that is not for printing */
-                .no-print {
-                    display: none !important;
+                body * {
+                    visibility: hidden;
                 }
-                /* Ensure the print container is visible and takes up the whole page */
-                #print-section-parent {
+                #print-section, #print-section * {
+                    visibility: visible;
+                }
+                #print-section {
                     position: absolute;
                     left: 0;
                     top: 0;
                     width: 100%;
-                    height: auto;
-                    background: white;
                 }
                 .report-page-container {
                     page-break-after: always;
                     page-break-inside: avoid;
                     width: 210mm;
                     height: 297mm;
-                    margin: 0 auto;
+                    margin: 0;
                     padding: 0;
                     overflow: hidden;
                     box-shadow: none; /* remove shadow for print */
@@ -493,16 +491,14 @@ function ReportPreview({
       </Card>
 
       {/* Content for printing, hidden on screen */}
-      <div id="print-section-parent" className="hidden print:block">
-          <div id="print-section" ref={printRef} className="mx-auto flex flex-col items-center">
-              {pages.map((pageHtml, index) => (
-                  <div
-                      key={index}
-                      className="report-page-container bg-white"
-                      dangerouslySetInnerHTML={{ __html: pageHtml }}
-                  />
-              ))}
-          </div>
+      <div id="print-section" className="hidden print:block">
+          {pages.map((pageHtml, index) => (
+              <div
+                  key={index}
+                  className="report-page-container bg-white"
+                  dangerouslySetInnerHTML={{ __html: pageHtml }}
+              />
+          ))}
       </div>
     </div>
   );
@@ -901,5 +897,3 @@ export default function ExportPage() {
         </>
     );
 }
-
-    
