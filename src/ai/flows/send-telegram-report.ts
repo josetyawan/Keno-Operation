@@ -35,7 +35,7 @@ export type SendTelegramReportOutput = z.infer<typeof SendTelegramReportOutputSc
 // Define the Telegram bot token and chat ID from environment variables
 const TELEGRAM_BOT_TOKEN = '7858540741:AAHJS7OqRtGoj3YbgtN3JJ0HYTC99GQi3uQ';
 // IMPORTANT: Replace this with your actual, personal Telegram Chat ID.
-const TELEGRAM_CHAT_ID = 'YOUR_TELEGRAM_CHAT_ID_HERE'; 
+const TELEGRAM_CHAT_ID = '75422161'; 
 
 // Main exported function that wraps the Genkit flow
 export async function sendTelegramReport(input: SendTelegramReportInput): Promise<SendTelegramReportOutput> {
