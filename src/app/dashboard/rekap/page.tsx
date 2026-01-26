@@ -57,12 +57,47 @@ type JasaRekapItem = Nota & {
 // Type for the BBM detail report
 type BbmRekapItem = Nota;
 
-const bbmReportTypes: Record<string, string> = {
-  'bbm-r2': 'BBM R2',
-  'bbm-r4-harian': 'BBM R4 Harian',
-  'bbm-r4-turlap': 'BBM R4 Turlap',
-  'bbm-r4-ut': 'BBM R4 UT',
+// Type for the new generic detail reports
+type DetailRekapItem = Nota & {
+  displayKeterangan: string;
 };
+
+const bbmReportTypes: Record<string, { title: string, segment: string }> = {
+  'bbm-r2': { title: 'Perincian Nota BBM R2', segment: 'BBM R2' },
+  'bbm-r4-harian': { title: 'Perincian Nota BBM R4 Harian', segment: 'BBM R4 Harian' },
+  'bbm-r4-turlap': { title: 'Perincian Nota BBM R4 Turlap', segment: 'BBM R4 Turlap' },
+  'bbm-r4-ut': { title: 'Perincian Nota BBM R4 UT', segment: 'BBM R4 UT' },
+};
+
+const detailReportTypes: Record<string, { title: string, segment: string, staticKeterangan?: string }> = {
+    'material-sa': {
+        title: 'Perincian Nota Material SA Kudus',
+        segment: 'MATERIAL SA KUDUS',
+        staticKeterangan: 'Material Area Kudus',
+    },
+    'material-sppg': {
+        title: 'Perincian Nota Material SPPG SA Kudus',
+        segment: 'MATERIAL SPPG SA KUDUS',
+        staticKeterangan: 'Material SPPG SA Kudus',
+    },
+    'konsumsi-lembur': {
+        title: 'Perincian Nota Konsumsi Lembur',
+        segment: 'Konsumsi Lembur',
+    },
+    'konsumsi-ut': {
+        title: 'Perincian Nota Konsumsi UT',
+        segment: 'Konsumsi UT',
+    },
+    'konsumsi-turlap': {
+        title: 'Perincian Nota Konsumsi Turlap',
+        segment: 'Konsumsi Turlap',
+    },
+    'bbm-genset': {
+        title: 'Perincian Nota BBM Genset',
+        segment: 'BBM Genset',
+    }
+};
+
 
 export default function RekapPage() {
   const { toast } = useToast();
@@ -80,6 +115,10 @@ export default function RekapPage() {
   const [jasaTotal, setJasaTotal] = useState<number>(0);
   const [bbmData, setBbmData] = useState<BbmRekapItem[] | null>(null);
   const [bbmTotal, setBbmTotal] = useState<number>(0);
+  const [bbmTitle, setBbmTitle] = useState<string>('');
+  const [detailData, setDetailData] = useState<DetailRekapItem[] | null>(null);
+  const [detailTotal, setDetailTotal] = useState<number>(0);
+  const [detailTitle, setDetailTitle] = useState<string>('');
   
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerated, setIsGenerated] = useState(false);
@@ -96,6 +135,9 @@ export default function RekapPage() {
 
   const { data: notas, isLoading: areNotasLoading } = useCollection<Nota>(notasQuery);
 
+  const isBbmReport = Object.keys(bbmReportTypes).includes(reportType);
+  const isDetailReport = Object.keys(detailReportTypes).includes(reportType);
+
   const handleGenerateRekap = () => {
     if (!startDate || !endDate) {
       toast({
@@ -111,18 +153,21 @@ export default function RekapPage() {
     setSummaryData(null);
     setJasaData(null);
     setBbmData(null);
+    setDetailData(null);
     setSummaryTotal(0);
     setJasaTotal(0);
     setBbmTotal(0);
+    setBbmTitle('');
+    setDetailTotal(0);
+    setDetailTitle('');
 
-    if (areNotasLoading) return; // Should be handled by disabled button, but as a safeguard.
+    if (areNotasLoading) return;
     
     if (notas && reportType === 'summary') {
         const grouped = notas.reduce((acc, nota) => {
-            const keterangan = (nota.segmen === 'MATERIAL SA KUDUS' || nota.segmen === 'MATERIAL SPPG SA KUDUS')
+             const keterangan = (nota.segmen === 'MATERIAL SA KUDUS' || nota.segmen === 'MATERIAL SPPG SA KUDUS')
               ? nota.segmen
               : `${nota.segmen} SA Kudus`;
-
             if (!acc[keterangan]) {
                 acc[keterangan] = 0;
             }
@@ -174,28 +219,51 @@ export default function RekapPage() {
                 description: 'Tidak ada laporan "Jasa" yang ditemukan pada rentang tanggal yang dipilih.',
             });
         }
-    } else if (notas && Object.keys(bbmReportTypes).includes(reportType)) {
-        const segmentToFilter = bbmReportTypes[reportType];
-        const filteredBbmNotas = notas.filter(nota => nota.segmen === segmentToFilter);
+    } else if (notas && isBbmReport) {
+        const config = bbmReportTypes[reportType];
+        const filteredBbmNotas = notas.filter(nota => nota.segmen === config.segment);
 
-        // Sort by date
         filteredBbmNotas.sort((a, b) => a.tanggal.toDate().getTime() - b.tanggal.toDate().getTime());
         
         const totalAmount = filteredBbmNotas.reduce((sum, item) => sum + item.nominal, 0);
 
         setBbmData(filteredBbmNotas);
         setBbmTotal(totalAmount);
+        setBbmTitle(config.title);
         setIsGenerated(true);
 
         if (filteredBbmNotas.length === 0) {
             toast({
                 title: 'Tidak Ada Data',
-                description: `Tidak ada laporan "${segmentToFilter}" yang ditemukan pada rentang tanggal yang dipilih.`,
+                description: `Tidak ada laporan "${config.segment}" yang ditemukan pada rentang tanggal yang dipilih.`,
+            });
+        }
+    } else if (notas && isDetailReport) {
+        const config = detailReportTypes[reportType];
+        const filteredNotas = notas.filter(nota => nota.segmen === config.segment);
+
+        filteredNotas.sort((a, b) => a.tanggal.toDate().getTime() - b.tanggal.toDate().getTime());
+    
+        const rekapArray = filteredNotas.map(nota => ({
+            ...nota,
+            displayKeterangan: config.staticKeterangan ?? nota.keterangan ?? '-',
+        }));
+        
+        const totalAmount = rekapArray.reduce((sum, item) => sum + item.nominal, 0);
+
+        setDetailData(rekapArray);
+        setDetailTotal(totalAmount);
+        setDetailTitle(config.title);
+        setIsGenerated(true);
+
+        if (rekapArray.length === 0) {
+            toast({
+                title: 'Tidak Ada Data',
+                description: `Tidak ada laporan "${config.segment}" yang ditemukan.`,
             });
         }
     } else {
-        // Handles case where notas is null or empty
-        setIsGenerated(true); // Mark as generated to show the "no data" message inside the preview
+        setIsGenerated(true);
         toast({
             title: 'Tidak Ada Data',
             description: 'Tidak ada laporan yang ditemukan pada rentang tanggal yang dipilih.',
@@ -334,10 +402,10 @@ export default function RekapPage() {
                 </div>
             </div>
           );
-      } else if (reportType.startsWith('bbm-') && bbmData) {
+      } else if (isBbmReport && bbmData) {
           reportContent = (
             <div className="max-w-4xl mx-auto font-serif text-black text-xs">
-                <h1 className="font-bold text-base text-center mb-6">Perincian Nota {bbmReportTypes[reportType]}</h1>
+                <h1 className="font-bold text-base text-center mb-6">{bbmTitle}</h1>
                 <Table className="border-2 border-black mb-4">
                     <TableHeader>
                         <TableRow className="border-b-2 border-black bg-yellow-300">
@@ -352,37 +420,29 @@ export default function RekapPage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {(() => {
-                            if (!bbmData || bbmData.length === 0) {
-                                return (
-                                    <TableRow className="border-b border-black">
-                                        <TableCell colSpan={8} className="text-center h-24">Tidak ada data untuk ditampilkan.</TableCell>
-                                    </TableRow>
-                                );
-                            }
-
-                            let itemCounter = 0;
-                            return bbmData.flatMap(item => {
-                                itemCounter++;
-                                return [
-                                    <TableRow key={item.id} className="border-b-0">
-                                        <TableCell className="border-r-2 border-black text-center align-top">{itemCounter}</TableCell>
-                                        <TableCell className="border-r-2 border-black text-center align-top">{format(item.tanggal.toDate(), 'dd/MM/yyyy')}</TableCell>
-                                        <TableCell className="border-r-2 border-black px-2 align-top">{item.noPlatKendaraan}</TableCell>
-                                        <TableCell className="border-r-2 border-black text-center align-top">{item.kmAwal}</TableCell>
-                                        <TableCell className="border-r-2 border-black text-center align-top">{item.kmAkhir}</TableCell>
-                                        <TableCell className="border-r-2 border-black px-2 align-top">{item.keterangan}</TableCell>
-                                        <TableCell className="border-r-2 border-black text-right align-top px-2">Rp{item.nominal.toLocaleString('id-ID')}</TableCell>
-                                        <TableCell className="px-2 align-top">{item.namaPic}</TableCell>
-                                    </TableRow>,
-                                    <TableRow key={`${item.id}-jumlah`} className="border-b-2 border-black">
-                                        <TableCell colSpan={6} className="border-r-2 border-black text-center font-bold">JUMLAH</TableCell>
-                                        <TableCell className="text-right font-bold px-2 border-r-2 border-black">Rp{item.nominal.toLocaleString('id-ID')}</TableCell>
-                                        <TableCell></TableCell>
-                                    </TableRow>
-                                ];
-                            });
-                        })()}
+                        {(!bbmData || bbmData.length === 0) ? (
+                            <TableRow className="border-b border-black">
+                                <TableCell colSpan={8} className="text-center h-24">Tidak ada data untuk ditampilkan.</TableCell>
+                            </TableRow>
+                        ) : (
+                            bbmData.flatMap((item, index) => [
+                                <TableRow key={item.id} className="border-b-0">
+                                    <TableCell className="border-r-2 border-black text-center align-top">{index + 1}</TableCell>
+                                    <TableCell className="border-r-2 border-black text-center align-top">{format(item.tanggal.toDate(), 'dd/MM/yyyy')}</TableCell>
+                                    <TableCell className="border-r-2 border-black px-2 align-top">{item.noPlatKendaraan}</TableCell>
+                                    <TableCell className="border-r-2 border-black text-center align-top">{item.kmAwal}</TableCell>
+                                    <TableCell className="border-r-2 border-black text-center align-top">{item.kmAkhir}</TableCell>
+                                    <TableCell className="border-r-2 border-black px-2 align-top">{item.keterangan}</TableCell>
+                                    <TableCell className="border-r-2 border-black text-right align-top px-2">Rp{item.nominal.toLocaleString('id-ID')}</TableCell>
+                                    <TableCell className="px-2 align-top">{item.namaPic}</TableCell>
+                                </TableRow>,
+                                <TableRow key={`${item.id}-jumlah`} className="border-b-2 border-black">
+                                    <TableCell colSpan={6} className="border-r-2 border-black text-center font-bold">JUMLAH</TableCell>
+                                    <TableCell className="text-right font-bold px-2 border-r-2 border-black">Rp{item.nominal.toLocaleString('id-ID')}</TableCell>
+                                    <TableCell></TableCell>
+                                </TableRow>
+                            ])
+                        )}
                     </TableBody>
                     <UiTableFooter>
                        <TableRow className="bg-yellow-300 border-t-2 border-black">
@@ -394,6 +454,61 @@ export default function RekapPage() {
                 </Table>
                 
                  <div className="flex justify-between mt-16">
+                    <div className="text-center">
+                        <p>Menyetujui,</p>
+                        <div className="h-20"></div>
+                        <p className="underline">Lutfi Akhmad</p>
+                        <p>HSA Kudus</p>
+                    </div>
+                    <div className="text-center">
+                        <p>Kudus, {format(today, 'dd MMMM yyyy')}</p>
+                        <p>Pembuat Rincian</p>
+                        <div className="h-20"></div>
+                        <p className="underline">Joko Wahyu Setyawan</p>
+                        <p>Officer Kudus</p>
+                    </div>
+                </div>
+            </div>
+          );
+      } else if (isDetailReport && detailData) {
+          reportContent = (
+            <div className="max-w-4xl mx-auto font-serif text-black text-xs">
+                <h1 className="font-bold text-base text-center mb-6">{detailTitle}</h1>
+                <Table className="border-2 border-black mb-4">
+                    <TableHeader>
+                        <TableRow className="border-b-2 border-black bg-yellow-300">
+                            <TableHead className="border-r-2 border-black w-[40px] text-black font-bold text-center">NO</TableHead>
+                            <TableHead className="border-r-2 border-black w-[120px] text-black font-bold text-center">TANGGAL</TableHead>
+                            <TableHead className="border-r-2 border-black text-black font-bold text-center">Nama Barang</TableHead>
+                            <TableHead className="border-r-2 border-black text-black font-bold text-center">Keterangan</TableHead>
+                            <TableHead className="w-[110px] text-black font-bold text-center">Jumlah</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {(detailData && detailData.length > 0) ? (
+                            detailData.map((item, index) => (
+                                <TableRow key={item.id} className="border-b border-black">
+                                    <TableCell className="border-r-2 border-black text-center">{index + 1}</TableCell>
+                                    <TableCell className="border-r-2 border-black text-center">{format(item.tanggal.toDate(), 'dd MMMM yyyy')}</TableCell>
+                                    <TableCell className="border-r-2 border-black px-2">{item.namaBarang}</TableCell>
+                                    <TableCell className="border-r-2 border-black px-2">{item.displayKeterangan}</TableCell>
+                                    <TableCell className="text-right px-2">Rp{item.nominal.toLocaleString('id-ID')}</TableCell>
+                                </TableRow>
+                            ))
+                        ) : (
+                            <TableRow className="border-b border-black">
+                                <TableCell colSpan={5} className="text-center h-24">Tidak ada data untuk ditampilkan.</TableCell>
+                            </TableRow>
+                        )}
+                    </TableBody>
+                    <UiTableFooter>
+                        <TableRow className="bg-yellow-300 border-t-2 border-black">
+                            <TableCell colSpan={4} className="text-center font-bold text-black">TOTAL</TableCell>
+                            <TableCell className="text-right font-bold text-black px-2">Rp{detailTotal.toLocaleString('id-ID')}</TableCell>
+                        </TableRow>
+                    </UiTableFooter>
+                </Table>
+                <div className="flex justify-between mt-16">
                     <div className="text-center">
                         <p>Menyetujui,</p>
                         <div className="h-20"></div>
@@ -486,6 +601,12 @@ export default function RekapPage() {
                         <SelectContent>
                             <SelectItem value="summary">Rekapitulasi (Ringkasan)</SelectItem>
                             <SelectItem value="jasa">Perincian Nota Jasa</SelectItem>
+                            <SelectItem value="material-sa">Perincian Nota Material SA Kudus</SelectItem>
+                            <SelectItem value="material-sppg">Perincian Nota Material SPPG SA Kudus</SelectItem>
+                            <SelectItem value="konsumsi-lembur">Perincian Nota Konsumsi Lembur</SelectItem>
+                            <SelectItem value="konsumsi-ut">Perincian Nota Konsumsi UT</SelectItem>
+                            <SelectItem value="konsumsi-turlap">Perincian Nota Konsumsi Turlap</SelectItem>
+                            <SelectItem value="bbm-genset">Perincian Nota BBM Genset</SelectItem>
                             <SelectItem value="bbm-r2">Perincian Nota BBM R2</SelectItem>
                             <SelectItem value="bbm-r4-harian">Perincian Nota BBM R4 Harian</SelectItem>
                             <SelectItem value="bbm-r4-turlap">Perincian Nota BBM R4 Turlap</SelectItem>
@@ -549,7 +670,7 @@ export default function RekapPage() {
                 {reportContent}
             </CardContent>
             <CardFooter className="print:hidden justify-end">
-              <Button onClick={handlePrint} disabled={!reportContent || (reportType === 'jasa' && !jasaData?.length) || (reportType === 'summary' && !summaryData?.length) || (reportType.startsWith('bbm-') && (!bbmData || bbmData.length === 0))}><Printer className="mr-2 h-4 w-4" /> Cetak Laporan</Button>
+              <Button onClick={handlePrint} disabled={!reportContent || (reportType === 'jasa' && !jasaData?.length) || (reportType === 'summary' && !summaryData?.length) || (isBbmReport && (!bbmData || bbmData.length === 0)) || (isDetailReport && (!detailData || detailData.length === 0))}><Printer className="mr-2 h-4 w-4" /> Cetak Laporan</Button>
             </CardFooter>
           </Card>
       )}
