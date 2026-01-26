@@ -200,21 +200,79 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
 
 
 const generateBBMReport = (notas: Nota[], title: string): string => {
+    const isGroupedReport = title.includes('BBM R2') || title.includes('BBM R4');
+    let tableRows = '';
     let grandTotal = 0;
-    const tableRows = notas.map((nota, index) => {
-        grandTotal += nota.nominal;
-        return `
-        <tr>
-            <td style="padding: 4px; border: 1px solid black; text-align: center;">${index + 1}</td>
-            <td style="padding: 4px; border: 1px solid black;">${format(nota.tanggal.toDate(), 'dd-MMM-yy', { locale: idLocale })}</td>
-            <td style="padding: 4px; border: 1px solid black;">${nota.noPlatKendaraan || '-'}</td>
-            <td style="padding: 4px; border: 1px solid black; text-align: center;">${nota.kmAwal || '-'}</td>
-            <td style="padding: 4px; border: 1px solid black; text-align: center;">${nota.kmAkhir || '-'}</td>
-            <td style="padding: 4px; border: 1px solid black;">${nota.keterangan || '-'}</td>
-            <td style="padding: 4px; border: 1px solid black; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
-            <td style="padding: 4px; border: 1px solid black;">${nota.namaPic}</td>
-        </tr>`;
-    }).join('');
+
+    if (isGroupedReport) {
+        const groupedByDate = notas.reduce((acc, nota) => {
+            const dateStr = format(nota.tanggal.toDate(), 'yyyy-MM-dd');
+            if (!acc[dateStr]) {
+                acc[dateStr] = {
+                    tanggal: nota.tanggal.toDate(),
+                    noPlatKendaraan: nota.noPlatKendaraan || '-',
+                    kmAwal: nota.kmAwal || Infinity,
+                    kmAkhir: nota.kmAkhir || 0,
+                    keterangan: [],
+                    nominal: 0,
+                    namaPic: nota.namaPic,
+                };
+            }
+
+            acc[dateStr].kmAwal = Math.min(acc[dateStr].kmAwal, nota.kmAwal || Infinity);
+            acc[dateStr].kmAkhir = Math.max(acc[dateStr].kmAkhir, nota.kmAkhir || 0);
+            if (nota.keterangan) {
+                acc[dateStr].keterangan.push(nota.keterangan);
+            }
+            acc[dateStr].nominal += nota.nominal;
+
+            return acc;
+        }, {} as Record<string, {
+            tanggal: Date;
+            noPlatKendaraan: string;
+            kmAwal: number;
+            kmAkhir: number;
+            keterangan: string[];
+            nominal: number;
+            namaPic: string;
+        }>);
+
+        Object.values(groupedByDate).forEach(group => {
+            if (group.kmAwal === Infinity) {
+                group.kmAwal = 0;
+            }
+        });
+
+        const groupedNotas = Object.values(groupedByDate);
+        grandTotal = groupedNotas.reduce((sum, group) => sum + group.nominal, 0);
+
+        tableRows = groupedNotas.map((group, index) => `
+            <tr>
+                <td style="padding: 4px; border: 1px solid black; text-align: center;">${index + 1}</td>
+                <td style="padding: 4px; border: 1px solid black;">${format(group.tanggal, 'dd-MMM-yy', { locale: idLocale })}</td>
+                <td style="padding: 4px; border: 1px solid black;">${group.noPlatKendaraan}</td>
+                <td style="padding: 4px; border: 1px solid black; text-align: center;">${group.kmAwal || '-'}</td>
+                <td style="padding: 4px; border: 1px solid black; text-align: center;">${group.kmAkhir || '-'}</td>
+                <td style="padding: 4px; border: 1px solid black; white-space: normal; word-break: break-all;">${group.keterangan.join(' | ')}</td>
+                <td style="padding: 4px; border: 1px solid black; text-align: right;">${group.nominal.toLocaleString('id-ID')}</td>
+                <td style="padding: 4px; border: 1px solid black;">${group.namaPic}</td>
+            </tr>`
+        ).join('');
+    } else {
+        grandTotal = notas.reduce((sum, nota) => sum + nota.nominal, 0);
+        tableRows = notas.map((nota, index) => `
+            <tr>
+                <td style="padding: 4px; border: 1px solid black; text-align: center;">${index + 1}</td>
+                <td style="padding: 4px; border: 1px solid black;">${format(nota.tanggal.toDate(), 'dd-MMM-yy', { locale: idLocale })}</td>
+                <td style="padding: 4px; border: 1px solid black;">${nota.noPlatKendaraan || '-'}</td>
+                <td style="padding: 4px; border: 1px solid black; text-align: center;">${nota.kmAwal || '-'}</td>
+                <td style="padding: 4px; border: 1px solid black; text-align: center;">${nota.kmAkhir || '-'}</td>
+                <td style="padding: 4px; border: 1px solid black;">${nota.keterangan || '-'}</td>
+                <td style="padding: 4px; border: 1px solid black; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
+                <td style="padding: 4px; border: 1px solid black;">${nota.namaPic}</td>
+            </tr>`
+        ).join('');
+    }
 
     const today = new Date();
     const formattedDate = format(today, 'dd MMMM yyyy', { locale: idLocale });
