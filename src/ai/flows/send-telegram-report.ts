@@ -13,13 +13,15 @@ import { format } from 'date-fns';
 const RekapDataItemSchema = z.object({
   phone: z.string(),
   name: z.string(),
-  total: z.number(),
-  details: z.string(),
+  segmen: z.string(),
+  tanggal: z.string(),
+  nominal: z.number(),
 });
 
 const SendTelegramReportInputSchema = z.object({
   rekapData: z.array(RekapDataItemSchema),
   grandTotal: z.number(),
+  rekapDate: z.string(),
 });
 
 const SendTelegramReportOutputSchema = z.object({
@@ -49,7 +51,7 @@ const sendTelegramReportFlow = ai.defineFlow(
   },
   async (input) => {
     if (!TELEGRAM_BOT_TOKEN || TELEGRAM_CHAT_ID === 'YOUR_TELEGRAM_CHAT_ID_HERE') {
-      const errorMsg = 'Telegram Bot Token atau Chat ID belum dikonfigurasi dengan benar.';
+      const errorMsg = 'Telegram Bot Token atau Chat ID belum dikonfigurasi. Dapatkan ID Anda dari @userinfobot dan masukkan ke dalam kode.';
       console.error(errorMsg);
       return { success: false, error: errorMsg };
     }
@@ -58,16 +60,16 @@ const sendTelegramReportFlow = ai.defineFlow(
       const bot = new TelegramBot(TELEGRAM_BOT_TOKEN);
 
       // Format the message content
-      let message = `Rekap Harian - ${format(new Date(), 'dd MMMM yyyy')}\n${"=".repeat(20)}\n\n`;
+      let message = `Rekap Harian - ${input.rekapDate}\n${"=".repeat(20)}\n\n`;
 
       message += input.rekapData
         .map(item => {
-            // Replace the separator for better formatting in Telegram
-            return `${item.phone} ${item.name} - ${item.details.replace(' | ', '\n  ')}`;
+            // New format: {phone} {name} {segmen} {date} {nominal}
+            return `${item.phone} ${item.name} ${item.segmen} ${item.tanggal} ${item.nominal}`;
         })
-        .join('\n\n');
+        .join('\n');
         
-      message += `\n\n${"=".repeat(20)}\nGrand Total: Rp ${input.grandTotal.toLocaleString('id-ID')}`;
+      message += `\n\n${"=".repeat(20)}\nTotal: Rp ${input.grandTotal.toLocaleString('id-ID')}`;
 
       // Send the message
       await bot.sendMessage(TELEGRAM_CHAT_ID, message);

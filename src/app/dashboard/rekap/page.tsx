@@ -20,7 +20,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { ArrowLeft, Calendar as CalendarIcon, Loader2, Bot } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where, Timestamp } from 'firebase/firestore';
-import { format, isSameDay, startOfDay, endOfDay } from 'date-fns';
+import { format, startOfDay, endOfDay } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import type { Nota, UserProfile } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -28,21 +28,27 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { sendTelegramReport } from '@/ai/flows/send-telegram-report';
 
-type RekapData = {
+type RekapDataItem = {
     phone: string;
     name: string;
-    total: number;
-    details: string;
+    segmen: string;
+    tanggal: string;
+    nominal: number;
 };
 
 export default function RekapPage() {
     const firestore = useFirestore();
     const { toast } = useToast();
-    const [verificationDate, setVerificationDate] = useState<Date | undefined>(new Date());
-    const [rekapData, setRekapData] = useState<RekapData[]>([]);
+    const [verificationDate, setVerificationDate] = useState<Date | undefined>();
+    const [rekapData, setRekapData] = useState<RekapDataItem[]>([]);
     const [grandTotal, setGrandTotal] = useState(0);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSending, setIsSending] = useState(false);
+
+    useEffect(() => {
+        // Set initial date on client-side to avoid hydration mismatch
+        setVerificationDate(new Date());
+    }, []);
 
     const notasQuery = useMemoFirebase(() => {
         if (!verificationDate) return null;
@@ -65,37 +71,28 @@ export default function RekapPage() {
     const { data: users, isLoading: isUsersLoading } = useCollection<UserProfile>(usersCollection);
 
     const handleGenerateRekap = () => {
-        if (!notas || !users) return;
+        if (!notas || !users) {
+            setRekapData([]);
+            setGrandTotal(0);
+            return
+        };
         setIsGenerating(true);
 
         const userMap = new Map(users.map(u => [u.id, u]));
 
-        const dataByUser = notas.reduce((acc, nota) => {
-            if (!acc[nota.userId]) {
-                const user = userMap.get(nota.userId);
-                acc[nota.userId] = {
-                    phone: user?.phone || 'No HP tidak ada',
-                    name: nota.namaPic,
-                    total: 0,
-                    notas: [],
-                };
-            }
-            acc[nota.userId].total += nota.nominal;
-            acc[nota.userId].notas.push(nota);
-            return acc;
-        }, {} as Record<string, { phone: string; name: string; total: number; notas: Nota[] }>);
-
-        const formattedData: RekapData[] = Object.values(dataByUser).map(userData => {
-             const details = userData.notas.map(n => `${n.segmen} ${format(n.tanggal.toDate(), 'dd/MM')}: ${n.nominal.toLocaleString('id-ID')}`).join(' + ');
-             return {
-                 phone: userData.phone,
-                 name: userData.name,
-                 total: userData.total,
-                 details: `${details} | Total : ${userData.total.toLocaleString('id-ID')}`
-             }
-        });
-
-        const total = formattedData.reduce((sum, item) => sum + item.total, 0);
+        // New format: one line per nota
+        const formattedData: RekapDataItem[] = notas.map(nota => {
+            const user = userMap.get(nota.userId);
+            return {
+                phone: user?.phone || 'No-HP',
+                name: (nota.namaPic || '').replace(/\s/g, ''),
+                segmen: (nota.segmen || '').replace(/\s/g, ''),
+                tanggal: format(nota.tanggal.toDate(), 'dd/MM/yy'),
+                nominal: nota.nominal,
+            };
+        }).sort((a,b) => a.name.localeCompare(b.name));
+        
+        const total = notas.reduce((sum, item) => sum + item.nominal, 0);
 
         setRekapData(formattedData);
         setGrandTotal(total);
@@ -103,7 +100,6 @@ export default function RekapPage() {
     };
     
     useEffect(() => {
-        // Automatically generate rekap when data is loaded/changed
         if(notas && users) {
            handleGenerateRekap();
         }
@@ -117,7 +113,11 @@ export default function RekapPage() {
         }
         setIsSending(true);
         try {
-            const result = await sendTelegramReport({ rekapData, grandTotal });
+            const result = await sendTelegramReport({ 
+                rekapData, 
+                grandTotal,
+                rekapDate: verificationDate ? format(verificationDate, 'dd MMMM yyyy', {locale: idLocale}) : 'N/A'
+             });
             if (result.success) {
                 toast({ title: 'Terkirim!', description: 'Rekap berhasil dikirim ke Telegram.' });
             } else {
@@ -167,7 +167,7 @@ export default function RekapPage() {
                             )}
                         >
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {verificationDate ? format(verificationDate, 'PPP', {locale: idLocale}) : <span>Pilih tanggal verifikasi</span>}
+                            {verificationDate ? format(verificationDate, 'PPP', {locale: idLocale}) : <span>Pilih tanggal verifikasi...</span>}
                         </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
@@ -181,7 +181,7 @@ export default function RekapPage() {
                     </Popover>
                     <Button onClick={handleGenerateRekap} disabled={isGenerating || isLoading}>
                         {(isGenerating || isLoading) && <Loader2 className="mr-2 animate-spin"/>}
-                        Buat Rekap
+                        Buat Ulang Rekap
                     </Button>
                 </CardContent>
             </Card>
@@ -201,10 +201,10 @@ export default function RekapPage() {
                             <Skeleton className="h-4 w-2/3" />
                          </div>
                     ) : rekapData.length > 0 ? (
-                        <div className="space-y-2 text-sm font-mono bg-muted p-4 rounded-md">
+                        <div className="space-y-2 text-sm font-mono bg-muted p-4 rounded-md overflow-x-auto">
                             {rekapData.map((item, index) => (
                                 <p key={index}>
-                                    {item.phone} {item.name} - {item.details}
+                                    {`${item.phone} ${item.name} ${item.segmen} ${item.tanggal} ${item.nominal}`}
                                 </p>
                             ))}
                         </div>
