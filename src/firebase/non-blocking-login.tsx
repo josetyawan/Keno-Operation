@@ -17,7 +17,6 @@ async function createUserDocument(firestore: Firestore, user: User, details: Sig
     
     // Create a minimal user document that satisfies security rules and basic app functionality.
     const userData = {
-        id: user.uid,
         email: user.email, // Use the email from the created Auth user for consistency.
         displayName: user.email, // Default display name to email, essential for UI.
         role: 'user', // Required by rule
@@ -33,7 +32,7 @@ async function createUserDocument(firestore: Firestore, user: User, details: Sig
 export async function signUpWithEmail(auth: Auth, firestore: Firestore, password: string, details: SignUpDetails): Promise<UserCredential> {
   const userCredential = await createUserWithEmailAndPassword(auth, details.email, password);
   try {
-    // Creates the minimal user document, now with the redundant 'id' field.
+    // Creates the minimal user document.
     await createUserDocument(firestore, userCredential.user, details);
   } catch (firestoreError) {
     console.error("Kritis: Gagal membuat dokumen pengguna di Firestore setelah pembuatan pengguna di Auth.", firestoreError);
