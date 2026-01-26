@@ -27,13 +27,13 @@ import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { ArrowLeft, CalendarIcon, Camera, Upload } from 'lucide-react';
-import { useState } from 'react';
-import { useFirestore, addDocumentNonBlocking, useUser, useStorage } from '@/firebase';
-import { collection, serverTimestamp } from 'firebase/firestore';
+import { useState, useEffect } from 'react';
+import { useFirestore, addDocumentNonBlocking, useUser, useStorage, useDoc, useMemoFirebase } from '@/firebase';
+import { collection, serverTimestamp, doc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import type { Nota } from '@/lib/types';
+import type { Nota, UserProfile } from '@/lib/types';
 
 function PhotoUpload({
   id,
@@ -96,6 +96,19 @@ export default function NewNotaPage() {
   const [namaPic, setNamaPic] = useState('');
   const [files, setFiles] = useState<(File | null)[]>(Array(7).fill(null));
 
+  const userDocRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [user, firestore]);
+  const { data: userProfile } = useDoc<UserProfile>(userDocRef);
+
+  useEffect(() => {
+      if (userProfile?.displayName) {
+          setNamaPic(userProfile.displayName);
+      }
+  }, [userProfile]);
+
+
   const bbmKendaraanSegments = ['BBM R2', 'BBM R4 Harian', 'BBM R4 Turlap', 'BBM R4 UT'];
   const nonBbmKendaraanSegments = ['MATERIAL SA KUDUS', 'BBM Genset', 'jasa', 'Konsumsi Turlap', 'Konsumsi UT', 'Konsumsi Lembur', 'MATERIAL SPPG SA KUDUS'];
   
@@ -143,8 +156,6 @@ export default function NewNotaPage() {
     event.preventDefault();
     setIsSaving(true);
     
-    console.log('[DIAGNOSTIC] handleSubmit triggered. Current user object from useUser():', user);
-
     if (!user || !user.uid || !user.email) {
       toast({
         variant: 'destructive',
@@ -179,8 +190,6 @@ export default function NewNotaPage() {
           const filePath = `notas/${user.uid}/${fileName}`;
           const storageRef = ref(storage, filePath);
           
-          console.log(`[VERIFICATION] Preparing to upload to path: ${storageRef.fullPath}`);
-
           await uploadBytes(storageRef, file);
           const downloadURL = await getDownloadURL(storageRef);
           return downloadURL;
@@ -398,7 +407,8 @@ export default function NewNotaPage() {
                     placeholder="Nama penanggung jawab"
                     required
                     value={namaPic}
-                    onChange={(e) => setNamaPic(e.target.value)}
+                    readOnly
+                    className="bg-muted/50"
                   />
                 </div>
               </div>
