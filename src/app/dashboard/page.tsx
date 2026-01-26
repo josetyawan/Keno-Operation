@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -31,10 +30,16 @@ import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 
-function NotaActions({ nota, userProfile }: { nota: Nota, userProfile: UserProfile | null }) {
+function NotaActions({ nota }: { nota: Nota }) {
   const { toast } = useToast();
   const firestore = useFirestore();
   const { user } = useUser();
+
+  const userDocRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [user, firestore]);
+  const { data: userProfile } = useDoc<UserProfile>(userDocRef);
 
   const isAdmin = userProfile?.role === 'admin';
   const isOwner = user?.uid === nota.userId;
@@ -90,22 +95,13 @@ function NotaActions({ nota, userProfile }: { nota: Nota, userProfile: UserProfi
 
 export default function DashboardPage() {
   const firestore = useFirestore();
-  const { user } = useUser();
-
-  const userDocRef = useMemoFirebase(() => {
-    if (!user) return null;
-    return doc(firestore, 'users', user.uid);
-  }, [user, firestore]);
-  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
   // For admins, query all notas. For regular users, this query is filtered by security rules.
   const notasQuery = useMemoFirebase(() => {
     return query(collection(firestore, 'notas'), orderBy('dateCreated', 'desc'));
   }, [firestore]);
 
-  const { data: notas, isLoading: areNotasLoading } = useCollection<Nota>(notasQuery);
-
-  const isLoading = areNotasLoading || isProfileLoading;
+  const { data: notas, isLoading } = useCollection<Nota>(notasQuery);
 
   return (
     <>
@@ -169,7 +165,7 @@ export default function DashboardPage() {
                       {nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd MMM yyyy', { locale: idLocale }) : '-'}
                     </TableCell>
                     <TableCell className="text-center pr-6">
-                      <NotaActions nota={nota} userProfile={userProfile} />
+                      <NotaActions nota={nota} />
                     </TableCell>
                   </TableRow>
                 ))}
