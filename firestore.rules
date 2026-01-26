@@ -20,8 +20,6 @@
  *   document) have elevated privileges, specifically the ability to update any
  *   nota for verification purposes.
  * - **Default Deny**: Any path not explicitly defined is inaccessible.
- *
- * TRIGGERING REDEPLOYMENT FOR STORAGE RULES v4.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -57,15 +55,9 @@ service cloud.firestore {
      * This is used for granting elevated permissions.
      */
     function isAdmin() {
+      // This rule is safe from recursion because the ability to 'get' one's own
+      // document is granted separately without needing to check for admin status.
       return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
-
-    /**
-     * Validates that on user document creation, the document's internal `id`
-     * field correctly matches the document's ID in the path.
-     */
-    function isCreatingOwnUserDocument(userId) {
-      return request.resource.data.id == userId;
     }
 
     /**
@@ -99,25 +91,26 @@ service cloud.firestore {
      * @path /users/{userId}
      */
     match /users/{userId} {
-      // ADMIN ACCESS: An admin can list all users. The read permission for each
-      // individual document is checked via the `get` rule below.
-      allow list: if isAdmin();
-      
-      // READ ACCESS: A user can read a document if they are an admin OR they are the owner.
-      // The isOwner() check is what prevents infinite recursion when isAdmin() is evaluated
-      // for the admin's own document during a list or get operation.
-      allow get: if isAdmin() || isOwner(userId);
-      
-      // UPDATE ACCESS: An admin can update any user's document. A regular user can
-      // only update their own document.
-      allow update: if isAdmin() || (isOwner(userId) && isUpdatingOwnUserDocument());
-      
-      // CREATE ACCESS: A newly authenticated user must be the owner of the document they
-      // are creating, ensuring users can only create their own profiles.
-      allow create: if isOwner(userId) &&
-                      isCreatingOwnUserDocument(userId) &&
+      // CREATE: Allow a user to create their own document upon signup with strict validation.
+      // This solves the registration problem where the user document was not being created.
+      allow create: if request.auth.uid == userId &&
+                      request.resource.data.id == userId &&
                       request.resource.data.role == 'user' &&
                       request.resource.data.registrationStatus == 'pending';
+      
+      // READ (OWNER): Any authenticated user can read their OWN document.
+      // This is CRITICAL for isAdmin() to work without causing a recursive loop.
+      allow get: if isOwner(userId);
+
+      // READ (ADMIN): An admin can list and get any user document. This now works because
+      // the 'get' inside isAdmin() is satisfied by the rule above for the admin's own document.
+      allow list, get: if isAdmin();
+      
+      // UPDATE (OWNER): An authenticated user can update their own document.
+      allow update: if isOwner(userId) && isUpdatingOwnUserDocument();
+      
+      // UPDATE (ADMIN): An admin can update any user's document.
+      allow update: if isAdmin();
 
       // DELETION: Deleting users is a server-side or console action, not allowed from the client.
       allow delete: if false;
