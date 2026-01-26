@@ -187,11 +187,6 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
             <td style="padding: 4px; border: 1px solid black;">${nota.keterangan || '-'}</td>
             <td style="padding: 4px; border: 1px solid black; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
             <td style="padding: 4px; border: 1px solid black;">${nota.namaPic}</td>
-        </tr>
-        <tr style="background-color: #fef9c3;">
-            <td colspan="6" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">JUMLAH</td>
-            <td style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
-            <td style="padding: 4px; border: 1px solid black;"></td>
         </tr>`;
     }).join('');
 
