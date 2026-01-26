@@ -15,18 +15,14 @@ interface SignUpDetails {
 async function createUserDocument(firestore: Firestore, user: User, details: SignUpDetails) {
     const userDocRef = doc(firestore, 'users', user.uid);
     
-    // Create a minimal user document.
-    // Other fields can be populated by the user in their profile later.
+    // Create a minimal user document that satisfies security rules and basic app functionality.
+    // Other fields (nik, phone, etc.) can be populated by the user in their profile later.
     const userData = {
         id: user.uid,
         email: details.email,
-        displayName: details.email, // Default display name to email
-        role: 'user',
-        registrationStatus: 'pending',
-        nik: '',
-        phone: '',
-        firstName: '',
-        lastName: '',
+        displayName: details.email, // Default display name to email, essential for UI.
+        role: 'user', // Required by rule
+        registrationStatus: 'pending', // Required by rule
     };
 
     await setDoc(userDocRef, userData);

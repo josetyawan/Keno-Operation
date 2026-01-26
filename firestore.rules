@@ -86,11 +86,14 @@ service cloud.firestore {
      */
     match /users/{userId} {
       // CREATE: Allow a user to create their own document upon signup with strict validation.
-      // This solves the registration problem where the user document was not being created.
+      // This rule ensures only the essential fields are written on creation.
       allow create: if request.auth.uid == userId &&
                       request.resource.data.id == userId &&
+                      request.resource.data.email == request.auth.token.email &&
+                      request.resource.data.displayName == request.auth.token.email &&
                       request.resource.data.role == 'user' &&
-                      request.resource.data.registrationStatus == 'pending';
+                      request.resource.data.registrationStatus == 'pending' &&
+                      request.resource.data.keys().hasOnly(['id', 'email', 'displayName', 'role', 'registrationStatus']);
       
       // READ (OWNER): Any authenticated user can read their OWN document.
       // This is CRITICAL for isAdmin() to work without causing a recursive loop.
