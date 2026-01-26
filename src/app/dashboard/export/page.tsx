@@ -147,6 +147,9 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
         `;
     }).join('');
 
+    const today = new Date();
+    const formattedDate = format(today, 'dd MMMM yyyy', { locale: idLocale });
+
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt;">
         <h2 style="text-align: center; font-size: 14pt; margin: 0; text-decoration: underline;">${title.toUpperCase()}</h2>
@@ -174,10 +177,21 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
             <p style="margin: 0; font-style: italic; font-weight: bold;">Terbilang: ${toWords(Math.floor(grandTotal))} Rupiah</p>
         </div>
         <br/><br/>
-        <table style="width: 100%; text-align: center;">
+        <table style="width: 100%; text-align: center; font-size: 11pt;">
             <tr>
-                <td style="width: 50%;"><p>Disetujui,</p><br/><br/><br/><br/><p style="text-decoration: underline; font-weight: bold;">(___________________)</p></td>
-                <td style="width: 50%;"><p>Yang Membuat</p><br/><br/><br/><br/><p style="text-decoration: underline; font-weight: bold;">(___________________)</p></td>
+                <td style="width: 50%; vertical-align: top;">
+                    <p>Menyetujui,</p>
+                    <br/><br/><br/><br/>
+                    <p style="text-decoration: underline; font-weight: bold; margin: 0;">Lutfi Akhmad</p>
+                    <p style="margin: 0;">HSA Kudus</p>
+                </td>
+                <td style="width: 50%; vertical-align: top;">
+                    <p>Kudus, ${formattedDate}</p>
+                    <p>Pembuat Rincian</p>
+                    <br/><br/><br/><br/>
+                    <p style="text-decoration: underline; font-weight: bold; margin: 0;">Joko Wahyu Setyawan</p>
+                    <p style="margin: 0;">Officer Kudus</p>
+                </td>
             </tr>
         </table>
     </div>`;
@@ -200,6 +214,9 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
             <td style="padding: 4px; border: 1px solid black;">${nota.namaPic}</td>
         </tr>`;
     }).join('');
+
+    const today = new Date();
+    const formattedDate = format(today, 'dd MMMM yyyy', { locale: idLocale });
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt;">
@@ -224,10 +241,21 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
             <p style="margin: 0; font-style: italic; font-weight: bold;">Terbilang: ${toWords(grandTotal)} Rupiah</p>
         </div>
         <br/><br/>
-        <table style="width: 100%; text-align: center;">
+        <table style="width: 100%; text-align: center; font-size: 11pt;">
             <tr>
-                <td style="width: 50%;"><p>Disetujui,</p><br/><br/><br/><br/><p style="text-decoration: underline; font-weight: bold;">(___________________)</p></td>
-                <td style="width: 50%;"><p>Yang Membuat</p><br/><br/><br/><br/><p style="text-decoration: underline; font-weight: bold;">(___________________)</p></td>
+                <td style="width: 50%; vertical-align: top;">
+                    <p>Menyetujui,</p>
+                    <br/><br/><br/><br/>
+                    <p style="text-decoration: underline; font-weight: bold; margin: 0;">Lutfi Akhmad</p>
+                    <p style="margin: 0;">HSA Kudus</p>
+                </td>
+                <td style="width: 50%; vertical-align: top;">
+                    <p>Kudus, ${formattedDate}</p>
+                    <p>Pembuat Rincian</p>
+                    <br/><br/><br/><br/>
+                    <p style="text-decoration: underline; font-weight: bold; margin: 0;">Joko Wahyu Setyawan</p>
+                    <p style="margin: 0;">Officer Kudus</p>
+                </td>
             </tr>
         </table>
     </div>`;
@@ -246,6 +274,9 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
             <td style="padding: 4px; border: 1px solid black; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
         </tr>`;
     }).join('');
+
+    const today = new Date();
+    const formattedDate = format(today, 'dd MMMM yyyy', { locale: idLocale });
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt;">
@@ -269,10 +300,21 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
             <p style="margin: 0; font-style: italic; font-weight: bold;">Terbilang: ${toWords(grandTotal)} Rupiah</p>
         </div>
         <br/><br/>
-        <table style="width: 100%; text-align: center;">
+        <table style="width: 100%; text-align: center; font-size: 11pt;">
             <tr>
-                <td style="width: 50%;"><p>Disetujui,</p><br/><br/><br/><br/><p style="text-decoration: underline; font-weight: bold;">(___________________)</p></td>
-                <td style="width: 50%;"><p>Yang Membuat</p><br/><br/><br/><br/><p style="text-decoration: underline; font-weight: bold;">(___________________)</p></td>
+                <td style="width: 50%; vertical-align: top;">
+                    <p>Menyetujui,</p>
+                    <br/><br/><br/><br/>
+                    <p style="text-decoration: underline; font-weight: bold; margin: 0;">Lutfi Akhmad</p>
+                    <p style="margin: 0;">HSA Kudus</p>
+                </td>
+                <td style="width: 50%; vertical-align: top;">
+                    <p>Kudus, ${formattedDate}</p>
+                    <p>Pembuat Rincian</p>
+                    <br/><br/><br/><br/>
+                    <p style="text-decoration: underline; font-weight: bold; margin: 0;">Joko Wahyu Setyawan</p>
+                    <p style="margin: 0;">Officer Kudus</p>
+                </td>
             </tr>
         </table>
     </div>`;
@@ -350,7 +392,7 @@ function ReportPreview({
                 }
                 @page {
                     size: A4 portrait;
-                    margin: 1cm;
+                    margin: 0;
                 }
                 .no-print {
                     display: none !important;
@@ -367,7 +409,7 @@ function ReportPreview({
           </div>
         </CardHeader>
         <CardContent className="flex-grow overflow-auto bg-gray-200 p-4">
-            <div id="print-section" ref={printRef} className="bg-white shadow-lg p-8 mx-auto" style={{width: '210mm', minHeight: '297mm'}} dangerouslySetInnerHTML={{ __html: htmlContent }} />
+            <div id="print-section" ref={printRef} className="bg-white shadow-lg mx-auto" style={{width: '210mm', minHeight: '297mm'}} dangerouslySetInnerHTML={{ __html: htmlContent }} />
         </CardContent>
       </Card>
     </div>
@@ -404,6 +446,7 @@ export default function ExportPage() {
     
     const [reportContent, setReportContent] = useState<string | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [reportTypeBeingGenerated, setReportTypeBeingGenerated] = useState('');
 
     const monthOptions = useMemo(() => getMonthYearOptions(notas || []), [notas]);
 
@@ -468,6 +511,7 @@ export default function ExportPage() {
 
     const handleGenerateReport = async (reportType: string, subType: string = '') => {
         setIsGenerating(true);
+        setReportTypeBeingGenerated(reportType);
         const selectedNotas = notas?.filter(n => selectedNotaIds.includes(n.id)) || [];
         if (selectedNotas.length === 0) {
             toast({
@@ -476,11 +520,11 @@ export default function ExportPage() {
                 description: "Silakan pilih setidaknya satu laporan untuk membuat rekap.",
             });
             setIsGenerating(false);
+            setReportTypeBeingGenerated('');
             return;
         }
 
         let html = '';
-        const title = `Perincian Nota ${subType}`;
 
         try {
             if (reportType === 'rekap') {
@@ -488,24 +532,54 @@ export default function ExportPage() {
                 const monthName = format(new Date(Number(year), Number(monthNum)-1, 1), 'MMMM', {locale: idLocale});
                 html = generateRekapitulasiReport(selectedNotas, monthName, year);
             } else if (reportType === 'perincian') {
-                 if (subType === 'jasa') {
-                    html = generateJasaReport(selectedNotas.filter(n => n.segmen === 'jasa'), title);
-                } else if (subType.startsWith('BBM')) {
-                    html = generateBBMReport(selectedNotas.filter(n => n.segmen === subType), title);
-                } else {
-                    html = generateMaterialReport(selectedNotas.filter(n => n.segmen === subType), title);
+                const groupedBySegment = selectedNotas.reduce((acc, nota) => {
+                    const seg = nota.segmen;
+                    if (!acc[seg]) {
+                        acc[seg] = [];
+                    }
+                    acc[seg].push(nota);
+                    return acc;
+                }, {} as Record<string, Nota[]>);
+                
+                let combinedHtml = '';
+                const sortedSegments = Object.keys(groupedBySegment).sort();
+            
+                for (const [index, segment] of sortedSegments.entries()) {
+                    const notasInSegment = groupedBySegment[segment];
+                    if (notasInSegment.length === 0) continue;
+            
+                    let segmentHtml = '';
+                    const title = `Perincian Nota ${segment}`;
+                    
+                    if (segment === 'jasa') {
+                        segmentHtml = generateJasaReport(notasInSegment, title);
+                    } else if (segment.startsWith('BBM R')) {
+                        segmentHtml = generateBBMReport(notasInSegment, title);
+                    } else { // All other material-like reports
+                        segmentHtml = generateMaterialReport(notasInSegment, title);
+                    }
+                    
+                    if (index < sortedSegments.length - 1) {
+                         combinedHtml += `<div style="page-break-after: always;">${segmentHtml}</div>`;
+                    } else {
+                         combinedHtml += segmentHtml;
+                    }
                 }
+                html = combinedHtml;
             } else if (reportType === 'eviden') {
                 html = generateEvidenReport(selectedNotas.filter(n => n.segmen === subType), `Eviden Foto - ${subType}`);
             } else {
                  toast({ variant: "destructive", title: "Tipe Laporan Tidak Didukung" });
             }
-            setReportContent(html);
+            if (html) {
+                setReportContent(html);
+            }
         } catch (error) {
             console.error("Error generating report:", error);
             toast({ variant: "destructive", title: "Gagal Membuat Laporan", description: "Terjadi kesalahan."});
         } finally {
             setIsGenerating(false);
+            setReportTypeBeingGenerated('');
         }
     };
     
@@ -691,27 +765,15 @@ export default function ExportPage() {
                         <FileArchive className="mr-2" /> Semua (1 File)
                     </Button>
                      <Button variant="outline" size="lg" onClick={() => handleGenerateReport('rekap')} disabled={isGenerating || selectedNotaIds.length === 0 || filterType !== 'monthly'}>
-                        {isGenerating ? <Loader2 className="mr-2 animate-spin"/> : <FileText className="mr-2" />} Rekap
+                        {isGenerating && reportTypeBeingGenerated === 'rekap' ? <Loader2 className="mr-2 animate-spin"/> : <FileText className="mr-2" />} Rekap
                     </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="lg" disabled={isGenerating || perincianSegments.length === 0}>
-                           {isGenerating ? <Loader2 className="mr-2 animate-spin"/> : <Printer className="mr-2" />} Perincian
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        {perincianSegments.map(seg => (
-                           <DropdownMenuItem key={seg} onClick={() => handleGenerateReport('perincian', seg)}>
-                                {seg}
-                           </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-
+                    <Button variant="outline" size="lg" onClick={() => handleGenerateReport('perincian')} disabled={isGenerating || selectedNotaIds.length === 0}>
+                        {isGenerating && reportTypeBeingGenerated === 'perincian' ? <Loader2 className="mr-2 animate-spin"/> : <Printer className="mr-2" />} Perincian
+                    </Button>
                      <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" size="lg" disabled={isGenerating || evidenSegments.length === 0}>
-                            {isGenerating ? <Loader2 className="mr-2 animate-spin"/> : <FileText className="mr-2" />} Eviden
+                            {isGenerating && reportTypeBeingGenerated === 'eviden' ? <Loader2 className="mr-2 animate-spin"/> : <FileText className="mr-2" />} Eviden
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent>
