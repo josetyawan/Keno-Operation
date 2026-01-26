@@ -79,7 +79,7 @@ const generateRekapitulasiReport = (notas: Nota[], month: string, year: string):
     const terbilangText = toWords(grandTotal);
 
     return `
-    <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; padding: 1cm;">
+    <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; padding: 1cm; width: 210mm; min-height: 297mm; background-color: white; box-shadow: 0 0 5px rgba(0,0,0,0.1);">
         <div style="text-align: center; font-weight: bold; line-height: 1.2;">
             <p style="margin: 0; font-size: 12pt; text-decoration: underline;">PERTANGGUNGAN OPERASIONAL</p>
             <p style="margin: 0; font-size: 12pt;">SERVICE AREA KUDUS</p>
@@ -151,7 +151,7 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
     const formattedDate = format(today, 'dd MMMM yyyy', { locale: idLocale });
 
     return `
-    <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt;">
+    <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; padding: 1cm; width: 210mm; min-height: 297mm; background-color: white; box-shadow: 0 0 5px rgba(0,0,0,0.1);">
         <h2 style="text-align: center; font-size: 14pt; margin: 0; text-decoration: underline;">${title.toUpperCase()}</h2>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
@@ -219,7 +219,7 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
     const formattedDate = format(today, 'dd MMMM yyyy', { locale: idLocale });
 
     return `
-    <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt;">
+    <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; padding: 1cm; width: 210mm; min-height: 297mm; background-color: white; box-shadow: 0 0 5px rgba(0,0,0,0.1);">
         <h2 style="text-align: center; font-size: 14pt; margin: 0; text-decoration: underline;">${title.toUpperCase()}</h2>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
@@ -279,7 +279,7 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
     const formattedDate = format(today, 'dd MMMM yyyy', { locale: idLocale });
 
     return `
-    <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt;">
+    <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; padding: 1cm; width: 210mm; min-height: 297mm; background-color: white; box-shadow: 0 0 5px rgba(0,0,0,0.1);">
         <h2 style="text-align: center; font-size: 14pt; margin: 0; text-decoration: underline;">${title.toUpperCase()}</h2>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
@@ -345,7 +345,7 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
     }).join('');
 
      return `
-    <div style="font-family: Arial, sans-serif; color: black; font-size: 9pt;">
+    <div style="font-family: Arial, sans-serif; color: black; font-size: 9pt; padding: 1cm; width: 210mm; min-height: 297mm; background-color: white; box-shadow: 0 0 5px rgba(0,0,0,0.1);">
         <h2 style="text-align: center; font-size: 14pt; margin: 0; text-decoration: underline;">${title.toUpperCase()}</h2>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black;">
@@ -361,10 +361,10 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
 
 // --- Preview Component ---
 function ReportPreview({
-  htmlContent,
+  pages,
   onClose,
 }: {
-  htmlContent: string;
+  pages: string[];
   onClose: () => void;
 }) {
   const printRef = useRef<HTMLDivElement>(null);
@@ -397,6 +397,9 @@ function ReportPreview({
                 .no-print {
                     display: none !important;
                 }
+                .page-break {
+                    page-break-after: always;
+                }
             }
             `}
         </style>
@@ -409,7 +412,15 @@ function ReportPreview({
           </div>
         </CardHeader>
         <CardContent className="flex-grow overflow-auto bg-gray-200 p-4">
-            <div id="print-section" ref={printRef} className="bg-white shadow-lg mx-auto" style={{width: '210mm', minHeight: '297mm'}} dangerouslySetInnerHTML={{ __html: htmlContent }} />
+            <div id="print-section" ref={printRef} className="mx-auto flex flex-col items-center gap-y-4">
+                {pages.map((pageHtml, index) => (
+                    <div 
+                        key={index}
+                        className={index < pages.length - 1 ? 'page-break' : ''}
+                        dangerouslySetInnerHTML={{ __html: pageHtml }}
+                    />
+                ))}
+            </div>
         </CardContent>
       </Card>
     </div>
@@ -444,7 +455,7 @@ export default function ExportPage() {
 
     const [selectedNotaIds, setSelectedNotaIds] = useState<string[]>([]);
     
-    const [reportContent, setReportContent] = useState<string | null>(null);
+    const [reportPages, setReportPages] = useState<string[]>([]);
     const [isGenerating, setIsGenerating] = useState(false);
     const [reportTypeBeingGenerated, setReportTypeBeingGenerated] = useState('');
 
@@ -524,13 +535,14 @@ export default function ExportPage() {
             return;
         }
 
-        let html = '';
+        const pages: string[] = [];
 
         try {
             if (reportType === 'rekap') {
                 const [year, monthNum] = selectedMonth.split('-');
                 const monthName = format(new Date(Number(year), Number(monthNum)-1, 1), 'MMMM', {locale: idLocale});
-                html = generateRekapitulasiReport(selectedNotas, monthName, year);
+                const html = generateRekapitulasiReport(selectedNotas, monthName, year);
+                pages.push(html);
             } else if (reportType === 'perincian') {
                 const groupedBySegment = selectedNotas.reduce((acc, nota) => {
                     const seg = nota.segmen;
@@ -541,10 +553,9 @@ export default function ExportPage() {
                     return acc;
                 }, {} as Record<string, Nota[]>);
                 
-                let combinedHtml = '';
                 const sortedSegments = Object.keys(groupedBySegment).sort();
             
-                for (const [index, segment] of sortedSegments.entries()) {
+                for (const segment of sortedSegments) {
                     const notasInSegment = groupedBySegment[segment];
                     if (notasInSegment.length === 0) continue;
             
@@ -558,21 +569,16 @@ export default function ExportPage() {
                     } else { // All other material-like reports
                         segmentHtml = generateMaterialReport(notasInSegment, title);
                     }
-                    
-                    if (index < sortedSegments.length - 1) {
-                         combinedHtml += `<div style="page-break-after: always;">${segmentHtml}</div>`;
-                    } else {
-                         combinedHtml += segmentHtml;
-                    }
+                    pages.push(segmentHtml);
                 }
-                html = combinedHtml;
             } else if (reportType === 'eviden') {
-                html = generateEvidenReport(selectedNotas.filter(n => n.segmen === subType), `Eviden Foto - ${subType}`);
+                const html = generateEvidenReport(selectedNotas.filter(n => n.segmen === subType), `Eviden Foto - ${subType}`);
+                pages.push(html);
             } else {
                  toast({ variant: "destructive", title: "Tipe Laporan Tidak Didukung" });
             }
-            if (html) {
-                setReportContent(html);
+            if (pages.length > 0) {
+                setReportPages(pages);
             }
         } catch (error) {
             console.error("Error generating report:", error);
@@ -787,7 +793,7 @@ export default function ExportPage() {
                 </div>
             </div>
         </div>
-        {reportContent && <ReportPreview htmlContent={reportContent} onClose={() => setReportContent(null)} />}
+        {reportPages.length > 0 && <ReportPreview pages={reportPages} onClose={() => setReportPages([])} />}
         </>
     );
 }
