@@ -50,8 +50,10 @@ export default function RekapPage() {
 
     useEffect(() => {
         // Set initial date on client-side to avoid hydration mismatch
-        setVerificationDate(new Date());
-    }, []);
+        if (!verificationDate) {
+            setVerificationDate(new Date());
+        }
+    }, [verificationDate]);
 
     const notasQuery = useMemoFirebase(() => {
         if (!verificationDate) return null;
@@ -67,7 +69,8 @@ export default function RekapPage() {
     const { data: notasFromQuery, isLoading: isNotasLoading } = useCollection<Nota>(notasQuery);
 
     const notas = useMemo(() => {
-        if (!notasFromQuery) return null;
+        if (!notasFromQuery) return [];
+        // Also filter by status client-side to be safe
         return notasFromQuery.filter(nota => nota.status === 'verified');
     }, [notasFromQuery]);
     
@@ -113,6 +116,40 @@ export default function RekapPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [notas, users]);
 
+    const handleLinkAjaPayment = async () => {
+        if (rekapData.length === 0 || grandTotal <= 0) {
+            toast({ variant: 'destructive', title: 'Tidak ada data pembayaran', description: 'Pastikan ada rekap dengan total lebih dari nol.' });
+            return;
+        }
+        setIsPaying(true);
+        try {
+            // Logika saat ini adalah membuat satu pembayaran untuk total keseluruhan.
+            // Anda mungkin perlu logika yang lebih kompleks untuk membayar setiap individu.
+            const uniqueInvoiceId = `REKAP-${format(new Date(), 'yyyyMMdd-HHmmss')}`;
+
+            const result = await sendLinkAjaPayment({ 
+                amount: grandTotal,
+                description: `Pembayaran rekap tanggal ${verificationDate ? format(verificationDate, 'dd/MM/yyyy') : 'N/A'}`,
+                invoiceId: uniqueInvoiceId,
+            });
+
+            if (result.success) {
+                toast({ title: 'Pembayaran Diproses', description: result.message });
+                 if (result.redirectUrl) {
+                    // Jika API mengembalikan URL, arahkan pengguna ke sana
+                    window.open(result.redirectUrl, '_blank');
+                }
+            } else {
+                throw new Error(result.message || 'Pembayaran LinkAja/Finpay gagal karena alasan yang tidak diketahui.');
+            }
+        } catch (error: any) {
+            console.error('LinkAja/Finpay payment error:', error);
+            toast({ variant: 'destructive', title: 'Gagal Membayar', description: error.message });
+        } finally {
+            setIsPaying(false);
+        }
+    }
+
     const handleSendToTelegram = async () => {
         if (rekapData.length === 0) {
             toast({ variant: 'destructive', title: 'Tidak ada data', description: 'Buat rekap terlebih dahulu.' });
@@ -137,38 +174,6 @@ export default function RekapPage() {
             setIsSending(false);
         }
     };
-
-    const handleLinkAjaPayment = async () => {
-        if (rekapData.length === 0 || grandTotal <= 0) {
-            toast({ variant: 'destructive', title: 'Tidak ada data pembayaran', description: 'Pastikan ada rekap dengan total lebih dari nol.' });
-            return;
-        }
-        setIsPaying(true);
-        try {
-            // Logika pembayaran di sini. Untuk saat ini, kita akan membuat satu pembayaran
-            // untuk total keseluruhan. Anda mungkin perlu logika yang lebih kompleks
-            // untuk membayar setiap individu.
-            // Di sini kita asumsikan membayar ke satu rekening tujuan, misal rekening perusahaan.
-            const result = await sendLinkAjaPayment({ 
-                amount: grandTotal,
-                description: `Pembayaran rekap tanggal ${verificationDate ? format(verificationDate, 'dd/MM/yyyy') : 'N/A'}`,
-                // Anda perlu menentukan rekening penerima di sini.
-                // Ini bisa berupa variabel statis atau diambil dari suatu tempat.
-                recipientAccount: 'NOMOR_REKENING_PENERIMA_UTAMA' 
-            });
-
-            if (result.success) {
-                toast({ title: 'Pembayaran Diproses', description: result.message });
-            } else {
-                throw new Error(result.message || 'Pembayaran LinkAja gagal karena alasan yang tidak diketahui.');
-            }
-        } catch (error: any) {
-            console.error('LinkAja payment error:', error);
-            toast({ variant: 'destructive', title: 'Gagal Membayar', description: error.message });
-        } finally {
-            setIsPaying(false);
-        }
-    }
     
     const isLoading = isNotasLoading || isUsersLoading;
 
@@ -263,7 +268,7 @@ export default function RekapPage() {
                             </Button>
                              <Button onClick={handleLinkAjaPayment} disabled={isPaying} variant="destructive">
                                 {isPaying ? <Loader2 className="mr-2 animate-spin"/> : <Wallet className="mr-2" />}
-                                {isPaying ? 'Membayar...' : 'Bayar via LinkAja'}
+                                {isPaying ? 'Membayar...' : 'Bayar via Finpay'}
                             </Button>
                         </div>
                     </CardFooter>

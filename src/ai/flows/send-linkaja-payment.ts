@@ -1,23 +1,28 @@
 'use server';
 
 /**
- * @fileOverview This file defines a Genkit flow for initiating a payment via a hypothetical LinkAja API.
+ * @fileOverview This file defines a Genkit flow for initiating a payment via the Finpay API (for LinkAja).
+ * IMPORTANT: The request body and authentication headers are based on common payment gateway patterns.
+ * You MUST verify and adjust them according to the official Finpay API documentation.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
-// Define Zod schemas for input and output
+// Define Zod schemas for input and output.
+// The recipient is often configured on the Finpay/merchant dashboard, so it might not be needed here.
 const SendLinkAjaPaymentInputSchema = z.object({
   amount: z.number().positive('Amount must be positive'),
   description: z.string(),
-  recipientAccount: z.string().describe("The recipient's account number or ID."),
+  // A unique ID for this specific transaction.
+  invoiceId: z.string(),
 });
 
 const SendLinkAjaPaymentOutputSchema = z.object({
   success: z.boolean(),
   message: z.string(),
   transactionId: z.string().optional(),
+  redirectUrl: z.string().url().optional(), // Payment gateways sometimes return a URL to complete payment
 });
 
 export type SendLinkAjaPaymentInput = z.infer<typeof SendLinkAjaPaymentInputSchema>;
@@ -37,64 +42,77 @@ const sendLinkAjaPaymentFlow = ai.defineFlow(
   },
   async (input) => {
     const { 
-        LINKAJA_API_KEY, 
-        LINKAJA_SECRET_KEY, 
+        LINKAJA_MERCHANT_ID,
+        LINKAJA_MERCHANT_KEY,
         LINKAJA_API_ENDPOINT,
         LINKAJA_ACCOUNT_NUMBER 
     } = process.env;
 
-    if (!LINKAJA_API_KEY || !LINKAJA_SECRET_KEY || !LINKAJA_API_ENDPOINT || LINKAJA_API_ENDPOINT.includes('GANTI_DENGAN') || !LINKAJA_ACCOUNT_NUMBER || LINKAJA_ACCOUNT_NUMBER.includes('GANTI_DENGAN')) {
-      const errorMsg = 'Kredensial atau konfigurasi API LinkAja belum lengkap di file .env. Mohon isi LINKAJA_API_ENDPOINT dan LINKAJA_ACCOUNT_NUMBER.';
+    if (!LINKAJA_MERCHANT_ID || !LINKAJA_MERCHANT_KEY || !LINKAJA_API_ENDPOINT || !LINKAJA_ACCOUNT_NUMBER) {
+      const errorMsg = 'Kredensial atau konfigurasi API LinkAja/Finpay belum lengkap di file .env.';
       console.error(errorMsg);
       return { success: false, message: errorMsg };
     }
     
-    // Ini adalah contoh payload. Anda HARUS menyesuaikannya dengan dokumentasi API LinkAja yang sebenarnya.
+    // --- PENTING: SESUAIKAN PAYLOAD INI ---
+    // Struktur body ini adalah contoh umum untuk API billing.
+    // Anda HARUS menyesuaikannya dengan dokumentasi API Finpay yang sebenarnya.
     const requestBody = {
-      source_account: LINKAJA_ACCOUNT_NUMBER,
-      destination_account: input.recipientAccount,
+      merchant_id: LINKAJA_MERCHANT_ID,
+      invoice: input.invoiceId,
       amount: input.amount,
       description: input.description,
-      transaction_id: `TXN-${Date.now()}` // ID transaksi unik
+      source_of_funds: "linkaja", // Parameter spesifik untuk e-money
+      // Finpay mungkin memerlukan info pelanggan:
+      // customer_name: 'Nama Pelanggan',
+      // customer_phone: '08123456789',
+      // customer_email: 'pelanggan@email.com',
+    };
+
+    // --- PENTING: SESUAIKAN HEADER OTENTIKASI INI ---
+    // Skema otentikasi Finpay kemungkinan besar memerlukan 'signature' yang di-hash
+    // dari beberapa bagian payload + merchant key.
+    // Contoh: signature = sha256(merchant_id + invoice_id + amount + merchant_key)
+    // Kode di bawah ini adalah placeholder sederhana.
+    const headers = {
+        'Content-Type': 'application/json',
+        'X-MERCHANT-ID': LINKAJA_MERCHANT_ID,
+        // 'X-SIGNATURE': calculatedSignature, // Anda perlu menghitung signature ini
+        'Authorization': `Bearer ${LINKAJA_MERCHANT_KEY}` // Ini adalah tebakan, bisa jadi salah
     };
 
     try {
-      console.log('Mengirim permintaan ke LinkAja API Endpoint:', LINKAJA_API_ENDPOINT);
+      console.log('Mengirim permintaan ke Finpay API Endpoint:', LINKAJA_API_ENDPOINT);
+      console.log('Headers:', JSON.stringify(headers, null, 2));
       console.log('Payload:', JSON.stringify(requestBody, null, 2));
 
       const response = await fetch(LINKAJA_API_ENDPOINT, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // Skema otentikasi ini adalah contoh. LinkAja mungkin menggunakan 'Authorization: Bearer <token>' atau skema lain.
-          'X-API-KEY': LINKAJA_API_KEY,
-          'X-SECRET-KEY': LINKAJA_SECRET_KEY, 
-        },
+        headers: headers,
         body: JSON.stringify(requestBody),
       });
 
       const responseData = await response.json();
 
       if (!response.ok) {
-        // Jika API mengembalikan error, tangkap dan teruskan pesannya.
-        const errorMessage = responseData.message || `API returned status ${response.status}`;
-        console.error('LinkAja API Error:', errorMessage, responseData);
+        const errorMessage = responseData.message || responseData.error_description || `API returned status ${response.status}`;
+        console.error('Finpay API Error:', errorMessage, responseData);
         return { success: false, message: `Gagal: ${errorMessage}` };
       }
 
-      // Jika berhasil
-      console.log('LinkAja API Success:', responseData);
+      console.log('Finpay API Success:', responseData);
       return { 
         success: true, 
-        message: 'Pembayaran berhasil diproses oleh LinkAja.',
-        transactionId: responseData.transactionId || requestBody.transaction_id,
+        message: responseData.message || 'Pembayaran berhasil diproses oleh Finpay.',
+        transactionId: responseData.transaction_id || input.invoiceId,
+        redirectUrl: responseData.redirect_url,
       };
 
     } catch (error: any) {
-      console.error('Gagal menghubungi LinkAja API:', error);
+      console.error('Gagal menghubungi Finpay API:', error);
       return {
         success: false,
-        message: `Terjadi kesalahan jaringan: ${error.message}`,
+        message: `Terjadi kesalahan jaringan atau koneksi ke Finpay: ${error.message}`,
       };
     }
   }
