@@ -462,7 +462,7 @@ export default function ExportPage() {
     const firestore = useFirestore();
     const { toast } = useToast();
     const notasQuery = useMemoFirebase(() => {
-        return query(collection(firestore, 'notas'), orderBy('tanggal', 'desc'));
+        return query(collection(firestore, 'notas'), orderBy('dateCreated', 'desc'));
     }, [firestore]);
 
     const { data: notas, isLoading } = useCollection<Nota>(notasQuery);
@@ -575,7 +575,7 @@ export default function ExportPage() {
                 const sortedSegments = Object.keys(groupedBySegment).sort();
 
                 for (const segment of sortedSegments) {
-                    const notasInSegment = groupedBySegment[segment];
+                    const notasInSegment = groupedBySegment[segment].sort((a,b) => a.tanggal.toDate().getTime() - b.tanggal.toDate().getTime());
                     if (notasInSegment.length === 0) continue;
 
                     let segmentHtml = '';
@@ -591,7 +591,10 @@ export default function ExportPage() {
                     pages.push(segmentHtml);
                 }
             } else if (reportType === 'eviden') {
-                const html = generateEvidenReport(selectedNotas.filter(n => n.segmen === subType), `Eviden Foto - ${subType}`);
+                 const notasInSegment = selectedNotas
+                    .filter(n => n.segmen === subType)
+                    .sort((a,b) => a.tanggal.toDate().getTime() - b.tanggal.toDate().getTime());
+                const html = generateEvidenReport(notasInSegment, `Eviden Foto - ${subType}`);
                 pages.push(html);
             } else {
                  toast({ variant: "destructive", title: "Tipe Laporan Tidak Didukung" });
