@@ -124,7 +124,6 @@ export default function RekapPage() {
         setIsPaying(true);
         try {
             // Logika saat ini adalah membuat satu pembayaran untuk total keseluruhan.
-            // Anda mungkin perlu logika yang lebih kompleks untuk membayar setiap individu.
             const uniqueInvoiceId = `REKAP-${format(new Date(), 'yyyyMMdd-HHmmss')}`;
 
             const result = await sendLinkAjaPayment({ 
@@ -134,9 +133,12 @@ export default function RekapPage() {
             });
 
             if (result.success) {
-                toast({ title: 'Pembayaran Diproses', description: result.message });
+                toast({ 
+                    title: 'Permintaan Pembayaran Diproses', 
+                    description: result.redirectUrl ? 'Anda akan diarahkan untuk konfirmasi.' : (result.message || 'Berhasil.')
+                });
                  if (result.redirectUrl) {
-                    // Jika API mengembalikan URL, arahkan pengguna ke sana
+                    // Jika API mengembalikan URL, arahkan pengguna ke sana untuk konfirmasi
                     window.open(result.redirectUrl, '_blank');
                 }
             } else {
