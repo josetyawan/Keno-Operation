@@ -441,20 +441,10 @@ function ReportPreview({
                     visibility: visible;
                 }
                 #print-section {
-                    position: absolute;
-                    left: 0;
-                    top: 0;
-                    width: 100%;
+                    position: static;
                 }
                 .report-page-container {
                     page-break-after: always;
-                    page-break-inside: avoid;
-                    width: 210mm;
-                    height: 297mm;
-                    margin: 0;
-                    padding: 0;
-                    overflow: hidden;
-                    box-shadow: none; /* remove shadow for print */
                 }
                  .report-page-container:last-child {
                     page-break-after: auto;
@@ -462,6 +452,9 @@ function ReportPreview({
                 @page {
                     size: A4 portrait;
                     margin: 0;
+                }
+                .no-print {
+                    display: none;
                 }
             }
             `}
