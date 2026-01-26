@@ -526,6 +526,14 @@ export default function ExportPage() {
     const [isGenerating, setIsGenerating] = useState(false);
     const [reportTypeBeingGenerated, setReportTypeBeingGenerated] = useState('');
 
+    const handleFilterChange = (value: string) => {
+        setFilterType(value);
+        // Automatically set today's date when switching to 'verified' tab if no date is selected
+        if (value === 'verified' && !verifiedDate) {
+            setVerifiedDate(new Date());
+        }
+    };
+
     const monthOptions = useMemo(() => getMonthYearOptions(notas || []), [notas]);
 
     useEffect(() => {
@@ -776,7 +784,7 @@ export default function ExportPage() {
                             </div>
                         </CardHeader>
                         <CardContent>
-                            <Tabs value={filterType} onValueChange={setFilterType} className="w-full">
+                            <Tabs value={filterType} onValueChange={handleFilterChange} className="w-full">
                                 <TabsList className="grid w-full grid-cols-3 mb-4">
                                     <TabsTrigger value="monthly">Per Bulan</TabsTrigger>
                                     <TabsTrigger value="range">Rentang Tanggal</TabsTrigger>
