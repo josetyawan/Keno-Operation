@@ -152,8 +152,9 @@ export default function ProfilePage() {
               </div>
 
               <div className="grid gap-2">
-                  <Label htmlFor="phone">No. HP</Label>
-                  <Input id="phone" value={phone} onChange={e => setPhone(e.target.value)} placeholder="e.g. 08123456789" />
+                  <Label htmlFor="phone">No. Pembayaran</Label>
+                  <Input id="phone" value={phone} onChange={e => setPhone(e.target.value)} placeholder="e.g., 0812... atau BCA 123..." />
+                  <p className="text-sm text-muted-foreground">Bisa diisi no e-wallet (GoPay, OVO, dll) atau No. Rekening (diawali nama bank).</p>
               </div>
               <div className="grid gap-2">
                   <Label htmlFor="email">Email</Label>

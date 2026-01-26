@@ -163,7 +163,7 @@ export default function AdminUsersPage() {
               <TableRow>
                 <TableHead className="w-[250px]">Email</TableHead>
                 <TableHead>NIK</TableHead>
-                <TableHead>No. HP</TableHead>
+                <TableHead>No. Pembayaran</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Peran</TableHead>
                 <TableHead className="text-right">

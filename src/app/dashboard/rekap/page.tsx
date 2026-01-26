@@ -90,7 +90,7 @@ export default function RekapPage() {
         const formattedData: RekapDataItem[] = notas.map(nota => {
             const user = userMap.get(nota.userId);
             return {
-                phone: user?.phone || 'No-HP',
+                phone: user?.phone || 'No-Pembayaran',
                 name: (nota.namaPic || '').replace(/\s/g, ''),
                 segmen: (nota.segmen || '').replace(/\s/g, ''),
                 tanggal: format(nota.tanggal.toDate(), 'dd/MM/yy'),

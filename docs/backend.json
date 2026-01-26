@@ -33,7 +33,7 @@
         },
         "phone": {
           "type": "string",
-          "description": "User's phone number."
+          "description": "Nomor pembayaran pengguna (e-wallet atau rekening bank)."
         },
         "role": {
           "type": "string",
