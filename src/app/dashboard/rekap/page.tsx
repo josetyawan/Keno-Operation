@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import {
   Card,
@@ -48,11 +48,14 @@ type RekapItem = {
   jumlah: number;
 };
 
-// Type for the new "Jasa" detail report
+// Type for the "Jasa" detail report
 type JasaRekapItem = Nota & {
   dpp: number;
   pph: number;
 };
+
+// Type for the BBM detail report
+type BbmRekapItem = Nota;
 
 
 export default function RekapPage() {
@@ -69,6 +72,8 @@ export default function RekapPage() {
   const [summaryTotal, setSummaryTotal] = useState<number>(0);
   const [jasaData, setJasaData] = useState<JasaRekapItem[] | null>(null);
   const [jasaTotal, setJasaTotal] = useState<number>(0);
+  const [bbmData, setBbmData] = useState<BbmRekapItem[] | null>(null);
+  const [bbmTotal, setBbmTotal] = useState<number>(0);
   
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerated, setIsGenerated] = useState(false);
@@ -99,8 +104,10 @@ export default function RekapPage() {
     setIsGenerated(false);
     setSummaryData(null);
     setJasaData(null);
+    setBbmData(null);
     setSummaryTotal(0);
     setJasaTotal(0);
+    setBbmTotal(0);
 
     if (areNotasLoading) return; // Should be handled by disabled button, but as a safeguard.
     
@@ -156,6 +163,24 @@ export default function RekapPage() {
             toast({
                 title: 'Tidak Ada Data',
                 description: 'Tidak ada laporan "Jasa" yang ditemukan pada rentang tanggal yang dipilih.',
+            });
+        }
+    } else if (notas && reportType === 'bbm') {
+        const bbmSegments = ['BBM R2', 'BBM R4 Harian', 'BBM R4 Turlap', 'BBM R4 UT'];
+        const filteredBbmNotas = notas
+            .filter(nota => bbmSegments.includes(nota.segmen))
+            .sort((a, b) => a.tanggal.toDate().getTime() - b.tanggal.toDate().getTime());
+        
+        const totalAmount = filteredBbmNotas.reduce((sum, item) => sum + item.nominal, 0);
+
+        setBbmData(filteredBbmNotas);
+        setBbmTotal(totalAmount);
+        setIsGenerated(true);
+
+        if (filteredBbmNotas.length === 0) {
+            toast({
+                title: 'Tidak Ada Data',
+                description: 'Tidak ada laporan "BBM" yang ditemukan pada rentang tanggal yang dipilih.',
             });
         }
     } else {
@@ -301,6 +326,78 @@ export default function RekapPage() {
                 </div>
             </div>
           );
+      } else if (reportType === 'bbm' && bbmData) {
+          reportContent = (
+            <div className="max-w-4xl mx-auto font-serif text-black text-xs">
+                <h1 className="font-bold text-base text-center mb-6">Perincian Nota BBM</h1>
+                <Table className="border-2 border-black mb-4">
+                    <TableHeader>
+                        <TableRow className="border-b-2 border-black bg-yellow-300">
+                            <TableHead className="border-r-2 border-black w-[40px] text-black font-bold text-center">NO</TableHead>
+                            <TableHead className="border-r-2 border-black w-[100px] text-black font-bold text-center">TANGGAL</TableHead>
+                            <TableHead className="border-r-2 border-black text-black font-bold text-center">KETERANGAN</TableHead>
+                            <TableHead className="border-r-2 border-black text-black font-bold text-center">NO PLAT</TableHead>
+                            <TableHead className="border-r-2 border-black w-[80px] text-black font-bold text-center">KM AWAL</TableHead>
+                            <TableHead className="border-r-2 border-black w-[80px] text-black font-bold text-center">KM AKHIR</TableHead>
+                            <TableHead className="border-r-2 border-black text-black font-bold text-center">URAIAN PEKERJAAN</TableHead>
+                            <TableHead className="border-r-2 border-black w-[100px] text-black font-bold text-center">JUMLAH</TableHead>
+                            <TableHead className="w-[120px] text-black font-bold text-center">NAMA</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                     <TableBody>
+                        {(bbmData && bbmData.length > 0) ? (
+                            bbmData.map((item, index) => (
+                                <React.Fragment key={item.id}>
+                                <TableRow className="border-b-0">
+                                    <TableCell className="border-r-2 border-black text-center align-top">{index + 1}</TableCell>
+                                    <TableCell className="border-r-2 border-black text-center align-top">{format(item.tanggal.toDate(), 'dd/MM/yyyy')}</TableCell>
+                                    <TableCell className="border-r-2 border-black px-2 align-top">{item.segmen}</TableCell>
+                                    <TableCell className="border-r-2 border-black px-2 align-top">{item.noPlatKendaraan}</TableCell>
+                                    <TableCell className="border-r-2 border-black text-center align-top">{item.kmAwal}</TableCell>
+                                    <TableCell className="border-r-2 border-black text-center align-top">{item.kmAkhir}</TableCell>
+                                    <TableCell className="border-r-2 border-black px-2 align-top">{item.keterangan}</TableCell>
+                                    <TableCell className="border-r-2 border-black text-right align-top px-2">Rp{item.nominal.toLocaleString('id-ID')}</TableCell>
+                                    <TableCell className="px-2 align-top">{item.namaPic}</TableCell>
+                                </TableRow>
+                                <TableRow className="border-b-2 border-black">
+                                     <TableCell colSpan={7} className="border-r-2 border-black text-center font-bold">JUMLAH</TableCell>
+                                     <TableCell className="text-right font-bold px-2 border-r-2 border-black">Rp{item.nominal.toLocaleString('id-ID')}</TableCell>
+                                     <TableCell></TableCell>
+                                </TableRow>
+                                </React.Fragment>
+                            ))
+                        ) : (
+                            <TableRow className="border-b border-black">
+                                <TableCell colSpan={9} className="text-center h-24">Tidak ada data untuk ditampilkan.</TableCell>
+                            </TableRow>
+                        )}
+                    </TableBody>
+                    <UiTableFooter>
+                       <TableRow className="bg-yellow-300 border-t-2 border-black">
+                            <TableCell colSpan={7} className="text-center font-bold text-black">TOTAL</TableCell>
+                            <TableCell className="text-right font-bold text-black px-2 border-r-2 border-black">Rp{bbmTotal.toLocaleString('id-ID')}</TableCell>
+                            <TableCell></TableCell>
+                        </TableRow>
+                    </UiTableFooter>
+                </Table>
+                
+                 <div className="flex justify-between mt-16">
+                    <div className="text-center">
+                        <p>Menyetujui,</p>
+                        <div className="h-20"></div>
+                        <p className="underline">Lutfi Akhmad</p>
+                        <p>HSA Kudus</p>
+                    </div>
+                    <div className="text-center">
+                        <p>Kudus, {format(today, 'dd MMMM yyyy')}</p>
+                        <p>Pembuat Rincian</p>
+                        <div className="h-20"></div>
+                        <p className="underline">Joko Wahyu Setyawan</p>
+                        <p>Officer Kudus</p>
+                    </div>
+                </div>
+            </div>
+          );
       } else {
           // Fallback for "no data"
           reportContent = (
@@ -373,6 +470,7 @@ export default function RekapPage() {
                         <SelectContent>
                             <SelectItem value="summary">Rekapitulasi (Ringkasan)</SelectItem>
                             <SelectItem value="jasa">Perincian Nota Jasa</SelectItem>
+                            <SelectItem value="bbm">Perincian Nota BBM</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
@@ -432,12 +530,10 @@ export default function RekapPage() {
                 {reportContent}
             </CardContent>
             <CardFooter className="print:hidden justify-end">
-              <Button onClick={handlePrint} disabled={!reportContent || (reportType === 'jasa' && !jasaData?.length) || (reportType === 'summary' && !summaryData?.length)}><Printer className="mr-2 h-4 w-4" /> Cetak Laporan</Button>
+              <Button onClick={handlePrint} disabled={!reportContent || (reportType === 'jasa' && !jasaData?.length) || (reportType === 'summary' && !summaryData?.length) || (reportType === 'bbm' && !bbmData?.length)}><Printer className="mr-2 h-4 w-4" /> Cetak Laporan</Button>
             </CardFooter>
           </Card>
       )}
     </>
   );
 }
-
-    
