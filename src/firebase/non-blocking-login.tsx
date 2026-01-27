@@ -19,6 +19,7 @@ async function createUserDocument(firestore: Firestore, user: User, details: Sig
     // The displayName can be set by the user later in their profile.
     const userData = {
         email: user.email, // Use the email from the created Auth user for consistency.
+        displayName: user.email, // Default displayName to email
         role: 'user', // Required by rule
         registrationStatus: 'pending', // Required by rule
     };

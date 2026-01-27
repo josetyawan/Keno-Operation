@@ -90,7 +90,10 @@ service cloud.firestore {
       // making it more robust against minor data mismatches during signup.
       allow create: if request.auth.uid == userId &&
                       request.resource.data.role == 'user' &&
-                      request.resource.data.registrationStatus == 'pending';
+                      request.resource.data.registrationStatus == 'pending' &&
+                      request.resource.data.email == request.auth.token.email &&
+                      request.resource.data.keys().hasAll(['email', 'displayName', 'role', 'registrationStatus']) &&
+                      request.resource.data.size() == 4;
       
       // READ (OWNER): Any authenticated user can read their OWN document.
       // This is CRITICAL for isAdmin() to work without causing a recursive loop.
@@ -104,7 +107,7 @@ service cloud.firestore {
       allow update: if isOwner(userId) || isAdmin();
       
       // DELETION: Deleting users is a server-side or console action, not allowed from the client.
-      allow delete: if false;
+      allow delete: if isAdmin() && request.auth.uid != userId;
     }
 
     /**
