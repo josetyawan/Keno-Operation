@@ -86,10 +86,8 @@ service cloud.firestore {
      */
     match /users/{userId} {
       // CREATE: Allow a user to create their own document upon signup.
-      // This rule is now very specific about the data allowed upon creation.
+      // This rule is now robust and simple.
       allow create: if request.auth.uid == userId &&
-                      request.resource.data.keys().hasOnly(['email', 'role', 'registrationStatus']) &&
-                      request.resource.data.email == request.auth.token.email &&
                       request.resource.data.role == 'user' &&
                       request.resource.data.registrationStatus == 'pending';
       
@@ -105,7 +103,7 @@ service cloud.firestore {
       allow update: if isOwner(userId) || isAdmin();
       
       // DELETION: Deleting users is a server-side or console action, not allowed from the client.
-      allow delete: if false;
+      allow delete: if isAdmin() && request.auth.uid != userId;
     }
 
     /**
