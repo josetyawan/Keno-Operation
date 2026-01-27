@@ -5,16 +5,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AuthLayout from '@/components/auth-layout';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth, useUser, signUpWithEmail, useFirestore } from '@/firebase';
+import { useAuth, signUpWithEmail, useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { FirebaseError } from 'firebase/app';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
-import { deleteUser } from 'firebase/auth';
+import { deleteUser, type User } from 'firebase/auth';
 
 export default function SignupPage() {
   const [email, setEmail] = useState('');
@@ -25,28 +25,19 @@ export default function SignupPage() {
   const router = useRouter();
   const auth = useAuth();
   const firestore = useFirestore();
-  const { user, isUserLoading } = useUser();
   const { toast } = useToast();
-
-  useEffect(() => {
-    if (!isUserLoading && user) {
-      router.push('/dashboard');
-    }
-  }, [user, isUserLoading, router]);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setSignupError(null);
-    if (!email || !password) {
-        setSignupError('Mohon isi Email dan Password.');
-        return;
-    }
     setIsLoading(true);
+
+    let authUser: User | undefined; // Define here to access in catch block
 
     try {
       // Step 1: Create the authentication user
       const userCredential = await signUpWithEmail(auth, password, { email });
-      const authUser = userCredential.user;
+      authUser = userCredential.user;
 
       // Step 2: Directly create the user document in Firestore
       const newUserDocRef = doc(firestore, 'users', authUser.uid);
@@ -62,10 +53,22 @@ export default function SignupPage() {
           phone: '',
       };
       
+      // Await the database write to ensure it completes before proceeding
       await setDoc(newUserDocRef, newUserProfileData);
 
-      // If both succeed, the useEffect will handle the redirect to the dashboard
-      // where the user will see the pending approval message.
+      // Step 3: If both succeed, sign the user out to prevent auto-login to a pending account
+      if (auth.currentUser) {
+        await auth.signOut();
+      }
+
+      // Step 4: Show a clear success message and redirect to the login page
+      toast({
+        title: 'Pendaftaran Berhasil!',
+        description: 'Akun Anda telah dibuat. Silakan login setelah akun Anda disetujui oleh admin.',
+        duration: 9000,
+      });
+
+      router.push('/login');
 
     } catch (error: any) {
         let errorMessage = 'Terjadi kesalahan yang tidak diketahui.';
@@ -81,7 +84,6 @@ export default function SignupPage() {
                     errorMessage = 'Format email tidak valid.';
                     break;
                 default:
-                    // This will now catch Firestore errors too, like 'permission-denied'
                     errorMessage = `Pendaftaran gagal: ${error.message}`;
                     break;
             }
@@ -89,9 +91,9 @@ export default function SignupPage() {
             errorMessage = `Pendaftaran gagal: ${error.message}`;
         }
 
-        // Cleanup: If doc creation fails, delete the auth user so they can try again.
-        if (auth.currentUser) {
-            await deleteUser(auth.currentUser).catch(delErr => {
+        // Cleanup: If any step fails, delete the created auth user so they can try again.
+        if (authUser) {
+            await deleteUser(authUser).catch(delErr => {
                 console.error("Cleanup failed: Could not delete orphaned auth user.", delErr);
                 errorMessage += " Gagal melakukan pembersihan otomatis, harap hubungi admin."
             });
@@ -127,7 +129,7 @@ export default function SignupPage() {
             <Label htmlFor="password">Password *</Label>
             <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
-          <Button type="submit" className="w-full" disabled={isUserLoading || isLoading}>
+          <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? 'Mendaftarkan...' : 'Daftar Akun'}
           </Button>
         </div>
