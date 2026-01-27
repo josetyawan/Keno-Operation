@@ -17,11 +17,10 @@ interface SignUpDetails {
 async function createUserDocument(firestore: Firestore, user: User, details: SignUpDetails) {
     const userDocRef = doc(firestore, 'users', user.uid);
     
-    // Create a minimal user document that satisfies security rules and basic app functionality.
     const userData = {
-        email: user.email, // Use the email from the created Auth user for consistency.
-        role: 'user', // Required by rule
-        registrationStatus: 'pending', // Required by rule
+        email: user.email,
+        role: 'user',
+        registrationStatus: 'pending',
     };
 
     await setDoc(userDocRef, userData);
@@ -33,23 +32,26 @@ async function createUserDocument(firestore: Firestore, user: User, details: Sig
 export async function signUpWithEmail(auth: Auth, firestore: Firestore, password: string, details: SignUpDetails): Promise<UserCredential> {
   const userCredential = await createUserWithEmailAndPassword(auth, details.email, password);
   try {
-    // Creates the minimal user document.
     await createUserDocument(firestore, userCredential.user, details);
   } catch (firestoreError: any) {
-    console.error("--- KESALAHAN KRITIS: Gagal membuat dokumen pengguna di Firestore ---");
-    console.error("Pengguna Auth berhasil dibuat dengan UID:", userCredential.user.uid);
-    console.error("Namun, penulisan ke path 'users/" + userCredential.user.uid + "' GAGAL.");
-    console.error("Error Asli dari Firestore:", firestoreError.message);
-    console.error("Ini hampir pasti disebabkan oleh Aturan Keamanan Firestore yang menolak penulisan. Pastikan aturan telah diterapkan dengan benar di Firebase Console.");
-    console.error("------------------------------------------------------------------");
+    // Log the detailed error to the console for debugging
+    console.error("---Firestore Document Creation Failed---");
+    console.error("Auth User UID:", userCredential.user.uid);
+    console.error("Firestore Path:", 'users/' + userCredential.user.uid);
+    console.error("Original Firestore Error:", firestoreError);
     
-    // Hapus pengguna auth jika pembuatan dokumen gagal untuk menghindari akun yatim piatu.
-    await userCredential.user.delete();
+    // Attempt to delete the orphaned auth user
+    try {
+        await userCredential.user.delete();
+        console.log("Orphaned auth user successfully deleted.");
+    } catch (deleteError) {
+        console.error("CRITICAL: Failed to delete orphaned auth user. UID:", userCredential.user.uid, deleteError);
+    }
     
-    // Buat error yang lebih informatif untuk dilempar kembali ke UI
+    // Create a user-friendly and informative error to throw to the UI
     const customError = new FirebaseError(
         'auth/user-document-creation-failed',
-        `Gagal membuat profil pengguna di database. Ini kemungkinan besar disebabkan oleh masalah Aturan Keamanan Firestore. Error: ${firestoreError.message}`
+        `Gagal menyimpan data pengguna ke database setelah otentikasi berhasil. Ini hampir selalu disebabkan oleh Aturan Keamanan Firestore yang salah. Pesan asli: ${firestoreError.message}`
     );
     throw customError;
   }

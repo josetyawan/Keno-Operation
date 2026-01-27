@@ -17,7 +17,7 @@ import { AlertCircle } from 'lucide-react';
 export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [signupError, setSignupError] = useState<string | null>(null); // New state for error message
+  const [signupError, setSignupError] = useState<string | null>(null);
   
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -34,7 +34,7 @@ export default function SignupPage() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSignupError(null); // Reset error on new attempt
+    setSignupError(null);
     if (!email || !password) {
         setSignupError('Mohon isi Email dan Password.');
         return;
@@ -47,45 +47,12 @@ export default function SignupPage() {
         description: 'Akun Anda sedang menunggu persetujuan dari admin. Anda akan dialihkan ke halaman login.',
       });
       router.push('/login');
-    } catch (error) {
-        let title = 'Pendaftaran Gagal';
-        let description = 'Terjadi kesalahan. Silakan coba lagi.';
-        if (error instanceof FirebaseError) {
-          switch (error.code) {
-            case 'auth/email-already-in-use':
-              title = 'Email Sudah Terdaftar';
-              description = 'Email ini sudah digunakan. Silakan login.';
-              // Special case for toast with action
-              toast({
-                  variant: 'destructive',
-                  title: title,
-                  description: description,
-                  action: ( <ToastAction altText="Login"><Link href="/login">Login</Link></ToastAction> ),
-              });
-              setIsLoading(false);
-              return; // Exit early
-            case 'auth/weak-password':
-              title = 'Password Lemah';
-              description = 'Password harus terdiri dari minimal 6 karakter.';
-              break;
-            case 'auth/invalid-email':
-              title = 'Email Tidak Valid';
-              description = 'Mohon masukkan alamat email yang valid.';
-              break;
-            case 'auth/user-document-creation-failed':
-              title = 'Gagal Membuat Profil di Database';
-              description = `Akun Anda berhasil dibuat di sistem otentikasi, tetapi gagal disimpan ke database. Ini hampir pasti disebabkan oleh Aturan Keamanan (Security Rules) Firestore yang salah atau belum diperbarui. Pastikan aturan telah diterapkan dengan benar di Firebase Console. Pesan error asli: ${(error as FirebaseError).message}`;
-              break;
-            default:
-              description = `Terjadi kesalahan saat pendaftaran. (${error.code})`;
-              break;
-          }
-        } else if (error instanceof Error) {
-            description = error.message;
-        }
+    } catch (error: any) {
+        // Log the full error to the console for debugging
+        console.error("SIGNUP_PAGE_ERROR:", error);
 
-        // Set the state to display the error prominently on the page
-        setSignupError(description);
+        // Always display the error message directly in the UI
+        setSignupError(error.message || 'Terjadi kesalahan yang tidak diketahui.');
     } finally {
         setIsLoading(false);
     }
