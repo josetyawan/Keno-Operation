@@ -36,7 +36,13 @@ export async function signUpWithEmail(auth: Auth, firestore: Firestore, password
     // Creates the minimal user document.
     await createUserDocument(firestore, userCredential.user, details);
   } catch (firestoreError: any) {
-    console.error("Kritis: Gagal membuat dokumen pengguna di Firestore setelah pembuatan pengguna di Auth.", firestoreError);
+    console.error("--- KESALAHAN KRITIS: Gagal membuat dokumen pengguna di Firestore ---");
+    console.error("Pengguna Auth berhasil dibuat dengan UID:", userCredential.user.uid);
+    console.error("Namun, penulisan ke path 'users/" + userCredential.user.uid + "' GAGAL.");
+    console.error("Error Asli dari Firestore:", firestoreError.message);
+    console.error("Ini hampir pasti disebabkan oleh Aturan Keamanan Firestore yang menolak penulisan.");
+    console.error("------------------------------------------------------------------");
+    
     // Hapus pengguna auth jika pembuatan dokumen gagal untuk menghindari akun yatim piatu.
     await userCredential.user.delete();
     
