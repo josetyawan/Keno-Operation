@@ -40,7 +40,7 @@ export async function signUpWithEmail(auth: Auth, firestore: Firestore, password
     console.error("Pengguna Auth berhasil dibuat dengan UID:", userCredential.user.uid);
     console.error("Namun, penulisan ke path 'users/" + userCredential.user.uid + "' GAGAL.");
     console.error("Error Asli dari Firestore:", firestoreError.message);
-    console.error("Ini hampir pasti disebabkan oleh Aturan Keamanan Firestore yang menolak penulisan.");
+    console.error("Ini hampir pasti disebabkan oleh Aturan Keamanan Firestore yang menolak penulisan. Pastikan aturan telah diterapkan dengan benar di Firebase Console.");
     console.error("------------------------------------------------------------------");
     
     // Hapus pengguna auth jika pembuatan dokumen gagal untuk menghindari akun yatim piatu.
@@ -49,7 +49,7 @@ export async function signUpWithEmail(auth: Auth, firestore: Firestore, password
     // Buat error yang lebih informatif untuk dilempar kembali ke UI
     const customError = new FirebaseError(
         'auth/user-document-creation-failed',
-        'Gagal membuat profil pengguna di database setelah otentikasi berhasil. Ini kemungkinan besar disebabkan oleh masalah Aturan Keamanan Firestore. Silakan hubungi admin.'
+        `Gagal membuat profil pengguna di database. Ini kemungkinan besar disebabkan oleh masalah Aturan Keamanan Firestore. Error: ${firestoreError.message}`
     );
     throw customError;
   }
