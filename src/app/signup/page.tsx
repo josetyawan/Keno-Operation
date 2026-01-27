@@ -7,11 +7,14 @@ import { Label } from '@/components/ui/label';
 import AuthLayout from '@/components/auth-layout';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth, useUser, signUpWithEmail } from '@/firebase';
+import { useAuth, useUser, signUpWithEmail, useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { FirebaseError } from 'firebase/app';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
+import { doc, setDoc } from 'firebase/firestore';
+import type { UserProfile } from '@/lib/types';
+import { deleteUser } from 'firebase/auth';
 
 export default function SignupPage() {
   const [email, setEmail] = useState('');
@@ -21,6 +24,7 @@ export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const auth = useAuth();
+  const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const { toast } = useToast();
 
@@ -38,10 +42,30 @@ export default function SignupPage() {
         return;
     }
     setIsLoading(true);
+
     try {
-      // This now only creates the auth user. The `useEffect` above will handle
-      // redirecting to the dashboard, where the profile document will be created.
-      await signUpWithEmail(auth, password, { email });
+      // Step 1: Create the authentication user
+      const userCredential = await signUpWithEmail(auth, password, { email });
+      const authUser = userCredential.user;
+
+      // Step 2: Directly create the user document in Firestore
+      const newUserDocRef = doc(firestore, 'users', authUser.uid);
+      const newUserProfileData: UserProfile = {
+          id: authUser.uid,
+          email: authUser.email!,
+          role: 'user',
+          registrationStatus: 'pending',
+          displayName: authUser.email?.split('@')[0] || 'New User',
+          firstName: '',
+          lastName: '',
+          nik: '',
+          phone: '',
+      };
+      
+      await setDoc(newUserDocRef, newUserProfileData);
+
+      // If both succeed, the useEffect will handle the redirect to the dashboard
+      // where the user will see the pending approval message.
 
     } catch (error: any) {
         let errorMessage = 'Terjadi kesalahan yang tidak diketahui.';
@@ -57,12 +81,22 @@ export default function SignupPage() {
                     errorMessage = 'Format email tidak valid.';
                     break;
                 default:
-                    errorMessage = error.message;
+                    // This will now catch Firestore errors too, like 'permission-denied'
+                    errorMessage = `Pendaftaran gagal: ${error.message}`;
                     break;
             }
         } else {
-            errorMessage = error.message;
+            errorMessage = `Pendaftaran gagal: ${error.message}`;
         }
+
+        // Cleanup: If doc creation fails, delete the auth user so they can try again.
+        if (auth.currentUser) {
+            await deleteUser(auth.currentUser).catch(delErr => {
+                console.error("Cleanup failed: Could not delete orphaned auth user.", delErr);
+                errorMessage += " Gagal melakukan pembersihan otomatis, harap hubungi admin."
+            });
+        }
+        
         setSignupError(errorMessage);
         console.error("SIGNUP_PAGE_ERROR:", error);
     } finally {

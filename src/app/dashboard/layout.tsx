@@ -124,7 +124,7 @@ export default function DashboardLayout({
     }
   }, [user, userProfile, firestore, toast]);
 
-  // Use effect for redirection logic and profile self-healing
+  // Use effect for redirection logic
    useEffect(() => {
     // Don't do anything until both auth and profile loading are complete
     if (isUserLoading || isProfileLoading) {
@@ -137,38 +137,15 @@ export default function DashboardLayout({
       return;
     }
 
-    // Case 2: User is authenticated, but their profile document doesn't exist (self-healing)
+    // Case 2: User is authenticated, but their profile document doesn't exist
+    // This is now a critical error state. The profile should have been created at sign-up.
     if (!userProfile) {
-        console.log('User profile not found, creating one...');
-        const newUserDocRef = doc(firestore, 'users', user.uid);
-        const newUserProfileData: UserProfile = {
-            email: user.email!,
-            role: 'user',
-            registrationStatus: 'pending',
-            displayName: user.email?.split('@')[0] || 'New User',
-            id: user.uid,
-            firstName: '',
-            lastName: '',
-            nik: '',
-            phone: '',
-        };
-
-        // Use setDoc to create the document. We will await it here to catch the error.
-        setDoc(newUserDocRef, newUserProfileData)
-            .then(() => {
-                console.log("Profile document created successfully. The component will now re-render.");
-                // The useDoc hook will pick up the new doc and trigger a re-render.
-                // The next run of this useEffect will handle the 'pending' status.
-            })
-            .catch(error => {
-                console.error("CRITICAL: Failed to create user profile document from dashboard layout:", error);
-                handleSignOutAndRedirect(
-                    'Gagal Membuat Profil Database',
-                    `Gagal menyimpan profil Anda setelah login. Ini kemungkinan besar karena masalah Aturan Keamanan Firestore. Silakan hubungi admin. Pesan error: ${error.message}`
-                );
-            });
-        
-        return; // Return to wait for the creation and re-render.
+        console.error("CRITICAL: User is authenticated but Firestore profile document is missing.");
+        handleSignOutAndRedirect(
+            'Profil Database Tidak Ditemukan',
+            'Akun Anda valid, tetapi profil database Anda hilang. Silakan hubungi admin untuk pemulihan.'
+        );
+        return;
     }
     
     // Case 3: User has a profile, but it's not approved yet
