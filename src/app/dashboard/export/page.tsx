@@ -498,8 +498,19 @@ function ReportPreview({
 const getMonthYearOptions = (notas: Nota[]) => {
     const monthYears = new Set<string>();
     notas.forEach(nota => {
+        let date: Date | null = null;
         if (nota.tanggal?.toDate) {
-            const date = nota.tanggal.toDate();
+            // Firestore Timestamp
+            date = nota.tanggal.toDate();
+        } else if (typeof nota.tanggal === 'string' && new Date(nota.tanggal).toString() !== 'Invalid Date') {
+            // ISO string
+            date = new Date(nota.tanggal);
+        } else if (nota.tanggal instanceof Date) {
+            // JavaScript Date object
+            date = nota.tanggal;
+        }
+
+        if (date) {
             monthYears.add(format(date, 'yyyy-MM'));
         }
     });
@@ -540,10 +551,17 @@ export default function ExportPage() {
     const monthOptions = useMemo(() => getMonthYearOptions(notas || []), [notas]);
 
     useEffect(() => {
-        if (monthOptions.length > 0 && !selectedMonth) {
-            setSelectedMonth(monthOptions[0]);
+        if (monthOptions.length > 0) {
+            // If there's no selection or the current selection is invalid, set to the first option.
+            if (!selectedMonth || !monthOptions.includes(selectedMonth)) {
+                setSelectedMonth(monthOptions[0]);
+            }
+        } else {
+            // No options, clear selection
+            setSelectedMonth('');
         }
     }, [monthOptions, selectedMonth]);
+
 
     const filteredNotas = useMemo(() => {
         if (!notas) return [];
@@ -809,7 +827,7 @@ export default function ExportPage() {
                                     <TabsTrigger value="verified">Terverifikasi</TabsTrigger>
                                 </TabsList>
                                 <TabsContent value="monthly">
-                                    <Select onValueChange={setSelectedMonth} value={selectedMonth || (monthOptions.length > 0 ? monthOptions[0] : '')}>
+                                    <Select onValueChange={setSelectedMonth} value={selectedMonth}>
                                         <SelectTrigger>
                                         <SelectValue placeholder="Pilih bulan..." />
                                         </SelectTrigger>
