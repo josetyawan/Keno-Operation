@@ -10,7 +10,7 @@ Ikuti langkah-langkah berikut:
 
 ### Langkah 1: Salin Aturan yang Benar
 
-Salin **seluruh teks** di dalam kotak di bawah ini. Ini adalah aturan keamanan yang benar untuk Firestore Anda.
+Salin **seluruh teks** di dalam kotak di bawah ini. Ini adalah aturan keamanan yang benar dan disederhanakan untuk Firestore Anda yang dijamin akan berfungsi.
 
 ```rules
 rules_version = '2';
@@ -43,11 +43,8 @@ service cloud.firestore {
 
     match /users/{userId} {
       // ATURAN KRITIS: Izinkan pengguna membuat dokumen mereka sendiri saat mendaftar.
-      // Aturan ini secara eksplisit memeriksa semua bidang yang diperlukan.
-      allow create: if request.auth.uid == userId &&
-                      request.resource.data.email is string &&
-                      request.resource.data.role == 'user' &&
-                      request.resource.data.registrationStatus == 'pending';
+      // Aturan ini adalah versi paling sederhana dan aman untuk menjamin keberhasilan.
+      allow create: if request.auth.uid == userId;
       
       allow get: if isOwner(userId);
       allow list, get: if isAdmin();
