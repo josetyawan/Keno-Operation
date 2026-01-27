@@ -122,6 +122,7 @@ export default function NotaDetailPage() {
   
   const notaContentForSummary = `
   Tanggal: ${format(tanggalLaporan, 'dd MMMM yyyy')}
+  Service Area: ${nota.serviceArea}
   Segmen: ${nota.segmen}
   PIC: ${nota.namaPic}
   Nominal: Rp ${nota.nominal.toLocaleString('id-ID')}
@@ -156,7 +157,7 @@ export default function NotaDetailPage() {
         <CardHeader>
           <CardTitle>Laporan Segmen: {nota.segmen}</CardTitle>
             <CardDescription>
-              Oleh {nota.userEmail} pada {format(tanggalLaporan, 'PPPPp')}
+              Oleh {nota.userEmail} di <strong>{nota.serviceArea}</strong> pada {format(tanggalLaporan, 'PPPPp')}
                {nota.status === 'verified' && nota.tanggalVerifikasi?.toDate && (
                     ` | Diverifikasi pada: ${format(nota.tanggalVerifikasi.toDate(), 'dd MMM yyyy')}`
                 )}

@@ -104,6 +104,7 @@ export default function EditNotaPage() {
   // Form state
   const [tanggal, setTanggal] = useState<Date | undefined>();
   const [segmen, setSegmen] = useState('');
+  const [serviceArea, setServiceArea] = useState('');
   const [noPlatKendaraan, setNoPlatKendaraan] = useState('');
   const [kmAwal, setKmAwal] = useState('');
   const [kmAkhir, setKmAkhir] = useState('');
@@ -113,6 +114,7 @@ export default function EditNotaPage() {
   const [namaPic, setNamaPic] = useState('');
   const [files, setFiles] = useState<(File | null)[]>(Array(7).fill(null));
   
+  const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA'];
   const bbmKendaraanSegments = ['BBM R2', 'BBM R4 Harian', 'BBM R4 Turlap', 'BBM R4 UT'];
   const nonBbmKendaraanSegments = ['MATERIAL SA KUDUS', 'BBM Genset', 'jasa', 'Konsumsi Turlap', 'Konsumsi UT', 'Konsumsi Lembur', 'MATERIAL SPPG SA KUDUS'];
   
@@ -150,6 +152,7 @@ export default function EditNotaPage() {
     if (nota) {
       setTanggal(nota.tanggal?.toDate());
       setSegmen(nota.segmen);
+      setServiceArea(nota.serviceArea);
       setNoPlatKendaraan(nota.noPlatKendaraan || '');
       setKmAwal(nota.kmAwal?.toString() || '');
       setKmAkhir(nota.kmAkhir?.toString() || '');
@@ -188,7 +191,7 @@ export default function EditNotaPage() {
     if (value === 'MATERIAL SA KUDUS') {
         setKeterangan('Material SA Kudus');
     } else if (value === 'MATERIAL SPPG SA KUDUS') {
-        setKeterangan('Material SPPG SA Kudus');
+        setKeterangan('Material SPPG SA KUDUS');
     } else {
         // If switching away from a static segment, clear the text area
         if (keterangan === 'Material SA Kudus' || keterangan === 'Material SPPG SA Kudus') {
@@ -208,7 +211,7 @@ export default function EditNotaPage() {
     if (!notaRef || !user) return;
     
     // Dynamic validation
-    let isFormValid = !!(tanggal && segmen && nominal && namaPic);
+    let isFormValid = !!(tanggal && segmen && serviceArea && nominal && namaPic);
     if (isBBMKendaraan) {
         isFormValid = isFormValid && !!(noPlatKendaraan && kmAwal && kmAkhir);
     }
@@ -247,6 +250,7 @@ export default function EditNotaPage() {
       const updatedData: Partial<Nota> = {
           tanggal,
           segmen,
+          serviceArea,
           keterangan,
           nominal: Number(nominal),
           namaPic,
@@ -374,6 +378,18 @@ export default function EditNotaPage() {
                     </PopoverContent>
                   </Popover>
                 </div>
+                 <div className="grid gap-3">
+                  <Label htmlFor="serviceArea">Service Area *</Label>
+                  <Select onValueChange={setServiceArea} value={serviceArea} required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih service area" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {serviceAreas.map(sa => <SelectItem key={sa} value={sa}>{sa}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
                 <div className="grid gap-3">
                   <Label htmlFor="segmen">Segmen *</Label>
                   <Select onValueChange={handleSegmenChange} value={segmen} required>
@@ -395,7 +411,6 @@ export default function EditNotaPage() {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
               
                {isBBMKendaraan && (
                 <>

@@ -45,7 +45,7 @@ import { toWords } from '@/lib/number-to-words';
 import Image from 'next/image';
 
 // --- Report Generation Logic ---
-const generateRekapitulasiReport = (notas: Nota[], month: string, year: string): string => {
+const generateRekapitulasiReport = (notas: Nota[], month: string, year: string, serviceArea: string): string => {
     const groupedBySegmen = notas.reduce((acc, nota) => {
         const key = nota.segmen;
         if (!acc[key]) {
@@ -76,7 +76,7 @@ const generateRekapitulasiReport = (notas: Nota[], month: string, year: string):
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; padding: 1cm; width: 210mm; min-height: 297mm; background-color: white; box-shadow: 0 0 5px rgba(0,0,0,0.1);">
         <div style="text-align: center; font-weight: bold; line-height: 1.2;">
             <p style="margin: 0; font-size: 12pt; text-decoration: underline;">PERTANGGUNGAN OPERASIONAL</p>
-            <p style="margin: 0; font-size: 12pt;">SERVICE AREA KUDUS</p>
+            <p style="margin: 0; font-size: 12pt;">SERVICE AREA ${serviceArea.toUpperCase()}</p>
             <p style="margin: 0; font-size: 12pt;">PEKERJAAN : SA KUDUS</p>
             <p style="margin: 0; font-size: 12pt;">ID PROJECT : -</p>
         </div>
@@ -506,6 +506,8 @@ const getMonthYearOptions = (notas: Nota[]) => {
     return Array.from(monthYears).sort().reverse();
 };
 
+const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA'];
+
 export default function ExportPage() {
     const firestore = useFirestore();
     const { toast } = useToast();
@@ -519,6 +521,7 @@ export default function ExportPage() {
     const [selectedMonth, setSelectedMonth] = useState<string>('');
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
     const [verifiedDate, setVerifiedDate] = useState<Date | undefined>(undefined);
+    const [selectedSA, setSelectedSA] = useState<string>('all');
 
     const [selectedNotaIds, setSelectedNotaIds] = useState<string[]>([]);
 
@@ -544,7 +547,8 @@ export default function ExportPage() {
 
     const filteredNotas = useMemo(() => {
         if (!notas) return [];
-        let result = [];
+        let result: Nota[] = [];
+
         if (filterType === 'monthly') {
             const currentMonth = selectedMonth || (monthOptions.length > 0 ? monthOptions[0] : '');
             if (!currentMonth) return [];
@@ -570,8 +574,13 @@ export default function ExportPage() {
                 return isSameDay(date, verifiedDate);
             });
         }
+
+        if (selectedSA !== 'all') {
+            result = result.filter(nota => nota.serviceArea === selectedSA);
+        }
+
         return result.sort((a,b) => a.tanggal.toDate().getTime() - b.tanggal.toDate().getTime());
-    }, [notas, filterType, selectedMonth, monthOptions, dateRange, verifiedDate]);
+    }, [notas, filterType, selectedMonth, monthOptions, dateRange, verifiedDate, selectedSA]);
 
     const handleSelectNota = (id: string, checked: boolean) => {
         setSelectedNotaIds(prev =>
@@ -595,6 +604,15 @@ export default function ExportPage() {
     }, [selectedNotaIds, notas]);
 
     const handleGenerateReport = async (reportType: string) => {
+        if (selectedSA === 'all' && reportType !== 'rekap') {
+             toast({
+                variant: "destructive",
+                title: "Pilih Service Area",
+                description: "Silakan pilih satu Service Area spesifik untuk membuat laporan jenis ini.",
+            });
+            return;
+        }
+
         setIsGenerating(true);
         setReportTypeBeingGenerated(reportType);
         const selectedNotas = filteredNotas.filter(n => selectedNotaIds.includes(n.id)) || [];
@@ -617,7 +635,7 @@ export default function ExportPage() {
             if (reportType === 'all') {
                 // 1. Generate Rekap (if applicable)
                 if (filterType === 'monthly' || filterType === 'verified') {
-                    const rekapHtml = generateRekapitulasiReport(sortedNotas, "Rekapitulasi", "");
+                    const rekapHtml = generateRekapitulasiReport(sortedNotas, "Rekapitulasi", "", selectedSA);
                     pages.push(rekapHtml);
                 }
 
@@ -633,7 +651,7 @@ export default function ExportPage() {
                     const notasInSegment = perincianGrouped[segment];
                     if (notasInSegment.length === 0) continue;
                     let segmentHtml = '';
-                    const title = `Perincian Nota ${segment}`;
+                    const title = `Perincian Nota ${segment} - ${selectedSA}`;
                     const bbmR2R4Segments = ['BBM R2', 'BBM R4 Harian', 'BBM R4 Turlap', 'BBM R4 UT'];
 
                     if (segment === 'jasa') {
@@ -663,7 +681,7 @@ export default function ExportPage() {
                     const notasInSegment = evidenGrouped[segment];
                     if (notasInSegment.length === 0) continue;
                     let segmentHtml = '';
-                    const title = `Eviden Foto - Perincian Nota ${segment}`;
+                    const title = `Eviden Foto - Perincian Nota ${segment} - ${selectedSA}`;
 
                     if (bbmR2R4Segments.includes(segment)) {
                         segmentHtml = generateEvidenReport(notasInSegment, title);
@@ -675,7 +693,7 @@ export default function ExportPage() {
 
             } else if (reportType === 'rekap') {
                  if (filterType === 'monthly' || filterType === 'verified') {
-                    const html = generateRekapitulasiReport(sortedNotas, "Rekapitulasi", "");
+                    const html = generateRekapitulasiReport(sortedNotas, "Rekapitulasi", "", selectedSA);
                     pages.push(html);
                 } else {
                     toast({ variant: "destructive", title: "Tidak dapat membuat rekap", description: "Filter saat ini tidak mendukung pembuatan rekap."});
@@ -695,7 +713,7 @@ export default function ExportPage() {
                     if (notasInSegment.length === 0) continue;
 
                     let segmentHtml = '';
-                    const title = `Perincian Nota ${segment}`;
+                    const title = `Perincian Nota ${segment} - ${selectedSA}`;
                     const bbmR2R4Segments = ['BBM R2', 'BBM R4 Harian', 'BBM R4 Turlap', 'BBM R4 UT'];
 
 
@@ -729,7 +747,7 @@ export default function ExportPage() {
                     if (notasInSegment.length === 0) continue;
 
                     let segmentHtml = '';
-                    const title = `Eviden Foto - Perincian Nota ${segment}`;
+                    const title = `Eviden Foto - Perincian Nota ${segment} - ${selectedSA}`;
 
                     if (bbmR2R4Segments.includes(segment)) {
                         segmentHtml = generateEvidenReport(notasInSegment, title);
@@ -783,7 +801,7 @@ export default function ExportPage() {
                                 <CardTitle>Filter Data</CardTitle>
                             </div>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="space-y-4">
                             <Tabs value={filterType} onValueChange={handleFilterChange} className="w-full">
                                 <TabsList className="grid w-full grid-cols-3 mb-4">
                                     <TabsTrigger value="monthly">Per Bulan</TabsTrigger>
@@ -867,6 +885,18 @@ export default function ExportPage() {
                                     </Popover>
                                 </TabsContent>
                             </Tabs>
+                             <div className="grid gap-2">
+                                <Label>Service Area</Label>
+                                <Select value={selectedSA} onValueChange={setSelectedSA}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Pilih Service Area..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Semua Service Area</SelectItem>
+                                        {serviceAreas.map(sa => <SelectItem key={sa} value={sa}>{sa}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                             </div>
                         </CardContent>
                     </Card>
 
