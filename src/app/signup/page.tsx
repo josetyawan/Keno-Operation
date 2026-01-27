@@ -11,10 +11,13 @@ import { useAuth, useFirestore, useUser, signUpWithEmail } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { FirebaseError } from 'firebase/app';
 import { ToastAction } from '@/components/ui/toast';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [signupError, setSignupError] = useState<string | null>(null); // New state for error message
   
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -31,12 +34,9 @@ export default function SignupPage() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSignupError(null); // Reset error on new attempt
     if (!email || !password) {
-        toast({
-            variant: 'destructive',
-            title: 'Form Belum Lengkap',
-            description: 'Mohon isi Email dan Password.',
-        });
+        setSignupError('Mohon isi Email dan Password.');
         return;
     }
     setIsLoading(true);
@@ -53,18 +53,17 @@ export default function SignupPage() {
         if (error instanceof FirebaseError) {
           switch (error.code) {
             case 'auth/email-already-in-use':
-                toast({
-                    variant: 'destructive',
-                    title: 'Email Sudah Terdaftar',
-                    description: 'Email ini sudah digunakan. Silakan login.',
-                    action: (
-                        <ToastAction altText="Login">
-                            <Link href="/login">Login</Link>
-                        </ToastAction>
-                    ),
-                });
-                setIsLoading(false);
-                return;
+              title = 'Email Sudah Terdaftar';
+              description = 'Email ini sudah digunakan. Silakan login.';
+              // Special case for toast with action
+              toast({
+                  variant: 'destructive',
+                  title: title,
+                  description: description,
+                  action: ( <ToastAction altText="Login"><Link href="/login">Login</Link></ToastAction> ),
+              });
+              setIsLoading(false);
+              return; // Exit early
             case 'auth/weak-password':
               title = 'Password Lemah';
               description = 'Password harus terdiri dari minimal 6 karakter.';
@@ -74,8 +73,8 @@ export default function SignupPage() {
               description = 'Mohon masukkan alamat email yang valid.';
               break;
             case 'auth/user-document-creation-failed':
-              title = 'Gagal Membuat Profil Database';
-              description = (error as FirebaseError).message;
+              title = 'Gagal Membuat Profil di Database';
+              description = `Akun Anda berhasil dibuat di sistem otentikasi, tetapi gagal disimpan ke database. Ini hampir pasti disebabkan oleh Aturan Keamanan (Security Rules) Firestore yang salah atau belum diperbarui. Pastikan aturan telah diterapkan dengan benar di Firebase Console. Pesan error asli: ${(error as FirebaseError).message}`;
               break;
             default:
               description = `Terjadi kesalahan saat pendaftaran. (${error.code})`;
@@ -85,11 +84,8 @@ export default function SignupPage() {
             description = error.message;
         }
 
-        toast({
-            variant: 'destructive',
-            title,
-            description,
-        });
+        // Set the state to display the error prominently on the page
+        setSignupError(description);
     } finally {
         setIsLoading(false);
     }
@@ -99,6 +95,17 @@ export default function SignupPage() {
     <AuthLayout>
       <form onSubmit={handleSignUp}>
         <div className="grid gap-4">
+          
+          {signupError && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Pendaftaran Gagal</AlertTitle>
+              <AlertDescription>
+                {signupError}
+              </AlertDescription>
+            </Alert>
+          )}
+          
           <div className="grid gap-2">
             <Label htmlFor="email">Email *</Label>
             <Input id="email" type="email" placeholder="email@contoh.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
