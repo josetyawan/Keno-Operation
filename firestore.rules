@@ -85,8 +85,8 @@ service cloud.firestore {
      * @path /users/{userId}
      */
     match /users/{userId} {
-      // CREATE: Allow a user to create their own document upon signup.
-      // This is the simplest possible secure rule to guarantee success.
+      // ATURAN KRITIS: Izinkan pengguna membuat dokumen mereka sendiri saat mendaftar.
+      // Aturan ini adalah versi paling sederhana dan aman untuk menjamin keberhasilan.
       allow create: if request.auth.uid == userId;
       
       // READ (OWNER): Any authenticated user can read their OWN document.
