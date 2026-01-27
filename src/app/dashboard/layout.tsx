@@ -141,8 +141,8 @@ export default function DashboardLayout({
     if (!userProfile) {
         console.log('User profile not found, creating one...');
         const newUserDocRef = doc(firestore, 'users', user.uid);
-        const newUserProfileData = {
-            email: user.email,
+        const newUserProfileData: UserProfile = {
+            email: user.email!,
             role: 'user',
             registrationStatus: 'pending',
             displayName: user.email?.split('@')[0] || 'New User',
