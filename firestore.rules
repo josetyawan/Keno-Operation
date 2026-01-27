@@ -85,9 +85,10 @@ service cloud.firestore {
      * @path /users/{userId}
      */
     match /users/{userId} {
-      // ATURAN KRITIS: Izinkan pengguna membuat dokumen mereka sendiri saat mendaftar.
-      // Aturan ini sengaja dibuat sangat sederhana untuk melewati kegagalan sebelumnya.
+      // CREATE: Allow a user to create their own document upon signup.
+      // This rule now explicitly checks for the `email` field to avoid ambiguity.
       allow create: if request.auth.uid == userId &&
+                      request.resource.data.email is string &&
                       request.resource.data.role == 'user' &&
                       request.resource.data.registrationStatus == 'pending';
       

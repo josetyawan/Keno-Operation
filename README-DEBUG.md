@@ -43,8 +43,9 @@ service cloud.firestore {
 
     match /users/{userId} {
       // ATURAN KRITIS: Izinkan pengguna membuat dokumen mereka sendiri saat mendaftar.
-      // Aturan ini sederhana dan kuat untuk menghindari kegagalan sebelumnya.
+      // Aturan ini secara eksplisit memeriksa semua bidang yang diperlukan.
       allow create: if request.auth.uid == userId &&
+                      request.resource.data.email is string &&
                       request.resource.data.role == 'user' &&
                       request.resource.data.registrationStatus == 'pending';
       
