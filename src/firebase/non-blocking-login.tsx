@@ -7,6 +7,8 @@ import {
   type User,
 } from 'firebase/auth';
 import { doc, setDoc, Firestore } from 'firebase/firestore';
+import { FirebaseError } from 'firebase/app';
+
 
 interface SignUpDetails {
     email: string;
@@ -33,11 +35,17 @@ export async function signUpWithEmail(auth: Auth, firestore: Firestore, password
   try {
     // Creates the minimal user document.
     await createUserDocument(firestore, userCredential.user, details);
-  } catch (firestoreError) {
+  } catch (firestoreError: any) {
     console.error("Kritis: Gagal membuat dokumen pengguna di Firestore setelah pembuatan pengguna di Auth.", firestoreError);
     // Hapus pengguna auth jika pembuatan dokumen gagal untuk menghindari akun yatim piatu.
     await userCredential.user.delete();
-    throw firestoreError;
+    
+    // Buat error yang lebih informatif untuk dilempar kembali ke UI
+    const customError = new FirebaseError(
+        'auth/user-document-creation-failed',
+        'Gagal membuat profil pengguna di database setelah otentikasi berhasil. Ini kemungkinan besar disebabkan oleh masalah Aturan Keamanan Firestore. Silakan hubungi admin.'
+    );
+    throw customError;
   }
   return userCredential;
 }

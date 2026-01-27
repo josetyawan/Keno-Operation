@@ -73,11 +73,18 @@ export default function SignupPage() {
               title = 'Email Tidak Valid';
               description = 'Mohon masukkan alamat email yang valid.';
               break;
+            case 'auth/user-document-creation-failed':
+              title = 'Gagal Membuat Profil Database';
+              description = (error as FirebaseError).message;
+              break;
             default:
               description = `Terjadi kesalahan saat pendaftaran. (${error.code})`;
               break;
           }
+        } else if (error instanceof Error) {
+            description = error.message;
         }
+
         toast({
             variant: 'destructive',
             title,
