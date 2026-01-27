@@ -17,7 +17,7 @@ import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase, updateDocument
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { doc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -93,11 +93,11 @@ export default function DashboardLayout({
                 title,
                 description,
                 variant: title.includes('Gagal') ? 'destructive' : 'default',
-                duration: 5000,
+                duration: 9000,
             });
             router.push('/login');
         });
-    } else {
+    } else if (router) {
         router.push('/login');
     }
   }, [auth, router, toast]);
@@ -124,7 +124,7 @@ export default function DashboardLayout({
     }
   }, [user, userProfile, firestore, toast]);
 
-  // Use effect for redirection logic
+  // Use effect for redirection logic and profile self-healing
    useEffect(() => {
     // Don't do anything until both auth and profile loading are complete
     if (isUserLoading || isProfileLoading) {
@@ -137,13 +137,38 @@ export default function DashboardLayout({
       return;
     }
 
-    // Case 2: User is authenticated, but their profile document doesn't exist
+    // Case 2: User is authenticated, but their profile document doesn't exist (self-healing)
     if (!userProfile) {
-      handleSignOutAndRedirect(
-        'Gagal Memuat Profil',
-        'Tidak dapat menemukan data pengguna. Silakan login kembali.'
-      );
-      return;
+        console.log('User profile not found, creating one...');
+        const newUserDocRef = doc(firestore, 'users', user.uid);
+        const newUserProfileData = {
+            email: user.email,
+            role: 'user',
+            registrationStatus: 'pending',
+            displayName: user.email?.split('@')[0] || 'New User',
+            id: user.uid,
+            firstName: '',
+            lastName: '',
+            nik: '',
+            phone: '',
+        };
+
+        // Use setDoc to create the document. We will await it here to catch the error.
+        setDoc(newUserDocRef, newUserProfileData)
+            .then(() => {
+                console.log("Profile document created successfully. The component will now re-render.");
+                // The useDoc hook will pick up the new doc and trigger a re-render.
+                // The next run of this useEffect will handle the 'pending' status.
+            })
+            .catch(error => {
+                console.error("CRITICAL: Failed to create user profile document from dashboard layout:", error);
+                handleSignOutAndRedirect(
+                    'Gagal Membuat Profil Database',
+                    `Gagal menyimpan profil Anda setelah login. Ini kemungkinan besar karena masalah Aturan Keamanan Firestore. Silakan hubungi admin. Pesan error: ${error.message}`
+                );
+            });
+        
+        return; // Return to wait for the creation and re-render.
     }
     
     // Case 3: User has a profile, but it's not approved yet
@@ -155,7 +180,7 @@ export default function DashboardLayout({
       return;
     }
 
-  }, [user, isUserLoading, userProfile, isProfileLoading, router, handleSignOutAndRedirect]);
+  }, [user, isUserLoading, userProfile, isProfileLoading, router, firestore, handleSignOutAndRedirect]);
 
 
   // Show skeleton while loading auth or profile (if user object exists)
@@ -164,7 +189,7 @@ export default function DashboardLayout({
   }
 
   // Do not render the dashboard if the user is not approved or doesn't exist
-  // The useEffect above will handle the redirection.
+  // The useEffect above will handle the redirection or profile creation.
   if (!user || !userProfile || userProfile.registrationStatus !== 'approved') {
       return <DashboardSkeleton />;
   }

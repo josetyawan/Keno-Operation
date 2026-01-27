@@ -7,10 +7,9 @@ import { Label } from '@/components/ui/label';
 import AuthLayout from '@/components/auth-layout';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth, useFirestore, useUser, signUpWithEmail } from '@/firebase';
+import { useAuth, useUser, signUpWithEmail } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { FirebaseError } from 'firebase/app';
-import { ToastAction } from '@/components/ui/toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 
@@ -22,7 +21,6 @@ export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const auth = useAuth();
-  const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const { toast } = useToast();
 
@@ -41,18 +39,32 @@ export default function SignupPage() {
     }
     setIsLoading(true);
     try {
-      await signUpWithEmail(auth, firestore, password, { email });
-      toast({
-        title: 'Pendaftaran Berhasil!',
-        description: 'Akun Anda sedang menunggu persetujuan dari admin. Anda akan dialihkan ke halaman login.',
-      });
-      router.push('/login');
-    } catch (error: any) {
-        // Log the full error to the console for debugging
-        console.error("SIGNUP_PAGE_ERROR:", error);
+      // This now only creates the auth user. The `useEffect` above will handle
+      // redirecting to the dashboard, where the profile document will be created.
+      await signUpWithEmail(auth, password, { email });
 
-        // Always display the error message directly in the UI
-        setSignupError(error.message || 'Terjadi kesalahan yang tidak diketahui.');
+    } catch (error: any) {
+        let errorMessage = 'Terjadi kesalahan yang tidak diketahui.';
+        if (error instanceof FirebaseError) {
+            switch(error.code) {
+                case 'auth/email-already-in-use':
+                    errorMessage = 'Email ini sudah terdaftar. Silakan gunakan email lain atau login.';
+                    break;
+                case 'auth/weak-password':
+                    errorMessage = 'Password terlalu lemah. Harap gunakan minimal 6 karakter.';
+                    break;
+                case 'auth/invalid-email':
+                    errorMessage = 'Format email tidak valid.';
+                    break;
+                default:
+                    errorMessage = error.message;
+                    break;
+            }
+        } else {
+            errorMessage = error.message;
+        }
+        setSignupError(errorMessage);
+        console.error("SIGNUP_PAGE_ERROR:", error);
     } finally {
         setIsLoading(false);
     }
