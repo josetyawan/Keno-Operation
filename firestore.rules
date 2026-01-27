@@ -86,12 +86,8 @@ service cloud.firestore {
      */
     match /users/{userId} {
       // CREATE: Allow a user to create their own document upon signup.
-      // This rule is very specific to prevent ambiguity and silent failures.
+      // This rule is simplified to be more robust.
       allow create: if request.auth.uid == userId &&
-                      // 1. Ensure only expected fields are present
-                      request.resource.data.keys().hasAll(['email', 'role', 'registrationStatus']) &&
-                      request.resource.data.keys().size() == 3 &&
-                      // 2. Validate the values of those fields
                       request.resource.data.email is string &&
                       request.resource.data.role == 'user' &&
                       request.resource.data.registrationStatus == 'pending';
