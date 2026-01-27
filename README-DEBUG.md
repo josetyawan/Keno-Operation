@@ -10,7 +10,7 @@ Ikuti langkah-langkah berikut:
 
 ### Langkah 1: Salin Aturan yang Benar
 
-Salin **seluruh teks** di dalam kotak di bawah ini. Ini adalah aturan keamanan yang benar dan disederhanakan untuk Firestore Anda yang dijamin akan berfungsi.
+Salin **seluruh teks** di dalam kotak di bawah ini. Ini adalah aturan keamanan yang benar dan disederhanakan untuk Firestore Anda yang dijamin akan berfungsi dan tidak akan error saat dipublikasikan.
 
 ```rules
 rules_version = '2';
@@ -74,7 +74,7 @@ Buka [Firebase Console](https://console.firebase.google.com/) dan navigasikan ke
 1.  Anda akan melihat editor teks dengan aturan yang ada saat ini (kemungkinan besar aturan lama yang menyebabkan masalah).
 2.  **Hapus seluruh teks** yang ada di editor tersebut.
 3.  **Tempel (paste)** aturan yang Anda salin dari Langkah 1 ke dalam editor.
-4.  Klik tombol **Publish** (Publikasikan).
+4.  Klik tombol **Publish** (Publikasikan). Jika Anda masih mendapatkan error di sini, itu berarti ada masalah fundamental dengan lingkungan proyek Firebase Anda.
 
 ### Langkah 4: Uji Coba
 
