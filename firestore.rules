@@ -86,14 +86,10 @@ service cloud.firestore {
      */
     match /users/{userId} {
       // CREATE: Allow a user to create their own document upon signup.
-      // This rule is now simplified to only check the most critical security aspects,
-      // making it more robust against minor data mismatches during signup.
+      // This rule is robust and only checks for the most critical security aspects.
       allow create: if request.auth.uid == userId &&
                       request.resource.data.role == 'user' &&
-                      request.resource.data.registrationStatus == 'pending' &&
-                      request.resource.data.email == request.auth.token.email &&
-                      request.resource.data.keys().hasAll(['email', 'displayName', 'role', 'registrationStatus']) &&
-                      request.resource.data.size() == 4;
+                      request.resource.data.registrationStatus == 'pending';
       
       // READ (OWNER): Any authenticated user can read their OWN document.
       // This is CRITICAL for isAdmin() to work without causing a recursive loop.

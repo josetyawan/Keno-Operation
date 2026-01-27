@@ -16,10 +16,8 @@ async function createUserDocument(firestore: Firestore, user: User, details: Sig
     const userDocRef = doc(firestore, 'users', user.uid);
     
     // Create a minimal user document that satisfies security rules and basic app functionality.
-    // The displayName can be set by the user later in their profile.
     const userData = {
         email: user.email, // Use the email from the created Auth user for consistency.
-        displayName: user.email, // Default displayName to email
         role: 'user', // Required by rule
         registrationStatus: 'pending', // Required by rule
     };
