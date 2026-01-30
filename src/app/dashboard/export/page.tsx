@@ -648,12 +648,8 @@ export default function ExportPage() {
 
     const handleGenerateReport = async (reportType: string) => {
         if (selectedSA === 'all' && reportType !== 'rekap') {
-             toast({
-                variant: "destructive",
-                title: "Pilih Service Area",
-                description: "Silakan pilih satu Service Area spesifik untuk membuat laporan jenis ini.",
-            });
-            return;
+            // Allow all reports except rekap when 'all' is selected.
+            // For rekap, we can aggregate but the title might be generic.
         }
 
         setIsGenerating(true);
@@ -694,7 +690,7 @@ export default function ExportPage() {
                     const notasInSegment = perincianGrouped[segment];
                     if (notasInSegment.length === 0) continue;
                     let segmentHtml = '';
-                    const title = `Perincian Nota ${segment} - ${selectedSA}`;
+                    const title = `Perincian Nota ${segment} - ${selectedSA === 'all' ? 'Semua SA' : selectedSA}`;
                     const bbmR2R4Segments = ['BBM R2', 'BBM R4 Harian', 'BBM R4 Turlap', 'BBM R4 UT'];
 
                     if (segment === 'jasa') {
@@ -724,7 +720,7 @@ export default function ExportPage() {
                     const notasInSegment = evidenGrouped[segment];
                     if (notasInSegment.length === 0) continue;
                     let segmentHtml = '';
-                    const title = `Eviden Foto - Perincian Nota ${segment} - ${selectedSA}`;
+                    const title = `Eviden Foto - Perincian Nota ${segment} - ${selectedSA === 'all' ? 'Semua SA' : selectedSA}`;
 
                     if (bbmR2R4Segments.includes(segment)) {
                         segmentHtml = generateEvidenReport(notasInSegment, title);
@@ -736,7 +732,7 @@ export default function ExportPage() {
 
             } else if (reportType === 'rekap') {
                  if (filterType === 'monthly' || filterType === 'verified') {
-                    const html = generateRekapitulasiReport(sortedNotas, "Rekapitulasi", "", selectedSA);
+                    const html = generateRekapitulasiReport(sortedNotas, "Rekapitulasi", "", selectedSA === 'all' ? 'Semua SA' : selectedSA);
                     pages.push(html);
                 } else {
                     toast({ variant: "destructive", title: "Tidak dapat membuat rekap", description: "Filter saat ini tidak mendukung pembuatan rekap."});
@@ -756,7 +752,7 @@ export default function ExportPage() {
                     if (notasInSegment.length === 0) continue;
 
                     let segmentHtml = '';
-                    const title = `Perincian Nota ${segment} - ${selectedSA}`;
+                    const title = `Perincian Nota ${segment} - ${selectedSA === 'all' ? 'Semua SA' : selectedSA}`;
                     const bbmR2R4Segments = ['BBM R2', 'BBM R4 Harian', 'BBM R4 Turlap', 'BBM R4 UT'];
 
 
@@ -790,7 +786,7 @@ export default function ExportPage() {
                     if (notasInSegment.length === 0) continue;
 
                     let segmentHtml = '';
-                    const title = `Eviden Foto - Perincian Nota ${segment} - ${selectedSA}`;
+                    const title = `Eviden Foto - Perincian Nota ${segment} - ${selectedSA === 'all' ? 'Semua SA' : selectedSA}`;
 
                     if (bbmR2R4Segments.includes(segment)) {
                         segmentHtml = generateEvidenReport(notasInSegment, title);
