@@ -40,6 +40,7 @@ import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useMemo } from 'react';
+import { Input } from '@/components/ui/input';
 
 function NotaActions({ nota }: { nota: Nota }) {
   const { toast } = useToast();
@@ -107,22 +108,51 @@ function NotaActions({ nota }: { nota: Nota }) {
 export default function DashboardPage() {
   const firestore = useFirestore();
   const [selectedSA, setSelectedSA] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA'];
 
-  // For admins, query all notas. For regular users, this query is filtered by security rules.
   const notasQuery = useMemoFirebase(() => {
     return query(collection(firestore, 'notas'), orderBy('dateCreated', 'desc'));
   }, [firestore]);
+  const { data: notas, isLoading: isNotasLoading } = useCollection<Nota>(notasQuery);
+  
+  const usersQuery = useMemoFirebase(() => {
+    return query(collection(firestore, 'users'));
+  }, [firestore]);
+  const { data: users, isLoading: isUsersLoading } = useCollection<UserProfile>(usersQuery);
 
-  const { data: notas, isLoading } = useCollection<Nota>(notasQuery);
+  const userMap = useMemo(() => {
+    if (!users) return new Map<string, UserProfile>();
+    return new Map(users.map(u => [u.id, u]));
+  }, [users]);
 
   const filteredNotas = useMemo(() => {
       if (!notas) return [];
-      if (selectedSA === 'all') {
-          return notas;
+      let results = notas;
+
+      // Filter by Service Area
+      if (selectedSA !== 'all') {
+          results = results.filter(nota => nota.serviceArea === selectedSA);
       }
-      return notas.filter(nota => nota.serviceArea === selectedSA);
-  }, [notas, selectedSA]);
+
+      // Filter by search query
+      if (searchQuery) {
+        const lowercasedQuery = searchQuery.toLowerCase();
+        results = results.filter(nota => {
+            const user = userMap.get(nota.userId);
+            const nik = user?.nik || '';
+            return (
+                nota.namaPic.toLowerCase().includes(lowercasedQuery) ||
+                nota.segmen.toLowerCase().includes(lowercasedQuery) ||
+                nik.toLowerCase().includes(lowercasedQuery)
+            )
+        })
+      }
+
+      return results;
+  }, [notas, selectedSA, searchQuery, userMap]);
+
+  const isLoading = isNotasLoading || isUsersLoading;
 
   return (
     <>
@@ -154,8 +184,8 @@ export default function DashboardPage() {
         <CardHeader>
           <CardTitle>Filter Laporan</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid gap-2 max-w-sm">
+        <CardContent className="grid md:grid-cols-2 gap-4">
+          <div className="grid gap-2">
             <Label htmlFor="service-area-filter">Service Area</Label>
             <Select value={selectedSA} onValueChange={setSelectedSA}>
               <SelectTrigger id="service-area-filter">
@@ -166,6 +196,15 @@ export default function DashboardPage() {
                 {serviceAreas.map(sa => <SelectItem key={sa} value={sa}>{sa}</SelectItem>)}
               </SelectContent>
             </Select>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="search-filter">Cari (PIC, Segmen, NIK)</Label>
+            <Input
+              id="search-filter"
+              placeholder="Ketik untuk mencari..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
         </CardContent>
       </Card>
@@ -183,6 +222,7 @@ export default function DashboardPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[200px] pl-6">PIC</TableHead>
+                  <TableHead>NIK</TableHead>
                   <TableHead>Segmen</TableHead>
                   <TableHead className="text-right">Jumlah</TableHead>
                   <TableHead className="hidden md:table-cell w-[160px]">Tanggal</TableHead>
@@ -198,6 +238,7 @@ export default function DashboardPage() {
                         {nota.namaPic}
                       </div>
                     </TableCell>
+                    <TableCell className="text-muted-foreground">{userMap.get(nota.userId)?.nik || '-'}</TableCell>
                     <TableCell className="text-muted-foreground">{nota.segmen}</TableCell>
                     <TableCell className="text-right font-semibold">
                       Rp {nota.nominal.toLocaleString('id-ID')}
