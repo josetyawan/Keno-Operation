@@ -28,6 +28,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { sendTelegramReport } from '@/ai/flows/send-telegram-report';
 import { sendLinkAjaPayment } from '@/ai/flows/send-linkaja-payment';
+import type { DateRange } from 'react-day-picker';
 
 type RekapDataItem = {
     phone: string;
@@ -41,30 +42,24 @@ type RekapDataItem = {
 export default function RekapPage() {
     const firestore = useFirestore();
     const { toast } = useToast();
-    const [verificationDate, setVerificationDate] = useState<Date | undefined>();
+    const [verificationDateRange, setVerificationDateRange] = useState<DateRange | undefined>();
     const [rekapData, setRekapData] = useState<RekapDataItem[]>([]);
     const [grandTotal, setGrandTotal] = useState(0);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSending, setIsSending] = useState(false);
     const [isPaying, setIsPaying] = useState(false);
 
-    useEffect(() => {
-        // Set initial date on client-side to avoid hydration mismatch
-        if (!verificationDate) {
-            setVerificationDate(new Date());
-        }
-    }, [verificationDate]);
-
     const notasQuery = useMemoFirebase(() => {
-        if (!verificationDate) return null;
-        const start = startOfDay(verificationDate);
-        const end = endOfDay(verificationDate);
+        if (!verificationDateRange?.from) return null; // Use only `from` for initial check
+        const start = startOfDay(verificationDateRange.from);
+        // Use `to` if it exists, otherwise use the end of the `from` day
+        const end = endOfDay(verificationDateRange.to || verificationDateRange.from);
         return query(
             collection(firestore, 'notas'),
             where('tanggalVerifikasi', '>=', Timestamp.fromDate(start)),
             where('tanggalVerifikasi', '<=', Timestamp.fromDate(end))
         );
-    }, [firestore, verificationDate]);
+    }, [firestore, verificationDateRange]);
 
     const { data: notasFromQuery, isLoading: isNotasLoading } = useCollection<Nota>(notasQuery);
 
@@ -115,6 +110,14 @@ export default function RekapPage() {
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [notas, users]);
+    
+    const rekapDateString = useMemo(() => {
+        if (!verificationDateRange?.from) return '...';
+        if (verificationDateRange.to) {
+            return `${format(verificationDateRange.from, 'dd MMM yyyy', {locale: idLocale})} - ${format(verificationDateRange.to, 'dd MMM yyyy', {locale: idLocale})}`;
+        }
+        return format(verificationDateRange.from, 'dd MMMM yyyy', {locale: idLocale});
+    }, [verificationDateRange]);
 
     const handleLinkAjaPayment = async () => {
         if (rekapData.length === 0 || grandTotal <= 0) {
@@ -128,7 +131,7 @@ export default function RekapPage() {
 
             const result = await sendLinkAjaPayment({ 
                 amount: grandTotal,
-                description: `Pembayaran rekap tanggal ${verificationDate ? format(verificationDate, 'dd/MM/yyyy') : 'N/A'}`,
+                description: `Pembayaran rekap untuk ${rekapDateString}`,
                 invoiceId: uniqueInvoiceId,
             });
 
@@ -162,7 +165,7 @@ export default function RekapPage() {
             const result = await sendTelegramReport({ 
                 rekapData: rekapData.map(({ phone, name, segmen, tanggal, nominal }) => ({ phone, name, segmen, tanggal, nominal })),
                 grandTotal,
-                rekapDate: verificationDate ? format(verificationDate, 'dd MMMM yyyy', {locale: idLocale}) : 'N/A'
+                rekapDate: rekapDateString
              });
             if (result.success) {
                 toast({ title: 'Terkirim!', description: 'Rekap berhasil dikirim ke Telegram.' });
@@ -200,32 +203,46 @@ export default function RekapPage() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Pilih Tanggal Verifikasi</CardTitle>
+                    <CardTitle>Pilih Rentang Tanggal Verifikasi</CardTitle>
                 </CardHeader>
                 <CardContent className="flex items-center gap-4">
                      <Popover>
                         <PopoverTrigger asChild>
-                        <Button
-                            variant={'outline'}
-                            className={cn(
-                            'w-[280px] justify-start text-left font-normal',
-                            !verificationDate && 'text-muted-foreground'
-                            )}
-                        >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {verificationDate ? format(verificationDate, 'PPP', {locale: idLocale}) : <span>Pilih tanggal verifikasi...</span>}
-                        </Button>
+                            <Button
+                                id="verified-date-range"
+                                variant={"outline"}
+                                className={cn(
+                                    "w-full max-w-sm justify-start text-left font-normal",
+                                    !verificationDateRange && "text-muted-foreground"
+                                )}
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {verificationDateRange?.from ? (
+                                    verificationDateRange.to ? (
+                                        <>
+                                            {format(verificationDateRange.from, "dd LLL, yy", {locale: idLocale})} -{' '}
+                                            {format(verificationDateRange.to, "dd LLL, yy", {locale: idLocale})}
+                                        </>
+                                    ) : (
+                                        format(verificationDateRange.from, "dd LLL, yy", {locale: idLocale})
+                                    )
+                                ) : (
+                                    <span>Pilih rentang tanggal</span>
+                                )}
+                            </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                        <Calendar
-                            mode="single"
-                            selected={verificationDate}
-                            onSelect={setVerificationDate}
-                            initialFocus
-                        />
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                                initialFocus
+                                mode="range"
+                                defaultMonth={verificationDateRange?.from}
+                                selected={verificationDateRange}
+                                onSelect={setVerificationDateRange}
+                                numberOfMonths={2}
+                            />
                         </PopoverContent>
                     </Popover>
-                    <Button onClick={handleGenerateRekap} disabled={isGenerating || isLoading}>
+                    <Button onClick={handleGenerateRekap} disabled={isGenerating || isLoading || !verificationDateRange?.from}>
                         {(isGenerating || isLoading) && <Loader2 className="mr-2 animate-spin"/>}
                         Buat Ulang Rekap
                     </Button>
@@ -236,7 +253,7 @@ export default function RekapPage() {
                 <CardHeader>
                     <CardTitle>Hasil Rekap</CardTitle>
                     <CardDescription>
-                        Laporan untuk tanggal {verificationDate ? format(verificationDate, 'dd MMMM yyyy', {locale: idLocale}) : '...'}
+                        Laporan untuk {rekapDateString}
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -255,7 +272,9 @@ export default function RekapPage() {
                             ))}
                         </div>
                     ) : (
-                        <p className="text-muted-foreground text-center py-8">Tidak ada data terverifikasi untuk tanggal yang dipilih.</p>
+                        <p className="text-muted-foreground text-center py-8">
+                            {verificationDateRange?.from ? 'Tidak ada data terverifikasi untuk rentang tanggal yang dipilih.' : 'Silakan pilih rentang tanggal untuk melihat rekap.'}
+                        </p>
                     )}
                 </CardContent>
                 {(notas && notas.length > 0 && rekapData.length > 0) && (

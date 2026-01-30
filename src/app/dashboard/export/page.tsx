@@ -77,7 +77,7 @@ const generateRekapitulasiReport = (notas: Nota[], month: string, year: string, 
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; padding: 1cm; width: 210mm; min-height: 297mm; background-color: white; box-shadow: 0 0 5px rgba(0,0,0,0.1);">
         <div style="text-align: center; font-weight: bold; line-height: 1.2;">
             <p style="margin: 0; font-size: 12pt; text-decoration: underline;">PERTANGGUNGAN OPERASIONAL</p>
-            <p style="margin: 0; font-size: 12pt;">SERVICE AREA ${serviceArea.toUpperCase()}</p>
+            <p style="margin: 0; font-size: 12pt;">SERVICE AREA ${pekerjaanTitle.toUpperCase()}</p>
             <p style="margin: 0; font-size: 12pt;">PEKERJAAN : ${pekerjaanTitle.toUpperCase()}</p>
             <p style="margin: 0; font-size: 12pt;">ID PROJECT : -</p>
         </div>
@@ -991,8 +991,8 @@ export default function ExportPage() {
                                                         Rp {nota.nominal.toLocaleString('id-ID')}
                                                     </div>
                                                 </div>
-                                                <p className="text-sm text-muted-foreground break-all mt-1">
-                                                    {nota.keterangan || nota.namaBarang || 'Tanpa keterangan'}
+                                                <p className="text-sm text-muted-foreground truncate mt-1">
+                                                    PIC: {nota.namaPic}
                                                 </p>
                                             </div>
                                             <div className="flex items-center">
