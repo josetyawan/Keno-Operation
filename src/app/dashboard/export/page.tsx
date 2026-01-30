@@ -71,13 +71,14 @@ const generateRekapitulasiReport = (notas: Nota[], month: string, year: string, 
     const today = new Date();
     const formattedDate = format(today, 'dd MMMM yyyy', { locale: idLocale });
     const terbilangText = toWords(grandTotal);
+    const pekerjaanTitle = serviceArea === 'SEMUA SA' ? 'SEMUA SA' : serviceArea;
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; padding: 1cm; width: 210mm; min-height: 297mm; background-color: white; box-shadow: 0 0 5px rgba(0,0,0,0.1);">
         <div style="text-align: center; font-weight: bold; line-height: 1.2;">
             <p style="margin: 0; font-size: 12pt; text-decoration: underline;">PERTANGGUNGAN OPERASIONAL</p>
             <p style="margin: 0; font-size: 12pt;">SERVICE AREA ${serviceArea.toUpperCase()}</p>
-            <p style="margin: 0; font-size: 12pt;">PEKERJAAN : ${serviceArea.toUpperCase()}</p>
+            <p style="margin: 0; font-size: 12pt;">PEKERJAAN : ${pekerjaanTitle.toUpperCase()}</p>
             <p style="margin: 0; font-size: 12pt;">ID PROJECT : -</p>
         </div>
         <br/>
@@ -106,14 +107,15 @@ const generateRekapitulasiReport = (notas: Nota[], month: string, year: string, 
         <table style="width: 100%; text-align: center; font-size: 11pt;">
             <tr>
                 <td style="width: 50%; vertical-align: top;">
-                    <p>Menyetujui,</p>
+                    <p style="margin: 0;">&nbsp;</p>
+                    <p style="margin: 0;">Menyetujui,</p>
                     <br/><br/><br/><br/>
                     <p style="text-decoration: underline; font-weight: bold; margin: 0;">Lutfi Akhmad</p>
                     <p style="margin: 0;">HSA Kudus</p>
                 </td>
                 <td style="width: 50%; vertical-align: top;">
-                    <p>Kudus, ${formattedDate}</p>
-                    <p>Pembuat Rincian</p>
+                    <p style="margin: 0;">Kudus, ${formattedDate}</p>
+                    <p style="margin: 0;">Pembuat Rincian</p>
                     <br/><br/><br/><br/>
                     <p style="text-decoration: underline; font-weight: bold; margin: 0;">Joko Wahyu Setyawan</p>
                     <p style="margin: 0;">Officer Kudus</p>
@@ -171,14 +173,15 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
         <table style="width: 100%; text-align: center; font-size: 11pt;">
             <tr>
                 <td style="width: 50%; vertical-align: top;">
-                    <p>Menyetujui,</p>
+                    <p style="margin: 0;">&nbsp;</p>
+                    <p style="margin: 0;">Menyetujui,</p>
                     <br/><br/><br/><br/>
                     <p style="text-decoration: underline; font-weight: bold; margin: 0;">Lutfi Akhmad</p>
                     <p style="margin: 0;">HSA Kudus</p>
                 </td>
                 <td style="width: 50%; vertical-align: top;">
-                    <p>Kudus, ${formattedDate}</p>
-                    <p>Pembuat Rincian</p>
+                    <p style="margin: 0;">Kudus, ${formattedDate}</p>
+                    <p style="margin: 0;">Pembuat Rincian</p>
                     <br/><br/><br/><br/>
                     <p style="text-decoration: underline; font-weight: bold; margin: 0;">Joko Wahyu Setyawan</p>
                     <p style="margin: 0;">Officer Kudus</p>
@@ -274,14 +277,15 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
         <table style="width: 100%; text-align: center; font-size: 11pt;">
             <tr>
                 <td style="width: 50%; vertical-align: top;">
-                    <p>Menyetujui,</p>
+                    <p style="margin: 0;">&nbsp;</p>
+                    <p style="margin: 0;">Menyetujui,</p>
                     <br/><br/><br/><br/>
                     <p style="text-decoration: underline; font-weight: bold; margin: 0;">Lutfi Akhmad</p>
                     <p style="margin: 0;">HSA Kudus</p>
                 </td>
                 <td style="width: 50%; vertical-align: top;">
-                    <p>Kudus, ${formattedDate}</p>
-                    <p>Pembuat Rincian</p>
+                    <p style="margin: 0;">Kudus, ${formattedDate}</p>
+                    <p style="margin: 0;">Pembuat Rincian</p>
                     <br/><br/><br/><br/>
                     <p style="text-decoration: underline; font-weight: bold; margin: 0;">Joko Wahyu Setyawan</p>
                     <p style="margin: 0;">Officer Kudus</p>
@@ -330,14 +334,15 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
         <table style="width: 100%; text-align: center; font-size: 11pt;">
             <tr>
                 <td style="width: 50%; vertical-align: top;">
-                    <p>Menyetujui,</p>
+                    <p style="margin: 0;">&nbsp;</p>
+                    <p style="margin: 0;">Menyetujui,</p>
                     <br/><br/><br/><br/>
                     <p style="text-decoration: underline; font-weight: bold; margin: 0;">Lutfi Akhmad</p>
                     <p style="margin: 0;">HSA Kudus</p>
                 </td>
                 <td style="width: 50%; vertical-align: top;">
-                    <p>Kudus, ${formattedDate}</p>
-                    <p>Pembuat Rincian</p>
+                    <p style="margin: 0;">Kudus, ${formattedDate}</p>
+                    <p style="margin: 0;">Pembuat Rincian</p>
                     <br/><br/><br/><br/>
                     <p style="text-decoration: underline; font-weight: bold; margin: 0;">Joko Wahyu Setyawan</p>
                     <p style="margin: 0;">Officer Kudus</p>
@@ -671,7 +676,7 @@ export default function ExportPage() {
         try {
             if (reportType === 'all') {
                 // 1. Generate Rekap
-                const reportSAForAll = selectedSA === 'all' ? 'Semua SA' : selectedSA;
+                const reportSAForAll = selectedSA === 'all' ? 'SEMUA SA' : selectedSA;
                 const rekapHtml = generateRekapitulasiReport(sortedNotas, "Rekapitulasi", "", reportSAForAll);
                 pages.push(rekapHtml);
 
@@ -728,7 +733,7 @@ export default function ExportPage() {
                 }
 
             } else if (reportType === 'rekap') {
-                 const reportSA = selectedSA === 'all' ? 'Semua SA' : selectedSA;
+                 const reportSA = selectedSA === 'all' ? 'SEMUA SA' : selectedSA;
                  const html = generateRekapitulasiReport(sortedNotas, "Rekapitulasi", "", reportSA);
                  pages.push(html);
             } else if (reportType === 'perincian') {
