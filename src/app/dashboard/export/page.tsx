@@ -406,16 +406,20 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
 
 const generateSimpleEvidenReport = (notas: Nota[], title: string): string => {
     const tableRows = notas.map((nota, index) => {
-        const evidenImageHtml = (nota.fotoEvidenUrls && nota.fotoEvidenUrls[0])
-            ? `<img src="${nota.fotoEvidenUrls[0]}" style="width: 100px; height: auto; object-fit: contain; border: 1px solid #eee; margin: auto;"/>`
-            : '';
+        const evidenImagesHtml = (nota.fotoEvidenUrls || []).map(url => 
+            `<img src="${url}" style="width: 80px; height: auto; object-fit: contain; border: 1px solid #eee;"/>`
+        ).join('');
+        
+        // Use a grid to display multiple photos within the cell
+        const evidenCellContent = `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 4px; align-items: center; justify-content: center;">${evidenImagesHtml}</div>`;
+
 
         return `
         <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
             <td style="border: 1px solid black; padding: 4px; text-align: center; vertical-align: top;">${index + 1}</td>
             <td style="border: 1px solid black; padding: 4px; vertical-align: top; white-space: nowrap;">${format(nota.tanggal.toDate(), 'dd MMMM yyyy', { locale: idLocale })}</td>
             <td style="border: 1px solid black; padding: 4px; vertical-align: top;">${nota.namaBarang || nota.keterangan || '-'}</td>
-            <td style="border: 1px solid black; padding: 4px; text-align: center; vertical-align: top;">${evidenImageHtml}</td>
+            <td style="border: 1px solid black; padding: 4px; vertical-align: top;">${evidenCellContent}</td>
             <td style="border: 1px solid black; padding: 4px; vertical-align: top;">${nota.namaPic}</td>
             <td style="border: 1px solid black; padding: 4px; text-align: right; vertical-align: top;">Rp${nota.nominal.toLocaleString('id-ID')}</td>
         </tr>`;
