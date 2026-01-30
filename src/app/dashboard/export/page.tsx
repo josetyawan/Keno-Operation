@@ -190,7 +190,6 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
 
 
 const generateBBMReport = (notas: Nota[], title: string): string => {
-    let grandTotal = 0;
     const bbmKeteranganMap: Record<string, string> = {
         'BBM R2': 'BBM Harian BBM R2',
         'BBM R4 Harian': 'BBM Harian BBM R4',
@@ -198,33 +197,56 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
         'BBM R4 UT': 'BBM UT BBM R4',
     };
 
-    const tableRows = notas.map((nota, index) => {
-        grandTotal += nota.nominal;
-        const staticKeterangan = bbmKeteranganMap[nota.segmen] || nota.segmen;
+    // Group notas by date
+    const groupedByDate = notas.reduce((acc, nota) => {
+        const dateKey = format(nota.tanggal.toDate(), 'yyyy-MM-dd');
+        if (!acc[dateKey]) {
+            acc[dateKey] = [];
+        }
+        acc[dateKey].push(nota);
+        return acc;
+    }, {} as Record<string, Nota[]>);
+    
+    const sortedDates = Object.keys(groupedByDate).sort();
+    
+    let grandTotal = 0;
+    let tableRows = '';
+    let overallIndex = 0;
 
-        const mainRow = `
-            <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
-                <td style="padding: 4px; border: 1px solid black; text-align: center;">${index + 1}</td>
-                <td style="padding: 4px; border: 1px solid black;">${format(nota.tanggal.toDate(), 'dd-MMM-yy', { locale: idLocale })}</td>
-                <td style="padding: 4px; border: 1px solid black;">${staticKeterangan}</td>
-                <td style="padding: 4px; border: 1px solid black;">${nota.noPlatKendaraan || '-'}</td>
-                <td style="padding: 4px; border: 1px solid black; text-align: center;">${nota.kmAwal || '-'}</td>
-                <td style="padding: 4px; border: 1px solid black; text-align: center;">${nota.kmAkhir || '-'}</td>
-                <td style="padding: 4px; border: 1px solid black; white-space: normal; word-break: break-all;">${nota.keterangan || '-'}</td>
-                <td style="padding: 4px; border: 1px solid black; text-align: right;">Rp${nota.nominal.toLocaleString('id-ID')}</td>
-                <td style="padding: 4px; border: 1px solid black;">${nota.namaPic}</td>
-            </tr>
-        `;
-        const subTotalRow = `
+    for (const dateKey of sortedDates) {
+        const notasOnDate = groupedByDate[dateKey];
+        let dateSubtotal = 0;
+
+        for (const nota of notasOnDate) {
+            overallIndex++;
+            grandTotal += nota.nominal;
+            dateSubtotal += nota.nominal;
+            const staticKeterangan = bbmKeteranganMap[nota.segmen] || nota.segmen;
+
+            tableRows += `
+                <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                    <td style="padding: 4px; border: 1px solid black; text-align: center;">${overallIndex}</td>
+                    <td style="padding: 4px; border: 1px solid black;">${format(nota.tanggal.toDate(), 'dd-MMM-yy', { locale: idLocale })}</td>
+                    <td style="padding: 4px; border: 1px solid black;">${staticKeterangan}</td>
+                    <td style="padding: 4px; border: 1px solid black;">${nota.noPlatKendaraan || '-'}</td>
+                    <td style="padding: 4px; border: 1px solid black; text-align: center;">${nota.kmAwal || '-'}</td>
+                    <td style="padding: 4px; border: 1px solid black; text-align: center;">${nota.kmAkhir || '-'}</td>
+                    <td style="padding: 4px; border: 1px solid black; white-space: normal; word-break: break-all;">${nota.keterangan || '-'}</td>
+                    <td style="padding: 4px; border: 1px solid black; text-align: right;">Rp${nota.nominal.toLocaleString('id-ID')}</td>
+                    <td style="padding: 4px; border: 1px solid black;">${nota.namaPic}</td>
+                </tr>
+            `;
+        }
+
+        // Render subtotal row for the date
+        tableRows += `
             <tr style="font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <td colspan="7" style="padding: 4px; border: 1px solid black; text-align: right;">JUMLAH</td>
-                <td style="padding: 4px; border: 1px solid black; text-align: right;">Rp${nota.nominal.toLocaleString('id-ID')}</td>
+                <td style="padding: 4px; border: 1px solid black; text-align: right;">Rp${dateSubtotal.toLocaleString('id-ID')}</td>
                 <td style="padding: 4px; border: 1px solid black;"></td>
             </tr>
         `;
-        return mainRow + subTotalRow;
-    }).join('');
-
+    }
 
     const today = new Date();
     const formattedDate = format(today, 'dd MMMM yyyy', { locale: idLocale });
@@ -573,8 +595,11 @@ export default function ExportPage() {
 
             const [year, month] = currentMonth.split('-').map(Number);
             result = notas.filter(nota => {
-                if (!nota.tanggal?.toDate) return false;
-                const date = nota.tanggal.toDate();
+                let date: Date | null = null;
+                if (nota.tanggal?.toDate) { date = nota.tanggal.toDate(); } 
+                else if (nota.tanggal instanceof Date) { date = nota.tanggal; }
+                if (!date) return false;
+
                 return getYear(date) === year && getMonth(date) === month - 1;
             });
         } else if (filterType === 'range') {
