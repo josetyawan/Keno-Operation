@@ -356,12 +356,12 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
         const evidenKmAkhirUrl = nota.fotoEvidenUrls?.[6];
 
         const keperluanImagesHtml = keperluanImageUrls.map(url =>
-            `<img src="${url}" style="width: 50px; height: auto; object-fit: contain; border: 1px solid #eee;"/>`
+            `<img src="${url}" style="width: 60px; height: auto; object-fit: contain; border: 1px solid #eee;"/>`
         ).join('');
 
         const renderImageCell = (url: string | undefined) => {
-            if (!url) return '<div style="width: 70px; height: 70px;"></div>'; // Keep cell height consistent
-            return `<img src="${url}" style="width: 70px; height: auto; object-fit: contain; margin: auto;"/>`;
+            if (!url) return '<div style="width: 60px; height: 60px;"></div>'; // Keep cell height consistent
+            return `<img src="${url}" style="width: 60px; height: auto; object-fit: contain; margin: auto;"/>`;
         };
         
         const selisih = (nota.kmAkhir != null && nota.kmAwal != null && nota.kmAkhir > nota.kmAwal) ? (nota.kmAkhir - nota.kmAwal) : '';
@@ -407,11 +407,11 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
 const generateSimpleEvidenReport = (notas: Nota[], title: string): string => {
     const tableRows = notas.map((nota, index) => {
         const evidenImagesHtml = (nota.fotoEvidenUrls || []).map(url => 
-            `<img src="${url}" style="width: 80px; height: auto; object-fit: contain; border: 1px solid #eee;"/>`
+            `<img src="${url}" style="width: 60px; height: auto; object-fit: contain; border: 1px solid #eee;"/>`
         ).join('');
         
         // Use a grid to display multiple photos within the cell
-        const evidenCellContent = `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 4px; align-items: center; justify-content: center;">${evidenImagesHtml}</div>`;
+        const evidenCellContent = `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; align-items: center; justify-content: center;">${evidenImagesHtml}</div>`;
 
 
         return `
@@ -671,7 +671,7 @@ export default function ExportPage() {
         try {
             if (reportType === 'all') {
                 // 1. Generate Rekap (if applicable)
-                if (filterType === 'monthly' || filterType === 'verified') {
+                if ((filterType === 'monthly' || filterType === 'verified') && selectedSA !== 'all') {
                     const rekapHtml = generateRekapitulasiReport(sortedNotas, "Rekapitulasi", "", selectedSA);
                     pages.push(rekapHtml);
                 }
@@ -729,11 +729,11 @@ export default function ExportPage() {
                 }
 
             } else if (reportType === 'rekap') {
-                 if (filterType === 'monthly' || filterType === 'verified') {
-                    const html = generateRekapitulasiReport(sortedNotas, "Rekapitulasi", "", selectedSA === 'all' ? 'Semua SA' : selectedSA);
+                 if ((filterType === 'monthly' || filterType === 'verified') && selectedSA !== 'all') {
+                    const html = generateRekapitulasiReport(sortedNotas, "Rekapitulasi", "", selectedSA);
                     pages.push(html);
                 } else {
-                    toast({ variant: "destructive", title: "Tidak dapat membuat rekap", description: "Filter saat ini tidak mendukung pembuatan rekap."});
+                    toast({ variant: "destructive", title: "Tidak dapat membuat rekap", description: "Filter saat ini tidak mendukung pembuatan rekap atau 'Semua SA' terpilih."});
                 }
             } else if (reportType === 'perincian') {
                 const groupedBySegment = sortedNotas.reduce((acc, nota) => {
@@ -1006,7 +1006,7 @@ export default function ExportPage() {
                             <Button variant="outline" size="lg" onClick={() => handleGenerateReport('all')} disabled={isGenerating || selectedNotaIds.length === 0}>
                                {isGenerating && reportTypeBeingGenerated === 'all' ? <Loader2 className="mr-2 animate-spin"/> : <FileArchive className="mr-2" />} Semua (1 File)
                             </Button>
-                            <Button variant="outline" size="lg" onClick={() => handleGenerateReport('rekap')} disabled={isGenerating || selectedNotaIds.length === 0 || !['monthly', 'verified'].includes(filterType)}>
+                            <Button variant="outline" size="lg" onClick={() => handleGenerateReport('rekap')} disabled={isGenerating || selectedNotaIds.length === 0 || (!['monthly', 'verified'].includes(filterType) || selectedSA === 'all')}>
                                 {isGenerating && reportTypeBeingGenerated === 'rekap' ? <Loader2 className="mr-2 animate-spin"/> : <FileText className="mr-2" />} Rekap
                             </Button>
                             <Button variant="outline" size="lg" onClick={() => handleGenerateReport('perincian')} disabled={isGenerating || selectedNotaIds.length === 0}>
