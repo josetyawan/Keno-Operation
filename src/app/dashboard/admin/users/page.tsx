@@ -42,7 +42,8 @@ import type { UserProfile } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState, useMemo } from 'react';
+import { Input } from '@/components/ui/input';
 
 function UserActions({ userToManage, currentUserId }: { userToManage: UserProfile, currentUserId: string }) {
   const firestore = useFirestore();
@@ -134,6 +135,7 @@ export default function AdminUsersPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Redirect if user is not an admin
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
@@ -158,6 +160,19 @@ export default function AdminUsersPage() {
   }, [firestore, currentUserProfile]);
 
   const { data: users, isLoading: areUsersLoading } = useCollection<UserProfile>(usersQuery);
+  
+  const filteredUsers = useMemo(() => {
+    if (!users) return [];
+    if (!searchQuery) return users;
+
+    const lowercasedQuery = searchQuery.toLowerCase();
+    return users.filter(user => 
+      user.email?.toLowerCase().includes(lowercasedQuery) ||
+      user.nik?.toLowerCase().includes(lowercasedQuery) ||
+      user.phone?.toLowerCase().includes(lowercasedQuery)
+    );
+  }, [users, searchQuery]);
+
 
   const isLoading = isUserLoading || isProfileLoading || areUsersLoading;
 
@@ -203,6 +218,14 @@ export default function AdminUsersPage() {
           <CardDescription>
             Daftar semua pengguna yang terdaftar di sistem.
           </CardDescription>
+           <div className="pt-4">
+            <Input
+              placeholder="Cari berdasarkan email, NIK, atau no. pembayaran..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="max-w-md"
+            />
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -219,8 +242,8 @@ export default function AdminUsersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users && users.length > 0 ? (
-                users.map(u => (
+              {filteredUsers && filteredUsers.length > 0 ? (
+                filteredUsers.map(u => (
                   <TableRow key={u.id}>
                     <TableCell className="font-medium">{u.email}</TableCell>
                     <TableCell>{u.nik || '-'}</TableCell>
