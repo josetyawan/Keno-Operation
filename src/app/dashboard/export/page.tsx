@@ -33,7 +33,7 @@ import {
 import { ArrowLeft, Edit, Trash2, Filter, FileText, Printer, FileArchive, Calendar as CalendarIcon, Loader2 } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
-import { format, getMonth, getYear, isSameDay, startOfDay } from 'date-fns';
+import { format, getMonth, getYear, startOfDay, endOfDay } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import type { Nota } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -71,7 +71,7 @@ const generateRekapitulasiReport = (notas: Nota[], month: string, year: string, 
     const today = new Date();
     const formattedDate = format(today, 'dd MMMM yyyy', { locale: idLocale });
     const terbilangText = toWords(grandTotal);
-    const pekerjaanTitle = serviceArea === 'SEMUA SA' ? 'SEMUA SA' : serviceArea;
+    const pekerjaanTitle = serviceArea === 'all' ? 'SEMUA SA' : serviceArea;
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; padding: 1cm; width: 210mm; min-height: 297mm; background-color: white; box-shadow: 0 0 5px rgba(0,0,0,0.1);">
@@ -562,7 +562,7 @@ export default function ExportPage() {
     const [filterType, setFilterType] = useState('monthly');
     const [selectedMonth, setSelectedMonth] = useState<string>('');
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
-    const [verifiedDate, setVerifiedDate] = useState<Date | undefined>(undefined);
+    const [verifiedDateRange, setVerifiedDateRange] = useState<DateRange | undefined>(undefined);
     const [selectedSA, setSelectedSA] = useState<string>('all');
 
     const [selectedNotaIds, setSelectedNotaIds] = useState<string[]>([]);
@@ -570,14 +570,6 @@ export default function ExportPage() {
     const [reportPages, setReportPages] = useState<string[]>([]);
     const [isGenerating, setIsGenerating] = useState(false);
     const [reportTypeBeingGenerated, setReportTypeBeingGenerated] = useState('');
-
-    const handleFilterChange = (value: string) => {
-        setFilterType(value);
-        // Automatically set today's date when switching to 'verified' tab if no date is selected
-        if (value === 'verified' && !verifiedDate) {
-            setVerifiedDate(new Date());
-        }
-    };
 
     const monthOptions = useMemo(() => getMonthYearOptions(notas || []), [notas]);
 
@@ -613,17 +605,21 @@ export default function ExportPage() {
             });
         } else if (filterType === 'range') {
             if (!dateRange?.from || !dateRange?.to) return [];
+            const fromDate = startOfDay(dateRange.from);
+            const toDate = endOfDay(dateRange.to);
             result = notas.filter(nota => {
                 if (!nota.tanggal?.toDate) return false;
                 const date = nota.tanggal.toDate();
-                return date >= dateRange.from! && date <= dateRange.to!;
+                return date >= fromDate && date <= toDate;
             });
         } else if (filterType === 'verified') {
-            if (!verifiedDate) return [];
+            if (!verifiedDateRange?.from || !verifiedDateRange?.to) return [];
+             const fromDate = startOfDay(verifiedDateRange.from);
+             const toDate = endOfDay(verifiedDateRange.to);
              result = notas.filter(nota => {
                 if (nota.status !== 'verified' || !nota.tanggalVerifikasi?.toDate) return false;
                 const date = nota.tanggalVerifikasi.toDate();
-                return isSameDay(date, verifiedDate);
+                return date >= fromDate && date <= toDate;
             });
         }
 
@@ -632,7 +628,7 @@ export default function ExportPage() {
         }
 
         return result.sort((a,b) => a.tanggal.toDate().getTime() - b.tanggal.toDate().getTime());
-    }, [notas, filterType, selectedMonth, monthOptions, dateRange, verifiedDate, selectedSA]);
+    }, [notas, filterType, selectedMonth, monthOptions, dateRange, verifiedDateRange, selectedSA]);
 
     const handleSelectNota = (id: string, checked: boolean) => {
         setSelectedNotaIds(prev =>
@@ -841,7 +837,7 @@ export default function ExportPage() {
                             </div>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <Tabs value={filterType} onValueChange={handleFilterChange} className="w-full">
+                            <Tabs value={filterType} onValueChange={setFilterType} className="w-full">
                                 <TabsList className="grid w-full grid-cols-3 mb-4">
                                     <TabsTrigger value="monthly">Per Bulan</TabsTrigger>
                                     <TabsTrigger value="range">Rentang Tanggal</TabsTrigger>
@@ -900,26 +896,40 @@ export default function ExportPage() {
                                     </Popover>
                                 </TabsContent>
                                 <TabsContent value="verified">
-                                    <Popover>
+                                     <Popover>
                                         <PopoverTrigger asChild>
-                                        <Button
-                                            variant={'outline'}
-                                            className={cn(
-                                            'w-full justify-start text-left font-normal',
-                                            !verifiedDate && 'text-muted-foreground'
-                                            )}
-                                        >
-                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {verifiedDate ? format(verifiedDate, 'PPP', {locale: idLocale}) : <span>Pilih tanggal verifikasi</span>}
-                                        </Button>
+                                            <Button
+                                                id="verified-date-range"
+                                                variant={"outline"}
+                                                className={cn(
+                                                    "w-full justify-start text-left font-normal",
+                                                    !verifiedDateRange && "text-muted-foreground"
+                                                )}
+                                            >
+                                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                                {verifiedDateRange?.from ? (
+                                                    verifiedDateRange.to ? (
+                                                        <>
+                                                            {format(verifiedDateRange.from, "dd LLL, yy", {locale: idLocale})} -{' '}
+                                                            {format(verifiedDateRange.to, "dd LLL, yy", {locale: idLocale})}
+                                                        </>
+                                                    ) : (
+                                                        format(verifiedDateRange.from, "dd LLL, yy")
+                                                    )
+                                                ) : (
+                                                    <span>Pilih rentang tanggal verifikasi</span>
+                                                )}
+                                            </Button>
                                         </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0">
-                                        <Calendar
-                                            mode="single"
-                                            selected={verifiedDate}
-                                            onSelect={setVerifiedDate}
-                                            initialFocus
-                                        />
+                                        <PopoverContent className="w-auto p-0" align="start">
+                                            <Calendar
+                                                initialFocus
+                                                mode="range"
+                                                defaultMonth={verifiedDateRange?.from}
+                                                selected={verifiedDateRange}
+                                                onSelect={setVerifiedDateRange}
+                                                numberOfMonths={2}
+                                            />
                                         </PopoverContent>
                                     </Popover>
                                 </TabsContent>
@@ -1025,3 +1035,5 @@ export default function ExportPage() {
         </>
     );
 }
+
+    
