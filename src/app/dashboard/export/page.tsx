@@ -670,11 +670,10 @@ export default function ExportPage() {
 
         try {
             if (reportType === 'all') {
-                // 1. Generate Rekap (if applicable)
-                if (selectedSA !== 'all') {
-                    const rekapHtml = generateRekapitulasiReport(sortedNotas, "Rekapitulasi", "", selectedSA);
-                    pages.push(rekapHtml);
-                }
+                // 1. Generate Rekap
+                const reportSAForAll = selectedSA === 'all' ? 'Semua SA' : selectedSA;
+                const rekapHtml = generateRekapitulasiReport(sortedNotas, "Rekapitulasi", "", reportSAForAll);
+                pages.push(rekapHtml);
 
                 // 2. Generate Perincian
                 const perincianGrouped = sortedNotas.reduce((acc, nota) => {
@@ -729,12 +728,9 @@ export default function ExportPage() {
                 }
 
             } else if (reportType === 'rekap') {
-                 if (selectedSA !== 'all') {
-                    const html = generateRekapitulasiReport(sortedNotas, "Rekapitulasi", "", selectedSA);
-                    pages.push(html);
-                } else {
-                    toast({ variant: "destructive", title: "Tidak dapat membuat rekap", description: "Silakan pilih satu Service Area spesifik untuk membuat rekapitulasi."});
-                }
+                 const reportSA = selectedSA === 'all' ? 'Semua SA' : selectedSA;
+                 const html = generateRekapitulasiReport(sortedNotas, "Rekapitulasi", "", reportSA);
+                 pages.push(html);
             } else if (reportType === 'perincian') {
                 const groupedBySegment = sortedNotas.reduce((acc, nota) => {
                     const seg = nota.segmen;
@@ -797,15 +793,9 @@ export default function ExportPage() {
                  toast({ variant: "destructive", title: "Tipe Laporan Tidak Didukung" });
             }
 
-            let hasShownToast = false;
-            if (reportType === 'rekap' && pages.length === 0) {
-                 // Toast is already shown inside the handler
-                 hasShownToast = true;
-            }
-
             if (pages.length > 0) {
                 setReportPages(pages);
-            } else if (!hasShownToast) {
+            } else {
                  toast({ variant: "destructive", title: "Tidak ada data untuk laporan ini" });
             }
         } catch (error) {
@@ -1013,7 +1003,7 @@ export default function ExportPage() {
                             <Button variant="outline" size="lg" onClick={() => handleGenerateReport('all')} disabled={isGenerating || selectedNotaIds.length === 0}>
                                {isGenerating && reportTypeBeingGenerated === 'all' ? <Loader2 className="mr-2 animate-spin"/> : <FileArchive className="mr-2" />} Semua (1 File)
                             </Button>
-                            <Button variant="outline" size="lg" onClick={() => handleGenerateReport('rekap')} disabled={isGenerating || selectedNotaIds.length === 0 || selectedSA === 'all'}>
+                            <Button variant="outline" size="lg" onClick={() => handleGenerateReport('rekap')} disabled={isGenerating || selectedNotaIds.length === 0}>
                                 {isGenerating && reportTypeBeingGenerated === 'rekap' ? <Loader2 className="mr-2 animate-spin"/> : <FileText className="mr-2" />} Rekap
                             </Button>
                             <Button variant="outline" size="lg" onClick={() => handleGenerateReport('perincian')} disabled={isGenerating || selectedNotaIds.length === 0}>
