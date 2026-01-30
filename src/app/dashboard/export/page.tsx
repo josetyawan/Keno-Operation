@@ -356,12 +356,12 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
         const evidenKmAkhirUrl = nota.fotoEvidenUrls?.[6];
 
         const keperluanImagesHtml = keperluanImageUrls.map(url =>
-            `<img src="${url}" style="width: 100px; height: auto; object-fit: contain; border: 1px solid #eee;"/>`
+            `<img src="${url}" style="width: 50px; height: auto; object-fit: contain; border: 1px solid #eee;"/>`
         ).join('');
 
         const renderImageCell = (url: string | undefined) => {
-            if (!url) return '<div style="width: 100px; height: 100px;"></div>'; // Keep cell height consistent
-            return `<img src="${url}" style="width: 100px; height: auto; object-fit: contain; margin: auto;"/>`;
+            if (!url) return '<div style="width: 70px; height: 70px;"></div>'; // Keep cell height consistent
+            return `<img src="${url}" style="width: 70px; height: auto; object-fit: contain; margin: auto;"/>`;
         };
         
         const selisih = (nota.kmAkhir != null && nota.kmAwal != null && nota.kmAkhir > nota.kmAwal) ? (nota.kmAkhir - nota.kmAwal) : '';
@@ -647,24 +647,18 @@ export default function ExportPage() {
     }, [selectedNotaIds, notas]);
 
     const handleGenerateReport = async (reportType: string) => {
-        if (selectedSA === 'all' && reportType !== 'rekap') {
-            // Allow all reports except rekap when 'all' is selected.
-            // For rekap, we can aggregate but the title might be generic.
-        }
-
-        setIsGenerating(true);
-        setReportTypeBeingGenerated(reportType);
-        const selectedNotas = filteredNotas.filter(n => selectedNotaIds.includes(n.id)) || [];
-        if (selectedNotas.length === 0) {
+        if (selectedNotaIds.length === 0) {
             toast({
                 variant: "destructive",
                 title: "Tidak ada laporan dipilih",
                 description: "Silakan pilih setidaknya satu laporan untuk membuat rekap.",
             });
-            setIsGenerating(false);
-            setReportTypeBeingGenerated('');
             return;
         }
+        
+        setIsGenerating(true);
+        setReportTypeBeingGenerated(reportType);
+        const selectedNotas = filteredNotas.filter(n => selectedNotaIds.includes(n.id)) || [];
 
         const pages: string[] = [];
         const sortedNotas = selectedNotas.sort((a,b) => a.tanggal.toDate().getTime() - b.tanggal.toDate().getTime());
