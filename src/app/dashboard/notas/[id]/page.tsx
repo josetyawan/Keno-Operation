@@ -12,7 +12,7 @@ import {
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import { ArrowLeft, CheckCircle, Edit, Trash } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Edit, Trash, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useDoc, useFirestore, useUser, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -46,6 +46,7 @@ export default function NotaDetailPage() {
   const { toast } = useToast();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [photoToDelete, setPhotoToDelete] = useState<string | null>(null);
   
   const [isVerifyDialogOpen, setIsVerifyDialogOpen] = useState(false);
   const [verificationDate, setVerificationDate] = useState<Date | undefined>(new Date());
@@ -100,6 +101,31 @@ export default function NotaDetailPage() {
     router.push('/dashboard');
   };
 
+  const handleDeletePhoto = () => {
+    if (!photoToDelete || !notaRef || !nota) return;
+    if (!isOwner && !isAdmin) {
+      toast({
+        variant: 'destructive',
+        title: 'Unauthorized',
+        description: "You don't have permission to modify this report.",
+      });
+      setPhotoToDelete(null);
+      return;
+    }
+
+    const newUrls = nota.fotoEvidenUrls?.filter(url => url !== photoToDelete) || [];
+    
+    updateDocumentNonBlocking(notaRef, { fotoEvidenUrls: newUrls });
+
+    toast({
+      title: 'Photo Removed',
+      description: 'The evidence photo has been removed from this report.',
+    });
+
+    setPhotoToDelete(null); // Close the dialog
+  };
+
+
   if (isLoading) {
       return (
          <div className="mx-auto grid max-w-4xl flex-1 auto-rows-max gap-6">
@@ -114,7 +140,6 @@ export default function NotaDetailPage() {
   }
 
   if (error || !nota) {
-    // This will be caught by the not-found mechanism
     notFound();
   }
 
@@ -134,161 +159,193 @@ export default function NotaDetailPage() {
   `.trim();
 
   return (
-    <div className="mx-auto grid max-w-4xl flex-1 auto-rows-max gap-6">
-       <div className="flex items-center gap-4">
-         <Link href="/dashboard">
+    <>
+      <div className="mx-auto grid max-w-4xl flex-1 auto-rows-max gap-6">
+        <div className="flex items-center gap-4">
+          <Link href="/dashboard">
           <Button variant="outline" size="icon" className="h-7 w-7">
             <ArrowLeft className="h-4 w-4" />
             <span className="sr-only">Back</span>
           </Button>
-         </Link>
-        <h1 className="flex-1 shrink-0 whitespace-nowrap text-xl font-semibold tracking-tight sm:grow-0 font-headline truncate">
-          Detail Laporan
-        </h1>
-        <Badge 
-          variant={nota.status === 'verified' ? 'default' : 'secondary'} 
-          className="ml-auto sm:ml-0 capitalize"
-        >
-          {nota.status}
-        </Badge>
+          </Link>
+          <h1 className="flex-1 shrink-0 whitespace-nowrap text-xl font-semibold tracking-tight sm:grow-0 font-headline truncate">
+            Detail Laporan
+          </h1>
+          <Badge 
+            variant={nota.status === 'verified' ? 'default' : 'secondary'} 
+            className="ml-auto sm:ml-0 capitalize"
+          >
+            {nota.status}
+          </Badge>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Laporan Segmen: {nota.segmen}</CardTitle>
+              <CardDescription>
+                Oleh {nota.userEmail} di <strong>{nota.serviceArea}</strong> pada {format(tanggalLaporan, 'PPPPp')}
+                {nota.status === 'verified' && nota.tanggalVerifikasi?.toDate && (
+                      ` | Diverifikasi pada: ${format(nota.tanggalVerifikasi.toDate(), 'dd MMM yyyy')}`
+                  )}
+              </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-6 text-sm">
+              <div>
+                <p className="text-muted-foreground">Nama PIC</p>
+                <p className="font-medium">{nota.namaPic}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Nominal</p>
+                <p className="font-medium">Rp {nota.nominal.toLocaleString('id-ID')}</p>
+              </div>
+              {nota.noPlatKendaraan && (
+                  <div>
+                    <p className="text-muted-foreground">No Plat Kendaraan</p>
+                    <p className="font-medium">{nota.noPlatKendaraan}</p>
+                  </div>
+              )}
+              {(nota.kmAwal !== undefined && nota.kmAkhir !== undefined && nota.kmAwal > 0) && (
+                  <div>
+                      <p className="text-muted-foreground">KM Awal / Akhir</p>
+                      <p className="font-medium">{nota.kmAwal} / {nota.kmAkhir}</p>
+                  </div>
+              )}
+              {nota.namaBarang && (
+                  <div className="col-span-2">
+                      <p className="text-muted-foreground">{nota.segmen === 'jasa' ? 'Nama Jasa' : 'Nama Barang'}</p>
+                      <p className="font-medium">{nota.namaBarang}</p>
+                  </div>
+              )}
+            </div>
+            {nota.keterangan && (
+              <div>
+                  <p className="text-muted-foreground text-sm">Keterangan</p>
+                  <div className="text-foreground whitespace-pre-wrap text-sm border p-3 rounded-md bg-muted/50">
+                      {nota.keterangan}
+                  </div>
+              </div>
+            )}
+
+            {(nota.fotoEvidenUrls && nota.fotoEvidenUrls.length > 0) && (
+              <div>
+                  <p className="text-muted-foreground text-sm mb-2">Foto Bukti</p>
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                      {nota.fotoEvidenUrls.map((url, index) => (
+                          <div key={index} className="relative group aspect-square w-full rounded-md overflow-hidden border">
+                              <Image src={url} alt={`Evidence ${index + 1}`} fill className="object-cover" />
+                              {(isOwner || isAdmin) && (
+                                  <Button
+                                      variant="destructive"
+                                      size="icon"
+                                      className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                      onClick={() => setPhotoToDelete(url)}
+                                  >
+                                      <X className="h-4 w-4" />
+                                      <span className="sr-only">Delete Photo</span>
+                                  </Button>
+                              )}
+                          </div>
+                      ))}
+                  </div>
+              </div>
+            )}
+            
+          </CardContent>
+          <CardFooter className="border-t pt-6 flex-col sm:flex-row gap-2">
+              <div className="flex-grow text-xs text-muted-foreground">
+                  Laporan ID: {nota.id}
+              </div>
+              <div className="flex gap-2 flex-wrap justify-end">
+                  <SummarizeButton notaContent={notaContentForSummary} />
+                  {(isOwner || isAdmin) && (
+                      <>
+                          <Link href={`/dashboard/notas/${id}/edit`}>
+                              <Button variant="outline">
+                                  <Edit /> Edit
+                              </Button>
+                          </Link>
+                          <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                              <AlertDialogTrigger asChild>
+                                  <Button variant="destructive">
+                                      <Trash /> Hapus
+                                  </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                  <AlertDialogTitle>Anda yakin ingin menghapus?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                      Tindakan ini tidak dapat dibatalkan. Laporan ini akan dihapus secara permanen.
+                                  </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                      <AlertDialogCancel>Batal</AlertDialogCancel>
+                                      <AlertDialogAction
+                                          onClick={handleDelete}
+                                          disabled={isDeleting}
+                                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                      >
+                                          {isDeleting ? 'Menghapus...' : 'Hapus'}
+                                      </AlertDialogAction>
+                                  </AlertDialogFooter>
+                              </AlertDialogContent>
+                          </AlertDialog>
+                      </>
+                  )}
+                  {isAdmin && nota.status === 'pending' && (
+                      <AlertDialog open={isVerifyDialogOpen} onOpenChange={setIsVerifyDialogOpen}>
+                          <AlertDialogTrigger asChild>
+                              <Button>
+                                  <CheckCircle /> Verify Laporan
+                              </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                              <AlertDialogHeader>
+                                  <AlertDialogTitle>Pilih Tanggal Verifikasi</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                      Pilih tanggal kapan laporan ini dianggap telah diverifikasi. Tanggal ini akan digunakan untuk filter laporan terverifikasi.
+                                  </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <div className="flex justify-center py-4">
+                                  <Calendar
+                                      mode="single"
+                                      selected={verificationDate}
+                                      onSelect={setVerificationDate}
+                                      initialFocus
+                                  />
+                              </div>
+                              <AlertDialogFooter>
+                                  <AlertDialogCancel>Batal</AlertDialogCancel>
+                                  <AlertDialogAction onClick={handleConfirmVerify} disabled={!verificationDate}>
+                                      Konfirmasi Verifikasi
+                                  </AlertDialogAction>
+                              </AlertDialogFooter>
+                          </AlertDialogContent>
+                      </AlertDialog>
+                  )}
+              </div>
+          </CardFooter>
+        </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Laporan Segmen: {nota.segmen}</CardTitle>
-            <CardDescription>
-              Oleh {nota.userEmail} di <strong>{nota.serviceArea}</strong> pada {format(tanggalLaporan, 'PPPPp')}
-               {nota.status === 'verified' && nota.tanggalVerifikasi?.toDate && (
-                    ` | Diverifikasi pada: ${format(nota.tanggalVerifikasi.toDate(), 'dd MMM yyyy')}`
-                )}
-            </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-2 gap-x-4 gap-y-6 text-sm">
-            <div>
-              <p className="text-muted-foreground">Nama PIC</p>
-              <p className="font-medium">{nota.namaPic}</p>
-            </div>
-             <div>
-              <p className="text-muted-foreground">Nominal</p>
-              <p className="font-medium">Rp {nota.nominal.toLocaleString('id-ID')}</p>
-            </div>
-             {nota.noPlatKendaraan && (
-                <div>
-                  <p className="text-muted-foreground">No Plat Kendaraan</p>
-                  <p className="font-medium">{nota.noPlatKendaraan}</p>
-                </div>
-             )}
-             {(nota.kmAwal !== undefined && nota.kmAkhir !== undefined && nota.kmAwal > 0) && (
-                <div>
-                    <p className="text-muted-foreground">KM Awal / Akhir</p>
-                    <p className="font-medium">{nota.kmAwal} / {nota.kmAkhir}</p>
-                </div>
-             )}
-             {nota.namaBarang && (
-                <div className="col-span-2">
-                    <p className="text-muted-foreground">{nota.segmen === 'jasa' ? 'Nama Jasa' : 'Nama Barang'}</p>
-                    <p className="font-medium">{nota.namaBarang}</p>
-                </div>
-             )}
-          </div>
-          {nota.keterangan && (
-            <div>
-                <p className="text-muted-foreground text-sm">Keterangan</p>
-                <div className="text-foreground whitespace-pre-wrap text-sm border p-3 rounded-md bg-muted/50">
-                    {nota.keterangan}
-                </div>
-            </div>
-          )}
-
-           {(nota.fotoEvidenUrls && nota.fotoEvidenUrls.length > 0) && (
-            <div>
-                <p className="text-muted-foreground text-sm mb-2">Foto Bukti</p>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    {nota.fotoEvidenUrls.map((url, index) => (
-                        <div key={index} className="relative aspect-square w-full rounded-md overflow-hidden border">
-                            <Image src={url} alt={`Evidence ${index + 1}`} fill className="object-cover" />
-                        </div>
-                    ))}
-                </div>
-            </div>
-          )}
-          
-        </CardContent>
-         <CardFooter className="border-t pt-6 flex-col sm:flex-row gap-2">
-            <div className="flex-grow text-xs text-muted-foreground">
-                Laporan ID: {nota.id}
-            </div>
-            <div className="flex gap-2 flex-wrap justify-end">
-                <SummarizeButton notaContent={notaContentForSummary} />
-                {(isOwner || isAdmin) && (
-                    <>
-                        <Link href={`/dashboard/notas/${id}/edit`}>
-                            <Button variant="outline">
-                                <Edit /> Edit
-                            </Button>
-                        </Link>
-                        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                            <AlertDialogTrigger asChild>
-                                <Button variant="destructive">
-                                    <Trash /> Hapus
-                                </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                <AlertDialogTitle>Anda yakin ingin menghapus?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    Tindakan ini tidak dapat dibatalkan. Laporan ini akan dihapus secara permanen.
-                                </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel>Batal</AlertDialogCancel>
-                                    <AlertDialogAction
-                                        onClick={handleDelete}
-                                        disabled={isDeleting}
-                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                    >
-                                        {isDeleting ? 'Menghapus...' : 'Hapus'}
-                                    </AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
-                    </>
-                )}
-                {isAdmin && nota.status === 'pending' && (
-                     <AlertDialog open={isVerifyDialogOpen} onOpenChange={setIsVerifyDialogOpen}>
-                        <AlertDialogTrigger asChild>
-                            <Button>
-                                <CheckCircle /> Verify Laporan
-                            </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Pilih Tanggal Verifikasi</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    Pilih tanggal kapan laporan ini dianggap telah diverifikasi. Tanggal ini akan digunakan untuk filter laporan terverifikasi.
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <div className="flex justify-center py-4">
-                                <Calendar
-                                    mode="single"
-                                    selected={verificationDate}
-                                    onSelect={setVerificationDate}
-                                    initialFocus
-                                />
-                            </div>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>Batal</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleConfirmVerify} disabled={!verificationDate}>
-                                    Konfirmasi Verifikasi
-                                </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
-                )}
-            </div>
-         </CardFooter>
-      </Card>
-    </div>
+      <AlertDialog open={!!photoToDelete} onOpenChange={(open) => !open && setPhotoToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to delete this photo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently remove the photo from this report.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeletePhoto}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
