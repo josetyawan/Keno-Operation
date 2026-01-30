@@ -77,7 +77,7 @@ const generateRekapitulasiReport = (notas: Nota[], month: string, year: string, 
         <div style="text-align: center; font-weight: bold; line-height: 1.2;">
             <p style="margin: 0; font-size: 12pt; text-decoration: underline;">PERTANGGUNGAN OPERASIONAL</p>
             <p style="margin: 0; font-size: 12pt;">SERVICE AREA ${serviceArea.toUpperCase()}</p>
-            <p style="margin: 0; font-size: 12pt;">PEKERJAAN : SA KUDUS</p>
+            <p style="margin: 0; font-size: 12pt;">PEKERJAAN : ${serviceArea.toUpperCase()}</p>
             <p style="margin: 0; font-size: 12pt;">ID PROJECT : -</p>
         </div>
         <br/>
@@ -671,7 +671,7 @@ export default function ExportPage() {
         try {
             if (reportType === 'all') {
                 // 1. Generate Rekap (if applicable)
-                if ((filterType === 'monthly' || filterType === 'verified') && selectedSA !== 'all') {
+                if (selectedSA !== 'all') {
                     const rekapHtml = generateRekapitulasiReport(sortedNotas, "Rekapitulasi", "", selectedSA);
                     pages.push(rekapHtml);
                 }
@@ -729,11 +729,11 @@ export default function ExportPage() {
                 }
 
             } else if (reportType === 'rekap') {
-                 if ((filterType === 'monthly' || filterType === 'verified') && selectedSA !== 'all') {
+                 if (selectedSA !== 'all') {
                     const html = generateRekapitulasiReport(sortedNotas, "Rekapitulasi", "", selectedSA);
                     pages.push(html);
                 } else {
-                    toast({ variant: "destructive", title: "Tidak dapat membuat rekap", description: "Filter saat ini tidak mendukung pembuatan rekap atau 'Semua SA' terpilih."});
+                    toast({ variant: "destructive", title: "Tidak dapat membuat rekap", description: "Silakan pilih satu Service Area spesifik untuk membuat rekapitulasi."});
                 }
             } else if (reportType === 'perincian') {
                 const groupedBySegment = sortedNotas.reduce((acc, nota) => {
@@ -796,9 +796,16 @@ export default function ExportPage() {
             } else {
                  toast({ variant: "destructive", title: "Tipe Laporan Tidak Didukung" });
             }
+
+            let hasShownToast = false;
+            if (reportType === 'rekap' && pages.length === 0) {
+                 // Toast is already shown inside the handler
+                 hasShownToast = true;
+            }
+
             if (pages.length > 0) {
                 setReportPages(pages);
-            } else {
+            } else if (!hasShownToast) {
                  toast({ variant: "destructive", title: "Tidak ada data untuk laporan ini" });
             }
         } catch (error) {
@@ -1006,7 +1013,7 @@ export default function ExportPage() {
                             <Button variant="outline" size="lg" onClick={() => handleGenerateReport('all')} disabled={isGenerating || selectedNotaIds.length === 0}>
                                {isGenerating && reportTypeBeingGenerated === 'all' ? <Loader2 className="mr-2 animate-spin"/> : <FileArchive className="mr-2" />} Semua (1 File)
                             </Button>
-                            <Button variant="outline" size="lg" onClick={() => handleGenerateReport('rekap')} disabled={isGenerating || selectedNotaIds.length === 0 || (!['monthly', 'verified'].includes(filterType) || selectedSA === 'all')}>
+                            <Button variant="outline" size="lg" onClick={() => handleGenerateReport('rekap')} disabled={isGenerating || selectedNotaIds.length === 0 || selectedSA === 'all'}>
                                 {isGenerating && reportTypeBeingGenerated === 'rekap' ? <Loader2 className="mr-2 animate-spin"/> : <FileText className="mr-2" />} Rekap
                             </Button>
                             <Button variant="outline" size="lg" onClick={() => handleGenerateReport('perincian')} disabled={isGenerating || selectedNotaIds.length === 0}>
