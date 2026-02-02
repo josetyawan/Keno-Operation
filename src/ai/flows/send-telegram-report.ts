@@ -16,6 +16,7 @@ const RekapDataItemSchema = z.object({
   segmen: z.string(),
   tanggal: z.string(),
   nominal: z.number(),
+  userId: z.string(),
 });
 
 const SendTelegramReportInputSchema = z.object({
@@ -64,12 +65,12 @@ const sendTelegramReportFlow = ai.defineFlow(
 
       message += input.rekapData
         .map(item => {
-            // If segmen and tanggal are empty, it's an aggregated total
-            if (!item.segmen && !item.tanggal) {
-                return `${item.phone} ${item.name} ${item.nominal}`;
+            // Subtotal row
+            if (item.name.startsWith('TOTAL ')) {
+                 return `\n${item.name}: Rp ${item.nominal.toLocaleString('id-ID')}\n${'-'.repeat(20)}`;
             }
-            // Original format for individual items
-            return `${item.phone} ${item.name} ${item.segmen} ${item.tanggal} ${item.nominal}`;
+            // Individual item row
+            return `${item.phone} ${item.name} ${item.segmen} ${item.tanggal} Rp ${item.nominal.toLocaleString('id-ID')}`;
         })
         .join('\n');
         

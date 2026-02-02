@@ -79,39 +79,70 @@ export default function RekapPage() {
         if (!notas || !users) {
             setRekapData([]);
             setGrandTotal(0);
-            return
-        };
+            return;
+        }
         setIsGenerating(true);
 
         const userMap = new Map(users.map(u => [u.id, u]));
 
-        // Group by user and sum their nominals
+        // Group notas by user ID
         const groupedByUser = notas.reduce((acc, nota) => {
             const userId = nota.userId;
-            const user = userMap.get(userId);
-
             if (!acc[userId]) {
-                acc[userId] = {
-                    phone: user?.phone || 'No-Pembayaran',
-                    name: (nota.namaPic || 'Unknown').replace(/\s/g, ''),
-                    nominal: 0,
-                    userId: userId,
-                    segmen: '', // will be empty
-                    tanggal: '' // will be empty
-                };
+                acc[userId] = [];
             }
-            
-            acc[userId].nominal += nota.nominal;
-            
+            acc[userId].push(nota);
             return acc;
-        }, {} as Record<string, RekapDataItem>);
+        }, {} as Record<string, Nota[]>);
+        
+        const finalRekapData: RekapDataItem[] = [];
+        
+        // Sort users by name for consistent order
+        const sortedUserIds = Object.keys(groupedByUser).sort((a, b) => {
+            const userA = userMap.get(a);
+            const userB = userMap.get(b);
+            const nameA = (userA?.displayName || 'Unknown').replace(/\s/g, '');
+            const nameB = (userB?.displayName || 'Unknown').replace(/\s/g, '');
+            return nameA.localeCompare(nameB);
+        });
 
-        const formattedData: RekapDataItem[] = Object.values(groupedByUser)
-            .sort((a, b) => a.name.localeCompare(b.name));
+        for (const userId of sortedUserIds) {
+            // Sort this user's notas by date
+            const userNotas = groupedByUser[userId].sort((a,b) => a.tanggal.toDate().getTime() - b.tanggal.toDate().getTime());
+            const user = userMap.get(userId);
+            let userSubtotal = 0;
+            const userName = (user?.displayName || 'Unknown').replace(/\s/g, '');
+
+
+            // Add individual nota items
+            userNotas.forEach(nota => {
+                finalRekapData.push({
+                    phone: user?.phone || 'No-Pembayaran',
+                    name: userName,
+                    segmen: nota.segmen,
+                    tanggal: format(nota.tanggal.toDate(), 'dd/MM/yy'),
+                    nominal: nota.nominal,
+                    userId: userId,
+                });
+                userSubtotal += nota.nominal;
+            });
+            
+            // Add user subtotal item if there are items for this user
+            if (userNotas.length > 0) {
+                finalRekapData.push({
+                    phone: user?.phone || 'No-Pembayaran',
+                    name: `TOTAL ${userName}`,
+                    segmen: '', // Indicate this is a total row
+                    tanggal: '', // Indicate this is a total row
+                    nominal: userSubtotal,
+                    userId: userId,
+                });
+            }
+        }
         
         const total = notas.reduce((sum, item) => sum + item.nominal, 0);
 
-        setRekapData(formattedData);
+        setRekapData(finalRekapData);
         setGrandTotal(total);
         setIsGenerating(false);
     };
@@ -276,12 +307,23 @@ export default function RekapPage() {
                             <Skeleton className="h-4 w-2/3" />
                          </div>
                     ) : (notas && notas.length > 0) ? (
-                        <div className="space-y-2 text-sm font-mono bg-muted p-4 rounded-md overflow-x-auto">
-                            {rekapData.map((item, index) => (
-                                <p key={index}>
-                                    {`${item.phone} ${item.name} ${item.nominal.toLocaleString('id-ID')}`}
-                                </p>
-                            ))}
+                        <div className="space-y-1 text-sm font-mono bg-muted p-4 rounded-md overflow-x-auto">
+                            {rekapData.map((item, index) => {
+                                // Subtotal row
+                                if (item.name.startsWith('TOTAL ')) {
+                                    return (
+                                        <p key={index} className="font-bold pt-2 mt-1 border-t border-dashed border-muted-foreground/30">
+                                            {`${item.phone} ${item.name} ${item.nominal.toLocaleString('id-ID')}`}
+                                        </p>
+                                    )
+                                }
+                                // Individual item row
+                                return (
+                                    <p key={index}>
+                                        {`${item.phone} ${item.name} ${item.segmen} ${item.tanggal} ${item.nominal.toLocaleString('id-ID')}`}
+                                    </p>
+                                );
+                            })}
                         </div>
                     ) : (
                         <p className="text-muted-foreground text-center py-8">
