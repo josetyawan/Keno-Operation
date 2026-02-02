@@ -64,7 +64,11 @@ const sendTelegramReportFlow = ai.defineFlow(
 
       message += input.rekapData
         .map(item => {
-            // New format: {phone} {name} {segmen} {date} {nominal}
+            // If segmen and tanggal are empty, it's an aggregated total
+            if (!item.segmen && !item.tanggal) {
+                return `${item.phone} ${item.name} ${item.nominal}`;
+            }
+            // Original format for individual items
             return `${item.phone} ${item.name} ${item.segmen} ${item.tanggal} ${item.nominal}`;
         })
         .join('\n');

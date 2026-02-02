@@ -85,17 +85,29 @@ export default function RekapPage() {
 
         const userMap = new Map(users.map(u => [u.id, u]));
 
-        const formattedData: RekapDataItem[] = notas.map(nota => {
-            const user = userMap.get(nota.userId);
-            return {
-                phone: user?.phone || 'No-Pembayaran',
-                name: (nota.namaPic || '').replace(/\s/g, ''),
-                segmen: (nota.segmen || '').replace(/\s/g, ''),
-                tanggal: format(nota.tanggal.toDate(), 'dd/MM/yy'),
-                nominal: nota.nominal,
-                userId: nota.userId,
-            };
-        }).sort((a,b) => a.name.localeCompare(b.name));
+        // Group by user and sum their nominals
+        const groupedByUser = notas.reduce((acc, nota) => {
+            const userId = nota.userId;
+            const user = userMap.get(userId);
+
+            if (!acc[userId]) {
+                acc[userId] = {
+                    phone: user?.phone || 'No-Pembayaran',
+                    name: (nota.namaPic || 'Unknown').replace(/\s/g, ''),
+                    nominal: 0,
+                    userId: userId,
+                    segmen: '', // will be empty
+                    tanggal: '' // will be empty
+                };
+            }
+            
+            acc[userId].nominal += nota.nominal;
+            
+            return acc;
+        }, {} as Record<string, RekapDataItem>);
+
+        const formattedData: RekapDataItem[] = Object.values(groupedByUser)
+            .sort((a, b) => a.name.localeCompare(b.name));
         
         const total = notas.reduce((sum, item) => sum + item.nominal, 0);
 
@@ -163,7 +175,7 @@ export default function RekapPage() {
         setIsSending(true);
         try {
             const result = await sendTelegramReport({ 
-                rekapData: rekapData.map(({ phone, name, segmen, tanggal, nominal }) => ({ phone, name, segmen, tanggal, nominal })),
+                rekapData, // Pass the aggregated data
                 grandTotal,
                 rekapDate: rekapDateString
              });
@@ -267,7 +279,7 @@ export default function RekapPage() {
                         <div className="space-y-2 text-sm font-mono bg-muted p-4 rounded-md overflow-x-auto">
                             {rekapData.map((item, index) => (
                                 <p key={index}>
-                                    {`${item.phone} ${item.name} ${item.segmen} ${item.tanggal} ${item.nominal}`}
+                                    {`${item.phone} ${item.name} ${item.nominal.toLocaleString('id-ID')}`}
                                 </p>
                             ))}
                         </div>
