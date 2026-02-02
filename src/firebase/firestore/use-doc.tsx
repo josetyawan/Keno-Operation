@@ -49,11 +49,10 @@ export function useDoc<T = any>(
 
   useEffect(() => {
     if (!memoizedDocRef) {
-      // If the document reference isn't available yet (e.g., waiting for user ID),
-      // we should be in a loading state. Reset data/error but keep loading.
+      // If the document reference isn't ready, set to a non-loading, no-data state.
       setData(null);
       setError(null);
-      setIsLoading(true);
+      setIsLoading(false);
       return;
     }
 
