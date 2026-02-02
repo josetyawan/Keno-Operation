@@ -108,10 +108,17 @@ function NotaActions({ nota }: { nota: Nota }) {
 
 export default function DashboardPage() {
   const firestore = useFirestore();
+  const { user } = useUser();
   const [selectedSA, setSelectedSA] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA'];
+
+  const userProfileRef = useMemoFirebase(() => {
+    return user ? doc(firestore, 'users', user.uid) : null;
+  }, [user, firestore]);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+  const isAdmin = userProfile?.role === 'admin';
 
   const notasQuery = useMemoFirebase(() => {
     return query(collection(firestore, 'notas'), orderBy('dateCreated', 'desc'));
@@ -160,7 +167,7 @@ export default function DashboardPage() {
       return results;
   }, [notas, selectedSA, searchQuery, userMap, selectedStatus]);
 
-  const isLoading = isNotasLoading || isUsersLoading;
+  const isLoading = isNotasLoading || isUsersLoading || isProfileLoading;
 
   return (
     <>
@@ -180,11 +187,13 @@ export default function DashboardPage() {
                     Tambah Nota
                 </Button>
             </Link>
-            <Link href="/dashboard/export">
-              <Button variant="outline">
-                  Buat Laporan Rekap
-              </Button>
-            </Link>
+            {isAdmin && (
+              <Link href="/dashboard/export">
+                <Button variant="outline">
+                    Buat Laporan Rekap
+                </Button>
+              </Link>
+            )}
         </div>
       </div>
 
