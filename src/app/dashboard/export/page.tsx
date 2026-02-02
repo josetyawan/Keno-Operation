@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Card,
@@ -30,9 +30,20 @@ import {
     TabsList,
     TabsTrigger,
 } from '@/components/ui/tabs';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { ArrowLeft, Edit, Trash2, Filter, FileText, Printer, FileArchive, Calendar as CalendarIcon, Loader2 } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { format, getMonth, getYear, startOfDay, endOfDay } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import type { Nota } from '@/lib/types';
@@ -416,7 +427,7 @@ const generateSimpleEvidenReport = (notas: Nota[], title: string): string => {
         ).join('');
         
         // Use a grid to display multiple photos within the cell
-        const evidenCellContent = `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; align-items: center; justify-content: center;">${evidenImagesHtml}</div>`;
+        const evidenCellContent = `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; align-items: center; justify-content: start;">${evidenImagesHtml}</div>`;
 
 
         return `
@@ -570,6 +581,10 @@ export default function ExportPage() {
     const [reportPages, setReportPages] = useState<string[]>([]);
     const [isGenerating, setIsGenerating] = useState(false);
     const [reportTypeBeingGenerated, setReportTypeBeingGenerated] = useState('');
+    
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+
 
     const monthOptions = useMemo(() => getMonthYearOptions(notas || []), [notas]);
 
@@ -650,6 +665,26 @@ export default function ExportPage() {
         }, 0);
         return { count: selectedCount, total };
     }, [selectedNotaIds, notas]);
+
+    const handleDeleteSelected = () => {
+        if (selectedNotaIds.length === 0) return;
+
+        setIsDeleting(true);
+        selectedNotaIds.forEach(id => {
+            const notaDocRef = doc(firestore, 'notas', id);
+            deleteDocumentNonBlocking(notaDocRef);
+        });
+
+        toast({
+            title: 'Penghapusan Dimulai',
+            description: `${selectedNotaIds.length} laporan telah dijadwalkan untuk dihapus.`,
+        });
+
+        setSelectedNotaIds([]);
+        setIsDeleting(false);
+        setIsDeleteDialogOpen(false);
+    };
+
 
     const handleGenerateReport = async (reportType: string) => {
         if (selectedNotaIds.length === 0) {
@@ -958,6 +993,32 @@ export default function ExportPage() {
                             <Button variant="outline" size="sm" onClick={() => setSelectedNotaIds([])} disabled={selectedNotaIds.length === 0}>
                                 Hapus Pilihan
                             </Button>
+                            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive" size="sm" disabled={selectedNotaIds.length === 0}>
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Hapus Terpilih
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                    <AlertDialogTitle>Anda benar-benar yakin?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Tindakan ini akan menghapus {selectedNotaIds.length} laporan yang dipilih secara permanen. Tindakan ini tidak dapat dibatalkan.
+                                    </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                                    <AlertDialogAction
+                                        onClick={handleDeleteSelected}
+                                        disabled={isDeleting}
+                                        className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                                    >
+                                        {isDeleting ? 'Menghapus...' : `Ya, Hapus (${selectedNotaIds.length})`}
+                                    </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
                             <div className="ml-auto text-sm text-muted-foreground">
                                 {selectionSummary.count} dipilih | Total: Rp {selectionSummary.total.toLocaleString('id-ID')}
                             </div>
@@ -983,7 +1044,7 @@ export default function ExportPage() {
                                             <div className="flex-grow min-w-0">
                                                 <div className="flex justify-between items-start flex-wrap gap-x-4 gap-y-1">
                                                     <div className="flex items-center gap-2 flex-wrap">
-                                                        <span className="font-medium">{nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd MMM yyyy', { locale: idLocale }) : 'Invalid Date'}</span>
+                                                        <span className="font-medium">{nota.namaPic}</span>
                                                         <Badge variant={nota.status === 'verified' ? 'default' : 'secondary'}>{nota.status}</Badge>
                                                         <Badge variant={nota.segmen.includes('BBM') ? 'destructive' : 'secondary'}>{nota.segmen}</Badge>
                                                     </div>
@@ -992,14 +1053,13 @@ export default function ExportPage() {
                                                     </div>
                                                 </div>
                                                 <p className="text-sm text-muted-foreground truncate mt-1">
-                                                    PIC: {nota.namaPic}
+                                                    {nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd MMM yyyy', { locale: idLocale }) : 'Invalid Date'}
                                                 </p>
                                             </div>
                                             <div className="flex items-center">
-                                            <Link href={`/dashboard/notas/${nota.id}/edit`}>
-                                                <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
-                                            </Link>
-                                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                                                <Link href={`/dashboard/notas/${nota.id}/edit`}>
+                                                    <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
+                                                </Link>
                                             </div>
                                         </div>
                                     </Card>
@@ -1035,5 +1095,3 @@ export default function ExportPage() {
         </>
     );
 }
-
-    
