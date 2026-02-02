@@ -41,6 +41,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 
 function NotaActions({ nota }: { nota: Nota }) {
   const { toast } = useToast();
@@ -108,6 +109,7 @@ function NotaActions({ nota }: { nota: Nota }) {
 export default function DashboardPage() {
   const firestore = useFirestore();
   const [selectedSA, setSelectedSA] = useState('all');
+  const [selectedStatus, setSelectedStatus] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA'];
 
@@ -134,6 +136,11 @@ export default function DashboardPage() {
       if (selectedSA !== 'all') {
           results = results.filter(nota => nota.serviceArea === selectedSA);
       }
+      
+      // Filter by Status
+      if (selectedStatus !== 'all') {
+          results = results.filter(nota => nota.status === selectedStatus);
+      }
 
       // Filter by search query
       if (searchQuery) {
@@ -144,13 +151,14 @@ export default function DashboardPage() {
             return (
                 nota.namaPic.toLowerCase().includes(lowercasedQuery) ||
                 nota.segmen.toLowerCase().includes(lowercasedQuery) ||
-                nik.toLowerCase().includes(lowercasedQuery)
+                nik.toLowerCase().includes(lowercasedQuery) ||
+                nota.status.toLowerCase().includes(lowercasedQuery)
             )
         })
       }
 
       return results;
-  }, [notas, selectedSA, searchQuery, userMap]);
+  }, [notas, selectedSA, searchQuery, userMap, selectedStatus]);
 
   const isLoading = isNotasLoading || isUsersLoading;
 
@@ -184,7 +192,7 @@ export default function DashboardPage() {
         <CardHeader>
           <CardTitle>Filter Laporan</CardTitle>
         </CardHeader>
-        <CardContent className="grid md:grid-cols-2 gap-4">
+        <CardContent className="grid md:grid-cols-3 gap-4">
           <div className="grid gap-2">
             <Label htmlFor="service-area-filter">Service Area</Label>
             <Select value={selectedSA} onValueChange={setSelectedSA}>
@@ -197,8 +205,21 @@ export default function DashboardPage() {
               </SelectContent>
             </Select>
           </div>
+           <div className="grid gap-2">
+            <Label htmlFor="status-filter">Status</Label>
+            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+              <SelectTrigger id="status-filter">
+                <SelectValue placeholder="Pilih Status..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua Status</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="verified">Verified</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div className="grid gap-2">
-            <Label htmlFor="search-filter">Cari (PIC, Segmen, NIK)</Label>
+            <Label htmlFor="search-filter">Cari (PIC, Segmen, NIK, Status)</Label>
             <Input
               id="search-filter"
               placeholder="Ketik untuk mencari..."
@@ -224,6 +245,7 @@ export default function DashboardPage() {
                   <TableHead className="w-[200px] pl-6">PIC</TableHead>
                   <TableHead>NIK</TableHead>
                   <TableHead>Segmen</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead className="text-right">Jumlah</TableHead>
                   <TableHead className="hidden md:table-cell w-[160px]">Tanggal</TableHead>
                   <TableHead className="w-[150px] text-center pr-6">Actions</TableHead>
@@ -240,6 +262,11 @@ export default function DashboardPage() {
                     </TableCell>
                     <TableCell className="text-muted-foreground">{userMap.get(nota.userId)?.nik || '-'}</TableCell>
                     <TableCell className="text-muted-foreground">{nota.segmen}</TableCell>
+                    <TableCell>
+                      <Badge variant={nota.status === 'verified' ? 'default' : 'secondary'} className="capitalize">
+                        {nota.status}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="text-right font-semibold">
                       Rp {nota.nominal.toLocaleString('id-ID')}
                     </TableCell>
