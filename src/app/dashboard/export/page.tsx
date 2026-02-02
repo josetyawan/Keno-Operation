@@ -575,6 +575,7 @@ export default function ExportPage() {
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
     const [verifiedDateRange, setVerifiedDateRange] = useState<DateRange | undefined>(undefined);
     const [selectedSA, setSelectedSA] = useState<string>('all');
+    const [selectedStatus, setSelectedStatus] = useState<string>('all');
 
     const [selectedNotaIds, setSelectedNotaIds] = useState<string[]>([]);
 
@@ -637,13 +638,17 @@ export default function ExportPage() {
                 return date >= fromDate && date <= toDate;
             });
         }
+        
+        if (selectedStatus !== 'all') {
+            result = result.filter(nota => nota.status === selectedStatus);
+        }
 
         if (selectedSA !== 'all') {
             result = result.filter(nota => nota.serviceArea === selectedSA);
         }
 
         return result.sort((a,b) => a.tanggal.toDate().getTime() - b.tanggal.toDate().getTime());
-    }, [notas, filterType, selectedMonth, monthOptions, dateRange, verifiedDateRange, selectedSA]);
+    }, [notas, filterType, selectedMonth, monthOptions, dateRange, verifiedDateRange, selectedSA, selectedStatus]);
 
     const handleSelectNota = (id: string, checked: boolean) => {
         setSelectedNotaIds(prev =>
@@ -871,12 +876,12 @@ export default function ExportPage() {
                                 <CardTitle>Filter Data</CardTitle>
                             </div>
                         </CardHeader>
-                        <CardContent className="space-y-4">
+                        <CardContent className="space-y-6">
                             <Tabs value={filterType} onValueChange={setFilterType} className="w-full">
                                 <TabsList className="grid w-full grid-cols-3 mb-4">
                                     <TabsTrigger value="monthly">Per Bulan</TabsTrigger>
                                     <TabsTrigger value="range">Rentang Tanggal</TabsTrigger>
-                                    <TabsTrigger value="verified">Terverifikasi</TabsTrigger>
+                                    <TabsTrigger value="verified">Tanggal Verifikasi</TabsTrigger>
                                 </TabsList>
                                 <TabsContent value="monthly">
                                     <Select onValueChange={setSelectedMonth} value={selectedMonth}>
@@ -969,17 +974,32 @@ export default function ExportPage() {
                                     </Popover>
                                 </TabsContent>
                             </Tabs>
-                             <div className="grid gap-2">
-                                <Label>Service Area</Label>
-                                <Select value={selectedSA} onValueChange={setSelectedSA}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Pilih Service Area..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Semua Service Area</SelectItem>
-                                        {serviceAreas.map(sa => <SelectItem key={sa} value={sa}>{sa}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="grid gap-2">
+                                    <Label>Service Area</Label>
+                                    <Select value={selectedSA} onValueChange={setSelectedSA}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Pilih Service Area..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Semua Service Area</SelectItem>
+                                            {serviceAreas.map(sa => <SelectItem key={sa} value={sa}>{sa}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label>Status</Label>
+                                    <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Pilih Status..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Semua Status</SelectItem>
+                                            <SelectItem value="pending">Pending</SelectItem>
+                                            <SelectItem value="verified">Verified</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                              </div>
                         </CardContent>
                     </Card>
