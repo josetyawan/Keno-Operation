@@ -18,8 +18,8 @@ import {
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { ArrowLeft, Calendar as CalendarIcon, Loader2, Bot, Wallet } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, Timestamp } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
+import { collection, query, where, Timestamp, doc } from 'firebase/firestore';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import type { Nota, UserProfile } from '@/lib/types';
@@ -29,6 +29,7 @@ import { useToast } from '@/hooks/use-toast';
 import { sendTelegramReport } from '@/ai/flows/send-telegram-report';
 import { sendLinkAjaPayment } from '@/ai/flows/send-linkaja-payment';
 import type { DateRange } from 'react-day-picker';
+import { useRouter } from 'next/navigation';
 
 type RekapDataItem = {
     phone: string;
@@ -41,6 +42,8 @@ type RekapDataItem = {
 
 export default function RekapPage() {
     const firestore = useFirestore();
+    const router = useRouter();
+    const { user, isUserLoading } = useUser();
     const { toast } = useToast();
     const [verificationDateRange, setVerificationDateRange] = useState<DateRange | undefined>();
     const [rekapData, setRekapData] = useState<RekapDataItem[]>([]);
@@ -48,6 +51,20 @@ export default function RekapPage() {
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSending, setIsSending] = useState(false);
     const [isPaying, setIsPaying] = useState(false);
+
+    // --- Role-based access control ---
+    const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
+        useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
+    );
+
+    useEffect(() => {
+        if (!isUserLoading && !isProfileLoading) {
+            if (!user || currentUserProfile?.role !== 'admin') {
+                router.push('/dashboard');
+            }
+        }
+    }, [user, currentUserProfile, isUserLoading, isProfileLoading, router]);
+    // --- End role-based access control ---
 
     const notasQuery = useMemoFirebase(() => {
         if (!verificationDateRange?.from) return null; // Use only `from` for initial check
@@ -223,7 +240,39 @@ export default function RekapPage() {
         }
     };
     
-    const isLoading = isNotasLoading || isUsersLoading;
+    const isLoading = isUserLoading || isProfileLoading || isNotasLoading || isUsersLoading;
+
+    if (isLoading || currentUserProfile?.role !== 'admin') {
+        return (
+            <div className="mx-auto grid w-full flex-1 auto-rows-max gap-6">
+                 <div className="flex items-center gap-4">
+                     <Skeleton className="h-8 w-8" />
+                     <div>
+                         <Skeleton className="h-6 w-72" />
+                         <Skeleton className="h-4 w-96 mt-1" />
+                     </div>
+                 </div>
+                <Card>
+                    <CardHeader>
+                        <Skeleton className="h-7 w-64" />
+                    </CardHeader>
+                    <CardContent>
+                        <Skeleton className="h-10 w-96" />
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader>
+                         <Skeleton className="h-7 w-32" />
+                         <Skeleton className="h-4 w-48" />
+                    </CardHeader>
+                    <CardContent>
+                        <Skeleton className="h-24 w-full" />
+                    </CardContent>
+                </Card>
+            </div>
+        )
+    }
+
 
     return (
         <div className="mx-auto grid w-full flex-1 auto-rows-max gap-6">
@@ -285,8 +334,8 @@ export default function RekapPage() {
                             />
                         </PopoverContent>
                     </Popover>
-                    <Button onClick={handleGenerateRekap} disabled={isGenerating || isLoading || !verificationDateRange?.from}>
-                        {(isGenerating || isLoading) && <Loader2 className="mr-2 animate-spin"/>}
+                    <Button onClick={handleGenerateRekap} disabled={isGenerating || isNotasLoading || !verificationDateRange?.from}>
+                        {(isGenerating || isNotasLoading) && <Loader2 className="mr-2 animate-spin"/>}
                         Buat Ulang Rekap
                     </Button>
                 </CardContent>
@@ -300,7 +349,7 @@ export default function RekapPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {isLoading ? (
+                    {isNotasLoading ? (
                          <div className="space-y-2">
                             <Skeleton className="h-4 w-full" />
                             <Skeleton className="h-4 w-full" />
