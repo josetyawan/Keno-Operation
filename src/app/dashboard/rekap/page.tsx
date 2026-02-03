@@ -17,7 +17,18 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { ArrowLeft, Calendar as CalendarIcon, Loader2, Bot, Wallet } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { ArrowLeft, Calendar as CalendarIcon, Loader2, Bot, Wallet, CheckCircle } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc, updateDocumentNonBlocking } from '@/firebase';
 import { collection, query, where, Timestamp, doc } from 'firebase/firestore';
 import { format, startOfDay, endOfDay } from 'date-fns';
@@ -52,6 +63,8 @@ export default function RekapPage() {
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSending, setIsSending] = useState(false);
     const [isPaying, setIsPaying] = useState(false);
+    const [isMarkingAsPaid, setIsMarkingAsPaid] = useState(false);
+    const [isManualPayDialogOpen, setIsManualPayDialogOpen] = useState(false);
 
     // --- Role-based access control ---
     const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
@@ -180,6 +193,47 @@ export default function RekapPage() {
         return format(verificationDateRange.from, 'dd MMMM yyyy', {locale: idLocale});
     }, [verificationDateRange]);
 
+    const handleManualPayment = async () => {
+        if (rekapData.length === 0 || grandTotal <= 0 || !notas) {
+            toast({ variant: 'destructive', title: 'Tidak ada data untuk ditandai lunas', description: 'Pastikan ada rekap dengan total lebih dari nol.' });
+            return;
+        }
+        setIsMarkingAsPaid(true);
+
+        try {
+            const paymentDate = new Date();
+
+            for (const nota of notas) {
+                const notaDocRef = doc(firestore, 'notas', nota.id);
+                updateDocumentNonBlocking(notaDocRef, {
+                    status: 'paid',
+                    tanggalPembayaran: paymentDate
+                });
+            }
+
+            await sendPaidNotice({
+                paidData: rekapData,
+                grandTotal: grandTotal,
+                paidDate: format(paymentDate, 'dd MMMM yyyy', { locale: idLocale }),
+            });
+
+            toast({ 
+                title: 'Laporan Telah Ditandai Lunas', 
+                description: 'Status laporan telah diperbarui menjadi "paid" dan notifikasi telah dikirim.',
+                duration: 5000,
+            });
+            
+            setIsManualPayDialogOpen(false);
+
+        } catch (error: any) {
+            console.error('Manual payment marking error:', error);
+            toast({ variant: 'destructive', title: 'Gagal Memperbarui Status', description: error.message });
+        } finally {
+            setIsMarkingAsPaid(false);
+        }
+    };
+
+
     const handleLinkAjaPayment = async () => {
         if (rekapData.length === 0 || grandTotal <= 0 || !notas) {
             toast({ variant: 'destructive', title: 'Tidak ada data pembayaran', description: 'Pastikan ada rekap dengan total lebih dari nol.' });
@@ -264,6 +318,8 @@ export default function RekapPage() {
     };
     
     const isLoading = isUserLoading || isProfileLoading || isNotasLoading || isUsersLoading;
+    const isActionInProgress = isSending || isPaying || isMarkingAsPaid;
+
 
     if (isLoading || currentUserProfile?.role !== 'admin') {
         return (
@@ -408,12 +464,37 @@ export default function RekapPage() {
                         <div className="text-lg font-bold">
                             Total: Rp {grandTotal.toLocaleString('id-ID')}
                         </div>
-                        <div className="flex gap-2">
-                            <Button onClick={handleSendToTelegram} disabled={isSending}>
+                        <div className="flex flex-wrap justify-end gap-2">
+                            <Button onClick={handleSendToTelegram} disabled={isActionInProgress}>
                                 {isSending ? <Loader2 className="mr-2 animate-spin"/> : <Bot className="mr-2" />}
                                 {isSending ? 'Mengirim...' : 'Kirim ke Telegram'}
                             </Button>
-                             <Button onClick={handleLinkAjaPayment} disabled={isPaying} variant="destructive">
+                            
+                            <AlertDialog open={isManualPayDialogOpen} onOpenChange={setIsManualPayDialogOpen}>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="outline" disabled={isActionInProgress || rekapData.length === 0}>
+                                        <CheckCircle className="mr-2" />
+                                        Tandai Lunas (Manual)
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Konfirmasi Pembayaran Manual</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            Anda akan menandai {notas?.length || 0} laporan dengan total Rp {grandTotal.toLocaleString('id-ID')} sebagai "LUNAS". Notifikasi akan dikirim ke Telegram. Tindakan ini tidak dapat dibatalkan.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Batal</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleManualPayment} disabled={isMarkingAsPaid}>
+                                            {isMarkingAsPaid && <Loader2 className="mr-2 animate-spin"/>}
+                                            {isMarkingAsPaid ? 'Memproses...' : 'Ya, Tandai Lunas'}
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+
+                             <Button onClick={handleLinkAjaPayment} disabled={isActionInProgress} variant="destructive">
                                 {isPaying ? <Loader2 className="mr-2 animate-spin"/> : <Wallet className="mr-2" />}
                                 {isPaying ? 'Membayar...' : 'Bayar via Finpay'}
                             </Button>
