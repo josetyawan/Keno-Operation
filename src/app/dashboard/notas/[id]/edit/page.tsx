@@ -267,6 +267,13 @@ export default function EditNotaPage() {
           tanggal, segmen, serviceArea, keterangan, nominal: Number(nominal), namaPic,
           fotoEvidenUrls: finalUrls,
       };
+
+      // If the report was rejected, submitting an edit should reset it to pending for re-approval
+      if (nota?.status === 'rejected') {
+          updatedData.status = 'pending';
+          updatedData.rejectionReason = ''; // Clear the reason
+          updatedData.tanggalVerifikasi = null; // Clear verification date
+      }
       
       if (isBBMKendaraan) {
           updatedData.noPlatKendaraan = noPlatKendaraan;
@@ -281,7 +288,10 @@ export default function EditNotaPage() {
       
       updateDocumentNonBlocking(notaRef, updatedData);
 
-      toast({ title: 'Laporan Diperbarui!', description: 'Laporan Anda telah berhasil disimpan.' });
+      toast({ 
+        title: 'Laporan Diperbarui!', 
+        description: nota?.status === 'rejected' ? 'Laporan Anda telah dikirim ulang untuk verifikasi.' : 'Laporan Anda telah berhasil disimpan.' 
+      });
       router.push(`/dashboard/notas/${id}`);
     } catch(error) {
         console.error("Error updating nota:", error);
