@@ -10,9 +10,9 @@ import {
   CardFooter,
 } from '@/components/ui/card';
 import { format } from 'date-fns';
-import { Badge } from '@/components/ui/badge';
+import { Badge, badgeVariants } from '@/components/ui/badge';
 import Link from 'next/link';
-import { ArrowLeft, CheckCircle, Edit, Trash, X } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Edit, Trash, X, ShieldX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useDoc, useFirestore, useUser, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -34,6 +34,25 @@ import {
 } from "@/components/ui/alert-dialog";
 import { SummarizeButton } from './summarize-button';
 import { Calendar } from '@/components/ui/calendar';
+import type { VariantProps } from 'class-variance-authority';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+
+
+const getStatusVariant = (status: Nota['status']): VariantProps<typeof badgeVariants>['variant'] => {
+    switch (status) {
+        case 'verified':
+            return 'outline';
+        case 'rejected':
+            return 'destructive';
+        case 'paid':
+            return 'default';
+        case 'pending':
+        default:
+            return 'secondary';
+    }
+};
 
 
 export default function NotaDetailPage() {
@@ -50,6 +69,9 @@ export default function NotaDetailPage() {
   
   const [isVerifyDialogOpen, setIsVerifyDialogOpen] = useState(false);
   const [verificationDate, setVerificationDate] = useState<Date | undefined>(new Date());
+
+  const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   const userDocRef = useMemoFirebase(() => {
     if (!user) return null;
@@ -77,6 +99,27 @@ export default function NotaDetailPage() {
     });
     setIsVerifyDialogOpen(false);
   };
+  
+  const handleConfirmReject = () => {
+    if (!isAdmin || !notaRef || !rejectionReason.trim()) {
+        toast({
+            variant: 'destructive',
+            title: 'Alasan Diperlukan',
+            description: 'Silakan isi alasan penolakan.',
+        });
+        return;
+    }
+    updateDocumentNonBlocking(notaRef, {
+        status: 'rejected',
+        rejectionReason: rejectionReason.trim()
+    });
+     toast({
+      title: 'Laporan Ditolak',
+      description: 'Status laporan telah diperbarui menjadi "rejected".',
+    });
+    setIsRejectDialogOpen(false);
+    setRejectionReason('');
+  }
 
   const handleDelete = () => {
     if (!notaRef) return;
@@ -172,7 +215,7 @@ export default function NotaDetailPage() {
             Detail Laporan
           </h1>
           <Badge 
-            variant={nota.status === 'verified' ? 'default' : 'secondary'} 
+            variant={getStatusVariant(nota.status)}
             className="ml-auto sm:ml-0 capitalize"
           >
             {nota.status}
@@ -187,9 +230,19 @@ export default function NotaDetailPage() {
                 {nota.status === 'verified' && nota.tanggalVerifikasi?.toDate && (
                       ` | Diverifikasi pada: ${format(nota.tanggalVerifikasi.toDate(), 'dd MMM yyyy')}`
                   )}
+                {nota.status === 'paid' && nota.tanggalPembayaran?.toDate && (
+                        ` | Dibayar pada: ${format(nota.tanggalPembayaran.toDate(), 'dd MMM yyyy')}`
+                    )}
               </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+             {nota.status === 'rejected' && nota.rejectionReason && (
+                <Alert variant="destructive">
+                  <ShieldX className="h-4 w-4" />
+                  <AlertTitle>Laporan Ditolak</AlertTitle>
+                  <AlertDescription>{nota.rejectionReason}</AlertDescription>
+                </Alert>
+              )}
             <div className="grid grid-cols-2 gap-x-4 gap-y-6 text-sm">
               <div>
                 <p className="text-muted-foreground">Nama PIC</p>
@@ -293,10 +346,39 @@ export default function NotaDetailPage() {
                       </>
                   )}
                   {isAdmin && nota.status === 'pending' && (
+                    <div className="flex gap-2">
+                      <AlertDialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
+                        <AlertDialogTrigger asChild>
+                           <Button variant="destructive">
+                              <ShieldX /> Tolak
+                           </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Tolak Laporan</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    Berikan alasan mengapa laporan ini ditolak. Alasan ini akan terlihat oleh pengguna.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <div className="py-4">
+                                <Label htmlFor="rejection-reason" className="sr-only">Alasan Penolakan</Label>
+                                <Textarea
+                                    id="rejection-reason"
+                                    placeholder="Contoh: Foto eviden tidak jelas, nominal tidak sesuai..."
+                                    value={rejectionReason}
+                                    onChange={(e) => setRejectionReason(e.target.value)}
+                                />
+                            </div>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel onClick={() => setRejectionReason('')}>Batal</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleConfirmReject} disabled={!rejectionReason.trim()}>Konfirmasi Penolakan</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                       <AlertDialog open={isVerifyDialogOpen} onOpenChange={setIsVerifyDialogOpen}>
                           <AlertDialogTrigger asChild>
                               <Button>
-                                  <CheckCircle /> Verify Laporan
+                                  <CheckCircle /> Verifikasi
                               </Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent>
@@ -322,6 +404,7 @@ export default function NotaDetailPage() {
                               </AlertDialogFooter>
                           </AlertDialogContent>
                       </AlertDialog>
+                    </div>
                   )}
               </div>
           </CardFooter>

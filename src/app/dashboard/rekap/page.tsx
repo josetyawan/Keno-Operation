@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { ArrowLeft, Calendar as CalendarIcon, Loader2, Bot, Wallet } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc, updateDocumentNonBlocking } from '@/firebase';
 import { collection, query, where, Timestamp, doc } from 'firebase/firestore';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
@@ -180,7 +180,7 @@ export default function RekapPage() {
     }, [verificationDateRange]);
 
     const handleLinkAjaPayment = async () => {
-        if (rekapData.length === 0 || grandTotal <= 0) {
+        if (rekapData.length === 0 || grandTotal <= 0 || !notas) {
             toast({ variant: 'destructive', title: 'Tidak ada data pembayaran', description: 'Pastikan ada rekap dengan total lebih dari nol.' });
             return;
         }
@@ -200,7 +200,18 @@ export default function RekapPage() {
                     title: 'Permintaan Pembayaran Diproses', 
                     description: result.redirectUrl ? 'Anda akan diarahkan untuk konfirmasi.' : (result.message || 'Berhasil.')
                 });
-                 if (result.redirectUrl) {
+                
+                // Mark all notas in the current filtered list as 'paid'
+                const paymentDate = new Date();
+                for (const nota of notas) {
+                    const notaDocRef = doc(firestore, 'notas', nota.id);
+                    updateDocumentNonBlocking(notaDocRef, {
+                        status: 'paid',
+                        tanggalPembayaran: paymentDate
+                    });
+                }
+                
+                if (result.redirectUrl) {
                     // Jika API mengembalikan URL, arahkan pengguna ke sana untuk konfirmasi
                     window.open(result.redirectUrl, '_blank');
                 }

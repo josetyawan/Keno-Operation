@@ -48,12 +48,27 @@ import { format, getMonth, getYear, startOfDay, endOfDay } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import type { Nota } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
+import { Badge, badgeVariants } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { DateRange } from 'react-day-picker';
 import { useToast } from '@/hooks/use-toast';
 import { toWords } from '@/lib/number-to-words';
 import Image from 'next/image';
+import type { VariantProps } from 'class-variance-authority';
+
+const getStatusVariant = (status: Nota['status']): VariantProps<typeof badgeVariants>['variant'] => {
+    switch (status) {
+        case 'verified':
+            return 'outline';
+        case 'rejected':
+            return 'destructive';
+        case 'paid':
+            return 'default';
+        case 'pending':
+        default:
+            return 'secondary';
+    }
+};
 
 // --- Report Generation Logic ---
 const generateRekapitulasiReport = (notas: Nota[], month: string, year: string, serviceArea: string): string => {
@@ -997,6 +1012,8 @@ export default function ExportPage() {
                                             <SelectItem value="all">Semua Status</SelectItem>
                                             <SelectItem value="pending">Pending</SelectItem>
                                             <SelectItem value="verified">Verified</SelectItem>
+                                            <SelectItem value="rejected">Rejected</SelectItem>
+                                            <SelectItem value="paid">Paid</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -1065,7 +1082,7 @@ export default function ExportPage() {
                                                 <div className="flex justify-between items-start flex-wrap gap-x-4 gap-y-1">
                                                     <div className="flex items-center gap-2 flex-wrap">
                                                         <span className="font-medium">{nota.namaPic}</span>
-                                                        <Badge variant={nota.status === 'verified' ? 'default' : 'secondary'}>{nota.status}</Badge>
+                                                        <Badge variant={getStatusVariant(nota.status)} className="capitalize">{nota.status}</Badge>
                                                         <Badge variant={nota.segmen.includes('BBM') ? 'destructive' : 'secondary'}>{nota.segmen}</Badge>
                                                     </div>
                                                     <div className="font-semibold text-base whitespace-nowrap">

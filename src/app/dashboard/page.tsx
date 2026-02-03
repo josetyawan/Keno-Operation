@@ -42,6 +42,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useState, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import type { VariantProps } from 'class-variance-authority';
+import { badgeVariants } from '@/components/ui/badge';
 
 function NotaActions({ nota }: { nota: Nota }) {
   const { toast } = useToast();
@@ -104,6 +106,20 @@ function NotaActions({ nota }: { nota: Nota }) {
     </div>
   );
 }
+
+const getStatusVariant = (status: Nota['status']): VariantProps<typeof badgeVariants>['variant'] => {
+    switch (status) {
+        case 'verified':
+            return 'outline';
+        case 'rejected':
+            return 'destructive';
+        case 'paid':
+            return 'default';
+        case 'pending':
+        default:
+            return 'secondary';
+    }
+};
 
 
 export default function DashboardPage() {
@@ -224,6 +240,8 @@ export default function DashboardPage() {
                 <SelectItem value="all">Semua Status</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="verified">Verified</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -272,7 +290,7 @@ export default function DashboardPage() {
                     <TableCell className="text-muted-foreground">{userMap.get(nota.userId)?.nik || '-'}</TableCell>
                     <TableCell className="text-muted-foreground">{nota.segmen}</TableCell>
                     <TableCell>
-                      <Badge variant={nota.status === 'verified' ? 'default' : 'secondary'} className="capitalize">
+                      <Badge variant={getStatusVariant(nota.status)} className="capitalize">
                         {nota.status}
                       </Badge>
                     </TableCell>

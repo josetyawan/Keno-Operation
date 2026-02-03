@@ -15,8 +15,10 @@ export type Nota = {
   namaPic: string;
   fotoEvidenUrls?: string[];
   dateCreated: any; // Using `any` to accommodate Firestore's serverTimestamp
-  status: 'pending' | 'verified';
+  status: 'pending' | 'verified' | 'rejected' | 'paid';
   tanggalVerifikasi?: any;
+  rejectionReason?: string;
+  tanggalPembayaran?: any;
 };
 
 export type UserProfile = {

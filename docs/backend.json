@@ -143,13 +143,24 @@
           "description": "Verification status of the nota.",
           "enum": [
             "pending",
-            "verified"
+            "verified",
+            "rejected",
+            "paid"
           ]
         },
         "tanggalVerifikasi": {
-            "type": "string",
-            "description": "Date the nota was verified by an admin.",
-            "format": "date-time"
+          "type": "string",
+          "description": "Date the nota was verified by an admin.",
+          "format": "date-time"
+        },
+        "rejectionReason": {
+          "type": "string",
+          "description": "Reason why the nota was rejected by an admin."
+        },
+        "tanggalPembayaran": {
+          "type": "string",
+          "description": "Date the nota was paid.",
+          "format": "date-time"
         }
       },
       "required": [
