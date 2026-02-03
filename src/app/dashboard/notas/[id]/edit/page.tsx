@@ -135,7 +135,18 @@ function EditNotaForm({ nota, isAdmin }: { nota: Nota, isAdmin: boolean }) {
         'BBM R4 UT B2B IOAN',
         'BBM R4 UT PROVISIONING',
     ];
-    const nonBbmKendaraanSegments = ['MATERIAL SA KUDUS', 'BBM Genset', 'jasa', 'Konsumsi Turlap', 'Konsumsi UT', 'Konsumsi Lembur', 'MATERIAL SPPG SA KUDUS'];
+    const nonBbmKendaraanSegments = [
+        'MATERIAL SA KUDUS',
+        'BBM Genset',
+        'jasa',
+        'Konsumsi Turlap B2B IOAN',
+        'Konsumsi Turlap PROVISIONING',
+        'Konsumsi UT B2B IOAN',
+        'Konsumsi UT PROVISIONING',
+        'Konsumsi Lembur B2B IOAN',
+        'Konsumsi Lembur PROVISIONING',
+        'MATERIAL SPPG SA KUDUS'
+    ];
     
     const isBBMKendaraan = segmen && bbmKendaraanSegments.includes(segmen);
     const isNonBBMKendaraan = segmen && nonBbmKendaraanSegments.includes(segmen);
@@ -208,8 +219,8 @@ function EditNotaForm({ nota, isAdmin }: { nota: Nota, isAdmin: boolean }) {
             const uploadPromises = files.map(async (file, index) => {
                 if (file) {
                     const fileExtension = file.name.split('.').pop();
-                    const fileName = `${user.uid}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExtension}`;
-                    const filePath = `notas/${user.uid}/${fileName}`;
+                    const fileName = `${'user.uid'}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExtension}`;
+                    const filePath = `notas/${'user.uid'}/${fileName}`;
                     const storageRef = ref(storage, filePath);
                     await uploadBytes(storageRef, file);
                     return getDownloadURL(storageRef);
@@ -305,9 +316,12 @@ function EditNotaForm({ nota, isAdmin }: { nota: Nota, isAdmin: boolean }) {
                                         <SelectItem value="MATERIAL SA KUDUS">MATERIAL SA KUDUS</SelectItem>
                                         <SelectItem value="BBM Genset">BBM Genset</SelectItem>
                                         <SelectItem value="jasa">Jasa</SelectItem>
-                                        <SelectItem value="Konsumsi Turlap">Konsumsi Turlap</SelectItem>
-                                        <SelectItem value="Konsumsi UT">Konsumsi UT</SelectItem>
-                                        <SelectItem value="Konsumsi Lembur">Konsumsi Lembur</SelectItem>
+                                        <SelectItem value="Konsumsi Turlap B2B IOAN">Konsumsi Turlap B2B IOAN</SelectItem>
+                                        <SelectItem value="Konsumsi Turlap PROVISIONING">Konsumsi Turlap PROVISIONING</SelectItem>
+                                        <SelectItem value="Konsumsi UT B2B IOAN">Konsumsi UT B2B IOAN</SelectItem>
+                                        <SelectItem value="Konsumsi UT PROVISIONING">Konsumsi UT PROVISIONING</SelectItem>
+                                        <SelectItem value="Konsumsi Lembur B2B IOAN">Konsumsi Lembur B2B IOAN</SelectItem>
+                                        <SelectItem value="Konsumsi Lembur PROVISIONING">Konsumsi Lembur PROVISIONING</SelectItem>
                                         <SelectItem value="MATERIAL SPPG SA KUDUS">MATERIAL SPPG SA KUDUS</SelectItem>
                                     </SelectContent>
                                 </Select>
