@@ -55,6 +55,7 @@ import { useToast } from '@/hooks/use-toast';
 import { toWords } from '@/lib/number-to-words';
 import Image from 'next/image';
 import type { VariantProps } from 'class-variance-authority';
+import { useRouter } from 'next/navigation';
 
 const getStatusVariant = (status: Nota['status']): VariantProps<typeof badgeVariants>['variant'] => {
     switch (status) {
@@ -578,6 +579,7 @@ const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BL
 
 export default function ExportPage() {
     const firestore = useFirestore();
+    const router = useRouter();
     const { toast } = useToast();
     const notasQuery = useMemoFirebase(() => {
         return query(collection(firestore, 'notas'), orderBy('dateCreated', 'desc'));
@@ -868,12 +870,10 @@ export default function ExportPage() {
             <div className="print:hidden">
                 <div className="mx-auto grid w-full flex-1 auto-rows-max gap-6">
                     <div className="flex items-center gap-4 sticky top-0 bg-background py-4 z-10 border-b -mx-6 px-6">
-                        <Link href="/dashboard">
-                            <Button variant="outline" size="icon" className="h-8 w-8">
+                        <Button onClick={() => router.back()} variant="outline" size="icon" className="h-8 w-8">
                             <ArrowLeft className="h-4 w-4" />
                             <span className="sr-only">Kembali</span>
-                            </Button>
-                        </Link>
+                        </Button>
                         <div>
                             <h1 className="flex-1 shrink-0 whitespace-nowrap text-xl font-bold tracking-tight sm:grow-0">
                                 Pilih Data Rekap

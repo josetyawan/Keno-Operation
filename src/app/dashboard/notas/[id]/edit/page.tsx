@@ -26,7 +26,6 @@ import {
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
-import Link from 'next/link';
 import { ArrowLeft, CalendarIcon, Upload, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useUser, useFirestore, useDoc, useMemoFirebase, updateDocumentNonBlocking, useStorage } from '@/firebase';
@@ -321,17 +320,15 @@ export default function EditNotaPage() {
     <div className="mx-auto grid w-full flex-1 auto-rows-max gap-4">
       <form onSubmit={handleSubmit}>
         <div className="flex items-center gap-4 mb-4">
-          <Link href={`/dashboard/notas/${id}`}>
-            <Button variant="outline" size="icon" className="h-7 w-7" type="button">
-                <ArrowLeft className="h-4 w-4" />
-                <span className="sr-only">Back</span>
-            </Button>
-          </Link>
+          <Button onClick={() => router.back()} variant="outline" size="icon" className="h-7 w-7" type="button">
+              <ArrowLeft className="h-4 w-4" />
+              <span className="sr-only">Back</span>
+          </Button>
           <h1 className="flex-1 shrink-0 whitespace-nowrap text-xl font-semibold tracking-tight sm:grow-0 font-headline">
             Edit Laporan
           </h1>
           <div className="hidden items-center gap-2 md:ml-auto md:flex">
-            <Link href={`/dashboard/notas/${id}`}><Button variant="outline" type="button">Cancel</Button></Link>
+            <Button onClick={() => router.back()} variant="outline" type="button">Cancel</Button>
             <Button type="submit" disabled={isSaving}>{isSaving ? "Saving..." : "Save Changes"}</Button>
           </div>
         </div>
@@ -412,7 +409,7 @@ export default function EditNotaPage() {
           </CardContent>
         </Card>
         <div className="flex items-center justify-end gap-2 mt-4 md:hidden">
-          <Link href={`/dashboard/notas/${id}`}><Button variant="outline" type="button">Cancel</Button></Link>
+          <Button onClick={() => router.back()} variant="outline" type="button">Cancel</Button>
           <Button type="submit" disabled={isSaving}>{isSaving ? "Saving..." : "Save Changes"}</Button>
         </div>
       </form>

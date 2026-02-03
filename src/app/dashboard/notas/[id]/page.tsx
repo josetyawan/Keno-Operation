@@ -227,12 +227,10 @@ export default function NotaDetailPage() {
     <>
       <div className="mx-auto grid max-w-4xl flex-1 auto-rows-max gap-6">
         <div className="flex items-center gap-4">
-          <Link href="/dashboard">
-          <Button variant="outline" size="icon" className="h-7 w-7">
+          <Button onClick={() => router.back()} variant="outline" size="icon" className="h-7 w-7">
             <ArrowLeft className="h-4 w-4" />
             <span className="sr-only">Back</span>
           </Button>
-          </Link>
           <h1 className="flex-1 shrink-0 whitespace-nowrap text-xl font-semibold tracking-tight sm:grow-0 font-headline truncate">
             Detail Laporan
           </h1>

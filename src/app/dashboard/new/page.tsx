@@ -25,7 +25,6 @@ import {
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
-import Link from 'next/link';
 import { ArrowLeft, CalendarIcon, Camera, Upload } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useFirestore, addDocumentNonBlocking, useUser, useStorage, useDoc, useMemoFirebase } from '@/firebase';
@@ -247,21 +246,17 @@ export default function NewNotaPage() {
     <div className="mx-auto grid w-full flex-1 auto-rows-max gap-4">
       <form onSubmit={handleSubmit}>
         <div className="flex items-center gap-4 mb-4">
-          <Link href="/dashboard">
-            <Button variant="ghost" size="icon" className="h-8 w-8" type="button">
-              <ArrowLeft className="h-5 w-5" />
-              <span className="sr-only">Kembali</span>
-            </Button>
-          </Link>
+          <Button onClick={() => router.back()} variant="ghost" size="icon" className="h-8 w-8" type="button">
+            <ArrowLeft className="h-5 w-5" />
+            <span className="sr-only">Kembali</span>
+          </Button>
           <h1 className="flex-1 shrink-0 whitespace-nowrap text-xl font-bold tracking-tight sm:grow-0">
             Input Laporan Nota
           </h1>
           <div className="hidden items-center gap-2 md:ml-auto md:flex">
-            <Link href="/dashboard">
-              <Button variant="outline" type="button">
-                Batal
-              </Button>
-            </Link>
+            <Button onClick={() => router.back()} variant="outline" type="button">
+              Batal
+            </Button>
             <Button type="submit" disabled={isSaving}>
               {isSaving ? 'Menyimpan...' : 'Simpan Laporan'}
             </Button>
@@ -447,11 +442,9 @@ export default function NewNotaPage() {
           </CardContent>
         </Card>
         <div className="flex items-center justify-end gap-2 mt-4 md:hidden">
-          <Link href="/dashboard">
-            <Button variant="outline" type="button">
-              Batal
-            </Button>
-          </Link>
+          <Button onClick={() => router.back()} variant="outline" type="button">
+            Batal
+          </Button>
           <Button type="submit" disabled={isSaving}>
             {isSaving ? 'Menyimpan...' : 'Simpan Laporan'}
           </Button>
