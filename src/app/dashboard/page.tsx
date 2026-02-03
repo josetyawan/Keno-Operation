@@ -39,7 +39,8 @@ import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, deleteDo
 import { collection, query, orderBy, doc, where } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { useState, useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import type { VariantProps } from 'class-variance-authority';
@@ -125,10 +126,28 @@ const getStatusVariant = (status: Nota['status']): VariantProps<typeof badgeVari
 export default function DashboardPage() {
   const firestore = useFirestore();
   const { user } = useUser();
-  const [selectedSA, setSelectedSA] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const selectedSA = searchParams.get('sa') || 'all';
+  const selectedStatus = searchParams.get('status') || 'all';
+  const searchQuery = searchParams.get('q') || '';
+  
   const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA'];
+
+  const createQueryString = useCallback(
+    (name: string, value: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (value && value !== 'all') {
+        params.set(name, value);
+      } else {
+        params.delete(name);
+      }
+      return params.toString();
+    },
+    [searchParams]
+  );
 
   const userProfileRef = useMemoFirebase(() => {
     return user ? doc(firestore, 'users', user.uid) : null;
@@ -243,7 +262,12 @@ export default function DashboardPage() {
         <CardContent className="grid md:grid-cols-3 gap-4">
           <div className="grid gap-2">
             <Label htmlFor="service-area-filter">Service Area</Label>
-            <Select value={selectedSA} onValueChange={setSelectedSA}>
+            <Select 
+              value={selectedSA} 
+              onValueChange={(value) => {
+                router.push(`${pathname}?${createQueryString('sa', value)}`);
+              }}
+            >
               <SelectTrigger id="service-area-filter">
                 <SelectValue placeholder="Pilih Service Area..." />
               </SelectTrigger>
@@ -255,7 +279,12 @@ export default function DashboardPage() {
           </div>
            <div className="grid gap-2">
             <Label htmlFor="status-filter">Status</Label>
-            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+            <Select 
+              value={selectedStatus} 
+              onValueChange={(value) => {
+                router.push(`${pathname}?${createQueryString('status', value)}`);
+              }}
+            >
               <SelectTrigger id="status-filter">
                 <SelectValue placeholder="Pilih Status..." />
               </SelectTrigger>
@@ -274,7 +303,9 @@ export default function DashboardPage() {
               id="search-filter"
               placeholder="Ketik untuk mencari..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                 router.push(`${pathname}?${createQueryString('q', e.target.value)}`);
+              }}
             />
           </div>
         </CardContent>
