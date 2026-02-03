@@ -68,6 +68,7 @@ export default function NotaDetailPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [photoToDelete, setPhotoToDelete] = useState<string | null>(null);
+  const [zoomedImageUrl, setZoomedImageUrl] = useState<string | null>(null);
   
   const [isVerifyDialogOpen, setIsVerifyDialogOpen] = useState(false);
   const [verificationDate, setVerificationDate] = useState<Date | undefined>(new Date());
@@ -307,6 +308,9 @@ export default function NotaDetailPage() {
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                       {nota.fotoEvidenUrls.map((url, index) => (
                           <div key={index} className="relative group aspect-square w-full rounded-md overflow-hidden border">
+                              <button type="button" className="absolute inset-0 z-20 cursor-zoom-in" onClick={() => setZoomedImageUrl(url)}>
+                                  <span className="sr-only">Perbesar gambar {index + 1}</span>
+                              </button>
                               <Image src={url} alt={`Evidence ${index + 1}`} fill className="object-cover" />
                               {(isOwner || isAdmin) && (
                                   <Button
@@ -450,6 +454,33 @@ export default function NotaDetailPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {zoomedImageUrl && (
+        <div 
+            className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4 cursor-zoom-out"
+            onClick={() => setZoomedImageUrl(null)}
+        >
+            <div className="relative max-w-4xl max-h-full">
+                <Image 
+                    src={zoomedImageUrl} 
+                    alt="Bukti yang diperbesar" 
+                    width={1200}
+                    height={800}
+                    className="object-contain w-auto h-auto max-w-full max-h-[90vh] cursor-default"
+                    onClick={(e) => e.stopPropagation()}
+                />
+                <Button
+                  variant="destructive"
+                  size="icon"
+                  className="absolute -top-2 -right-2 h-8 w-8 z-10 rounded-full"
+                  onClick={() => setZoomedImageUrl(null)}
+                >
+                  <X className="h-5 w-5" />
+                  <span className="sr-only">Tutup Zoom</span>
+                </Button>
+            </div>
+        </div>
+      )}
     </>
   );
 }
