@@ -144,15 +144,16 @@ export default function DashboardPage() {
 
     const notasCollectionRef = collection(firestore, 'notas');
 
-    // Admin can see all notas.
+    // Admin can see all notas, sorted by creation date.
     if (isAdmin) {
       return query(notasCollectionRef, orderBy('dateCreated', 'desc'));
     }
 
     // Regular user can only see their own notas.
-    // Ensure user object is available before creating user-specific query.
+    // We remove `orderBy` to avoid needing a composite index that crashes the app.
+    // Sorting will be handled on the client-side.
     if (user) {
-      return query(notasCollectionRef, where('userId', '==', user.uid), orderBy('dateCreated', 'desc'));
+      return query(notasCollectionRef, where('userId', '==', user.uid));
     }
 
     // If no user or not admin (and profile is loaded), return null to fetch nothing.
@@ -173,35 +174,37 @@ export default function DashboardPage() {
 
   const filteredNotas = useMemo(() => {
       if (!notas) return [];
-      let results = notas;
-
-      // Filter by Service Area
-      if (selectedSA !== 'all') {
-          results = results.filter(nota => nota.serviceArea === selectedSA);
-      }
       
-      // Filter by Status
-      if (selectedStatus !== 'all') {
-          results = results.filter(nota => nota.status === selectedStatus);
-      }
+      const filtered = notas.filter(nota => {
+          // SA filter
+          if (selectedSA !== 'all' && nota.serviceArea !== selectedSA) {
+              return false;
+          }
+          // Status filter
+          if (selectedStatus !== 'all' && nota.status !== selectedStatus) {
+              return false;
+          }
+          // Search query filter
+          if (searchQuery) {
+              const lowercasedQuery = searchQuery.toLowerCase();
+              const user = userMap.get(nota.userId);
+              const nik = user?.nik || '';
+              const isMatch = nota.namaPic.toLowerCase().includes(lowercasedQuery) ||
+                              nota.segmen.toLowerCase().includes(lowercasedQuery) ||
+                              nik.toLowerCase().includes(lowercasedQuery) ||
+                              nota.status.toLowerCase().includes(lowercasedQuery);
+              if (!isMatch) return false;
+          }
+          return true;
+      });
 
-      // Filter by search query
-      if (searchQuery) {
-        const lowercasedQuery = searchQuery.toLowerCase();
-        results = results.filter(nota => {
-            const user = userMap.get(nota.userId);
-            const nik = user?.nik || '';
-            return (
-                nota.namaPic.toLowerCase().includes(lowercasedQuery) ||
-                nota.segmen.toLowerCase().includes(lowercasedQuery) ||
-                nik.toLowerCase().includes(lowercasedQuery) ||
-                nota.status.toLowerCase().includes(lowercasedQuery)
-            )
-        })
-      }
-
-      return results;
-  }, [notas, selectedSA, searchQuery, userMap, selectedStatus]);
+      // Sort results by dateCreated descending, as it's no longer guaranteed by the query for all users.
+      return filtered.sort((a, b) => {
+        const dateA = a.dateCreated?.toDate ? a.dateCreated.toDate().getTime() : 0;
+        const dateB = b.dateCreated?.toDate ? b.dateCreated.toDate().getTime() : 0;
+        return dateB - dateA; // descending order
+      });
+  }, [notas, selectedSA, selectedStatus, searchQuery, userMap]);
 
   const isLoading = isNotasLoading || isUsersLoading || isProfileLoading;
 
