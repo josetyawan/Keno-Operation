@@ -36,7 +36,7 @@ import { MoreHorizontal, PlusCircle, Edit, Trash2, User } from 'lucide-react';
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, query, orderBy, doc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, where } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useMemo } from 'react';
@@ -137,8 +137,28 @@ export default function DashboardPage() {
   const isAdmin = userProfile?.role === 'admin';
 
   const notasQuery = useMemoFirebase(() => {
-    return query(collection(firestore, 'notas'), orderBy('dateCreated', 'desc'));
-  }, [firestore]);
+    // Don't query until profile is loaded, because we need the role to build the query.
+    if (isProfileLoading) {
+      return null;
+    }
+
+    const notasCollectionRef = collection(firestore, 'notas');
+
+    // Admin can see all notas.
+    if (isAdmin) {
+      return query(notasCollectionRef, orderBy('dateCreated', 'desc'));
+    }
+
+    // Regular user can only see their own notas.
+    // Ensure user object is available before creating user-specific query.
+    if (user) {
+      return query(notasCollectionRef, where('userId', '==', user.uid), orderBy('dateCreated', 'desc'));
+    }
+
+    // If no user or not admin (and profile is loaded), return null to fetch nothing.
+    return null;
+  }, [firestore, user, isProfileLoading, isAdmin]);
+
   const { data: notas, isLoading: isNotasLoading } = useCollection<Nota>(notasQuery);
   
   const usersQuery = useMemoFirebase(() => {
