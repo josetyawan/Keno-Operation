@@ -346,13 +346,13 @@ export default function EditNotaPage() {
                   </PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={tanggal} onSelect={setTanggal} initialFocus /></PopoverContent></Popover>
                 </div>
                  <div className="grid gap-3"><Label htmlFor="serviceArea">Service Area *</Label>
-                  <Select onValueChange={setServiceArea} value={serviceArea} required><SelectTrigger><SelectValue placeholder="Pilih service area" /></SelectTrigger>
+                  <Select onValueChange={setServiceArea} value={serviceArea} defaultValue={nota.serviceArea} required><SelectTrigger><SelectValue placeholder="Pilih service area" /></SelectTrigger>
                     <SelectContent>{serviceAreas.map(sa => <SelectItem key={sa} value={sa}>{sa}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
               </div>
                 <div className="grid gap-3"><Label htmlFor="segmen">Segmen *</Label>
-                  <Select onValueChange={handleSegmenChange} value={segmen} required><SelectTrigger><SelectValue placeholder="Pilih segmen" /></SelectTrigger>
+                  <Select onValueChange={handleSegmenChange} value={segmen} defaultValue={nota.segmen} required><SelectTrigger><SelectValue placeholder="Pilih segmen" /></SelectTrigger>
                     <SelectContent>
                         <SelectItem value="BBM R2">BBM R2</SelectItem><SelectItem value="BBM R4 Harian">BBM R4 Harian</SelectItem>
                         <SelectItem value="BBM R4 Turlap">BBM R4 Turlap</SelectItem><SelectItem value="BBM R4 UT">BBM R4 UT</SelectItem>
