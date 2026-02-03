@@ -28,6 +28,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { sendTelegramReport } from '@/ai/flows/send-telegram-report';
 import { sendLinkAjaPayment } from '@/ai/flows/send-linkaja-payment';
+import { sendPaidNotice } from '@/ai/flows/send-paid-notice';
 import type { DateRange } from 'react-day-picker';
 import { useRouter } from 'next/navigation';
 
@@ -196,13 +197,15 @@ export default function RekapPage() {
             });
 
             if (result.success) {
+                const paymentDate = new Date();
+
                 toast({ 
                     title: 'Permintaan Pembayaran Diproses', 
-                    description: result.redirectUrl ? 'Anda akan diarahkan untuk konfirmasi.' : (result.message || 'Berhasil.')
+                    description: result.redirectUrl ? 'Anda akan diarahkan untuk konfirmasi.' : (result.message || 'Berhasil. Memperbarui status laporan...'),
+                    duration: 5000,
                 });
                 
                 // Mark all notas in the current filtered list as 'paid'
-                const paymentDate = new Date();
                 for (const nota of notas) {
                     const notaDocRef = doc(firestore, 'notas', nota.id);
                     updateDocumentNonBlocking(notaDocRef, {
@@ -210,6 +213,15 @@ export default function RekapPage() {
                         tanggalPembayaran: paymentDate
                     });
                 }
+
+                // Send Telegram Notification for Paid Status
+                sendPaidNotice({
+                    paidData: rekapData,
+                    grandTotal: grandTotal,
+                    paidDate: format(paymentDate, 'dd MMMM yyyy', { locale: idLocale }),
+                }).catch(err => {
+                    console.error("Failed to send paid notification:", err);
+                });
                 
                 if (result.redirectUrl) {
                     // Jika API mengembalikan URL, arahkan pengguna ke sana untuk konfirmasi

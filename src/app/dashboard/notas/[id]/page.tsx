@@ -10,6 +10,7 @@ import {
   CardFooter,
 } from '@/components/ui/card';
 import { format } from 'date-fns';
+import { id as idLocale } from 'date-fns/locale';
 import { Badge, badgeVariants } from '@/components/ui/badge';
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle, Edit, Trash, X, ShieldX } from 'lucide-react';
@@ -38,6 +39,7 @@ import type { VariantProps } from 'class-variance-authority';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { sendRejectionNotice } from '@/ai/flows/send-rejection-notice';
 
 
 const getStatusVariant = (status: Nota['status']): VariantProps<typeof badgeVariants>['variant'] => {
@@ -101,22 +103,41 @@ export default function NotaDetailPage() {
   };
   
   const handleConfirmReject = () => {
-    if (!isAdmin || !notaRef || !rejectionReason.trim()) {
+    if (!isAdmin || !notaRef || !rejectionReason.trim() || !nota) {
         toast({
             variant: 'destructive',
-            title: 'Alasan Diperlukan',
-            description: 'Silakan isi alasan penolakan.',
+            title: 'Alasan Diperlukan atau Data Tidak Lengkap',
+            description: 'Silakan isi alasan penolakan dan pastikan data laporan ada.',
         });
         return;
     }
+    const reason = rejectionReason.trim();
     updateDocumentNonBlocking(notaRef, {
         status: 'rejected',
-        rejectionReason: rejectionReason.trim()
+        rejectionReason: reason,
+        tanggalVerifikasi: null, // Clear verification date on rejection
     });
      toast({
       title: 'Laporan Ditolak',
       description: 'Status laporan telah diperbarui menjadi "rejected".',
     });
+
+    // Send Telegram Notification
+    sendRejectionNotice({
+      picName: nota.namaPic,
+      notaDate: format(nota.tanggal.toDate(), 'dd MMM yyyy', { locale: idLocale }),
+      segment: nota.segmen,
+      reason: reason,
+    }).catch(err => {
+        console.error("Failed to send rejection notification:", err);
+        // Optionally show a non-blocking toast that the notification failed
+        toast({
+            variant: 'destructive',
+            title: 'Notifikasi Gagal Terkirim',
+            description: 'Gagal mengirim notifikasi penolakan ke Telegram.',
+        });
+    });
+
     setIsRejectDialogOpen(false);
     setRejectionReason('');
   }
