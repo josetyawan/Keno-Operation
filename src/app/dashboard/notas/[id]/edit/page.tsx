@@ -388,7 +388,10 @@ export default function EditNotaPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="grid gap-3"><Label htmlFor="nominal">Nominal (Rp) *</Label><Input id="nominal" type="number" placeholder="50000" required value={nominal} onChange={(e) => setNominal(e.target.value)} /></div>
-                <div className="grid gap-3"><Label htmlFor="namaPic">Nama PIC *</Label><Input id="namaPic" type="text" placeholder="Nama penanggung jawab" required value={namaPic} onChange={(e) => setNamaPic(e.target.value)} /></div>
+                <div className="grid gap-3">
+                  <Label htmlFor="namaPic">Nama PIC *</Label>
+                  <Input id="namaPic" type="text" placeholder="Nama penanggung jawab" required value={namaPic} readOnly className="bg-muted/50" />
+                </div>
               </div>
               <div><Label className="mb-3 block">Upload Foto Bukti</Label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
