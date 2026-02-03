@@ -220,13 +220,6 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
 
 
 const generateBBMReport = (notas: Nota[], title: string): string => {
-    const bbmKeteranganMap: Record<string, string> = {
-        'BBM R2': 'BBM Harian BBM R2',
-        'BBM R4 Harian': 'BBM Harian BBM R4',
-        'BBM R4 Turlap': 'BBM Turlap BBM R4',
-        'BBM R4 UT': 'BBM UT BBM R4',
-    };
-
     // Group notas by date
     const groupedByDate = notas.reduce((acc, nota) => {
         const dateKey = format(nota.tanggal.toDate(), 'yyyy-MM-dd');
@@ -251,7 +244,7 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
             overallIndex++;
             grandTotal += nota.nominal;
             dateSubtotal += nota.nominal;
-            const staticKeterangan = bbmKeteranganMap[nota.segmen] || nota.segmen;
+            const staticKeterangan = nota.segmen;
 
             tableRows += `
                 <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
@@ -746,7 +739,16 @@ export default function ExportPage() {
                     if (notasInSegment.length === 0) continue;
                     let segmentHtml = '';
                     const title = `Perincian Nota ${segment} - ${selectedSA === 'all' ? 'Semua SA' : selectedSA}`;
-                    const bbmR2R4Segments = ['BBM R2', 'BBM R4 Harian', 'BBM R4 Turlap', 'BBM R4 UT'];
+                    const bbmR2R4Segments = [
+                        'BBM R2 Harian B2B IOAN',
+                        'BBM R2 Harian PROVISIONING',
+                        'BBM R4 Harian B2B IOAN',
+                        'BBM R4 Harian PROVISIONING',
+                        'BBM R4 Turlap B2B IOAN',
+                        'BBM R4 Turlap PROVISIONING',
+                        'BBM R4 UT B2B IOAN',
+                        'BBM R4 UT PROVISIONING',
+                    ];
 
                     if (segment === 'jasa') {
                         segmentHtml = generateJasaReport(notasInSegment, title);
@@ -769,7 +771,16 @@ export default function ExportPage() {
                     acc[seg].push(nota);
                     return acc;
                 }, {} as Record<string, Nota[]>);
-                 const bbmR2R4Segments = ['BBM R2', 'BBM R4 Harian', 'BBM R4 Turlap', 'BBM R4 UT'];
+                 const bbmR2R4Segments = [
+                    'BBM R2 Harian B2B IOAN',
+                    'BBM R2 Harian PROVISIONING',
+                    'BBM R4 Harian B2B IOAN',
+                    'BBM R4 Harian PROVISIONING',
+                    'BBM R4 Turlap B2B IOAN',
+                    'BBM R4 Turlap PROVISIONING',
+                    'BBM R4 UT B2B IOAN',
+                    'BBM R4 UT PROVISIONING',
+                 ];
 
                 for (const segment of Object.keys(evidenGrouped).sort()) {
                     const notasInSegment = evidenGrouped[segment];
@@ -805,7 +816,16 @@ export default function ExportPage() {
 
                     let segmentHtml = '';
                     const title = `Perincian Nota ${segment} - ${selectedSA === 'all' ? 'Semua SA' : selectedSA}`;
-                    const bbmR2R4Segments = ['BBM R2', 'BBM R4 Harian', 'BBM R4 Turlap', 'BBM R4 UT'];
+                    const bbmR2R4Segments = [
+                        'BBM R2 Harian B2B IOAN',
+                        'BBM R2 Harian PROVISIONING',
+                        'BBM R4 Harian B2B IOAN',
+                        'BBM R4 Harian PROVISIONING',
+                        'BBM R4 Turlap B2B IOAN',
+                        'BBM R4 Turlap PROVISIONING',
+                        'BBM R4 UT B2B IOAN',
+                        'BBM R4 UT PROVISIONING',
+                    ];
 
 
                     if (segment === 'jasa') {
@@ -831,7 +851,16 @@ export default function ExportPage() {
                     return acc;
                 }, {} as Record<string, Nota[]>);
 
-                const bbmR2R4Segments = ['BBM R2', 'BBM R4 Harian', 'BBM R4 Turlap', 'BBM R4 UT'];
+                const bbmR2R4Segments = [
+                    'BBM R2 Harian B2B IOAN',
+                    'BBM R2 Harian PROVISIONING',
+                    'BBM R4 Harian B2B IOAN',
+                    'BBM R4 Harian PROVISIONING',
+                    'BBM R4 Turlap B2B IOAN',
+                    'BBM R4 Turlap PROVISIONING',
+                    'BBM R4 UT B2B IOAN',
+                    'BBM R4 UT PROVISIONING',
+                ];
 
                 for (const segment of Object.keys(groupedBySegment).sort()) {
                     const notasInSegment = groupedBySegment[segment];

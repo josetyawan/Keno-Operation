@@ -125,7 +125,16 @@ function EditNotaForm({ nota, isAdmin }: { nota: Nota, isAdmin: boolean }) {
     const [previews, setPreviews] = useState<(string | null)[]>(initialUrls);
   
     const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA'];
-    const bbmKendaraanSegments = ['BBM R2', 'BBM R4 Harian', 'BBM R4 Turlap', 'BBM R4 UT'];
+    const bbmKendaraanSegments = [
+        'BBM R2 Harian B2B IOAN',
+        'BBM R2 Harian PROVISIONING',
+        'BBM R4 Harian B2B IOAN',
+        'BBM R4 Harian PROVISIONING',
+        'BBM R4 Turlap B2B IOAN',
+        'BBM R4 Turlap PROVISIONING',
+        'BBM R4 UT B2B IOAN',
+        'BBM R4 UT PROVISIONING',
+    ];
     const nonBbmKendaraanSegments = ['MATERIAL SA KUDUS', 'BBM Genset', 'jasa', 'Konsumsi Turlap', 'Konsumsi UT', 'Konsumsi Lembur', 'MATERIAL SPPG SA KUDUS'];
     
     const isBBMKendaraan = segmen && bbmKendaraanSegments.includes(segmen);
@@ -277,19 +286,28 @@ function EditNotaForm({ nota, isAdmin }: { nota: Nota, isAdmin: boolean }) {
                                 </PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={tanggal} onSelect={setTanggal} initialFocus /></PopoverContent></Popover>
                                 </div>
                                 <div className="grid gap-3"><Label htmlFor="serviceArea">Service Area *</Label>
-                                <Select onValueChange={setServiceArea} value={serviceArea} required><SelectTrigger><SelectValue placeholder="Pilih service area" /></SelectTrigger>
+                                <Select onValueChange={setServiceArea} defaultValue={serviceArea} required><SelectTrigger><SelectValue placeholder="Pilih service area" /></SelectTrigger>
                                     <SelectContent>{serviceAreas.map(sa => <SelectItem key={sa} value={sa}>{sa}</SelectItem>)}</SelectContent>
                                 </Select>
                                 </div>
                             </div>
                             <div className="grid gap-3"><Label htmlFor="segmen">Segmen *</Label>
-                                <Select onValueChange={handleSegmenChange} value={segmen} required><SelectTrigger><SelectValue placeholder="Pilih segmen" /></SelectTrigger>
+                                <Select onValueChange={handleSegmenChange} defaultValue={segmen} required><SelectTrigger><SelectValue placeholder="Pilih segmen" /></SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="BBM R2">BBM R2</SelectItem><SelectItem value="BBM R4 Harian">BBM R4 Harian</SelectItem>
-                                        <SelectItem value="BBM R4 Turlap">BBM R4 Turlap</SelectItem><SelectItem value="BBM R4 UT">BBM R4 UT</SelectItem>
-                                        <SelectItem value="MATERIAL SA KUDUS">MATERIAL SA KUDUS</SelectItem><SelectItem value="BBM Genset">BBM Genset</SelectItem>
-                                        <SelectItem value="jasa">Jasa</SelectItem><SelectItem value="Konsumsi Turlap">Konsumsi Turlap</SelectItem>
-                                        <SelectItem value="Konsumsi UT">Konsumsi UT</SelectItem><SelectItem value="Konsumsi Lembur">Konsumsi Lembur</SelectItem>
+                                        <SelectItem value="BBM R2 Harian B2B IOAN">BBM R2 Harian B2B IOAN</SelectItem>
+                                        <SelectItem value="BBM R2 Harian PROVISIONING">BBM R2 Harian PROVISIONING</SelectItem>
+                                        <SelectItem value="BBM R4 Harian B2B IOAN">BBM R4 Harian B2B IOAN</SelectItem>
+                                        <SelectItem value="BBM R4 Harian PROVISIONING">BBM R4 Harian PROVISIONING</SelectItem>
+                                        <SelectItem value="BBM R4 Turlap B2B IOAN">BBM R4 Turlap B2B IOAN</SelectItem>
+                                        <SelectItem value="BBM R4 Turlap PROVISIONING">BBM R4 Turlap PROVISIONING</SelectItem>
+                                        <SelectItem value="BBM R4 UT B2B IOAN">BBM R4 UT B2B IOAN</SelectItem>
+                                        <SelectItem value="BBM R4 UT PROVISIONING">BBM R4 UT PROVISIONING</SelectItem>
+                                        <SelectItem value="MATERIAL SA KUDUS">MATERIAL SA KUDUS</SelectItem>
+                                        <SelectItem value="BBM Genset">BBM Genset</SelectItem>
+                                        <SelectItem value="jasa">Jasa</SelectItem>
+                                        <SelectItem value="Konsumsi Turlap">Konsumsi Turlap</SelectItem>
+                                        <SelectItem value="Konsumsi UT">Konsumsi UT</SelectItem>
+                                        <SelectItem value="Konsumsi Lembur">Konsumsi Lembur</SelectItem>
                                         <SelectItem value="MATERIAL SPPG SA KUDUS">MATERIAL SPPG SA KUDUS</SelectItem>
                                     </SelectContent>
                                 </Select>

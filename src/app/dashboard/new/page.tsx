@@ -109,7 +109,16 @@ export default function NewNotaPage() {
   }, [userProfile]);
 
   const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA'];
-  const bbmKendaraanSegments = ['BBM R2', 'BBM R4 Harian', 'BBM R4 Turlap', 'BBM R4 UT'];
+  const bbmKendaraanSegments = [
+    'BBM R2 Harian B2B IOAN',
+    'BBM R2 Harian PROVISIONING',
+    'BBM R4 Harian B2B IOAN',
+    'BBM R4 Harian PROVISIONING',
+    'BBM R4 Turlap B2B IOAN',
+    'BBM R4 Turlap PROVISIONING',
+    'BBM R4 UT B2B IOAN',
+    'BBM R4 UT PROVISIONING',
+  ];
   const nonBbmKendaraanSegments = ['MATERIAL SA KUDUS', 'BBM Genset', 'jasa', 'Konsumsi Turlap', 'Konsumsi UT', 'Konsumsi Lembur', 'MATERIAL SPPG SA KUDUS'];
   
   const isBBMKendaraan = segmen && bbmKendaraanSegments.includes(segmen);
@@ -315,10 +324,14 @@ export default function NewNotaPage() {
                       <SelectValue placeholder="Pilih segmen" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="BBM R2">BBM R2</SelectItem>
-                        <SelectItem value="BBM R4 Harian">BBM R4 Harian</SelectItem>
-                        <SelectItem value="BBM R4 Turlap">BBM R4 Turlap</SelectItem>
-                        <SelectItem value="BBM R4 UT">BBM R4 UT</SelectItem>
+                        <SelectItem value="BBM R2 Harian B2B IOAN">BBM R2 Harian B2B IOAN</SelectItem>
+                        <SelectItem value="BBM R2 Harian PROVISIONING">BBM R2 Harian PROVISIONING</SelectItem>
+                        <SelectItem value="BBM R4 Harian B2B IOAN">BBM R4 Harian B2B IOAN</SelectItem>
+                        <SelectItem value="BBM R4 Harian PROVISIONING">BBM R4 Harian PROVISIONING</SelectItem>
+                        <SelectItem value="BBM R4 Turlap B2B IOAN">BBM R4 Turlap B2B IOAN</SelectItem>
+                        <SelectItem value="BBM R4 Turlap PROVISIONING">BBM R4 Turlap PROVISIONING</SelectItem>
+                        <SelectItem value="BBM R4 UT B2B IOAN">BBM R4 UT B2B IOAN</SelectItem>
+                        <SelectItem value="BBM R4 UT PROVISIONING">BBM R4 UT PROVISIONING</SelectItem>
                         <SelectItem value="MATERIAL SA KUDUS">MATERIAL SA KUDUS</SelectItem>
                         <SelectItem value="BBM Genset">BBM Genset</SelectItem>
                         <SelectItem value="jasa">Jasa</SelectItem>
