@@ -131,10 +131,30 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
         </tr>
     `;
 
+    const signatureTable = `
+      <table style="width: 100%; text-align: center; font-size: 10pt; table-layout: fixed; margin-top: 2rem;">
+          <tr>
+              <td style="width: 33.3%;">Mengetahui<br/>Pemilik Anggaran,</td>
+              <td style="width: 33.3%;">Mengetahui<br/>Pengelola IF / Panjar,</td>
+              <td style="width: 33.3%;">Semarang, ${formattedDate}<br/>Dibuat/Diajukan oleh,</td>
+          </tr>
+          <tr>
+              <td style="height: 60px;"></td>
+              <td></td>
+              <td></td>
+          </tr>
+          <tr>
+              <td style="text-decoration: underline; font-weight: bold;">( . . . . . . . . . . . . . . . )</td>
+              <td style="text-decoration: underline; font-weight: bold;">( . . . . . . . . . . . . . . . )</td>
+              <td style="text-decoration: underline; font-weight: bold;">( . . . . . . . . . . . . . . . )</td>
+          </tr>
+      </table>
+  `;
+
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 9pt; width: 100%; box-sizing: border-box; page-break-inside: avoid;">
         
-        <div style="flex-grow: 1;">
+        <div>
             <div style="text-align: left; font-size: 11pt; font-weight: bold;">
                 PT. TELKOM AKSES<br/>
                 FINANCE REGIONAL III
@@ -205,15 +225,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
             </div>
         </div>
         
-        <div style="flex-shrink: 0; padding-top: 2rem;">
-            <table style="width: 100%; text-align: center; font-size: 10pt; table-layout: fixed;">
-                <tr>
-                    <td style="width: 33.3%;">Mengetahui<br/>Pemilik Anggaran,</td>
-                    <td style="width: 33.3%;">Mengetahui<br/>Pengelola IF / Panjar,</td>
-                    <td style="width: 33.3%;">Semarang, ${formattedDate}<br/>Dibuat/Diajukan oleh,</td>
-                </tr>
-            </table>
-        </div>
+        ${signatureTable}
     </div>
     `;
 };
@@ -655,13 +667,11 @@ function ReportPreview({
     <>
       <style>{`
         @media print {
-          body * {
-            visibility: hidden;
+          body > *:not(#print-section) {
+            display: none !important;
           }
-          #print-section, #print-section * {
-            visibility: visible;
-          }
-          #print-section {
+          
+          #print-section-container {
             position: absolute;
             left: 0;
             top: 0;
@@ -669,15 +679,25 @@ function ReportPreview({
             margin: 0;
             padding: 0;
           }
-          .page-is-portrait {
-            page: a4-portrait;
+
+          .printable-page {
+            box-shadow: none !important;
+            border: none !important;
+            margin: 0 !important;
+            padding: 1cm !important;
+            box-sizing: border-box;
+            width: auto !important;
+            height: auto !important;
+            min-height: 0 !important;
+            page-break-after: always;
           }
-          .page-is-landscape {
-            page: a4-landscape;
+
+          .printable-page:last-child {
+            page-break-after: auto;
           }
         }
       `}</style>
-      <div className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4 print:p-0 print:bg-white">
+      <div className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4 print:p-0 print:bg-white" id="print-section-container">
         <Card className="w-full max-w-7xl h-[90vh] flex flex-col print:shadow-none print:border-none print:h-auto">
             <CardHeader className="flex flex-row items-center justify-between print:hidden">
             <CardTitle>Pratinjau Laporan</CardTitle>
@@ -695,7 +715,7 @@ function ReportPreview({
                         <div
                             key={index}
                             className={cn(
-                              "bg-white shadow-lg",
+                              "printable-page bg-white shadow-lg",
                                page.orientation === 'landscape' ? 'page-is-landscape' : 'page-is-portrait'
                             )}
                             style={{
