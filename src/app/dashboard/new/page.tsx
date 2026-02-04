@@ -131,7 +131,8 @@ export default function NewNotaPage() {
     'Konsumsi UT PROVISIONING',
     'Konsumsi Lembur B2B IOAN',
     'Konsumsi Lembur PROVISIONING',
-    'MATERIAL SPPG SA KUDUS'
+    'MATERIAL SPPG B2B IOAN',
+    'MATERIAL SPPG PROVISIONING',
   ];
   
   const isBBMKendaraan = segmen && bbmKendaraanSegments.includes(segmen);
@@ -158,11 +159,13 @@ export default function NewNotaPage() {
     
     if (value === 'Pembelian Material Non stok') {
         setKeterangan('Pembelian Material Non stok');
-    } else if (value === 'MATERIAL SPPG SA KUDUS') {
-        setKeterangan('Material SPPG SA Kudus');
+    } else if (value === 'MATERIAL SPPG B2B IOAN') {
+        setKeterangan('Material SPPG B2B IOAN');
+    } else if (value === 'MATERIAL SPPG PROVISIONING') {
+        setKeterangan('Material SPPG PROVISIONING');
     } else {
         // If switching away from a static segment, clear the text area
-        if (keterangan === 'Pembelian Material Non stok' || keterangan === 'Material SPPG SA Kudus') {
+        if (keterangan === 'Pembelian Material Non stok' || keterangan === 'Material SPPG B2B IOAN' || keterangan === 'Material SPPG PROVISIONING') {
             setKeterangan('');
         }
     }
@@ -356,7 +359,8 @@ export default function NewNotaPage() {
                         <SelectItem value="Konsumsi UT PROVISIONING">Konsumsi UT PROVISIONING</SelectItem>
                         <SelectItem value="Konsumsi Lembur B2B IOAN">Konsumsi Lembur B2B IOAN</SelectItem>
                         <SelectItem value="Konsumsi Lembur PROVISIONING">Konsumsi Lembur PROVISIONING</SelectItem>
-                        <SelectItem value="MATERIAL SPPG SA KUDUS">MATERIAL SPPG SA KUDUS</SelectItem>
+                        <SelectItem value="MATERIAL SPPG B2B IOAN">MATERIAL SPPG B2B IOAN</SelectItem>
+                        <SelectItem value="MATERIAL SPPG PROVISIONING">MATERIAL SPPG PROVISIONING</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -422,7 +426,7 @@ export default function NewNotaPage() {
                   placeholder="Keterangan tambahan..."
                   value={keterangan}
                   onChange={(e) => setKeterangan(e.target.value)}
-                  readOnly={segmen === 'Pembelian Material Non stok' || segmen === 'MATERIAL SPPG SA KUDUS'}
+                  readOnly={keterangan === 'Pembelian Material Non stok' || keterangan === 'Material SPPG B2B IOAN' || keterangan === 'Material SPPG PROVISIONING'}
                 />
               </div>
 

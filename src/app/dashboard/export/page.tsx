@@ -57,9 +57,12 @@ import Image from 'next/image';
 import type { VariantProps } from 'class-variance-authority';
 import { useRouter } from 'next/navigation';
 
-type ProjectType = 'B2B IOAN' | 'PROVISIONING' | 'Lainnya';
+type ProjectType = 'B2B IOAN' | 'PROVISIONING' | 'SPPG' | 'Lainnya';
 
 const getProjectType = (segmen: string): ProjectType => {
+    if (segmen.includes('SPPG')) {
+        return 'SPPG';
+    }
     if (segmen.includes('B2B IOAN')) {
         return 'B2B IOAN';
     }
@@ -121,6 +124,9 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
     } else if (projectType === 'PROVISIONING') {
         pekerjaan = `PROVISIONING SA ${saShort}`;
         idProject = 'TIF-32/2026';
+    } else if (projectType === 'SPPG') {
+        pekerjaan = `SPPG SA ${saShort}`;
+        idProject = 'PPR-38/2025';
     } else if (serviceArea === 'all') {
         pekerjaan = 'SEMUA SA';
     }
@@ -782,7 +788,7 @@ export default function ExportPage() {
                         if (notasInSegment.length === 0) continue;
 
                         let segmentHtml = '';
-                        const title = `Perincian Nota ${segment} - ${projectType} - ${saShortForTitle}`;
+                        const title = `Perincian Nota ${segment} - ${projectType === 'Lainnya' ? '' : projectType + ' - '}${saShortForTitle === 'SEMUA SA' ? 'SEMUA' : saShortForTitle}`;
                         const bbmR2R4Segments = [
                             'BBM R2 Harian B2B IOAN', 'BBM R2 Harian PROVISIONING',
                             'BBM R4 Harian B2B IOAN', 'BBM R4 Harian PROVISIONING',
@@ -826,7 +832,7 @@ export default function ExportPage() {
                         if (notasInSegment.length === 0) continue;
 
                         let segmentHtml = '';
-                        const title = `Eviden Foto - Perincian Nota ${segment} - ${projectType} - ${saShortForTitle}`;
+                        const title = `Eviden Foto - Perincian Nota ${segment} - ${projectType === 'Lainnya' ? '' : projectType + ' - '}${saShortForTitle === 'SEMUA SA' ? 'SEMUA' : saShortForTitle}`;
 
                         if (bbmR2R4Segments.includes(segment)) {
                             segmentHtml = generateEvidenReport(notasInSegment, title);
