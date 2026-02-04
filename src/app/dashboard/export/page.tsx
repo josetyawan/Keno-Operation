@@ -111,7 +111,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
     }).join('');
 
     return `
-    <div style="font-family: Arial, sans-serif; color: black; font-size: 10pt; width: 100%; height: 100%; box-sizing: border-box; display: flex; flex-direction: column;">
+    <div style="font-family: Arial, sans-serif; color: black; font-size: 10pt; width: 100%; box-sizing: border-box; display: flex; flex-direction: column;">
         
         <div style="text-align: left; font-size: 11pt; font-weight: bold;">
             PT. TELKOM AKSES<br/>
@@ -702,15 +702,16 @@ function ReportPreview({
                     visibility: visible;
                 }
                 #print-section {
-                    position: static;
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    width: 100%;
                 }
                 .report-page-container {
-                    break-before: page;
-                    overflow: hidden;
-                    height: 99%;
+                    page-break-before: always;
                 }
                  .report-page-container:first-child {
-                    break-before: auto;
+                    page-break-before: auto;
                 }
                 .page-is-landscape {
                     page: landscape-page;
