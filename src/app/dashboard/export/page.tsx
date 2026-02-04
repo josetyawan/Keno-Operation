@@ -702,57 +702,21 @@ function ReportPreview({
   onClose: () => void;
 }) {
 
+  useEffect(() => {
+    document.body.classList.add('is-printing');
+    return () => {
+        document.body.classList.remove('is-printing');
+    };
+  }, []);
+
   const handlePrint = () => {
     window.print();
   };
 
   return (
     <>
-      <style>{`
-        @media print {
-            body > *:not(#print-section-container),
-            #print-section-container > *:not(#print-section) {
-                display: none !important;
-            }
-
-            #print-section-container {
-                position: absolute !important;
-                top: 0 !important;
-                left: 0 !important;
-                width: 100% !important;
-                height: auto !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                background-color: white !important;
-            }
-            #print-section {
-                margin: 0 !important;
-                padding: 0 !important;
-                background-color: white !important;
-            }
-            .printable-page {
-                box-shadow: none !important;
-                border: none !important;
-                margin: 0 !important;
-                width: 100% !important;
-                height: auto !important;
-                min-height: 0 !important;
-                page-break-after: always;
-                box-sizing: border-box;
-            }
-             .page-is-portrait {
-                page: a4-portrait;
-            }
-            .page-is-landscape {
-                page: a4-landscape;
-            }
-            .printable-page:last-child {
-                page-break-after: auto;
-            }
-        }
-      `}</style>
-      <div className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4 print:p-0 print:bg-white" id="print-section-container">
-        <Card className="w-full max-w-7xl h-[90vh] flex flex-col print:shadow-none print:border-none print:h-auto">
+      <div className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4" id="print-section-container">
+        <Card className="w-full max-w-7xl h-[90vh] flex flex-col">
             <CardHeader className="flex flex-row items-center justify-between print:hidden">
             <CardTitle>Pratinjau Laporan</CardTitle>
             <div className="flex gap-2">
@@ -763,8 +727,8 @@ function ReportPreview({
                 </Button>
             </div>
             </CardHeader>
-            <CardContent id="print-section" className="flex-grow overflow-auto bg-gray-200 p-4 print:bg-white print:p-0 print:overflow-visible">
-                <div className="mx-auto flex flex-col items-center gap-y-4 print:gap-y-0">
+            <CardContent id="print-section" className="flex-grow overflow-auto bg-gray-200 p-4">
+                <div className="mx-auto flex flex-col items-center gap-y-4">
                     {pages.map((page, index) => (
                         <div
                             key={index}
