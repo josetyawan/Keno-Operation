@@ -111,7 +111,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
     }).join('');
 
     return `
-    <div style="font-family: Arial, sans-serif; color: black; font-size: 10pt; width: 100%; box-sizing: border-box; display: flex; flex-direction: column;">
+    <div style="font-family: Arial, sans-serif; color: black; font-size: 10pt; width: 100%; box-sizing: border-box;">
         
         <div style="text-align: left; font-size: 11pt; font-weight: bold;">
             PT. TELKOM AKSES<br/>
@@ -130,17 +130,17 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
         <table style="width: 100%; border-collapse: collapse; font-size: 9pt; margin-bottom: 0.5rem;">
             <thead style="background-color: #DDEBF7; font-weight: bold; text-align: center;">
                 <tr>
-                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">No. Urut</th>
-                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">TANGGAL</th>
-                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">No. Kuitansi</th>
-                    <th style="border: 1px solid black; padding: 4px; width: 20%; vertical-align: middle;">URAIAN</th>
-                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">ID PROJECT</th>
-                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">No. Akun</th>
-                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">NILAI PERTANGGUNGAN</th>
-                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">PPN (Disetor Mitra)</th>
-                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">NILAI KUITANSI</th>
-                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">PPh 21, 23 / 4(2) *)</th>
-                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">BAYAR KE MITRA</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">No. Urut</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">TANGGAL</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">No. Kuitansi</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px; width: 20%; vertical-align: middle;">URAIAN</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">ID PROJECT</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">No. Akun</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">NILAI PERTANGGUNGAN</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">PPN (Disetor Mitra)</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">NILAI KUITANSI</th>
+                    <th colspan="1" style="border: 1px solid black; padding: 4px; vertical-align: middle;">PPh 21, 23 / 4(2) *)</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">BAYAR KE MITRA</th>
                 </tr>
             </thead>
             <tbody>
@@ -205,7 +205,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
             </div>
         </div>
         
-        <div style="margin-top: auto;"> 
+        <div style="margin-top: 2rem;"> 
             <table style="width: 100%; text-align: center; font-size: 10pt; table-layout: fixed; border-spacing: 0;">
                 <tr>
                     <td style="width: 33.3%; vertical-align: top;">Mengetahui<br/>Pemilik Anggaran,</td>
@@ -279,7 +279,7 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
     const terbilangText = toWords(grandTotal);
 
     const saShort = serviceArea.replace('SA ', '');
-    let pekerjaan = `SA ${saShort}`;
+    let pekerjaan = saShort;
     let idProject = '-';
 
     if (projectType === 'B2B IOAN') {
@@ -295,7 +295,7 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
         pekerjaan = `BBM GENSET ${saShort}`;
         idProject = 'Ditagihkan ke Unit Lain';
     } else if (serviceArea === 'all') {
-        pekerjaan = 'SEMUA SA';
+        pekerjaan = 'SEMUA';
     }
 
     return `
@@ -695,22 +695,23 @@ function ReportPreview({
                 margin: 1cm;
             }
             @media print {
-                body * {
-                    visibility: hidden;
+                body > :not(#print-section) {
+                    display: none !important;
                 }
-                #print-section, #print-section * {
-                    visibility: visible;
+                html, body {
+                    visibility: visible !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
                 }
                 #print-section {
-                    position: absolute;
-                    left: 0;
-                    top: 0;
-                    width: 100%;
+                    visibility: visible !important;
+                    position: static !important;
                 }
                 .report-page-container {
                     page-break-before: always;
+                    visibility: visible !important;
                 }
-                 .report-page-container:first-child {
+                .report-page-container:first-child {
                     page-break-before: auto;
                 }
                 .page-is-landscape {
