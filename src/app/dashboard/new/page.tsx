@@ -120,19 +120,21 @@ export default function NewNotaPage() {
     'BBM R4 UT PROVISIONING',
   ];
   const nonBbmKendaraanSegments = [
-    'Pembelian Material Non stok',
+    'Pembelian Material Non stok B2B IOAN',
+    'Pembelian Material Non stok PROVISIONING',
     'Perincian Nota ATK',
     'BBM Genset',
-    'jasa',
-    'Perincian Nota Pengiriman',
+    'jasa B2B IOAN',
+    'jasa PROVISIONING',
+    'Perincian Nota Pengiriman B2B IOAN',
+    'Perincian Nota Pengiriman PROVISIONING',
     'Konsumsi Turlap B2B IOAN',
     'Konsumsi Turlap PROVISIONING',
     'Konsumsi UT B2B IOAN',
     'Konsumsi UT PROVISIONING',
     'Konsumsi Lembur B2B IOAN',
     'Konsumsi Lembur PROVISIONING',
-    'MATERIAL SPPG B2B IOAN',
-    'MATERIAL SPPG PROVISIONING',
+    'MATERIAL SPPG',
   ];
   
   const isBBMKendaraan = segmen && bbmKendaraanSegments.includes(segmen);
@@ -157,15 +159,13 @@ export default function NewNotaPage() {
       setKmAkhir('');
     }
     
-    if (value === 'Pembelian Material Non stok') {
+    if (value.startsWith('Pembelian Material Non stok')) {
         setKeterangan('Pembelian Material Non stok');
-    } else if (value === 'MATERIAL SPPG B2B IOAN') {
-        setKeterangan('Material SPPG B2B IOAN');
-    } else if (value === 'MATERIAL SPPG PROVISIONING') {
-        setKeterangan('Material SPPG PROVISIONING');
+    } else if (value === 'MATERIAL SPPG') {
+        setKeterangan('Material SPPG');
     } else {
         // If switching away from a static segment, clear the text area
-        if (keterangan === 'Pembelian Material Non stok' || keterangan === 'Material SPPG B2B IOAN' || keterangan === 'Material SPPG PROVISIONING') {
+        if (keterangan.startsWith('Pembelian Material Non stok') || keterangan === 'Material SPPG') {
             setKeterangan('');
         }
     }
@@ -348,19 +348,21 @@ export default function NewNotaPage() {
                         <SelectItem value="BBM R4 Turlap PROVISIONING">BBM R4 Turlap PROVISIONING</SelectItem>
                         <SelectItem value="BBM R4 UT B2B IOAN">BBM R4 UT B2B IOAN</SelectItem>
                         <SelectItem value="BBM R4 UT PROVISIONING">BBM R4 UT PROVISIONING</SelectItem>
-                        <SelectItem value="Pembelian Material Non stok">Pembelian Material Non stok</SelectItem>
+                        <SelectItem value="Pembelian Material Non stok B2B IOAN">Pembelian Material Non stok B2B IOAN</SelectItem>
+                        <SelectItem value="Pembelian Material Non stok PROVISIONING">Pembelian Material Non stok PROVISIONING</SelectItem>
                         <SelectItem value="Perincian Nota ATK">Perincian Nota ATK</SelectItem>
                         <SelectItem value="BBM Genset">BBM Genset</SelectItem>
-                        <SelectItem value="jasa">Jasa</SelectItem>
-                        <SelectItem value="Perincian Nota Pengiriman">Perincian Nota Pengiriman</SelectItem>
+                        <SelectItem value="jasa B2B IOAN">jasa B2B IOAN</SelectItem>
+                        <SelectItem value="jasa PROVISIONING">jasa PROVISIONING</SelectItem>
+                        <SelectItem value="Perincian Nota Pengiriman B2B IOAN">Perincian Nota Pengiriman B2B IOAN</SelectItem>
+                        <SelectItem value="Perincian Nota Pengiriman PROVISIONING">Perincian Nota Pengiriman PROVISIONING</SelectItem>
                         <SelectItem value="Konsumsi Turlap B2B IOAN">Konsumsi Turlap B2B IOAN</SelectItem>
                         <SelectItem value="Konsumsi Turlap PROVISIONING">Konsumsi Turlap PROVISIONING</SelectItem>
                         <SelectItem value="Konsumsi UT B2B IOAN">Konsumsi UT B2B IOAN</SelectItem>
                         <SelectItem value="Konsumsi UT PROVISIONING">Konsumsi UT PROVISIONING</SelectItem>
                         <SelectItem value="Konsumsi Lembur B2B IOAN">Konsumsi Lembur B2B IOAN</SelectItem>
                         <SelectItem value="Konsumsi Lembur PROVISIONING">Konsumsi Lembur PROVISIONING</SelectItem>
-                        <SelectItem value="MATERIAL SPPG B2B IOAN">MATERIAL SPPG B2B IOAN</SelectItem>
-                        <SelectItem value="MATERIAL SPPG PROVISIONING">MATERIAL SPPG PROVISIONING</SelectItem>
+                        <SelectItem value="MATERIAL SPPG">MATERIAL SPPG</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -408,11 +410,11 @@ export default function NewNotaPage() {
               
               {isNonBBMKendaraan && (
                 <div className="grid gap-3">
-                    <Label htmlFor="namaBarang">{segmen === 'jasa' || segmen === 'Perincian Nota Pengiriman' ? 'Nama Jasa / Pengiriman' : 'Nama Barang'}</Label>
+                    <Label htmlFor="namaBarang">{segmen.startsWith('jasa') || segmen.startsWith('Perincian Nota Pengiriman') ? 'Nama Jasa / Pengiriman' : 'Nama Barang'}</Label>
                     <Input
                         id="namaBarang"
                         type="text"
-                        placeholder={segmen === 'jasa' || segmen === 'Perincian Nota Pengiriman' ? 'Contoh: Jasa perbaikan / Pengiriman barang' : 'Nama barang yang dibeli...'}
+                        placeholder={segmen.startsWith('jasa') || segmen.startsWith('Perincian Nota Pengiriman') ? 'Contoh: Jasa perbaikan / Pengiriman barang' : 'Nama barang yang dibeli...'}
                         value={namaBarang}
                         onChange={(e) => setNamaBarang(e.target.value)}
                     />
@@ -426,7 +428,7 @@ export default function NewNotaPage() {
                   placeholder="Keterangan tambahan..."
                   value={keterangan}
                   onChange={(e) => setKeterangan(e.target.value)}
-                  readOnly={keterangan === 'Pembelian Material Non stok' || keterangan === 'Material SPPG B2B IOAN' || keterangan === 'Material SPPG PROVISIONING'}
+                  readOnly={keterangan.startsWith('Pembelian Material Non stok') || keterangan === 'Material SPPG'}
                 />
               </div>
 
