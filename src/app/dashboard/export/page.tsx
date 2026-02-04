@@ -39,6 +39,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { ArrowLeft, Edit, Trash2, Filter, FileArchive, Printer, Calendar as CalendarIcon, Loader2 } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
@@ -445,7 +446,7 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
         <h2 style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${title}</h2>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
-            <thead style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+            <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr>
                     ${['NO', 'TANGGAL', 'KETERANGAN', 'NO PLAT', 'KM AWAL', 'KM AKHIR', 'URAIAN PEKERJAAN', 'JUMLAH', 'NAMA'].map(h => `<th style="padding: 4px; border: 1px solid black;">${h}</th>`).join('')}
                 </tr>
@@ -845,10 +846,16 @@ export default function ExportPage() {
         }
 
         return result.sort((a, b) => {
-          const toTime = (date: any) => {
+          const toTime = (date: any): number => {
             if (!date) return 0;
-            if (date.toDate) return date.toDate().getTime();
-            const d = new Date(date);
+            if (date.toDate) { // Firestore Timestamp
+                const d = date.toDate();
+                return !isNaN(d.getTime()) ? d.getTime() : 0;
+            }
+            if (date instanceof Date) { // JavaScript Date
+                return !isNaN(date.getTime()) ? date.getTime() : 0;
+            }
+            const d = new Date(date); // String date
             return isNaN(d.getTime()) ? 0 : d.getTime();
           };
           return toTime(a.tanggal) - toTime(b.tanggal);
