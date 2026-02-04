@@ -934,7 +934,7 @@ export default function ExportPage() {
                 const saShortForTitle = reportSA.replace(/^SA /, '');
                 
                 // --- 0. Imprest Fund Cover Page ---
-                if (reportType === 'all' || reportType === 'rekap') {
+                if ((reportType === 'all' || reportType === 'rekap') && projectType !== 'BBM GENSET') {
                     const coverHtml = generateImprestFundCover(notasForProject, reportSA, projectType);
                     pages.push(coverHtml);
                 }
