@@ -110,22 +110,27 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
-                <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
+                <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">-</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
             </tr>
         `;
     }).join('');
 
-    let projectName = `IF SEMARANG - SMG OPR - Ops ${projectType} Service Area "${saShort}"`;
+    let projectName = `IF SEMARANG - SMG OPR - Ops ${projectType} Service Area ${saShort}`;
     if (projectType === 'SPPG') {
-        projectName = `IF SEMARANG - SMG OPR - Ops SPPG Service Area "${saShort}"`;
+        projectName = `IF SEMARANG - SMG OPR - Ops SPPG Service Area ${saShort}`;
     }
 
+    const idProjectDisplay = projectType === 'B2B IOAN' ? 'TIF-215/2026' : (projectType === 'PROVISIONING' ? 'TIF-32/2026' : (projectType === 'SPPG' ? 'PPR-38/2025' : '-'));
+
     return `
-    <div style="font-family: Arial, sans-serif; color: black; font-size: 10pt; padding: 1.5cm; width: 297mm; min-height: 210mm; background-color: white; box-sizing: border-box;">
-        <div style="text-align: center; font-weight: bold; line-height: 1.2; margin-bottom: 1rem;">
+    <div style="font-family: Arial, sans-serif; color: black; font-size: 10pt; padding: 1.5cm; width: 297mm; min-height: 210mm; background-color: white; box-sizing: border-box; display: flex; flex-direction: column;">
+        <div style="text-align: left;">
             <p style="margin: 0; font-size: 11pt;">PT. TELKOM AKSES</p>
             <p style="margin: 0; font-size: 11pt;">FINANCE REGIONAL III</p>
+        </div>
+
+        <div style="text-align: center; font-weight: bold; line-height: 1.2; margin-top: -2.5em; margin-bottom: 1rem;">
             <p style="margin: 0; font-size: 11pt; text-decoration: underline;">REKAP PERTANGGUNGAN IMPREST FUND / PANJAR KERJA *)</p>
         </div>
 
@@ -138,20 +143,20 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
         <table style="width: 100%; border-collapse: collapse; font-size: 9pt; margin-bottom: 0.5rem;">
             <thead style="background-color: #DDEBF7; font-weight: bold; text-align: center;">
                 <tr>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px;">No. Urut</th>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px;">TANGGAL</th>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px;">No. Kuitansi</th>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px; width: 25%;">URAIAN</th>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px;">ID PROJECT</th>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px;">No. Akun</th>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px;">NILAI PERTANGGUNGAN</th>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px;">PPN (Disetor Mitra)</th>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px;">NILAI KUITANSI</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">No. Urut</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">TANGGAL</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">No. Kuitansi</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px; width: 20%; vertical-align: middle;">URAIAN</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">ID PROJECT</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">No. Akun</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">NILAI PERTANGGUNGAN</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">PPN (Disetor Mitra)</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">NILAI KUITANSI</th>
                     <th colspan="2" style="border: 1px solid black; padding: 4px;">PPh 21, 23</th>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px;">BAYAR KE MITRA</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">BAYAR KE MITRA</th>
                 </tr>
                 <tr>
-                    <th style="border: 1px solid black; padding: 4px;">PPh 4(2) *)</th>
+                    <th style="border: 1px solid black; padding: 4px; font-weight: normal;">PPh 4(2) *)</th>
                     <th style="border: 1px solid black; padding: 4px;"></th>
                 </tr>
             </thead>
@@ -165,58 +170,66 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
                     <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
                     <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
                     <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
-                    <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
+                    <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">-</td>
                     <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
                 </tr>
             </tfoot>
         </table>
 
-        <table style="width: 100%; font-size: 10pt; margin-top: 1rem;">
-            <tr>
-                <td style="width: 50%; vertical-align: top;">
-                    <table>
-                        <tr><td style="padding-right: 8px;">No. Dokumen</td><td>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/KU/TA-0203/SMG/02-2026</td></tr>
-                        <tr><td style="padding-right: 8px;">Berkas diterima tanggal</td><td>: ${formattedDate}</td></tr>
-                        <tr><td style="padding-right: 8px;">Berkas lengkap tanggal</td><td>: ${formattedDate}</td></tr>
-                    </table>
-                </td>
-                <td style="width: 50%; vertical-align: top;">
-                     <table style="width: 100%; border-collapse: collapse; font-size: 9pt;">
-                        <thead style="background-color: #DDEBF7;">
-                            <tr>
-                                <th colspan="4" style="border: 1px solid black; padding: 2px 4px;">REKAP:</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td style="border: 1px solid black; padding: 2px 4px;">No.</td>
-                                <td style="border: 1px solid black; padding: 2px 4px;">ID PROJECT</td>
-                                <td style="border: 1px solid black; padding: 2px 4px;">AKUN</td>
-                                <td style="border: 1px solid black; padding: 2px 4px;">JUMLAH</td>
-                            </tr>
-                             <tr>
-                                <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">1</td>
-                                <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${notas[0] ? (projectType === 'B2B IOAN' ? 'TIF-215/2026' : (projectType === 'PROVISIONING' ? 'TIF-32/2026' : (projectType === 'SPPG' ? 'PPR-38/2025' : '-'))) : '-'}</td>
-                                <td style="border: 1px solid black; padding: 2px 4px;"></td>
-                                <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
-                            </tr>
-                             <tr style="font-weight: bold;">
-                                <td colspan="3" style="border: 1px solid black; padding: 2px 4px;">JUMLAH</td>
-                                <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </td>
-            </tr>
-        </table>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 1rem; flex-grow: 1;">
+            <div style="width: 50%;">
+                <table style="font-size: 10pt;">
+                    <tr><td style="padding-right: 8px;">No. Dokumen</td><td>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/KU/TA-0203/SMG/02-2026</td></tr>
+                    <tr><td style="padding-right: 8px;">Berkas diterima tanggal</td><td>: ${formattedDate}</td></tr>
+                    <tr><td style="padding-right: 8px;">Berkas lengkap tanggal</td><td>: ${formattedDate}</td></tr>
+                </table>
+            </div>
+            <div style="width: 45%;">
+                 <table style="width: 100%; border-collapse: collapse; font-size: 9pt;">
+                    <thead style="background-color: #DDEBF7;">
+                        <tr>
+                            <th colspan="8" style="border: 1px solid black; padding: 2px 4px; text-align: left;">REKAP:</th>
+                        </tr>
+                        <tr>
+                            <th style="border: 1px solid black; padding: 2px 4px; font-weight: bold;">No.</th>
+                            <th style="border: 1px solid black; padding: 2px 4px; font-weight: bold;">ID PROJECT</th>
+                            <th style="border: 1px solid black; padding: 2px 4px; font-weight: bold;">AKUN</th>
+                            <th style="border: 1px solid black; padding: 2px 4px; font-weight: bold;">JUMLAH</th>
+                            <th style="border: 1px solid black; padding: 2px 4px; font-weight: bold;">PPN</th>
+                            <th style="border: 1px solid black; padding: 2px 4px; font-weight: bold;">NILAI KUITANSI</th>
+                            <th style="border: 1px solid black; padding: 2px 4px; font-weight: bold;">PPh</th>
+                            <th style="border: 1px solid black; padding: 2px 4px; font-weight: bold;">BAYAR KE MITRA</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">1</td>
+                            <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${idProjectDisplay}</td>
+                            <td style="border: 1px solid black; padding: 2px 4px;"></td>
+                            <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
+                            <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
+                            <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
+                            <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
+                            <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
+                        </tr>
+                         <tr style="font-weight: bold;">
+                            <td colspan="3" style="border: 1px solid black; padding: 2px 4px;">JUMLAH</td>
+                            <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
+                            <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
+                            <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
+                            <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
+                            <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
         
-        <div style="height: 1rem;"></div>
-
-        <table style="width: 100%; text-align: center; font-size: 10pt;">
-            <tr>
-                <td>Mengetahui<br/>Pemilik Anggaran,</td>
-                <td>Mengetahui<br/>Pengelola IF / Panjar,</td>
-                <td>Semarang, ${formattedDateLong}<br/>Dibuat/Diajukan oleh,</td>
+        <table style="width: 100%; text-align: center; font-size: 10pt; margin-top: 1rem;">
+             <tr>
+                <td style="width: 33.3%; vertical-align: top;">Mengetahui<br/>Pemilik Anggaran,</td>
+                <td style="width: 33.3%; vertical-align: top;">Mengetahui<br/>Pengelola IF / Panjar,</td>
+                <td style="width: 33.3%; vertical-align: top;">Semarang, ${formattedDateLong}<br/>Dibuat/Diajukan oleh,</td>
             </tr>
             <tr><td colspan="3" style="height: 4rem;">&nbsp;</td></tr>
             <tr style="font-weight: bold;">
@@ -247,8 +260,8 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
                 <td>MGR BUSINESS SUPPORT AREA JAWA BALI</td>
             </tr>
         </table>
-
-        <div style="border: 2px solid black; padding: 4px; width: 150px; margin-top: 1rem;">
+        
+        <div style="border: 2px solid black; padding: 4px; width: 150px; margin-top: auto;">
             DOC ID :
         </div>
     </div>
