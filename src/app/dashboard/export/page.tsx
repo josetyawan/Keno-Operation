@@ -57,16 +57,19 @@ import Image from 'next/image';
 import type { VariantProps } from 'class-variance-authority';
 import { useRouter } from 'next/navigation';
 
-type ProjectType = 'B2B IOAN' | 'PROVISIONING' | 'SPPG' | 'Lainnya';
+type ProjectType = 'B2B IOAN' | 'PROVISIONING' | 'SPPG' | 'BBM GENSET' | 'Lainnya';
 
 const getProjectType = (segmen: string): ProjectType => {
+    if (segmen === 'BBM Genset') {
+        return 'BBM GENSET';
+    }
     if (segmen.includes('SPPG')) {
         return 'SPPG';
     }
     if (segmen.includes('B2B IOAN')) {
         return 'B2B IOAN';
     }
-    if (segmen.includes('PROVISIONING')) {
+    if (segmen === 'Perincian Nota ATK' || segmen.includes('PROVISIONING')) {
         return 'PROVISIONING';
     }
     return 'Lainnya';
@@ -127,6 +130,9 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
     } else if (projectType === 'SPPG') {
         pekerjaan = `SPPG SA ${saShort}`;
         idProject = 'PPR-38/2025';
+    } else if (projectType === 'BBM GENSET') {
+        pekerjaan = `BBM GENSET SA ${saShort}`;
+        idProject = 'Ditagihkan ke Unit Lain';
     } else if (serviceArea === 'all') {
         pekerjaan = 'SEMUA SA';
     }
@@ -788,7 +794,10 @@ export default function ExportPage() {
                         if (notasInSegment.length === 0) continue;
 
                         let segmentHtml = '';
-                        const title = `Perincian Nota ${segment} - ${projectType === 'Lainnya' ? '' : projectType + ' - '}${saShortForTitle === 'SEMUA SA' ? 'SEMUA' : saShortForTitle}`;
+                        const projectTitlePart = projectType === 'Lainnya' ? '' : projectType + ' - ';
+                        const saTitlePart = saShortForTitle === 'SEMUA SA' ? 'SEMUA' : saShortForTitle;
+                        const title = `Perincian Nota ${segment} - ${projectTitlePart}${saTitlePart}`;
+                        
                         const bbmR2R4Segments = [
                             'BBM R2 Harian B2B IOAN', 'BBM R2 Harian PROVISIONING',
                             'BBM R4 Harian B2B IOAN', 'BBM R4 Harian PROVISIONING',
@@ -796,7 +805,7 @@ export default function ExportPage() {
                             'BBM R4 UT B2B IOAN', 'BBM R4 UT PROVISIONING',
                         ];
 
-                        if (segment === 'jasa' || segment === 'Perincian Nota Pengiriman') {
+                        if (segment.startsWith('jasa') || segment.startsWith('Perincian Nota Pengiriman')) {
                             segmentHtml = generateJasaReport(notasInSegment, title);
                         } else if (bbmR2R4Segments.includes(segment)) {
                             segmentHtml = generateBBMReport(notasInSegment, title);
@@ -832,7 +841,10 @@ export default function ExportPage() {
                         if (notasInSegment.length === 0) continue;
 
                         let segmentHtml = '';
-                        const title = `Eviden Foto - Perincian Nota ${segment} - ${projectType === 'Lainnya' ? '' : projectType + ' - '}${saShortForTitle === 'SEMUA SA' ? 'SEMUA' : saShortForTitle}`;
+                        const projectTitlePart = projectType === 'Lainnya' ? '' : projectType + ' - ';
+                        const saTitlePart = saShortForTitle === 'SEMUA SA' ? 'SEMUA' : saShortForTitle;
+                        const title = `Eviden Foto - Perincian Nota ${segment} - ${projectTitlePart}${saTitlePart}`;
+
 
                         if (bbmR2R4Segments.includes(segment)) {
                             segmentHtml = generateEvidenReport(notasInSegment, title);
