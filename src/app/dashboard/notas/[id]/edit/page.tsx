@@ -136,7 +136,8 @@ function EditNotaForm({ nota, isAdmin }: { nota: Nota, isAdmin: boolean }) {
         'BBM R4 UT PROVISIONING',
     ];
     const nonBbmKendaraanSegments = [
-        'MATERIAL SA KUDUS',
+        'Pembelian Material Non stok',
+        'Perincian Nota ATK',
         'BBM Genset',
         'jasa',
         'Konsumsi Turlap B2B IOAN',
@@ -168,9 +169,9 @@ function EditNotaForm({ nota, isAdmin }: { nota: Nota, isAdmin: boolean }) {
             setKmAwal('');
             setKmAkhir('');
         }
-        if (value === 'MATERIAL SA KUDUS') setKeterangan('Material SA Kudus');
+        if (value === 'Pembelian Material Non stok') setKeterangan('Pembelian Material Non stok');
         else if (value === 'MATERIAL SPPG SA KUDUS') setKeterangan('Material SPPG SA Kudus');
-        else if (keterangan === 'Material SA Kudus' || keterangan === 'Material SPPG SA Kudus') setKeterangan('');
+        else if (keterangan === 'Pembelian Material Non stok' || keterangan === 'Material SPPG SA Kudus') setKeterangan('');
     };
 
     const handleFileChange = (index: number, file: File | null) => {
@@ -313,7 +314,8 @@ function EditNotaForm({ nota, isAdmin }: { nota: Nota, isAdmin: boolean }) {
                                         <SelectItem value="BBM R4 Turlap PROVISIONING">BBM R4 Turlap PROVISIONING</SelectItem>
                                         <SelectItem value="BBM R4 UT B2B IOAN">BBM R4 UT B2B IOAN</SelectItem>
                                         <SelectItem value="BBM R4 UT PROVISIONING">BBM R4 UT PROVISIONING</SelectItem>
-                                        <SelectItem value="MATERIAL SA KUDUS">MATERIAL SA KUDUS</SelectItem>
+                                        <SelectItem value="Pembelian Material Non stok">Pembelian Material Non stok</SelectItem>
+                                        <SelectItem value="Perincian Nota ATK">Perincian Nota ATK</SelectItem>
                                         <SelectItem value="BBM Genset">BBM Genset</SelectItem>
                                         <SelectItem value="jasa">Jasa</SelectItem>
                                         <SelectItem value="Konsumsi Turlap B2B IOAN">Konsumsi Turlap B2B IOAN</SelectItem>
@@ -346,7 +348,7 @@ function EditNotaForm({ nota, isAdmin }: { nota: Nota, isAdmin: boolean }) {
                             )}
 
                             <div className="grid gap-3"><Label htmlFor="keterangan">Keterangan</Label>
-                                <Textarea id="keterangan" placeholder="Keterangan tambahan..." value={keterangan} onChange={(e) => setKeterangan(e.target.value)} readOnly={segmen === 'MATERIAL SA KUDUS' || segmen === 'MATERIAL SPPG SA KUDUS'} />
+                                <Textarea id="keterangan" placeholder="Keterangan tambahan..." value={keterangan} onChange={(e) => setKeterangan(e.target.value)} readOnly={segmen === 'Pembelian Material Non stok' || segmen === 'MATERIAL SPPG SA KUDUS'} />
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

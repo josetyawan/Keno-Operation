@@ -120,7 +120,8 @@ export default function NewNotaPage() {
     'BBM R4 UT PROVISIONING',
   ];
   const nonBbmKendaraanSegments = [
-    'MATERIAL SA KUDUS',
+    'Pembelian Material Non stok',
+    'Perincian Nota ATK',
     'BBM Genset',
     'jasa',
     'Konsumsi Turlap B2B IOAN',
@@ -154,13 +155,13 @@ export default function NewNotaPage() {
       setKmAkhir('');
     }
     
-    if (value === 'MATERIAL SA KUDUS') {
-        setKeterangan('Material SA Kudus');
+    if (value === 'Pembelian Material Non stok') {
+        setKeterangan('Pembelian Material Non stok');
     } else if (value === 'MATERIAL SPPG SA KUDUS') {
         setKeterangan('Material SPPG SA Kudus');
     } else {
         // If switching away from a static segment, clear the text area
-        if (keterangan === 'Material SA Kudus' || keterangan === 'Material SPPG SA Kudus') {
+        if (keterangan === 'Pembelian Material Non stok' || keterangan === 'Material SPPG SA Kudus') {
             setKeterangan('');
         }
     }
@@ -343,7 +344,8 @@ export default function NewNotaPage() {
                         <SelectItem value="BBM R4 Turlap PROVISIONING">BBM R4 Turlap PROVISIONING</SelectItem>
                         <SelectItem value="BBM R4 UT B2B IOAN">BBM R4 UT B2B IOAN</SelectItem>
                         <SelectItem value="BBM R4 UT PROVISIONING">BBM R4 UT PROVISIONING</SelectItem>
-                        <SelectItem value="MATERIAL SA KUDUS">MATERIAL SA KUDUS</SelectItem>
+                        <SelectItem value="Pembelian Material Non stok">Pembelian Material Non stok</SelectItem>
+                        <SelectItem value="Perincian Nota ATK">Perincian Nota ATK</SelectItem>
                         <SelectItem value="BBM Genset">BBM Genset</SelectItem>
                         <SelectItem value="jasa">Jasa</SelectItem>
                         <SelectItem value="Konsumsi Turlap B2B IOAN">Konsumsi Turlap B2B IOAN</SelectItem>
@@ -418,7 +420,7 @@ export default function NewNotaPage() {
                   placeholder="Keterangan tambahan..."
                   value={keterangan}
                   onChange={(e) => setKeterangan(e.target.value)}
-                  readOnly={segmen === 'MATERIAL SA KUDUS' || segmen === 'MATERIAL SPPG SA KUDUS'}
+                  readOnly={segmen === 'Pembelian Material Non stok' || segmen === 'MATERIAL SPPG SA KUDUS'}
                 />
               </div>
 
