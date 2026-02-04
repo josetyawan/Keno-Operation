@@ -63,7 +63,7 @@ const getProjectType = (segmen: string): ProjectType => {
     if (segmen === 'BBM Genset') return 'BBM GENSET';
     if (segmen.includes('SPPG')) return 'SPPG';
     if (segmen.includes('B2B IOAN')) return 'B2B IOAN';
-    if (segmen === 'Perincian Nota ATK' || segmen.includes('PROVISIONING')) return 'PROVISIONING';
+    if (segmen.includes('PROVISIONING') || segmen === 'Perincian Nota ATK') return 'PROVISIONING';
     return 'Lainnya';
 };
 
@@ -111,11 +111,15 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
+                <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
             </tr>
         `;
     }).join('');
 
-    const projectName = `IF SEMARANG - SMG OPR - Ops ${projectType} Service Area "${saShort}"`;
+    let projectName = `IF SEMARANG - SMG OPR - Ops ${projectType} Service Area "${saShort}"`;
+    if (projectType === 'SPPG') {
+        projectName = `IF SEMARANG - SMG OPR - Ops SPPG Service Area "${saShort}"`;
+    }
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 10pt; padding: 1.5cm; width: 297mm; min-height: 210mm; background-color: white; box-sizing: border-box;">
@@ -148,6 +152,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
                 </tr>
                 <tr>
                     <th style="border: 1px solid black; padding: 4px;">PPh 4(2) *)</th>
+                    <th style="border: 1px solid black; padding: 4px;"></th>
                 </tr>
             </thead>
             <tbody>
@@ -161,6 +166,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
                     <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
                     <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
                     <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
+                    <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
                 </tr>
             </tfoot>
         </table>
@@ -169,7 +175,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
             <tr>
                 <td style="width: 50%; vertical-align: top;">
                     <table>
-                        <tr><td style="padding-right: 8px;">No. Dokumen</td><td>: /KU/TA-0203/SMG/02-2026</td></tr>
+                        <tr><td style="padding-right: 8px;">No. Dokumen</td><td>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/KU/TA-0203/SMG/02-2026</td></tr>
                         <tr><td style="padding-right: 8px;">Berkas diterima tanggal</td><td>: ${formattedDate}</td></tr>
                         <tr><td style="padding-right: 8px;">Berkas lengkap tanggal</td><td>: ${formattedDate}</td></tr>
                     </table>
@@ -190,7 +196,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
                             </tr>
                              <tr>
                                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">1</td>
-                                <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${notas[0] ? (projectType === 'B2B IOAN' ? 'TIF-215/2026' : (projectType === 'PROVISIONING' ? 'TIF-32/2026' : 'PPR-38/2025')) : '-'}</td>
+                                <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${notas[0] ? (projectType === 'B2B IOAN' ? 'TIF-215/2026' : (projectType === 'PROVISIONING' ? 'TIF-32/2026' : (projectType === 'SPPG' ? 'PPR-38/2025' : '-'))) : '-'}</td>
                                 <td style="border: 1px solid black; padding: 2px 4px;"></td>
                                 <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
                             </tr>
