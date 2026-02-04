@@ -124,6 +124,7 @@ export default function NewNotaPage() {
     'Perincian Nota ATK',
     'BBM Genset',
     'jasa',
+    'Perincian Nota Pengiriman',
     'Konsumsi Turlap B2B IOAN',
     'Konsumsi Turlap PROVISIONING',
     'Konsumsi UT B2B IOAN',
@@ -348,6 +349,7 @@ export default function NewNotaPage() {
                         <SelectItem value="Perincian Nota ATK">Perincian Nota ATK</SelectItem>
                         <SelectItem value="BBM Genset">BBM Genset</SelectItem>
                         <SelectItem value="jasa">Jasa</SelectItem>
+                        <SelectItem value="Perincian Nota Pengiriman">Perincian Nota Pengiriman</SelectItem>
                         <SelectItem value="Konsumsi Turlap B2B IOAN">Konsumsi Turlap B2B IOAN</SelectItem>
                         <SelectItem value="Konsumsi Turlap PROVISIONING">Konsumsi Turlap PROVISIONING</SelectItem>
                         <SelectItem value="Konsumsi UT B2B IOAN">Konsumsi UT B2B IOAN</SelectItem>
@@ -402,11 +404,11 @@ export default function NewNotaPage() {
               
               {isNonBBMKendaraan && (
                 <div className="grid gap-3">
-                    <Label htmlFor="namaBarang">{segmen === 'jasa' ? 'Nama Jasa' : 'Nama Barang'}</Label>
+                    <Label htmlFor="namaBarang">{segmen === 'jasa' || segmen === 'Perincian Nota Pengiriman' ? 'Nama Jasa / Pengiriman' : 'Nama Barang'}</Label>
                     <Input
                         id="namaBarang"
                         type="text"
-                        placeholder={segmen === 'jasa' ? 'Contoh: Jasa perbaikan AC' : 'Nama barang yang dibeli...'}
+                        placeholder={segmen === 'jasa' || segmen === 'Perincian Nota Pengiriman' ? 'Contoh: Jasa perbaikan / Pengiriman barang' : 'Nama barang yang dibeli...'}
                         value={namaBarang}
                         onChange={(e) => setNamaBarang(e.target.value)}
                     />

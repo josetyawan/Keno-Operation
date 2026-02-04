@@ -750,7 +750,7 @@ export default function ExportPage() {
                         'BBM R4 UT PROVISIONING',
                     ];
 
-                    if (segment === 'jasa') {
+                    if (segment === 'jasa' || segment === 'Perincian Nota Pengiriman') {
                         segmentHtml = generateJasaReport(notasInSegment, title);
                     } else if (bbmR2R4Segments.includes(segment)) {
                         segmentHtml = generateBBMReport(notasInSegment, title);
@@ -828,7 +828,7 @@ export default function ExportPage() {
                     ];
 
 
-                    if (segment === 'jasa') {
+                    if (segment === 'jasa' || segment === 'Perincian Nota Pengiriman') {
                         segmentHtml = generateJasaReport(notasInSegment, title);
                     } else if (bbmR2R4Segments.includes(segment)) {
                         segmentHtml = generateBBMReport(notasInSegment, title);
