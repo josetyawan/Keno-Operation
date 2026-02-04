@@ -646,8 +646,6 @@ function ReportPreview({
 }) {
 
   const handlePrint = () => {
-    // All pages in the `pages` prop will have the same orientation because
-    // the user clicked either "Cetak Potret" or "Cetak Lanskap".
     const orientation = pages.length > 0 ? pages[0].orientation : 'portrait';
 
     const printIframe = document.createElement('iframe');
@@ -661,25 +659,24 @@ function ReportPreview({
     }
 
     const allPagesHtml = pages.map(page =>
-        // Add a div to enforce page breaks after each report page
         '<div style="page-break-after: always;">' + page.html + '</div>'
     ).join('');
 
-    const printStyles =
-        '@page { size: A4 ' + orientation + '; margin: 1cm; }' +
-        'body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }';
+    const printStyles = `
+        @page { size: A4 ${orientation}; margin: 1cm; }
+        body { margin: 0; }
+        * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+    `;
 
-    const htmlContent = '<html><head><title>Cetak Laporan</title><style>' +
-                        printStyles +
-                        '</style></head><body>' +
-                        allPagesHtml +
-                        '</body></html>';
+    const htmlContent = `<html><head><title>Cetak Laporan</title><style>${printStyles}</style></head><body>${allPagesHtml}</body></html>`;
 
     iframeDoc.open();
     iframeDoc.write(htmlContent);
     iframeDoc.close();
 
-    // Use a timeout to ensure all content (especially images from URLs) is loaded
     setTimeout(() => {
       try {
         printIframe.contentWindow?.focus();
@@ -687,12 +684,11 @@ function ReportPreview({
       } catch (e) {
         console.error('Print failed:', e);
       } finally {
-        // Clean up the iframe from the DOM
         if (document.body.contains(printIframe)) {
             document.body.removeChild(printIframe);
         }
       }
-    }, 500); // 500ms delay for rendering
+    }, 1500); // Increased timeout for image loading
   };
 
 
@@ -933,7 +929,7 @@ export default function ExportPage() {
                 
                 // Landscape pages
                 if (orientation === 'landscape') {
-                    // Cover
+                     // Only Imprest Fund Cover is landscape
                     if (projectType !== 'BBM GENSET') {
                         const coverHtml = generateImprestFundCover(notasForProject, reportSA, projectType);
                         pages.push({ html: coverHtml, orientation: 'landscape' });
@@ -984,7 +980,7 @@ export default function ExportPage() {
                         pages.push({ html: segmentHtml, orientation: 'portrait' });
                     }
 
-                    // Eviden Foto BBM (now in portrait)
+                    // Eviden Foto BBM
                     const bbmR2R4Segments = [
                         'BBM R2 Harian B2B IOAN', 'BBM R2 Harian PROVISIONING',
                         'BBM R4 Harian B2B IOAN', 'BBM R4 Harian PROVISIONING',
