@@ -101,7 +101,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${index + 1}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${format(nota.tanggal.toDate(), 'dd/MM/yyyy')}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${index + 1}</td>
-                <td style="border: 1px solid black; padding: 2px 4px;">${nota.keterangan || nota.namaBarang || nota.segmen}</td>
+                <td style="border: 1px solid black; padding: 2px 4px;">${nota.segmen}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${idProjectDisplay}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">-</td>
@@ -141,7 +141,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
     `;
 
       const signatureTable = `
-      <table style="width: 100%; text-align: center; font-size: 8pt; table-layout: fixed; margin-top: 2rem; border-collapse: collapse;">
+      <table style="width: 100%; text-align: center; font-size: 8pt; table-layout: fixed; margin-top: 2rem; border-collapse: collapse; page-break-inside: avoid;">
           <tbody>
               <!-- Row 1: Top titles -->
               <tr>
@@ -710,9 +710,11 @@ function ReportPreview({
     <>
       <style>{`
         @media print {
-            body > *:not(#print-section-container) {
+            body > *:not(#print-section-container),
+            #print-section-container > *:not(#print-section) {
                 display: none !important;
             }
+
             #print-section-container {
                 position: absolute !important;
                 top: 0 !important;
@@ -721,6 +723,7 @@ function ReportPreview({
                 height: auto !important;
                 margin: 0 !important;
                 padding: 0 !important;
+                background-color: white !important;
             }
             #print-section {
                 margin: 0 !important;
