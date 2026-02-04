@@ -740,6 +740,12 @@ function ReportPreview({
                 page-break-after: always;
                 box-sizing: border-box;
             }
+             .page-is-portrait {
+                page: a4-portrait;
+            }
+            .page-is-landscape {
+                page: a4-landscape;
+            }
             .printable-page:last-child {
                 page-break-after: auto;
             }
@@ -829,7 +835,7 @@ export default function ExportPage() {
 
     const [reportPages, setReportPages] = useState<{html: string, orientation: 'portrait' | 'landscape'}[]>([]);
     const [isGenerating, setIsGenerating] = useState(false);
-    const [reportTypeBeingGenerated, setReportTypeBeingGenerated] = useState('');
+    const [reportTypeBeingGenerated, setReportTypeBeingGenerated] = useState<'cover' | 'details' | ''>('');
     
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -939,7 +945,7 @@ export default function ExportPage() {
     };
 
 
-    const handleGenerateReport = async (reportType: string) => {
+    const handleGenerateReport = async (reportType: 'cover' | 'details') => {
         if (selectedNotaIds.length === 0) {
             toast({
                 variant: "destructive",
@@ -965,25 +971,27 @@ export default function ExportPage() {
 
             const projectTypes = Object.keys(groupedByProject).sort() as ProjectType[];
 
-            for (const projectType of projectTypes) {
-                const notasForProject = groupedByProject[projectType];
-                const reportSA = selectedSA === 'all' ? 'SEMUA SA' : selectedSA;
-                
-                // --- 0. Imprest Fund Cover Page ---
-                if ((reportType === 'all' || reportType === 'rekap') && projectType !== 'BBM GENSET') {
-                    const coverHtml = generateImprestFundCover(notasForProject, reportSA, projectType);
-                    pages.push({ html: coverHtml, orientation: 'landscape' });
+            if (reportType === 'cover') {
+                 for (const projectType of projectTypes) {
+                    const notasForProject = groupedByProject[projectType];
+                    const reportSA = selectedSA === 'all' ? 'SEMUA SA' : selectedSA;
+                    if (projectType !== 'BBM GENSET') {
+                        const coverHtml = generateImprestFundCover(notasForProject, reportSA, projectType);
+                        pages.push({ html: coverHtml, orientation: 'landscape' });
+                    }
                 }
+            }
+            
+            if (reportType === 'details') {
+                for (const projectType of projectTypes) {
+                    const notasForProject = groupedByProject[projectType];
+                    const reportSA = selectedSA === 'all' ? 'SEMUA SA' : selectedSA;
 
-
-                // --- 1. Rekapitulasi ---
-                if (reportType === 'all' || reportType === 'rekap') {
+                    // 1. Rekapitulasi (Portrait)
                     const rekapHtml = generateRekapitulasiReport(notasForProject, reportSA, projectType);
                     pages.push({ html: rekapHtml, orientation: 'portrait' });
-                }
 
-                // --- 2. Perincian ---
-                if (reportType === 'all' || reportType === 'perincian') {
+                    // 2. Perincian (Portrait)
                     const saShortForTitle = reportSA.replace(/^SA /, '');
                     const perincianGroupedBySegment = notasForProject.reduce((acc, nota) => {
                         const seg = nota.segmen;
@@ -1021,11 +1029,8 @@ export default function ExportPage() {
                         }
                         pages.push({ html: segmentHtml, orientation: 'portrait' });
                     }
-                }
-                
-                // --- 3. Eviden ---
-                if (reportType === 'all' || reportType === 'eviden') {
-                    const saShortForTitle = reportSA.replace(/^SA /, '');
+                    
+                    // 3. Eviden (Portrait)
                     const evidenGroupedBySegment = notasForProject.reduce((acc, nota) => {
                         const seg = nota.segmen;
                         if (!acc[seg]) acc[seg] = [];
@@ -1321,18 +1326,12 @@ export default function ExportPage() {
                     </div>
 
                     <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm py-3 mt-auto border-t -mx-6 px-6">
-                        <div className="max-w-4xl mx-auto flex justify-around items-center">
-                            <Button variant="outline" size="lg" onClick={() => handleGenerateReport('all')} disabled={isGenerating || selectedNotaIds.length === 0}>
-                               {isGenerating && reportTypeBeingGenerated === 'all' ? <Loader2 className="mr-2 animate-spin"/> : <FileArchive className="mr-2" />} Semua (1 File)
+                        <div className="max-w-4xl mx-auto flex justify-around items-center gap-4">
+                            <Button variant="outline" size="lg" onClick={() => handleGenerateReport('cover')} disabled={isGenerating || selectedNotaIds.length === 0}>
+                               {isGenerating && reportTypeBeingGenerated === 'cover' ? <Loader2 className="mr-2 animate-spin"/> : <FileArchive className="mr-2" />} Cetak Cover (Lanskap)
                             </Button>
-                            <Button variant="outline" size="lg" onClick={() => handleGenerateReport('rekap')} disabled={isGenerating || selectedNotaIds.length === 0}>
-                                {isGenerating && reportTypeBeingGenerated === 'rekap' ? <Loader2 className="mr-2 animate-spin"/> : <FileText className="mr-2" />} Rekap
-                            </Button>
-                            <Button variant="outline" size="lg" onClick={() => handleGenerateReport('perincian')} disabled={isGenerating || selectedNotaIds.length === 0}>
-                                {isGenerating && reportTypeBeingGenerated === 'perincian' ? <Loader2 className="mr-2 animate-spin"/> : <Printer className="mr-2" />} Perincian
-                            </Button>
-                            <Button size="lg" onClick={() => handleGenerateReport('eviden')} disabled={isGenerating || selectedNotaIds.length === 0}>
-                                {isGenerating && reportTypeBeingGenerated === 'eviden' ? <Loader2 className="mr-2 animate-spin"/> : <FileText className="mr-2" />} Eviden
+                            <Button size="lg" onClick={() => handleGenerateReport('details')} disabled={isGenerating || selectedNotaIds.length === 0}>
+                                {isGenerating && reportTypeBeingGenerated === 'details' ? <Loader2 className="mr-2 animate-spin"/> : <Printer className="mr-2" />} Cetak Laporan (Potret)
                             </Button>
                         </div>
                     </div>
