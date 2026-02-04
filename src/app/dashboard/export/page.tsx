@@ -86,7 +86,7 @@ const getStatusVariant = (status: Nota['status']): VariantProps<typeof badgeVari
 const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectType: ProjectType): string => {
     const today = new Date();
     const formattedDate = format(today, 'dd/MM/yyyy');
-    const formattedDateLong = format(today, 'dd MMMM yyyy', { locale: idLocale });
+
     let grandTotal = 0;
 
     const saShort = serviceArea.replace('SA ', '');
@@ -122,14 +122,12 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 10pt; padding: 0; width: 100%; height: 100%; box-sizing: border-box; display: flex; flex-direction: column;">
         
-        <div style="display: table; width: 100%; margin-bottom: 1rem;">
-          <div style="display: table-cell; vertical-align: top; font-size: 11pt; font-weight: bold;">
-              PT. TELKOM AKSES<br/>
-              FINANCE REGIONAL III
-          </div>
-          <div style="display: table-cell; vertical-align: middle; text-align: center; font-size: 11pt; font-weight: bold; text-decoration: underline;">
-              REKAP PERTANGGUNGAN IMPREST FUND / PANJAR KERJA *)
-          </div>
+        <div style="text-align: left; font-size: 11pt; font-weight: bold;">
+            PT. TELKOM AKSES<br/>
+            FINANCE REGIONAL III
+        </div>
+        <div style="text-align: center; font-size: 11pt; font-weight: bold; text-decoration: underline; margin-top: 1rem; margin-bottom: 1rem;">
+            REKAP PERTANGGUNGAN IMPREST FUND / PANJAR KERJA *)
         </div>
         
         <table style="font-size: 10pt; margin-bottom: 1rem;">
@@ -141,21 +139,18 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
         <table style="width: 100%; border-collapse: collapse; font-size: 9pt; margin-bottom: 0.5rem;">
             <thead style="background-color: #DDEBF7; font-weight: bold; text-align: center;">
                 <tr>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">No. Urut</th>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">TANGGAL</th>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">No. Kuitansi</th>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px; width: 20%; vertical-align: middle;">URAIAN</th>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">ID PROJECT</th>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">No. Akun</th>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">NILAI PERTANGGUNGAN</th>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">PPN (Disetor Mitra)</th>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">NILAI KUITANSI</th>
-                    <th colspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">PPh 21, 23</th>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">BAYAR KE MITRA</th>
-                </tr>
-                <tr>
-                    <th style="border: 1px solid black; padding: 4px; font-weight: normal;">PPh 4(2) *)</th>
-                    <th style="border: 1px solid black; padding: 4px; font-weight: normal;"></th>
+                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">No. Urut</th>
+                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">TANGGAL</th>
+                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">No. Kuitansi</th>
+                    <th style="border: 1px solid black; padding: 4px; width: 20%; vertical-align: middle;">URAIAN</th>
+                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">ID PROJECT</th>
+                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">No. Akun</th>
+                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">NILAI PERTANGGUNGAN</th>
+                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">PPN (Disetor Mitra)</th>
+                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">NILAI KUITANSI</th>
+                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">PPh 21, 23</th>
+                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">PPh 4(2) *)</th>
+                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">BAYAR KE MITRA</th>
                 </tr>
             </thead>
             <tbody>
@@ -174,7 +169,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
             </tfoot>
         </table>
 
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 1rem; flex-grow: 1;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 1rem;">
             <div style="width: 50%;">
                 <table style="font-size: 10pt;">
                     <tr><td style="padding-right: 8px;">No. Dokumen</td><td>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/KU/TA-0203/SMG/02-2026</td></tr>
@@ -185,9 +180,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
             <div style="width: 45%;">
                  <table style="width: 100%; border-collapse: collapse; font-size: 9pt;">
                     <thead style="background-color: #DDEBF7;">
-                        <tr>
-                            <th colspan="8" style="border: 1px solid black; padding: 2px 4px; text-align: left;">REKAP:</th>
-                        </tr>
+                        <tr><th colspan="8" style="border: 1px solid black; padding: 2px 4px; text-align: left;">REKAP:</th></tr>
                         <tr>
                             <th style="border: 1px solid black; padding: 2px 4px; font-weight: bold;">No.</th>
                             <th style="border: 1px solid black; padding: 2px 4px; font-weight: bold;">ID PROJECT</th>
@@ -223,44 +216,46 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
             </div>
         </div>
         
-        <table style="width: 100%; text-align: center; font-size: 10pt; margin-top: 1rem; table-layout: fixed;">
-             <tr>
-                <td style="width: 33.3%; vertical-align: top;">Mengetahui<br/>Pemilik Anggaran,</td>
-                <td style="width: 33.3%; vertical-align: top;">Mengetahui<br/>Pengelola IF / Panjar,</td>
-                <td style="width: 33.3%; vertical-align: top;">Semarang, ${formattedDateLong}<br/>Dibuat/Diajukan oleh,</td>
-            </tr>
-            <tr><td colspan="3" style="height: 4rem;">&nbsp;</td></tr>
-            <tr style="font-weight: bold;">
-                <td style="text-decoration: underline;">GALIH AJI KUSUMAH</td>
-                <td style="text-decoration: underline;">MUHAMMAD IKSAN</td>
-                <td style="text-decoration: underline;">DESSY WAHYUNINGTIAS</td>
-            </tr>
-            <tr>
-                <td>MGR BRANCH SEMARANG</td>
-                <td>MGR SHARED SERVICE REGIONAL JAWA TENGAH & DIY</td>
-                <td>OFF3 BUSINESS SUPPORT SEMARANG</td>
-            </tr>
-            <tr><td colspan="3" style="height: 1.5rem;">&nbsp;</td></tr>
-            <tr>
-                <td>Menyetujui,<br/>Penanggung Jawab IF</td>
-                <td></td>
-                <td>Mengetahui<br/>Pengelola IF</td>
-            </tr>
-            <tr><td colspan="3" style="height: 4rem;">&nbsp;</td></tr>
-            <tr style="font-weight: bold;">
-                <td style="text-decoration: underline;">HENRY SOEDIDARMA</td>
-                <td></td>
-                <td style="text-decoration: underline;">ARIZA ARBAATUS SOLIHA</td>
-            </tr>
-             <tr>
-                <td>GM REGIONAL JAWA TENGAH DIY</td>
-                <td></td>
-                <td>MGR BUSINESS SUPPORT AREA JAWA BALI</td>
-            </tr>
-        </table>
-        
-        <div style="border: 2px solid black; padding: 4px; width: 150px; margin-top: auto;">
-            DOC ID :
+        <div style="margin-top: auto;"> 
+            <table style="width: 100%; text-align: center; font-size: 10pt; table-layout: fixed; border-spacing: 0;">
+                <tr>
+                    <td style="width: 33.3%; vertical-align: top;">Mengetahui<br/>Pemilik Anggaran,</td>
+                    <td style="width: 33.3%; vertical-align: top;">Mengetahui<br/>Pengelola IF / Panjar,</td>
+                    <td style="width: 33.3%; vertical-align: top;">Semarang, ${formattedDate}<br/>Dibuat/Diajukan oleh,</td>
+                </tr>
+                <tr><td colspan="3" style="height: 4rem;">&nbsp;</td></tr>
+                <tr style="font-weight: bold;">
+                    <td style="text-decoration: underline; vertical-align: top;">GALIH AJI KUSUMAH</td>
+                    <td style="text-decoration: underline; vertical-align: top;">MUHAMMAD IKSAN</td>
+                    <td style="text-decoration: underline; vertical-align: top;">DESSY WAHYUNINGTIAS</td>
+                </tr>
+                <tr>
+                    <td style="vertical-align: top;">MGR BRANCH SEMARANG</td>
+                    <td style="vertical-align: top;">MGR SHARED SERVICE REGIONAL JAWA TENGAH & DIY</td>
+                    <td style="vertical-align: top;">OFF3 BUSINESS SUPPORT<br/>SEMARANG</td>
+                </tr>
+                <tr><td colspan="3" style="height: 1.5rem;">&nbsp;</td></tr>
+                <tr>
+                    <td style="vertical-align: top;">Menyetujui,<br/>Penanggung Jawab IF</td>
+                    <td></td>
+                    <td style="vertical-align: top;">Mengetahui<br/>Pengelola IF</td>
+                </tr>
+                <tr><td colspan="3" style="height: 4rem;">&nbsp;</td></tr>
+                <tr style="font-weight: bold;">
+                    <td style="text-decoration: underline; vertical-align: top;">HENRY SOEDIDARMA</td>
+                    <td></td>
+                    <td style="text-decoration: underline; vertical-align: top;">ARIZA ARBAATUS SOLIHA</td>
+                </tr>
+                 <tr>
+                    <td style="vertical-align: top;">GM REGIONAL JAWA TENGAH DIY</td>
+                    <td></td>
+                    <td style="vertical-align: top;">MGR BUSINESS SUPPORT AREA JAWA BALI</td>
+                </tr>
+            </table>
+
+            <div style="border: 2px solid black; padding: 4px; width: 150px; margin-top: 2rem;">
+                DOC ID :
+            </div>
         </div>
     </div>
     `;
