@@ -104,8 +104,8 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
                 <td style="border: 1px solid black; padding: 2px 4px;">${nota.segmen}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${idProjectDisplay}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
-                <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">-</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
+                <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">-</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${pphValue > 0 ? pphValue.toLocaleString('id-ID') : '-'}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${bayarKeMitra.toLocaleString('id-ID')}</td>
@@ -216,20 +216,17 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
         <table style="width: 100%; border-collapse: collapse; font-size: 8pt; margin-bottom: 0.5rem;">
             <thead style="background-color: #DDEBF7; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">No. Urut</th>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">TANGGAL</th>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">No. Kuitansi</th>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px; width: 20%; vertical-align: middle;">URAIAN</th>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">ID PROJECT</th>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">No. Akun</th>
-                    <th colspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">NILAI PERTANGGUNGAN</th>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">NILAI KUITANSI</th>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">PPh 21, 23 / 4(2) *)<br/>(Dipotong Pihak III)</th>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">BAYAR KE MITRA</th>
-                </tr>
-                <tr>
+                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">No. Urut</th>
+                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">TANGGAL</th>
+                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">No. Kuitansi</th>
+                    <th style="border: 1px solid black; padding: 4px; width: 20%; vertical-align: middle;">URAIAN</th>
+                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">ID PROJECT</th>
+                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">No. Akun</th>
                     <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">PPN (Disetor Mitra)</th>
                     <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">DPP</th>
+                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">NILAI KUITANSI</th>
+                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">PPh 21, 23 / 4(2) *)<br/>(Dipotong Pihak III)</th>
+                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">BAYAR KE MITRA</th>
                 </tr>
             </thead>
             <tbody>
@@ -238,8 +235,8 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
             <tfoot>
                 <tr style="font-weight: bold;">
                     <td colspan="6" style="border: 1px solid black; padding: 2px 4px; text-align: center;">JUMLAH</td>
-                    <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">-</td>
                     <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
+                    <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">-</td>
                     <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
                     <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${totalPph > 0 ? totalPph.toLocaleString('id-ID') : '-'}</td>
                     <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${totalBayar.toLocaleString('id-ID')}</td>
@@ -702,22 +699,67 @@ function ReportPreview({
   onClose: () => void;
 }) {
 
-  useEffect(() => {
-    document.body.classList.add('is-printing');
-    return () => {
-        document.body.classList.remove('is-printing');
-    };
-  }, []);
-
   const handlePrint = () => {
     window.print();
   };
 
   return (
     <>
+      <style>{`
+        @media print {
+          /* 1. Hide the main app layout */
+          #main-dashboard-layout {
+            display: none !important;
+          }
+          
+          /* 2. Make the print container a normal, visible block element */
+          #print-section-container {
+            position: static !important;
+            display: block !important;
+            overflow: visible !important;
+            background: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+
+          /* 3. Hide the preview UI elements */
+          .print-hidden-header {
+            display: none !important;
+          }
+          
+          /* 4. Reset preview-specific styles to ensure clean printing */
+          #print-section {
+            overflow: visible !important;
+            background-color: white !important;
+            height: auto !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+          #print-section > div { /* The direct child div containing pages */
+             padding: 0 !important;
+             gap: 0 !important;
+          }
+
+          /* 5. Style the printable pages themselves */
+          .printable-page {
+            box-shadow: none !important;
+            margin: 0 !important;
+            page-break-after: always;
+          }
+          .printable-page:last-child {
+            page-break-after: auto;
+          }
+          .page-is-portrait {
+            page: a4-portrait;
+          }
+          .page-is-landscape {
+            page: a4-landscape;
+          }
+        }
+      `}</style>
       <div className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4" id="print-section-container">
         <Card className="w-full max-w-7xl h-[90vh] flex flex-col">
-            <CardHeader className="flex flex-row items-center justify-between print:hidden">
+            <CardHeader className="print-hidden-header flex flex-row items-center justify-between">
             <CardTitle>Pratinjau Laporan</CardTitle>
             <div className="flex gap-2">
                 <Button variant="outline" onClick={onClose}>Tutup</Button>
@@ -799,7 +841,6 @@ export default function ExportPage() {
 
     const [reportPages, setReportPages] = useState<{html: string, orientation: 'portrait' | 'landscape'}[]>([]);
     const [isGenerating, setIsGenerating] = useState(false);
-    const [reportTypeBeingGenerated, setReportTypeBeingGenerated] = useState<'cover' | 'details' | ''>('');
     
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -920,7 +961,6 @@ export default function ExportPage() {
         }
         
         setIsGenerating(true);
-        setReportTypeBeingGenerated(reportType);
         const selectedNotas = filteredNotas.filter(n => selectedNotaIds.includes(n.id)) || [];
         const sortedNotas = selectedNotas.sort((a,b) => a.tanggal.toDate().getTime() - b.tanggal.toDate().getTime());
         const pages: {html: string, orientation: 'portrait' | 'landscape'}[] = [];
@@ -994,7 +1034,7 @@ export default function ExportPage() {
                         pages.push({ html: segmentHtml, orientation: 'portrait' });
                     }
                     
-                    // 3. Eviden (Portrait)
+                    // 3. Eviden (Landscape for BBM, Portrait for others)
                     const evidenGroupedBySegment = notasForProject.reduce((acc, nota) => {
                         const seg = nota.segmen;
                         if (!acc[seg]) acc[seg] = [];
@@ -1014,6 +1054,7 @@ export default function ExportPage() {
                         if (notasInSegment.length === 0) continue;
 
                         let segmentHtml = '';
+                        let orientation: 'portrait' | 'landscape' = 'portrait';
                         const projectTitlePart = projectType === 'Lainnya' ? '' : projectType + ' - ';
                         const saTitlePart = saShortForTitle === 'SEMUA SA' ? 'SEMUA' : saShortForTitle;
                         const title = `Eviden Foto - Perincian Nota ${segment} - ${projectTitlePart}${saTitlePart}`;
@@ -1021,10 +1062,12 @@ export default function ExportPage() {
 
                         if (bbmR2R4Segments.includes(segment)) {
                             segmentHtml = generateEvidenReport(notasInSegment, title);
+                            orientation = 'landscape';
                         } else {
                             segmentHtml = generateSimpleEvidenReport(notasInSegment, title);
+                            orientation = 'portrait';
                         }
-                        pages.push({ html: segmentHtml, orientation: 'portrait' });
+                        pages.push({ html: segmentHtml, orientation });
                     }
                 }
             }
@@ -1040,13 +1083,12 @@ export default function ExportPage() {
             toast({ variant: "destructive", title: "Gagal Membuat Laporan", description: "Terjadi kesalahan."});
         } finally {
             setIsGenerating(false);
-            setReportTypeBeingGenerated('');
         }
     };
 
     return (
         <>
-            <div className="print:hidden">
+            <div>
                 <div className="mx-auto grid w-full flex-1 auto-rows-max gap-6">
                     <div className="flex items-center gap-4 sticky top-0 bg-background py-4 z-10 border-b -mx-6 px-6">
                         <Button onClick={() => router.back()} variant="outline" size="icon" className="h-8 w-8">
@@ -1291,11 +1333,11 @@ export default function ExportPage() {
 
                     <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm py-3 mt-auto border-t -mx-6 px-6">
                         <div className="max-w-4xl mx-auto flex justify-around items-center gap-4">
-                            <Button variant="outline" size="lg" onClick={() => handleGenerateReport('cover')} disabled={isGenerating || selectedNotaIds.length === 0}>
-                               {isGenerating && reportTypeBeingGenerated === 'cover' ? <Loader2 className="mr-2 animate-spin"/> : <FileArchive className="mr-2" />} Cetak Cover (Lanskap)
+                             <Button variant="outline" size="lg" onClick={() => handleGenerateReport('cover')} disabled={isGenerating || selectedNotaIds.length === 0}>
+                                {isGenerating ? <Loader2 className="mr-2 animate-spin"/> : <FileArchive className="mr-2" />} Cetak Cover (Lanskap)
                             </Button>
                             <Button size="lg" onClick={() => handleGenerateReport('details')} disabled={isGenerating || selectedNotaIds.length === 0}>
-                                {isGenerating && reportTypeBeingGenerated === 'details' ? <Loader2 className="mr-2 animate-spin"/> : <Printer className="mr-2" />} Cetak Laporan (Potret)
+                                {isGenerating ? <Loader2 className="mr-2 animate-spin"/> : <Printer className="mr-2" />} Cetak Laporan (Potret & Lanskap)
                             </Button>
                         </div>
                     </div>
