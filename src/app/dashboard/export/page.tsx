@@ -132,7 +132,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
     `;
 
     return `
-    <div style="font-family: Arial, sans-serif; color: black; font-size: 9pt; width: 100%; box-sizing: border-box; page-break-inside: avoid; display: flex; flex-direction: column; height: 100%;">
+    <div style="font-family: Arial, sans-serif; color: black; font-size: 9pt; width: 100%; box-sizing: border-box; page-break-inside: avoid;">
         
         <div style="flex-grow: 1;">
             <div style="text-align: left; font-size: 11pt; font-weight: bold;">
@@ -669,10 +669,12 @@ function ReportPreview({
             margin: 0;
             padding: 0;
           }
-          @page a4-portrait { size: A4 portrait; margin: 1cm; }
-          @page a4-landscape { size: A4 landscape; margin: 1cm; }
-          .page-is-portrait { page: a4-portrait; }
-          .page-is-landscape { page: a4-landscape; }
+          .page-is-portrait {
+            page: a4-portrait;
+          }
+          .page-is-landscape {
+            page: a4-landscape;
+          }
         }
       `}</style>
       <div className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4 print:p-0 print:bg-white">

@@ -56,3 +56,13 @@
     @apply bg-background text-foreground;
   }
 }
+
+@page a4-portrait {
+    size: A4 portrait;
+    margin: 1cm;
+}
+
+@page a4-landscape {
+    size: A4 landscape;
+    margin: 1cm;
+}
