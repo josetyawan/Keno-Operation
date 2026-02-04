@@ -230,8 +230,8 @@ function EditNotaForm({ nota, isAdmin }: { nota: Nota, isAdmin: boolean }) {
             const uploadPromises = files.map(async (file, index) => {
                 if (file) {
                     const fileExtension = file.name.split('.').pop();
-                    const fileName = `${'user.uid'}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExtension}`;
-                    const filePath = `notas/${'user.uid'}/${fileName}`;
+                    const fileName = `${user.uid}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExtension}`;
+                    const filePath = `notas/${user.uid}/${fileName}`;
                     const storageRef = ref(storage, filePath);
                     await uploadBytes(storageRef, file);
                     return getDownloadURL(storageRef);

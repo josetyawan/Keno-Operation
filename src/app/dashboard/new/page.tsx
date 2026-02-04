@@ -211,8 +211,8 @@ export default function NewNotaPage() {
         .filter((file): file is File => file !== null)
         .map(async (file) => {
           const fileExtension = file.name.split('.').pop();
-          const fileName = `${'user.uid'}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExtension}`;
-          const filePath = `notas/${'user.uid'}/${fileName}`;
+          const fileName = `${user.uid}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExtension}`;
+          const filePath = `notas/${user.uid}/${fileName}`;
           const storageRef = ref(storage, filePath);
           
           await uploadBytes(storageRef, file);
