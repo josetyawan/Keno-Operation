@@ -124,15 +124,21 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
     const idProjectDisplay = projectType === 'B2B IOAN' ? 'TIF-215/2026' : (projectType === 'PROVISIONING' ? 'TIF-32/2026' : (projectType === 'SPPG' ? 'PPR-38/2025' : '-'));
 
     return `
-    <div style="font-family: Arial, sans-serif; color: black; font-size: 10pt; padding: 1.5cm; width: 297mm; min-height: 210mm; background-color: white; box-sizing: border-box; display: flex; flex-direction: column;">
-        <div style="text-align: left;">
-            <p style="margin: 0; font-size: 11pt;">PT. TELKOM AKSES</p>
-            <p style="margin: 0; font-size: 11pt;">FINANCE REGIONAL III</p>
-        </div>
+    <div style="font-family: Arial, sans-serif; color: black; font-size: 10pt; padding: 0; width: 100%; height: 100%; box-sizing: border-box; display: flex; flex-direction: column;">
+        
+        <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+                <td style="width: 33.33%; vertical-align: top;">
+                    <p style="margin: 0; font-size: 11pt; font-weight: bold;">PT. TELKOM AKSES</p>
+                    <p style="margin: 0; font-size: 11pt; font-weight: bold;">FINANCE REGIONAL III</p>
+                </td>
+                <td style="width: 66.67%; text-align: center; vertical-align: bottom;">
+                    <p style="margin: 0; font-size: 11pt; font-weight: bold; text-decoration: underline;">REKAP PERTANGGUNGAN IMPREST FUND / PANJAR KERJA *)</p>
+                </td>
+            </tr>
+        </table>
 
-        <div style="text-align: center; font-weight: bold; line-height: 1.2; margin-top: -2.5em; margin-bottom: 1rem;">
-            <p style="margin: 0; font-size: 11pt; text-decoration: underline;">REKAP PERTANGGUNGAN IMPREST FUND / PANJAR KERJA *)</p>
-        </div>
+        <div style="height: 1rem;"></div>
 
         <table style="font-size: 10pt; margin-bottom: 1rem;">
             <tr><td style="padding-right: 8px;">Unit Kerja</td><td>: Direktorat Operation</td></tr>
@@ -692,7 +698,7 @@ function ReportPreview({
   pages,
   onClose,
 }: {
-  pages: string[];
+  pages: {html: string, orientation: 'portrait' | 'landscape'}[];
   onClose: () => void;
 }) {
 
@@ -702,8 +708,16 @@ function ReportPreview({
 
   return (
     <>
-        <style>
-            {`
+      <style>
+          {`
+            @page landscape-page {
+                size: A4 landscape;
+                margin: 0.5cm;
+            }
+            @page portrait-page {
+                size: A4 portrait;
+                margin: 1cm;
+            }
             @media print {
                 body * {
                     visibility: hidden;
@@ -714,16 +728,23 @@ function ReportPreview({
                 #print-section {
                     position: static;
                 }
-                .report-page-container:not(:first-child) {
+                .report-page-container {
                     break-before: page;
+                    overflow: hidden;
+                    height: 99%;
                 }
-                @page {
-                    size: A4 landscape;
-                    margin: 0;
+                 .report-page-container:first-child {
+                    break-before: auto;
+                }
+                .page-is-landscape {
+                    page: landscape-page;
+                }
+                .page-is-portrait {
+                    page: portrait-page;
                 }
             }
-            `}
-        </style>
+          `}
+      </style>
       
       {/* On-screen modal, hidden on print */}
       <div className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4 print:hidden">
@@ -737,12 +758,12 @@ function ReportPreview({
             </CardHeader>
             <CardContent className="flex-grow overflow-auto bg-gray-200 p-4">
                 <div className="mx-auto flex flex-col items-center gap-y-4">
-                    {pages.map((pageHtml, index) => (
+                    {pages.map((page, index) => (
                         <div
                             key={index}
                             className="bg-white shadow-lg"
-                            style={{width: '297mm', minHeight: '210mm'}}
-                            dangerouslySetInnerHTML={{ __html: pageHtml }}
+                            style={page.orientation === 'landscape' ? {width: '297mm', minHeight: '210mm', padding: '0.5cm'} : {width: '210mm', minHeight: '297mm', padding: '1cm'}}
+                            dangerouslySetInnerHTML={{ __html: page.html }}
                         />
                     ))}
                 </div>
@@ -753,11 +774,14 @@ function ReportPreview({
 
       {/* Content for printing, hidden on screen */}
       <div id="print-section" className="hidden print:block">
-          {pages.map((pageHtml, index) => (
+          {pages.map((page, index) => (
               <div
                   key={index}
-                  className="report-page-container bg-white"
-                  dangerouslySetInnerHTML={{ __html: pageHtml }}
+                  className={cn(
+                      'report-page-container',
+                      page.orientation === 'landscape' ? 'page-is-landscape' : 'page-is-portrait'
+                  )}
+                  dangerouslySetInnerHTML={{ __html: page.html }}
               />
           ))}
       </div>
@@ -809,7 +833,7 @@ export default function ExportPage() {
 
     const [selectedNotaIds, setSelectedNotaIds] = useState<string[]>([]);
 
-    const [reportPages, setReportPages] = useState<string[]>([]);
+    const [reportPages, setReportPages] = useState<{html: string, orientation: 'portrait' | 'landscape'}[]>([]);
     const [isGenerating, setIsGenerating] = useState(false);
     const [reportTypeBeingGenerated, setReportTypeBeingGenerated] = useState('');
     
@@ -935,7 +959,7 @@ export default function ExportPage() {
         setReportTypeBeingGenerated(reportType);
         const selectedNotas = filteredNotas.filter(n => selectedNotaIds.includes(n.id)) || [];
         const sortedNotas = selectedNotas.sort((a,b) => a.tanggal.toDate().getTime() - b.tanggal.toDate().getTime());
-        const pages: string[] = [];
+        const pages: {html: string, orientation: 'portrait' | 'landscape'}[] = [];
 
         try {
             const groupedByProject = sortedNotas.reduce((acc, nota) => {
@@ -955,14 +979,14 @@ export default function ExportPage() {
                 // --- 0. Imprest Fund Cover Page ---
                 if ((reportType === 'all' || reportType === 'rekap') && projectType !== 'BBM GENSET') {
                     const coverHtml = generateImprestFundCover(notasForProject, reportSA, projectType);
-                    pages.push(coverHtml);
+                    pages.push({ html: coverHtml, orientation: 'landscape' });
                 }
 
 
                 // --- 1. Rekapitulasi ---
                 if (reportType === 'all' || reportType === 'rekap') {
                     const rekapHtml = generateRekapitulasiReport(notasForProject, reportSA, projectType);
-                    pages.push(rekapHtml);
+                    pages.push({ html: rekapHtml, orientation: 'portrait' });
                 }
 
                 // --- 2. Perincian ---
@@ -1001,7 +1025,7 @@ export default function ExportPage() {
                              });
                             segmentHtml = generateMaterialReport(modifiedNotas, title);
                         }
-                        pages.push(segmentHtml);
+                        pages.push({ html: segmentHtml, orientation: 'portrait' });
                     }
                 }
                 
@@ -1036,7 +1060,7 @@ export default function ExportPage() {
                         } else {
                             segmentHtml = generateSimpleEvidenReport(notasInSegment, title);
                         }
-                        pages.push(segmentHtml);
+                        pages.push({ html: segmentHtml, orientation: 'portrait' });
                     }
                 }
             }
