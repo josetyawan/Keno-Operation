@@ -116,10 +116,10 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
     let idProject = '-';
 
     if (projectType === 'B2B IOAN') {
-        pekerjaan = `B2B IOAN ${saShort}`;
+        pekerjaan = `B2B IOAN SA ${saShort}`;
         idProject = 'TIF-215/2026';
     } else if (projectType === 'PROVISIONING') {
-        pekerjaan = `PROVISIONING ${saShort}`;
+        pekerjaan = `PROVISIONING SA ${saShort}`;
         idProject = 'TIF-32/2026';
     } else if (serviceArea === 'all') {
         pekerjaan = 'SEMUA SA';
@@ -759,6 +759,8 @@ export default function ExportPage() {
             for (const projectType of projectTypes) {
                 const notasForProject = groupedByProject[projectType];
                 const reportSA = selectedSA === 'all' ? 'SEMUA SA' : selectedSA;
+                const saShortForTitle = reportSA.replace(/^SA /, '');
+
 
                 // --- 1. Rekapitulasi ---
                 if (reportType === 'all' || reportType === 'rekap') {
@@ -780,7 +782,7 @@ export default function ExportPage() {
                         if (notasInSegment.length === 0) continue;
 
                         let segmentHtml = '';
-                        const title = `Perincian Nota ${segment} - ${projectType} - ${reportSA.replace('SA ','')}`;
+                        const title = `Perincian Nota ${segment} - ${projectType} - ${saShortForTitle}`;
                         const bbmR2R4Segments = [
                             'BBM R2 Harian B2B IOAN', 'BBM R2 Harian PROVISIONING',
                             'BBM R4 Harian B2B IOAN', 'BBM R4 Harian PROVISIONING',
@@ -824,7 +826,7 @@ export default function ExportPage() {
                         if (notasInSegment.length === 0) continue;
 
                         let segmentHtml = '';
-                        const title = `Eviden Foto - Perincian Nota ${segment} - ${projectType} - ${reportSA.replace('SA ','')}`;
+                        const title = `Eviden Foto - Perincian Nota ${segment} - ${projectType} - ${saShortForTitle}`;
 
                         if (bbmR2R4Segments.includes(segment)) {
                             segmentHtml = generateEvidenReport(notasInSegment, title);
