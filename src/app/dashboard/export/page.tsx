@@ -60,18 +60,10 @@ import { useRouter } from 'next/navigation';
 type ProjectType = 'B2B IOAN' | 'PROVISIONING' | 'SPPG' | 'BBM GENSET' | 'Lainnya';
 
 const getProjectType = (segmen: string): ProjectType => {
-    if (segmen === 'BBM Genset') {
-        return 'BBM GENSET';
-    }
-    if (segmen.includes('SPPG')) {
-        return 'SPPG';
-    }
-    if (segmen.includes('B2B IOAN')) {
-        return 'B2B IOAN';
-    }
-    if (segmen === 'Perincian Nota ATK' || segmen.includes('PROVISIONING')) {
-        return 'PROVISIONING';
-    }
+    if (segmen === 'BBM Genset') return 'BBM GENSET';
+    if (segmen.includes('SPPG')) return 'SPPG';
+    if (segmen.includes('B2B IOAN')) return 'B2B IOAN';
+    if (segmen === 'Perincian Nota ATK' || segmen.includes('PROVISIONING')) return 'PROVISIONING';
     return 'Lainnya';
 };
 
@@ -90,6 +82,174 @@ const getStatusVariant = (status: Nota['status']): VariantProps<typeof badgeVari
 };
 
 // --- Report Generation Logic ---
+
+const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectType: ProjectType): string => {
+    const today = new Date();
+    const formattedDate = format(today, 'dd/MM/yyyy');
+    const formattedDateLong = format(today, 'dd MMMM yyyy', { locale: idLocale });
+    let grandTotal = 0;
+
+    const saShort = serviceArea.replace('SA ', '');
+
+    const tableRows = notas.map((nota, index) => {
+        grandTotal += nota.nominal;
+        let idProject = '-';
+        if (projectType === 'B2B IOAN') idProject = 'TIF-215/2026';
+        else if (projectType === 'PROVISIONING') idProject = 'TIF-32/2026';
+        else if (projectType === 'SPPG') idProject = 'PPR-38/2025';
+
+        return `
+            <tr>
+                <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${index + 1}</td>
+                <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${format(nota.tanggal.toDate(), 'dd/MM/yyyy')}</td>
+                <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${index + 1}</td>
+                <td style="border: 1px solid black; padding: 2px 4px;">${nota.segmen}</td>
+                <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${idProject}</td>
+                <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
+                <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
+                <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
+                <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
+                <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
+                <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
+            </tr>
+        `;
+    }).join('');
+
+    const projectName = `IF SEMARANG - SMG OPR - Ops ${projectType} Service Area "${saShort}"`;
+
+    return `
+    <div style="font-family: Arial, sans-serif; color: black; font-size: 10pt; padding: 1.5cm; width: 297mm; min-height: 210mm; background-color: white; box-sizing: border-box;">
+        <div style="text-align: center; font-weight: bold; line-height: 1.2; margin-bottom: 1rem;">
+            <p style="margin: 0; font-size: 11pt;">PT. TELKOM AKSES</p>
+            <p style="margin: 0; font-size: 11pt;">FINANCE REGIONAL III</p>
+            <p style="margin: 0; font-size: 11pt; text-decoration: underline;">REKAP PERTANGGUNGAN IMPREST FUND / PANJAR KERJA *)</p>
+        </div>
+
+        <table style="font-size: 10pt; margin-bottom: 1rem;">
+            <tr><td style="padding-right: 8px;">Unit Kerja</td><td>: Direktorat Operation</td></tr>
+            <tr><td style="padding-right: 8px;">Cost Center</td><td>: TA03J08 - Semarang</td></tr>
+            <tr><td style="padding-right: 8px;">Nama Project</td><td>: ${projectName}</td></tr>
+        </table>
+
+        <table style="width: 100%; border-collapse: collapse; font-size: 9pt; margin-bottom: 0.5rem;">
+            <thead style="background-color: #DDEBF7; font-weight: bold; text-align: center;">
+                <tr>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px;">No. Urut</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px;">TANGGAL</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px;">No. Kuitansi</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px; width: 25%;">URAIAN</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px;">ID PROJECT</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px;">No. Akun</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px;">NILAI PERTANGGUNGAN</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px;">PPN (Disetor Mitra)</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px;">NILAI KUITANSI</th>
+                    <th colspan="2" style="border: 1px solid black; padding: 4px;">PPh 21, 23</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px;">BAYAR KE MITRA</th>
+                </tr>
+                <tr>
+                    <th style="border: 1px solid black; padding: 4px;">PPh 4(2) *)</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${tableRows}
+            </tbody>
+            <tfoot>
+                <tr style="font-weight: bold;">
+                    <td colspan="6" style="border: 1px solid black; padding: 2px 4px; text-align: center;">JUMLAH</td>
+                    <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
+                    <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
+                    <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
+                    <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
+                    <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <table style="width: 100%; font-size: 10pt; margin-top: 1rem;">
+            <tr>
+                <td style="width: 50%; vertical-align: top;">
+                    <table>
+                        <tr><td style="padding-right: 8px;">No. Dokumen</td><td>: /KU/TA-0203/SMG/02-2026</td></tr>
+                        <tr><td style="padding-right: 8px;">Berkas diterima tanggal</td><td>: ${formattedDate}</td></tr>
+                        <tr><td style="padding-right: 8px;">Berkas lengkap tanggal</td><td>: ${formattedDate}</td></tr>
+                    </table>
+                </td>
+                <td style="width: 50%; vertical-align: top;">
+                     <table style="width: 100%; border-collapse: collapse; font-size: 9pt;">
+                        <thead style="background-color: #DDEBF7;">
+                            <tr>
+                                <th colspan="4" style="border: 1px solid black; padding: 2px 4px;">REKAP:</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="border: 1px solid black; padding: 2px 4px;">No.</td>
+                                <td style="border: 1px solid black; padding: 2px 4px;">ID PROJECT</td>
+                                <td style="border: 1px solid black; padding: 2px 4px;">AKUN</td>
+                                <td style="border: 1px solid black; padding: 2px 4px;">JUMLAH</td>
+                            </tr>
+                             <tr>
+                                <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">1</td>
+                                <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${notas[0] ? (projectType === 'B2B IOAN' ? 'TIF-215/2026' : (projectType === 'PROVISIONING' ? 'TIF-32/2026' : 'PPR-38/2025')) : '-'}</td>
+                                <td style="border: 1px solid black; padding: 2px 4px;"></td>
+                                <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
+                            </tr>
+                             <tr style="font-weight: bold;">
+                                <td colspan="3" style="border: 1px solid black; padding: 2px 4px;">JUMLAH</td>
+                                <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </td>
+            </tr>
+        </table>
+        
+        <div style="height: 1rem;"></div>
+
+        <table style="width: 100%; text-align: center; font-size: 10pt;">
+            <tr>
+                <td>Mengetahui<br/>Pemilik Anggaran,</td>
+                <td>Mengetahui<br/>Pengelola IF / Panjar,</td>
+                <td>Semarang, ${formattedDateLong}<br/>Dibuat/Diajukan oleh,</td>
+            </tr>
+            <tr><td colspan="3" style="height: 4rem;">&nbsp;</td></tr>
+            <tr style="font-weight: bold;">
+                <td style="text-decoration: underline;">GALIH AJI KUSUMAH</td>
+                <td style="text-decoration: underline;">MUHAMMAD IKSAN</td>
+                <td style="text-decoration: underline;">DESSY WAHYUNINGTIAS</td>
+            </tr>
+            <tr>
+                <td>MGR BRANCH SEMARANG</td>
+                <td>MGR SHARED SERVICE REGIONAL JAWA TENGAH & DIY</td>
+                <td>OFF3 BUSINESS SUPPORT SEMARANG</td>
+            </tr>
+            <tr><td colspan="3" style="height: 1.5rem;">&nbsp;</td></tr>
+            <tr>
+                <td>Menyetujui,<br/>Penanggung Jawab IF</td>
+                <td></td>
+                <td>Mengetahui<br/>Pengelola IF</td>
+            </tr>
+            <tr><td colspan="3" style="height: 4rem;">&nbsp;</td></tr>
+            <tr style="font-weight: bold;">
+                <td style="text-decoration: underline;">HENRY SOEDIDARMA</td>
+                <td></td>
+                <td style="text-decoration: underline;">ARIZA ARBAATUS SOLIHA</td>
+            </tr>
+             <tr>
+                <td>GM REGIONAL JAWA TENGAH DIY</td>
+                <td></td>
+                <td>MGR BUSINESS SUPPORT AREA JAWA BALI</td>
+            </tr>
+        </table>
+
+        <div style="border: 2px solid black; padding: 4px; width: 150px; margin-top: 1rem;">
+            DOC ID :
+        </div>
+    </div>
+    `;
+};
+
+
 const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectType: ProjectType): string => {
     const groupedBySegmen = notas.reduce((acc, nota) => {
         const key = nota.segmen;
@@ -118,7 +278,7 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
     const terbilangText = toWords(grandTotal);
 
     const saShort = serviceArea.replace('SA ', '');
-    let pekerjaan = saShort;
+    let pekerjaan = `SA ${saShort}`;
     let idProject = '-';
 
     if (projectType === 'B2B IOAN') {
@@ -539,7 +699,7 @@ function ReportPreview({
                     break-before: page;
                 }
                 @page {
-                    size: A4 portrait;
+                    size: A4 landscape;
                     margin: 0;
                 }
             }
@@ -548,7 +708,7 @@ function ReportPreview({
       
       {/* On-screen modal, hidden on print */}
       <div className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4 print:hidden">
-        <Card className="w-full max-w-5xl h-[90vh] flex flex-col">
+        <Card className="w-full max-w-7xl h-[90vh] flex flex-col">
             <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Pratinjau Laporan</CardTitle>
             <div className="flex gap-2">
@@ -562,7 +722,7 @@ function ReportPreview({
                         <div
                             key={index}
                             className="bg-white shadow-lg"
-                            style={{width: '210mm', minHeight: '297mm'}}
+                            style={{width: '297mm', minHeight: '210mm'}}
                             dangerouslySetInnerHTML={{ __html: pageHtml }}
                         />
                     ))}
@@ -772,6 +932,12 @@ export default function ExportPage() {
                 const notasForProject = groupedByProject[projectType];
                 const reportSA = selectedSA === 'all' ? 'SEMUA SA' : selectedSA;
                 const saShortForTitle = reportSA.replace(/^SA /, '');
+                
+                // --- 0. Imprest Fund Cover Page ---
+                if (reportType === 'all' || reportType === 'rekap') {
+                    const coverHtml = generateImprestFundCover(notasForProject, reportSA, projectType);
+                    pages.push(coverHtml);
+                }
 
 
                 // --- 1. Rekapitulasi ---
