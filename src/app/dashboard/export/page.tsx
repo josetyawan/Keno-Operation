@@ -110,7 +110,6 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
-                <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
             </tr>
         `;
@@ -148,8 +147,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
                     <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">NILAI PERTANGGUNGAN</th>
                     <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">PPN (Disetor Mitra)</th>
                     <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">NILAI KUITANSI</th>
-                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">PPh 21, 23</th>
-                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">PPh 4(2) *)</th>
+                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">PPh 21, 23 / 4(2) *)</th>
                     <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">BAYAR KE MITRA</th>
                 </tr>
             </thead>
@@ -162,7 +160,6 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
                     <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
                     <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
                     <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
-                    <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
                     <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
                     <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
                 </tr>
