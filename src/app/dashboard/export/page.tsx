@@ -111,7 +111,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
     }).join('');
 
     return `
-    <div style="font-family: Arial, sans-serif; color: black; font-size: 10pt; width: 100%; box-sizing: border-box;">
+    <div style="font-family: Arial, sans-serif; color: black; font-size: 10pt; width: 100%; box-sizing: border-box; display: flex; flex-direction: column;">
         
         <div style="text-align: left; font-size: 11pt; font-weight: bold;">
             PT. TELKOM AKSES<br/>
@@ -139,7 +139,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
                     <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">NILAI PERTANGGUNGAN</th>
                     <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">PPN (Disetor Mitra)</th>
                     <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">NILAI KUITANSI</th>
-                    <th colspan="1" style="border: 1px solid black; padding: 4px; vertical-align: middle;">PPh 21, 23 / 4(2) *)</th>
+                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">PPh 21, 23 / 4(2) *)</th>
                     <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">BAYAR KE MITRA</th>
                 </tr>
             </thead>
@@ -157,6 +157,8 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
                 </tr>
             </tfoot>
         </table>
+
+        <div style="flex-grow: 1;"></div>
 
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 1rem;">
             <div style="width: 50%;">
@@ -695,31 +697,32 @@ function ReportPreview({
                 margin: 1cm;
             }
             @media print {
-                body > :not(#print-section) {
-                    display: none !important;
-                }
-                html, body {
-                    visibility: visible !important;
-                    margin: 0 !important;
-                    padding: 0 !important;
-                }
-                #print-section {
-                    visibility: visible !important;
-                    position: static !important;
-                }
-                .report-page-container {
-                    page-break-before: always;
-                    visibility: visible !important;
-                }
-                .report-page-container:first-child {
-                    page-break-before: auto;
-                }
-                .page-is-landscape {
-                    page: landscape-page;
-                }
-                .page-is-portrait {
-                    page: portrait-page;
-                }
+              body * {
+                visibility: hidden;
+              }
+              #print-section, #print-section * {
+                visibility: visible;
+              }
+              #print-section {
+                position: absolute;
+                left: 0;
+                top: 0;
+                right: 0;
+                margin: 0;
+                padding: 0;
+              }
+              .report-page-container {
+                  page-break-before: always;
+              }
+              .report-page-container:first-child {
+                  page-break-before: auto;
+              }
+              .page-is-landscape {
+                  page: landscape-page;
+              }
+              .page-is-portrait {
+                  page: portrait-page;
+              }
             }
           `}
       </style>
@@ -740,7 +743,7 @@ function ReportPreview({
                         <div
                             key={index}
                             className="bg-white shadow-lg"
-                            style={page.orientation === 'landscape' ? {width: '297mm', minHeight: '200mm', padding: '0.5cm'} : {width: '210mm', minHeight: '287mm', padding: '1cm'}}
+                            style={page.orientation === 'landscape' ? {width: '297mm', height: '210mm', padding: '0.5cm'} : {width: '210mm', height: '297mm', padding: '1cm'}}
                             dangerouslySetInnerHTML={{ __html: page.html }}
                         />
                     ))}
