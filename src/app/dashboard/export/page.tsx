@@ -40,7 +40,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { ArrowLeft, Edit, Trash2, Filter, FileText, Printer, FileArchive, Calendar as CalendarIcon, Loader2, Download } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Filter, FileArchive, Printer, Calendar as CalendarIcon, Loader2 } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { format, getMonth, getYear, startOfDay, endOfDay } from 'date-fns';
@@ -55,8 +55,6 @@ import { toWords } from '@/lib/number-to-words';
 import Image from 'next/image';
 import type { VariantProps } from 'class-variance-authority';
 import { useRouter } from 'next/navigation';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 
 type ProjectType = 'B2B IOAN' | 'PROVISIONING' | 'SPPG' | 'BBM GENSET' | 'Lainnya';
 
@@ -93,9 +91,6 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
     let grandTotal = 0;
     const tableRows = notas.map((nota, index) => {
         grandTotal += nota.nominal;
-        const pphValue = nota.segmen.toLowerCase().includes('jasa') ? (nota.nominal - (nota.nominal / 1.02)) : 0;
-        const bayarKeMitra = nota.nominal - pphValue;
-
         return `
             <tr>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${index + 1}</td>
@@ -105,33 +100,71 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">-</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
-                <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${pphValue > 0 ? pphValue.toLocaleString('id-ID') : '-'}</td>
-                <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${bayarKeMitra.toLocaleString('id-ID')}</td>
             </tr>
         `;
     }).join('');
     
-    const totalPph = notas.reduce((acc, nota) => {
-        const pph = nota.segmen.toLowerCase().includes('jasa') ? (nota.nominal - (nota.nominal / 1.02)) : 0;
-        return acc + pph;
-    }, 0);
-    const totalBayar = grandTotal - totalPph;
-    
     const signatureTable = `
-        <div style="font-size: 8pt; width: 100%; display: flex; flex-direction: column; justify-content: space-between; page-break-inside: avoid;">
-            <div style="display: flex; justify-content: space-between; text-align: center; margin-bottom: 2rem;">
-                <div style="width: 33%;">Mengetahui<br/>Pemilik Anggaran,<br/><br/><br/><br/><br/><b><u>GALIH AJI KUSUMAH</u></b><br/>MGR BRANCH SEMARANG</div>
-                <div style="width: 33%;">Mengetahui<br/>Pengelola IF / Panjar,<br/><br/><br/><br/><br/><b><u>MUHAMMAD IKSAN</u></b><br/>MGR SHARED SERVICE REGIONAL JAWA TENGAH & DIY</div>
-                <div style="width: 33%;">Semarang, ${formattedDate}<br/>Dibuat/Diajukan oleh,<br/><br/><br/><br/><br/><b><u>DESSY WAHYUNINGTIAS</u></b><br/>OFF3 BUSINESS SUPPORT SEMARANG</div>
-            </div>
-            <div style="display: flex; justify-content: space-around; text-align: center; margin-bottom: 1rem;">
-                <div style="width: 50%;">Menyetujui,<br/>Penanggung Jawab IF<br/><br/><br/><br/><br/><b><u>HENRY SOEDIDARMA</u></b><br/>GM REGIONAL JAWA TENGAH DIY</div>
-                <div style="width: 50%;">Mengetahui<br/>Pengelola IF<br/><br/><br/><br/><br/><b><u>ARIZA ARBAATUS SOLIHA</u></b><br/>MGR BUSINESS SUPPORT AREA JAWA BALI</div>
-            </div>
-            <div style="border: 1px solid black; padding: 8px; font-weight: bold; width: 150px; text-align: left;">
-                DOC ID :
-            </div>
+    <div style="font-size: 8pt; width: 100%; page-break-inside: avoid; margin-top: 1.5rem;">
+        <table style="width: 100%; text-align: center; border-collapse: collapse;">
+            <tbody>
+                <tr>
+                    <td style="width: 25%;">Mengetahui<br/>Pemilik Anggaran,</td>
+                    <td style="width: 25%;">Mengetahui<br/>Pengelola IF / Panjar,</td>
+                    <td style="width: 25%;"></td>
+                    <td style="width: 25%;">Semarang, ${formattedDate}<br/>Dibuat/Diajukan oleh,</td>
+                </tr>
+                <tr>
+                    <td style="height: 60px;"></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td style="text-decoration: underline; font-weight: bold;">GALIH AJI KUSUMAH</td>
+                    <td style="text-decoration: underline; font-weight: bold;">MUHAMMAD IKSAN</td>
+                    <td></td>
+                    <td style="text-decoration: underline; font-weight: bold;">DESSY WAHYUNINGTIAS</td>
+                </tr>
+                <tr>
+                    <td>MGR BRANCH SEMARANG</td>
+                    <td>MGR SHARED SERVICE REGIONAL JAWA TENGAH & DIY</td>
+                    <td></td>
+                    <td>OFF3 BUSINESS SUPPORT SEMARANG</td>
+                </tr>
+                <tr>
+                    <td colspan="4" style="height: 20px;"></td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td>Menyetujui,<br/>Penanggung Jawab IF</td>
+                    <td>Mengetahui<br/>Pengelola IF</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td style="height: 60px;"></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td style="text-decoration: underline; font-weight: bold;">HENRY SOEDIDARMA</td>
+                    <td style="text-decoration: underline; font-weight: bold;">ARIZA ARBAATUS SOLIHA</td>
+                    <td></td>
+                </tr>
+                 <tr>
+                    <td></td>
+                    <td>GM REGIONAL JAWA TENGAH DIY</td>
+                    <td>MGR BUSINESS SUPPORT AREA JAWA BALI</td>
+                    <td></td>
+                </tr>
+            </tbody>
+        </table>
+        <div style="border: 1px solid black; padding: 8px; font-weight: bold; width: 150px; text-align: left; margin-top: 1.5rem;">
+            DOC ID :
         </div>
+    </div>
     `;
 
     return `
@@ -154,18 +187,13 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
             <table style="width: 100%; border-collapse: collapse; font-size: 8pt;">
                 <thead style="background-color: #DDEBF7; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                     <tr>
-                        <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">No. Urut</th>
-                        <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">TANGGAL</th>
-                        <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">No. Kuitansi</th>
-                        <th rowspan="2" style="border: 1px solid black; padding: 4px; width: 25%; vertical-align: middle;">URAIAN</th>
-                        <th colspan="5" style="border: 1px solid black; padding: 4px;">NILAI PERTANGGUNGAN</th>
-                    </tr>
-                    <tr>
+                        <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">No. Urut</th>
+                        <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">TANGGAL</th>
+                        <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">No. Kuitansi</th>
+                        <th style="border: 1px solid black; padding: 4px; width: 35%; vertical-align: middle;">URAIAN</th>
                         <th style="border: 1px solid black; padding: 4px;">PPN (Disetor Mitra)</th>
                         <th style="border: 1px solid black; padding: 4px;">DPP</th>
                         <th style="border: 1px solid black; padding: 4px;">NILAI KUITANSI</th>
-                        <th style="border: 1px solid black; padding: 4px;">PPh 21, 23 / 4(2) *)<br/>(Dipotong Pihak III)</th>
-                        <th style="border: 1px solid black; padding: 4px;">BAYAR KE MITRA</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -177,8 +205,6 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
                         <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
                         <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">-</td>
                         <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
-                        <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${totalPph > 0 ? totalPph.toLocaleString('id-ID') : '-'}</td>
-                        <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${totalBayar.toLocaleString('id-ID')}</td>
                     </tr>
                 </tfoot>
             </table>
@@ -619,93 +645,60 @@ function ReportPreview({
 }) {
 
   const handlePrint = () => {
+    // All pages in the `pages` prop will have the same orientation because
+    // the user clicked either "Cetak Potret" or "Cetak Lanskap".
+    const orientation = pages.length > 0 ? pages[0].orientation : 'portrait';
+
     const printIframe = document.createElement('iframe');
-    printIframe.style.position = 'absolute';
-    printIframe.style.width = '0';
-    printIframe.style.height = '0';
-    printIframe.style.border = 'none';
-    printIframe.name = 'printIframe';
+    printIframe.style.display = 'none';
     document.body.appendChild(printIframe);
 
     const iframeDoc = printIframe.contentWindow?.document;
-    if (!iframeDoc) return;
+    if (!iframeDoc) {
+      document.body.removeChild(printIframe);
+      return;
+    }
 
-    const allPagesHtml = pages.map(page => {
-      const pageClass = page.orientation === 'landscape' ? 'page-is-landscape' : 'page-is-portrait';
-      return `<div class="printable-page ${pageClass}">${page.html}</div>`;
-    }).join('');
+    const allPagesHtml = pages.map(page =>
+        // Add a div to enforce page breaks after each report page
+        '<div style="page-break-after: always;">' + page.html + '</div>'
+    ).join('');
 
-    const printStyles = `
-      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap');
-      @page a4-portrait { size: A4 portrait; margin: 1cm; }
-      @page a4-landscape { size: A4 landscape; margin: 1cm; }
-      body {
-        margin: 0;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-        font-family: 'Inter', Arial, sans-serif;
-      }
-      .printable-page {
-        page-break-after: always;
-      }
-      .printable-page:last-child {
-        page-break-after: auto;
-      }
-    `;
+    const printStyles =
+        '@page { size: A4 ' + orientation + '; margin: 1cm; }' +
+        'body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }';
+
+    const htmlContent = '<html><head><title>Cetak Laporan</title><style>' +
+                        printStyles +
+                        '</style></head><body>' +
+                        allPagesHtml +
+                        '</body></html>';
 
     iframeDoc.open();
-    iframeDoc.write(\`
-      <html>
-        <head>
-          <title>Cetak Laporan</title>
-          <style>\${printStyles}</style>
-        </head>
-        <body>
-          \${allPagesHtml}
-        </body>
-      </html>
-    \`);
+    iframeDoc.write(htmlContent);
     iframeDoc.close();
 
-    const doPrint = () => {
+    // Use a timeout to ensure all content (especially images from URLs) is loaded
+    setTimeout(() => {
       try {
         printIframe.contentWindow?.focus();
         printIframe.contentWindow?.print();
       } catch (e) {
-        console.error("Print failed:", e);
+        console.error('Print failed:', e);
       } finally {
-        // Use a timeout to ensure print dialog is closed before removing
-        setTimeout(() => {
-          if (document.body.contains(printIframe)) {
+        // Clean up the iframe from the DOM
+        if (document.body.contains(printIframe)) {
             document.body.removeChild(printIframe);
-          }
-        }, 1000);
+        }
       }
-    };
-    
-    // Some browsers are faster than others
-    let printed = false;
-    const oldOnload = printIframe.onload;
-    printIframe.onload = () => {
-      if (typeof oldOnload === 'function') {
-        oldOnload();
-      }
-      if (printed) return;
-      printed = true;
-      doPrint();
-    };
-    // Fallback for browsers that don't fire onload quickly
-    setTimeout(() => {
-        if (printed) return;
-        printed = true;
-        doPrint();
-    }, 500);
+    }, 500); // 500ms delay for rendering
   };
+
 
   return (
     <div id="print-section-container" className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4">
       <Card className="w-full max-w-7xl h-[90vh] flex flex-col">
-        <CardHeader className="print-hidden-header flex flex-row items-center justify-between">
+        <CardHeader className="print-hidden flex flex-row items-center justify-between">
           <CardTitle>Pratinjau Laporan</CardTitle>
           <div className="flex gap-2">
             <Button variant="outline" onClick={onClose}>Tutup</Button>
@@ -769,7 +762,6 @@ export default function ExportPage() {
     const firestore = useFirestore();
     const router = useRouter();
     const { toast } = useToast();
-    const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
     const notasQuery = useMemoFirebase(() => {
         return query(collection(firestore, 'notas'), orderBy('dateCreated', 'desc'));
     }, [firestore]);
@@ -896,7 +888,7 @@ export default function ExportPage() {
     };
 
 
-    const generatePages = (orientation: 'portrait' | 'landscape' | 'all') => {
+    const generatePages = (orientation: 'portrait' | 'landscape') => {
         if (selectedNotaIds.length === 0) {
             toast({
                 variant: "destructive",
@@ -925,7 +917,7 @@ export default function ExportPage() {
                 const reportSA = selectedSA === 'all' ? 'SEMUA SA' : selectedSA;
                 
                 // Landscape pages
-                if (orientation === 'landscape' || orientation === 'all') {
+                if (orientation === 'landscape') {
                     // Cover
                     if (projectType !== 'BBM GENSET') {
                         const coverHtml = generateImprestFundCover(notasForProject, reportSA, projectType);
@@ -960,7 +952,7 @@ export default function ExportPage() {
                 }
 
                 // Portrait pages
-                if (orientation === 'portrait' || orientation === 'all') {
+                if (orientation === 'portrait') {
                     // Rekapitulasi
                     const rekapHtml = generateRekapitulasiReport(notasForProject, reportSA, projectType);
                     pages.push({ html: rekapHtml, orientation: 'portrait' });
@@ -1053,59 +1045,6 @@ export default function ExportPage() {
         }
         setIsGenerating(false);
     };
-
-    const handleDownloadPdf = async () => {
-        setIsDownloadingPdf(true);
-        const allPages = generatePages('all');
-        if (allPages.length === 0) {
-            setIsDownloadingPdf(false);
-            return;
-        }
-
-        const pdf = new jsPDF({
-            orientation: 'p',
-            unit: 'mm',
-            format: 'a4',
-        });
-
-        for (let i = 0; i < allPages.length; i++) {
-            const pageInfo = allPages[i];
-            const isLandscape = pageInfo.orientation === 'landscape';
-            const format = isLandscape ? [297, 210] : [210, 297];
-
-            if (i > 0) {
-                pdf.addPage(format, pageInfo.orientation);
-            } else {
-                pdf.deletePage(1);
-                pdf.addPage(format, pageInfo.orientation);
-            }
-            
-            const tempContainer = document.createElement('div');
-            tempContainer.style.position = 'absolute';
-            tempContainer.style.left = '-9999px';
-            tempContainer.style.width = isLandscape ? '297mm' : '210mm';
-            tempContainer.style.height = isLandscape ? '210mm' : '297mm';
-            tempContainer.innerHTML = pageInfo.html;
-            document.body.appendChild(tempContainer);
-
-            const canvas = await html2canvas(tempContainer, {
-                scale: 2, // Increase scale for better quality
-                useCORS: true,
-                logging: false,
-            });
-
-            document.body.removeChild(tempContainer);
-            
-            const imgData = canvas.toDataURL('image/png');
-            const pdfWidth = isLandscape ? 297 : 210;
-            const pdfHeight = isLandscape ? 210 : 297;
-            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        }
-
-        pdf.save('Laporan_NotaKu.pdf');
-        setIsDownloadingPdf(false);
-    };
-
 
     return (
         <>
@@ -1355,14 +1294,12 @@ export default function ExportPage() {
                     <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm py-3 mt-auto border-t -mx-6 px-6">
                         <div className="max-w-4xl mx-auto flex justify-around items-center gap-4">
                             <Button variant="outline" size="lg" onClick={() => handleGenerateReport('landscape')} disabled={isGenerating || selectedNotaIds.length === 0}>
-                                {isGenerating ? <Loader2 className="mr-2 animate-spin"/> : <FileArchive className="mr-2" />} Cetak Laporan Lanskap
+                                {isGenerating ? <Loader2 className="mr-2 animate-spin"/> : <FileArchive className="mr-2" />}
+                                Cetak Laporan Lanskap
                             </Button>
                             <Button size="lg" onClick={() => handleGenerateReport('portrait')} disabled={isGenerating || selectedNotaIds.length === 0}>
-                                {isGenerating ? <Loader2 className="mr-2 animate-spin"/> : <Printer className="mr-2" />} Cetak Laporan Potret
-                            </Button>
-                            <Button size="lg" onClick={handleDownloadPdf} disabled={isDownloadingPdf || selectedNotaIds.length === 0}>
-                                {isDownloadingPdf ? <Loader2 className="mr-2 animate-spin"/> : <Download className="mr-2" />}
-                                Download Semua (PDF)
+                                {isGenerating ? <Loader2 className="mr-2 animate-spin"/> : <Printer className="mr-2" />}
+                                Cetak Laporan Potret
                             </Button>
                         </div>
                     </div>
