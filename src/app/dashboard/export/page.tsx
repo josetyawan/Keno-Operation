@@ -41,7 +41,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { ArrowLeft, Edit, Trash2, Filter, FileText, Printer, FileArchive, Calendar as CalendarIcon, Loader2 } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Filter, FileText, Printer, FileArchive, Calendar as CalendarIcon, Loader2, Download } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { format, getMonth, getYear, startOfDay, endOfDay } from 'date-fns';
@@ -56,6 +56,8 @@ import { toWords } from '@/lib/number-to-words';
 import Image from 'next/image';
 import type { VariantProps } from 'class-variance-authority';
 import { useRouter } from 'next/navigation';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 type ProjectType = 'B2B IOAN' | 'PROVISIONING' | 'SPPG' | 'BBM GENSET' | 'Lainnya';
 
@@ -111,7 +113,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
     }).join('');
 
     return `
-    <div style="font-family: Arial, sans-serif; color: black; font-size: 10pt; width: 100%; box-sizing: border-box;">
+    <div style="font-family: Arial, sans-serif; color: black; font-size: 9pt; width: 100%; box-sizing: border-box; page-break-inside: avoid;">
         
         <div style="text-align: left; font-size: 11pt; font-weight: bold;">
             PT. TELKOM AKSES<br/>
@@ -127,7 +129,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
             <tr><td>Nama Project</td><td>: ${projectName}</td></tr>
         </table>
 
-        <table style="width: 100%; border-collapse: collapse; font-size: 9pt; margin-bottom: 0.5rem;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 8pt; margin-bottom: 0.5rem;">
             <thead style="background-color: #DDEBF7; font-weight: bold; text-align: center;">
                 <tr>
                     <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">No. Urut</th>
@@ -136,11 +138,15 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
                     <th rowspan="2" style="border: 1px solid black; padding: 4px; width: 20%; vertical-align: middle;">URAIAN</th>
                     <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">ID PROJECT</th>
                     <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">No. Akun</th>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">NILAI PERTANGGUNGAN</th>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">PPN (Disetor Mitra)</th>
+                    <th colspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">NILAI PERTANGGUNGAN</th>
                     <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">NILAI KUITANSI</th>
                     <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">PPh 21, 23 / 4(2) *)</th>
                     <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">BAYAR KE MITRA</th>
+                </tr>
+                 <tr>
+                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">PPN (Disetor Mitra)</th>
+                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">DPP</th>
+                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">(Dipotong Pihak III)</th>
                 </tr>
             </thead>
             <tbody>
@@ -162,13 +168,13 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                 <div style="width: 50%;">
                     <table style="font-size: 10pt;">
-                        <tr><td style="padding-right: 8px;">No. Dokumen</td><td>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/KU/TA-0203/SMG/02-2026</td></tr>
+                        <tr><td style="padding-right: 8px;">No. Dokumen</td><td>: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/KU/TA-0203/SMG/02-2026</td></tr>
                         <tr><td style="padding-right: 8px;">Berkas diterima tanggal</td><td>: ${formattedDate}</td></tr>
                         <tr><td style="padding-right: 8px;">Berkas lengkap tanggal</td><td>: ${formattedDate}</td></tr>
                     </table>
                 </div>
                 <div style="width: 45%;">
-                     <table style="width: 100%; border-collapse: collapse; font-size: 9pt;">
+                     <table style="width: 100%; border-collapse: collapse; font-size: 8pt;">
                         <thead style="background-color: #DDEBF7;">
                             <tr><th colspan="8" style="border: 1px solid black; padding: 2px 4px; text-align: left;">REKAP:</th></tr>
                             <tr>
@@ -306,8 +312,8 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
         <div style="text-align: center; font-weight: bold; line-height: 1.2;">
             <p style="margin: 0; font-size: 12pt; text-decoration: underline;">PERTANGGUNGAN OPERASIONAL</p>
             <p style="margin: 0; font-size: 12pt;">${saShort.toUpperCase()}</p>
-            <p style="margin: 0; font-size: 12pt;">PEKERJAAN : ${pekerjaan.toUpperCase()}</p>
-            <p style="margin: 0; font-size: 12pt;">ID PROJECT : ${idProject}</p>
+            <p style="margin: 0; font-size: 12pt;">PEKERJAAN: ${pekerjaan.toUpperCase()}</p>
+            <p style="margin: 0; font-size: 12pt;">ID PROJECT: ${idProject}</p>
         </div>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 1px solid black;">
@@ -680,73 +686,112 @@ function ReportPreview({
   pages: {html: string, orientation: 'portrait' | 'landscape'}[];
   onClose: () => void;
 }) {
+  const { toast } = useToast();
+  const [isDownloading, setIsDownloading] = useState(false);
 
-  const handlePrint = () => {
-    window.print();
-  };
+  const handleDownload = async () => {
+    const reportContainer = document.getElementById('download-section');
+    if (!reportContainer) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not find report content to download.' });
+        return;
+    }
+    
+    setIsDownloading(true);
+
+    const pageElements = reportContainer.children;
+    if (pageElements.length === 0) {
+        toast({ variant: 'destructive', title: 'Error', description: 'No pages found to download.' });
+        setIsDownloading(false);
+        return;
+    }
+
+    try {
+        const firstPageOrientation = pages[0].orientation;
+        const pdf = new jsPDF({
+            orientation: firstPageOrientation,
+            unit: 'mm',
+            format: 'a4',
+        });
+        
+        const A4_WIDTH_MM = 210;
+        const A4_HEIGHT_MM = 297;
+
+        for (let i = 0; i < pageElements.length; i++) {
+            const element = pageElements[i] as HTMLElement;
+            const pageInfo = pages[i];
+            
+            const canvas = await html2canvas(element, {
+                scale: 2,
+                useCORS: true, 
+                logging: false,
+                width: element.offsetWidth,
+                height: element.offsetHeight,
+            });
+
+            if (i > 0) {
+                 pdf.addPage([pageInfo.orientation === 'landscape' ? A4_HEIGHT_MM : A4_WIDTH_MM, pageInfo.orientation === 'landscape' ? A4_WIDTH_MM : A4_HEIGHT_MM], pageInfo.orientation);
+            }
+            
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            
+            const canvasWidth = canvas.width;
+            const canvasHeight = canvas.height;
+            
+            const pdfRatio = pdfWidth / pdfHeight;
+            const canvasRatio = canvasWidth / canvasHeight;
+
+            let finalWidth, finalHeight;
+
+            if (canvasRatio > pdfRatio) {
+                finalWidth = pdfWidth;
+                finalHeight = pdfWidth / canvasRatio;
+            } else {
+                finalHeight = pdfHeight;
+                finalWidth = pdfHeight * canvasRatio;
+            }
+            
+            const x = (pdfWidth - finalWidth) / 2;
+            const y = (pdfHeight - finalHeight) / 2;
+
+            pdf.addImage(canvas.toDataURL('image/png'), 'PNG', x, y, finalWidth, finalHeight);
+        }
+        
+        pdf.save('Laporan_NotaKu.pdf');
+
+    } catch (error) {
+        console.error("Failed to download PDF:", error);
+        toast({ variant: 'destructive', title: 'Download Gagal', description: 'Terjadi kesalahan saat membuat file PDF.' });
+    } finally {
+        setIsDownloading(false);
+    }
+};
 
   return (
-    <>
-      <style>
-          {`
-            @page landscape-page {
-                size: A4 landscape;
-                margin: 0.5cm;
-            }
-            @page portrait-page {
-                size: A4 portrait;
-                margin: 1cm;
-            }
-            @media print {
-              body > *:not(#print-section) {
-                display: none !important;
-              }
-              #print-section, #print-section * {
-                display: block !important;
-                visibility: visible !important;
-              }
-              #print-section {
-                position: static !important;
-                left: 0;
-                top: 0;
-                right: 0;
-                margin: 0;
-                padding: 0;
-              }
-              .report-page-container {
-                  page-break-before: always;
-                  overflow: hidden; 
-              }
-              .report-page-container:first-child {
-                  page-break-before: auto;
-              }
-              .page-is-landscape {
-                  page: landscape-page;
-              }
-              .page-is-portrait {
-                  page: portrait-page;
-              }
-            }
-          `}
-      </style>
-      
-      {/* On-screen modal, hidden on print */}
-      <div className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4 print:hidden">
+      <div className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4">
         <Card className="w-full max-w-7xl h-[90vh] flex flex-col">
             <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Pratinjau Laporan</CardTitle>
             <div className="flex gap-2">
                 <Button variant="outline" onClick={onClose}>Tutup</Button>
-                <Button onClick={handlePrint}><Printer className="mr-2" /> Cetak</Button>
+                <Button onClick={handleDownload} disabled={isDownloading}>
+                    {isDownloading ? <Loader2 className="mr-2 animate-spin"/> : <Download className="mr-2" />}
+                    Download PDF
+                </Button>
             </div>
             </CardHeader>
             <CardContent className="flex-grow overflow-auto bg-gray-200 p-4">
-                <div className="mx-auto flex flex-col items-center gap-y-4">
+                <div id="download-section" className="mx-auto flex flex-col items-center gap-y-4">
                     {pages.map((page, index) => (
                         <div
                             key={index}
                             className="bg-white shadow-lg"
-                            style={page.orientation === 'landscape' ? {width: '297mm', height: '210mm', padding: '0.5cm'} : {width: '210mm', minHeight: '297mm', padding: '1cm'}}
+                            style={{
+                                width: page.orientation === 'landscape' ? '297mm' : '210mm', 
+                                height: page.orientation === 'landscape' ? '210mm' : '297mm',
+                                padding: '1cm',
+                                boxSizing: 'border-box'
+                            }}
                             dangerouslySetInnerHTML={{ __html: page.html }}
                         />
                     ))}
@@ -754,22 +799,6 @@ function ReportPreview({
             </CardContent>
         </Card>
       </div>
-
-
-      {/* Content for printing, hidden on screen */}
-      <div id="print-section" className="hidden print:block">
-          {pages.map((page, index) => (
-              <div
-                  key={index}
-                  className={cn(
-                      'report-page-container',
-                      page.orientation === 'landscape' ? 'page-is-landscape' : 'page-is-portrait'
-                  )}
-                  dangerouslySetInnerHTML={{ __html: page.html }}
-              />
-          ))}
-      </div>
-    </>
   );
 }
 
