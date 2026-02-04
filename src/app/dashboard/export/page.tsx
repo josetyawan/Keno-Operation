@@ -844,7 +844,15 @@ export default function ExportPage() {
             result = result.filter(nota => nota.serviceArea === selectedSA);
         }
 
-        return result.sort((a,b) => a.tanggal.toDate().getTime() - b.tanggal.toDate().getTime());
+        return result.sort((a, b) => {
+          const toTime = (date: any) => {
+            if (!date) return 0;
+            if (date.toDate) return date.toDate().getTime();
+            const d = new Date(date);
+            return isNaN(d.getTime()) ? 0 : d.getTime();
+          };
+          return toTime(a.tanggal) - toTime(b.tanggal);
+        });
     }, [notas, filterType, selectedMonth, monthOptions, dateRange, verifiedDateRange, selectedSA, selectedStatus]);
 
     const handleSelectNota = (id: string, checked: boolean) => {
