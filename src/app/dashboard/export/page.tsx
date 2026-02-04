@@ -57,6 +57,18 @@ import Image from 'next/image';
 import type { VariantProps } from 'class-variance-authority';
 import { useRouter } from 'next/navigation';
 
+type ProjectType = 'B2B IOAN' | 'PROVISIONING' | 'Lainnya';
+
+const getProjectType = (segmen: string): ProjectType => {
+    if (segmen.includes('B2B IOAN')) {
+        return 'B2B IOAN';
+    }
+    if (segmen.includes('PROVISIONING')) {
+        return 'PROVISIONING';
+    }
+    return 'Lainnya';
+};
+
 const getStatusVariant = (status: Nota['status']): VariantProps<typeof badgeVariants>['variant'] => {
     switch (status) {
         case 'verified':
@@ -72,7 +84,7 @@ const getStatusVariant = (status: Nota['status']): VariantProps<typeof badgeVari
 };
 
 // --- Report Generation Logic ---
-const generateRekapitulasiReport = (notas: Nota[], month: string, year: string, serviceArea: string): string => {
+const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectType: ProjectType): string => {
     const groupedBySegmen = notas.reduce((acc, nota) => {
         const key = nota.segmen;
         if (!acc[key]) {
@@ -98,15 +110,28 @@ const generateRekapitulasiReport = (notas: Nota[], month: string, year: string, 
     const today = new Date();
     const formattedDate = format(today, 'dd MMMM yyyy', { locale: idLocale });
     const terbilangText = toWords(grandTotal);
-    const pekerjaanTitle = serviceArea === 'all' ? 'SEMUA SA' : serviceArea;
+
+    const saShort = serviceArea.replace('SA ', '');
+    let pekerjaan = saShort;
+    let idProject = '-';
+
+    if (projectType === 'B2B IOAN') {
+        pekerjaan = `B2B IOAN ${saShort}`;
+        idProject = 'TIF-215/2026';
+    } else if (projectType === 'PROVISIONING') {
+        pekerjaan = `PROVISIONING ${saShort}`;
+        idProject = 'TIF-32/2026';
+    } else if (serviceArea === 'all') {
+        pekerjaan = 'SEMUA SA';
+    }
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; padding: 1cm; width: 210mm; min-height: 297mm; background-color: white; box-shadow: 0 0 5px rgba(0,0,0,0.1);">
         <div style="text-align: center; font-weight: bold; line-height: 1.2;">
             <p style="margin: 0; font-size: 12pt; text-decoration: underline;">PERTANGGUNGAN OPERASIONAL</p>
-            <p style="margin: 0; font-size: 12pt;">SERVICE AREA ${pekerjaanTitle.toUpperCase()}</p>
-            <p style="margin: 0; font-size: 12pt;">PEKERJAAN : ${pekerjaanTitle.toUpperCase()}</p>
-            <p style="margin: 0; font-size: 12pt;">ID PROJECT : -</p>
+            <p style="margin: 0; font-size: 12pt;">SERVICE AREA ${saShort.toUpperCase()}</p>
+            <p style="margin: 0; font-size: 12pt;">PEKERJAAN : ${pekerjaan.toUpperCase()}</p>
+            <p style="margin: 0; font-size: 12pt;">ID PROJECT : ${idProject}</p>
         </div>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 1px solid black;">
@@ -718,171 +743,99 @@ export default function ExportPage() {
         setIsGenerating(true);
         setReportTypeBeingGenerated(reportType);
         const selectedNotas = filteredNotas.filter(n => selectedNotaIds.includes(n.id)) || [];
-
-        const pages: string[] = [];
         const sortedNotas = selectedNotas.sort((a,b) => a.tanggal.toDate().getTime() - b.tanggal.toDate().getTime());
-
+        const pages: string[] = [];
 
         try {
-            if (reportType === 'all') {
-                // 1. Generate Rekap
-                const reportSAForAll = selectedSA === 'all' ? 'SEMUA SA' : selectedSA;
-                const rekapHtml = generateRekapitulasiReport(sortedNotas, "Rekapitulasi", "", reportSAForAll);
-                pages.push(rekapHtml);
+            const groupedByProject = sortedNotas.reduce((acc, nota) => {
+                const pType = getProjectType(nota.segmen);
+                if (!acc[pType]) acc[pType] = [];
+                acc[pType].push(nota);
+                return acc;
+            }, {} as Record<ProjectType, Nota[]>);
 
-                // 2. Generate Perincian
-                const perincianGrouped = sortedNotas.reduce((acc, nota) => {
-                    const seg = nota.segmen;
-                    if (!acc[seg]) acc[seg] = [];
-                    acc[seg].push(nota);
-                    return acc;
-                }, {} as Record<string, Nota[]>);
+            const projectTypes = Object.keys(groupedByProject).sort() as ProjectType[];
 
-                for (const segment of Object.keys(perincianGrouped).sort()) {
-                    const notasInSegment = perincianGrouped[segment];
-                    if (notasInSegment.length === 0) continue;
-                    let segmentHtml = '';
-                    const title = `Perincian Nota ${segment} - ${selectedSA === 'all' ? 'Semua SA' : selectedSA}`;
+            for (const projectType of projectTypes) {
+                const notasForProject = groupedByProject[projectType];
+                const reportSA = selectedSA === 'all' ? 'SEMUA SA' : selectedSA;
+
+                // --- 1. Rekapitulasi ---
+                if (reportType === 'all' || reportType === 'rekap') {
+                    const rekapHtml = generateRekapitulasiReport(notasForProject, reportSA, projectType);
+                    pages.push(rekapHtml);
+                }
+
+                // --- 2. Perincian ---
+                if (reportType === 'all' || reportType === 'perincian') {
+                    const perincianGroupedBySegment = notasForProject.reduce((acc, nota) => {
+                        const seg = nota.segmen;
+                        if (!acc[seg]) acc[seg] = [];
+                        acc[seg].push(nota);
+                        return acc;
+                    }, {} as Record<string, Nota[]>);
+                    
+                    for (const segment of Object.keys(perincianGroupedBySegment).sort()) {
+                        const notasInSegment = perincianGroupedBySegment[segment];
+                        if (notasInSegment.length === 0) continue;
+
+                        let segmentHtml = '';
+                        const title = `Perincian Nota ${segment} - ${projectType} - ${reportSA.replace('SA ','')}`;
+                        const bbmR2R4Segments = [
+                            'BBM R2 Harian B2B IOAN', 'BBM R2 Harian PROVISIONING',
+                            'BBM R4 Harian B2B IOAN', 'BBM R4 Harian PROVISIONING',
+                            'BBM R4 Turlap B2B IOAN', 'BBM R4 Turlap PROVISIONING',
+                            'BBM R4 UT B2B IOAN', 'BBM R4 UT PROVISIONING',
+                        ];
+
+                        if (segment === 'jasa' || segment === 'Perincian Nota Pengiriman') {
+                            segmentHtml = generateJasaReport(notasInSegment, title);
+                        } else if (bbmR2R4Segments.includes(segment)) {
+                            segmentHtml = generateBBMReport(notasInSegment, title);
+                        } else {
+                             const modifiedNotas = notasInSegment.map(nota => {
+                                 if (segment === 'BBM Genset') return { ...nota, keterangan: '' };
+                                 return nota;
+                             });
+                            segmentHtml = generateMaterialReport(modifiedNotas, title);
+                        }
+                        pages.push(segmentHtml);
+                    }
+                }
+                
+                // --- 3. Eviden ---
+                if (reportType === 'all' || reportType === 'eviden') {
+                    const evidenGroupedBySegment = notasForProject.reduce((acc, nota) => {
+                        const seg = nota.segmen;
+                        if (!acc[seg]) acc[seg] = [];
+                        acc[seg].push(nota);
+                        return acc;
+                    }, {} as Record<string, Nota[]>);
+
                     const bbmR2R4Segments = [
-                        'BBM R2 Harian B2B IOAN',
-                        'BBM R2 Harian PROVISIONING',
-                        'BBM R4 Harian B2B IOAN',
-                        'BBM R4 Harian PROVISIONING',
-                        'BBM R4 Turlap B2B IOAN',
-                        'BBM R4 Turlap PROVISIONING',
-                        'BBM R4 UT B2B IOAN',
-                        'BBM R4 UT PROVISIONING',
+                        'BBM R2 Harian B2B IOAN', 'BBM R2 Harian PROVISIONING',
+                        'BBM R4 Harian B2B IOAN', 'BBM R4 Harian PROVISIONING',
+                        'BBM R4 Turlap B2B IOAN', 'BBM R4 Turlap PROVISIONING',
+                        'BBM R4 UT B2B IOAN', 'BBM R4 UT PROVISIONING',
                     ];
 
-                    if (segment === 'jasa' || segment === 'Perincian Nota Pengiriman') {
-                        segmentHtml = generateJasaReport(notasInSegment, title);
-                    } else if (bbmR2R4Segments.includes(segment)) {
-                        segmentHtml = generateBBMReport(notasInSegment, title);
-                    } else {
-                         const modifiedNotas = notasInSegment.map(nota => {
-                             if (segment === 'BBM Genset') return { ...nota, keterangan: '' };
-                             return nota;
-                         });
-                        segmentHtml = generateMaterialReport(modifiedNotas, title);
+                    for (const segment of Object.keys(evidenGroupedBySegment).sort()) {
+                        const notasInSegment = evidenGroupedBySegment[segment];
+                        if (notasInSegment.length === 0) continue;
+
+                        let segmentHtml = '';
+                        const title = `Eviden Foto - Perincian Nota ${segment} - ${projectType} - ${reportSA.replace('SA ','')}`;
+
+                        if (bbmR2R4Segments.includes(segment)) {
+                            segmentHtml = generateEvidenReport(notasInSegment, title);
+                        } else {
+                            segmentHtml = generateSimpleEvidenReport(notasInSegment, title);
+                        }
+                        pages.push(segmentHtml);
                     }
-                    pages.push(segmentHtml);
                 }
-
-                // 3. Generate Eviden
-                const evidenGrouped = sortedNotas.reduce((acc, nota) => {
-                    const seg = nota.segmen;
-                    if (!acc[seg]) acc[seg] = [];
-                    acc[seg].push(nota);
-                    return acc;
-                }, {} as Record<string, Nota[]>);
-                 const bbmR2R4Segments = [
-                    'BBM R2 Harian B2B IOAN',
-                    'BBM R2 Harian PROVISIONING',
-                    'BBM R4 Harian B2B IOAN',
-                    'BBM R4 Harian PROVISIONING',
-                    'BBM R4 Turlap B2B IOAN',
-                    'BBM R4 Turlap PROVISIONING',
-                    'BBM R4 UT B2B IOAN',
-                    'BBM R4 UT PROVISIONING',
-                 ];
-
-                for (const segment of Object.keys(evidenGrouped).sort()) {
-                    const notasInSegment = evidenGrouped[segment];
-                    if (notasInSegment.length === 0) continue;
-                    let segmentHtml = '';
-                    const title = `Eviden Foto - Perincian Nota ${segment} - ${selectedSA === 'all' ? 'Semua SA' : selectedSA}`;
-
-                    if (bbmR2R4Segments.includes(segment)) {
-                        segmentHtml = generateEvidenReport(notasInSegment, title);
-                    } else {
-                        segmentHtml = generateSimpleEvidenReport(notasInSegment, title);
-                    }
-                    pages.push(segmentHtml);
-                }
-
-            } else if (reportType === 'rekap') {
-                 const reportSA = selectedSA === 'all' ? 'SEMUA SA' : selectedSA;
-                 const html = generateRekapitulasiReport(sortedNotas, "Rekapitulasi", "", reportSA);
-                 pages.push(html);
-            } else if (reportType === 'perincian') {
-                const groupedBySegment = sortedNotas.reduce((acc, nota) => {
-                    const seg = nota.segmen;
-                    if (!acc[seg]) {
-                        acc[seg] = [];
-                    }
-                    acc[seg].push(nota);
-                    return acc;
-                }, {} as Record<string, Nota[]>);
-
-                for (const segment of Object.keys(groupedBySegment).sort()) {
-                    const notasInSegment = groupedBySegment[segment];
-                    if (notasInSegment.length === 0) continue;
-
-                    let segmentHtml = '';
-                    const title = `Perincian Nota ${segment} - ${selectedSA === 'all' ? 'Semua SA' : selectedSA}`;
-                    const bbmR2R4Segments = [
-                        'BBM R2 Harian B2B IOAN',
-                        'BBM R2 Harian PROVISIONING',
-                        'BBM R4 Harian B2B IOAN',
-                        'BBM R4 Harian PROVISIONING',
-                        'BBM R4 Turlap B2B IOAN',
-                        'BBM R4 Turlap PROVISIONING',
-                        'BBM R4 UT B2B IOAN',
-                        'BBM R4 UT PROVISIONING',
-                    ];
-
-
-                    if (segment === 'jasa' || segment === 'Perincian Nota Pengiriman') {
-                        segmentHtml = generateJasaReport(notasInSegment, title);
-                    } else if (bbmR2R4Segments.includes(segment)) {
-                        segmentHtml = generateBBMReport(notasInSegment, title);
-                    } else { // All other material-like reports
-                         const modifiedNotas = notasInSegment.map(nota => {
-                             if (segment === 'BBM Genset') return { ...nota, keterangan: '' };
-                             return nota;
-                         });
-                        segmentHtml = generateMaterialReport(modifiedNotas, title);
-                    }
-                    pages.push(segmentHtml);
-                }
-            } else if (reportType === 'eviden') {
-                const groupedBySegment = sortedNotas.reduce((acc, nota) => {
-                    const seg = nota.segmen;
-                    if (!acc[seg]) {
-                        acc[seg] = [];
-                    }
-                    acc[seg].push(nota);
-                    return acc;
-                }, {} as Record<string, Nota[]>);
-
-                const bbmR2R4Segments = [
-                    'BBM R2 Harian B2B IOAN',
-                    'BBM R2 Harian PROVISIONING',
-                    'BBM R4 Harian B2B IOAN',
-                    'BBM R4 Harian PROVISIONING',
-                    'BBM R4 Turlap B2B IOAN',
-                    'BBM R4 Turlap PROVISIONING',
-                    'BBM R4 UT B2B IOAN',
-                    'BBM R4 UT PROVISIONING',
-                ];
-
-                for (const segment of Object.keys(groupedBySegment).sort()) {
-                    const notasInSegment = groupedBySegment[segment];
-                    if (notasInSegment.length === 0) continue;
-
-                    let segmentHtml = '';
-                    const title = `Eviden Foto - Perincian Nota ${segment} - ${selectedSA === 'all' ? 'Semua SA' : selectedSA}`;
-
-                    if (bbmR2R4Segments.includes(segment)) {
-                        segmentHtml = generateEvidenReport(notasInSegment, title);
-                    } else {
-                        segmentHtml = generateSimpleEvidenReport(notasInSegment, title);
-                    }
-                    pages.push(segmentHtml);
-                }
-            } else {
-                 toast({ variant: "destructive", title: "Tipe Laporan Tidak Didukung" });
             }
+
 
             if (pages.length > 0) {
                 setReportPages(pages);
