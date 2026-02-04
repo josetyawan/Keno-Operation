@@ -110,26 +110,27 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
+                <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
             </tr>
         `;
     }).join('');
-
-    let projectName = `IF SEMARANG - SMG OPR - Ops ${projectType} Service Area ${saShort}`;
-    if (projectType === 'SPPG') {
-        projectName = `IF SEMARANG - SMG OPR - Ops SPPG Service Area ${saShort}`;
-    }
-
+    
+    const projectName = `IF SEMARANG - SMG OPR - Ops ${projectType} Service Area ${saShort}`;
     const idProjectDisplay = projectType === 'B2B IOAN' ? 'TIF-215/2026' : (projectType === 'PROVISIONING' ? 'TIF-32/2026' : (projectType === 'SPPG' ? 'PPR-38/2025' : '-'));
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 10pt; padding: 0; width: 100%; height: 100%; box-sizing: border-box; display: flex; flex-direction: column;">
         
-        <div style="font-size: 11pt; font-weight: bold;">
-            <p style="margin: 0;">PT. TELKOM AKSES</p>
-            <p style="margin: 0;">FINANCE REGIONAL III</p>
+        <div style="display: table; width: 100%; margin-bottom: 1rem;">
+          <div style="display: table-cell; vertical-align: top; font-size: 11pt; font-weight: bold;">
+              PT. TELKOM AKSES<br/>
+              FINANCE REGIONAL III
+          </div>
+          <div style="display: table-cell; vertical-align: middle; text-align: center; font-size: 11pt; font-weight: bold; text-decoration: underline;">
+              REKAP PERTANGGUNGAN IMPREST FUND / PANJAR KERJA *)
+          </div>
         </div>
-        <p style="text-align: center; font-size: 11pt; font-weight: bold; text-decoration: underline; margin-top: -2rem; margin-bottom: 1rem;">REKAP PERTANGGUNGAN IMPREST FUND / PANJAR KERJA *)</p>
         
         <table style="font-size: 10pt; margin-bottom: 1rem;">
             <tr><td style="padding-right: 8px;">Unit Kerja</td><td>: Direktorat Operation</td></tr>
