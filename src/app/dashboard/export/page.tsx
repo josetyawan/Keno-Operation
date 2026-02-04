@@ -265,11 +265,13 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
         saShort = '';
     }
 
+    const areaTitle = saShort ? `SERVICE AREA ${saShort.toUpperCase()}` : '';
+
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; background-color: white; page-break-inside: avoid;">
         <div style="text-align: center; font-weight: bold; line-height: 1.2;">
             <p style="margin: 0; font-size: 12pt; text-decoration: underline;">PERTANGGUNGAN OPERASIONAL</p>
-            <p style="margin: 0; font-size: 12pt;">${saShort.toUpperCase()}</p>
+            <p style="margin: 0; font-size: 12pt;">${areaTitle}</p>
             <p style="margin: 0; font-size: 12pt;">PEKERJAAN: ${pekerjaan.toUpperCase()}</p>
             <p style="margin: 0; font-size: 12pt;">ID PROJECT: ${idProject}</p>
         </div>
