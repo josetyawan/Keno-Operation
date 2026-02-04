@@ -98,7 +98,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${format(nota.tanggal.toDate(), 'dd/MM/yyyy')}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${index + 1}</td>
                 <td style="border: 1px solid black; padding: 2px 4px;">${nota.segmen}</td>
-                <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
+                <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">-</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">-</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
             </tr>
@@ -203,7 +203,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
                 <tfoot>
                     <tr style="font-weight: bold;">
                         <td colspan="4" style="border: 1px solid black; padding: 2px 4px; text-align: center;">JUMLAH</td>
-                        <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
+                        <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">-</td>
                         <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">-</td>
                         <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
                     </tr>
@@ -938,32 +938,6 @@ export default function ExportPage() {
                         const coverHtml = generateImprestFundCover(notasForProject, reportSA, projectType);
                         pages.push({ html: coverHtml, orientation: 'landscape' });
                     }
-                    // Eviden BBM
-                    const bbmR2R4Segments = [
-                        'BBM R2 Harian B2B IOAN', 'BBM R2 Harian PROVISIONING',
-                        'BBM R4 Harian B2B IOAN', 'BBM R4 Harian PROVISIONING',
-                        'BBM R4 Turlap B2B IOAN', 'BBM R4 Turlap PROVISIONING',
-                        'BBM R4 UT B2B IOAN', 'BBM R4 UT PROVISIONING',
-                    ];
-                    const bbmNotas = notasForProject.filter(n => bbmR2R4Segments.includes(n.segmen));
-                    const evidenGroupedBySegment = bbmNotas.reduce((acc, nota) => {
-                        const seg = nota.segmen;
-                        if (!acc[seg]) acc[seg] = [];
-                        acc[seg].push(nota);
-                        return acc;
-                    }, {} as Record<string, Nota[]>);
-                    
-                    for (const segment of Object.keys(evidenGroupedBySegment).sort()) {
-                        const notasInSegment = evidenGroupedBySegment[segment];
-                        if (notasInSegment.length === 0) continue;
-                        
-                        const projectTitlePart = projectType === 'Lainnya' ? '' : projectType + ' - ';
-                        const saTitlePart = reportSA.replace(/^SA /, '') === 'SEMUA SA' ? 'SEMUA' : reportSA.replace(/^SA /, '');
-                        const title = `Eviden Foto - Perincian Nota ${segment} - ${projectTitlePart}${saTitlePart}`;
-                        
-                        const segmentHtml = generateEvidenReport(notasInSegment, title);
-                        pages.push({ html: segmentHtml, orientation: 'landscape' });
-                    }
                 }
 
                 // Portrait pages
@@ -1010,13 +984,35 @@ export default function ExportPage() {
                         pages.push({ html: segmentHtml, orientation: 'portrait' });
                     }
 
-                    // Eviden (non-BBM)
+                    // Eviden Foto BBM (now in portrait)
                     const bbmR2R4Segments = [
                         'BBM R2 Harian B2B IOAN', 'BBM R2 Harian PROVISIONING',
                         'BBM R4 Harian B2B IOAN', 'BBM R4 Harian PROVISIONING',
                         'BBM R4 Turlap B2B IOAN', 'BBM R4 Turlap PROVISIONING',
                         'BBM R4 UT B2B IOAN', 'BBM R4 UT PROVISIONING',
                     ];
+                    const bbmNotas = notasForProject.filter(n => bbmR2R4Segments.includes(n.segmen));
+                    const evidenGroupedBySegmentBBM = bbmNotas.reduce((acc, nota) => {
+                        const seg = nota.segmen;
+                        if (!acc[seg]) acc[seg] = [];
+                        acc[seg].push(nota);
+                        return acc;
+                    }, {} as Record<string, Nota[]>);
+                    
+                    for (const segment of Object.keys(evidenGroupedBySegmentBBM).sort()) {
+                        const notasInSegment = evidenGroupedBySegmentBBM[segment];
+                        if (notasInSegment.length === 0) continue;
+                        
+                        const projectTitlePart = projectType === 'Lainnya' ? '' : projectType + ' - ';
+                        const saTitlePart = reportSA.replace(/^SA /, '') === 'SEMUA SA' ? 'SEMUA' : reportSA.replace(/^SA /, '');
+                        const title = `Eviden Foto - Perincian Nota ${segment} - ${projectTitlePart}${saTitlePart}`;
+                        
+                        const segmentHtml = generateEvidenReport(notasInSegment, title);
+                        pages.push({ html: segmentHtml, orientation: 'portrait' });
+                    }
+
+
+                    // Eviden (non-BBM)
                     const nonBbmNotas = notasForProject.filter(n => !bbmR2R4Segments.includes(n.segmen));
                      const evidenGroupedBySegment = nonBbmNotas.reduce((acc, nota) => {
                         const seg = nota.segmen;
@@ -1310,11 +1306,11 @@ export default function ExportPage() {
                         <div className="max-w-4xl mx-auto flex justify-around items-center gap-4">
                             <Button variant="outline" size="lg" onClick={() => handleGenerateReport('landscape')} disabled={isGenerating || selectedNotaIds.length === 0}>
                                 {isGenerating ? <Loader2 className="mr-2 animate-spin"/> : <FileArchive className="mr-2" />}
-                                Cetak Laporan Lanskap
+                                Cetak Cover (Lanskap)
                             </Button>
                             <Button size="lg" onClick={() => handleGenerateReport('portrait')} disabled={isGenerating || selectedNotaIds.length === 0}>
                                 {isGenerating ? <Loader2 className="mr-2 animate-spin"/> : <Printer className="mr-2" />}
-                                Cetak Laporan Potret
+                                Cetak Rincian (Potret)
                             </Button>
                         </div>
                     </div>
