@@ -93,22 +93,31 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
     let grandTotal = 0;
     const tableRows = notas.map((nota, index) => {
         grandTotal += nota.nominal;
+        const pphValue = nota.segmen.toLowerCase().includes('jasa') ? (nota.nominal - (nota.nominal / 1.02)) : 0;
+        const bayarKeMitra = nota.nominal - pphValue;
+
         return `
             <tr>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${index + 1}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${format(nota.tanggal.toDate(), 'dd/MM/yyyy')}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${index + 1}</td>
-                <td style="border: 1px solid black; padding: 2px 4px;">${nota.segmen}</td>
+                <td style="border: 1px solid black; padding: 2px 4px;">${nota.keterangan || nota.namaBarang || nota.segmen}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${idProjectDisplay}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
+                <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">-</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
-                <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
-                <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
-                <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
+                <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${pphValue > 0 ? pphValue.toLocaleString('id-ID') : '-'}</td>
+                <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${bayarKeMitra.toLocaleString('id-ID')}</td>
             </tr>
         `;
     }).join('');
+    
+    const totalPph = notas.reduce((acc, nota) => {
+        const pph = nota.segmen.toLowerCase().includes('jasa') ? (nota.nominal - (nota.nominal / 1.02)) : 0;
+        return acc + pph;
+    }, 0);
+    const totalBayar = grandTotal - totalPph;
     
     const rekapTableContent = `
         <tr>
@@ -118,110 +127,144 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
             <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
             <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
             <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
-            <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
-            <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
+            <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${totalPph > 0 ? totalPph.toLocaleString('id-ID') : '-'}</td>
+            <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${totalBayar.toLocaleString('id-ID')}</td>
         </tr>
          <tr style="font-weight: bold;">
             <td colspan="3" style="border: 1px solid black; padding: 2px 4px;">JUMLAH</td>
             <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
             <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
             <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
-            <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
-            <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
+            <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${totalPph > 0 ? totalPph.toLocaleString('id-ID') : '-'}</td>
+            <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${totalBayar.toLocaleString('id-ID')}</td>
         </tr>
     `;
 
-    const signatureTable = `
-      <table style="width: 100%; text-align: center; font-size: 10pt; table-layout: fixed; margin-top: 2rem;">
-          <tr>
-              <td style="width: 33.3%;">Mengetahui<br/>Pemilik Anggaran,</td>
-              <td style="width: 33.3%;">Mengetahui<br/>Pengelola IF / Panjar,</td>
-              <td style="width: 33.3%;">Semarang, ${formattedDate}<br/>Dibuat/Diajukan oleh,</td>
-          </tr>
-          <tr>
-              <td style="height: 60px;"></td>
-              <td></td>
-              <td></td>
-          </tr>
-          <tr>
-              <td style="text-decoration: underline; font-weight: bold;">( . . . . . . . . . . . . . . . )</td>
-              <td style="text-decoration: underline; font-weight: bold;">( . . . . . . . . . . . . . . . )</td>
-              <td style="text-decoration: underline; font-weight: bold;">( . . . . . . . . . . . . . . . )</td>
-          </tr>
+      const signatureTable = `
+      <table style="width: 100%; text-align: center; font-size: 8pt; table-layout: fixed; margin-top: 2rem; border-collapse: collapse;">
+          <tbody>
+              <!-- Row 1: Top titles -->
+              <tr>
+                  <td colspan="2" style="vertical-align: top;">Mengetahui<br/>Pemilik Anggaran,</td>
+                  <td colspan="2" style="vertical-align: top;">Mengetahui<br/>Pengelola IF / Panjar,</td>
+                  <td colspan="2" style="vertical-align: top;">Semarang, ${formattedDate}<br/>Dibuat/Diajukan oleh,</td>
+              </tr>
+              <!-- Row 2: Spacer -->
+              <tr><td colspan="6" style="height: 60px;"></td></tr>
+              <!-- Row 3: Top names -->
+              <tr>
+                  <td colspan="2" style="font-weight: bold; text-decoration: underline;">GALIH AJI KUSUMAH</td>
+                  <td colspan="2" style="font-weight: bold; text-decoration: underline;">MUHAMMAD IKSAN</td>
+                  <td colspan="2" style="font-weight: bold; text-decoration: underline;">DESSY WAHYUNINGTIAS</td>
+              </tr>
+              <!-- Row 4: Top job titles -->
+              <tr>
+                  <td colspan="2">MGR BRANCH SEMARANG</td>
+                  <td colspan="2">MGR SHARED SERVICE REGIONAL JAWA TENGAH & DIY</td>
+                  <td colspan="2">OFF3 BUSINESS SUPPORT SEMARANG</td>
+              </tr>
+              <!-- Row 5: Spacer -->
+              <tr><td colspan="6" style="height: 20px;"></td></tr>
+              <!-- Row 6: Middle titles -->
+              <tr>
+                  <td colspan="3" style="vertical-align: top;">Menyetujui,<br/>Penanggung Jawab IF</td>
+                  <td colspan="3" style="vertical-align: top;">Mengetahui<br/>Pengelola IF</td>
+              </tr>
+              <!-- Row 7: Spacer -->
+              <tr><td colspan="6" style="height: 60px;"></td></tr>
+              <!-- Row 8: Middle names -->
+              <tr>
+                  <td colspan="3" style="font-weight: bold; text-decoration: underline;">HENRY SOEDIDARMA</td>
+                  <td colspan="3" style="font-weight: bold; text-decoration: underline;">ARIZA ARBAATUS SOLIHA</td>
+              </tr>
+              <!-- Row 9: Middle job titles -->
+              <tr>
+                  <td colspan="3">GM REGIONAL JAWA TENGAH DIY</td>
+                  <td colspan="3">MGR BUSINESS SUPPORT AREA JAWA BALI</td>
+              </tr>
+              <!-- Row 10: Spacer -->
+              <tr><td colspan="6" style="height: 20px;"></td></tr>
+               <!-- Row 11: DOC ID -->
+              <tr>
+                  <td colspan="2" style="text-align: left;">
+                      <div style="border: 1px solid black; padding: 8px; display: inline-block; font-weight: bold;">
+                          DOC ID :
+                      </div>
+                  </td>
+                  <td colspan="4"></td>
+              </tr>
+          </tbody>
       </table>
   `;
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 9pt; width: 100%; box-sizing: border-box; page-break-inside: avoid;">
+        <div style="text-align: left; font-size: 11pt; font-weight: bold;">
+            PT. TELKOM AKSES<br/>
+            FINANCE REGIONAL III
+        </div>
+        <div style="text-align: center; font-size: 11pt; font-weight: bold; text-decoration: underline; margin-top: 1rem; margin-bottom: 1rem;">
+            REKAP PERTANGGUNGAN IMPREST FUND / PANJAR KERJA *)
+        </div>
         
-        <div>
-            <div style="text-align: left; font-size: 11pt; font-weight: bold;">
-                PT. TELKOM AKSES<br/>
-                FINANCE REGIONAL III
-            </div>
-            <div style="text-align: center; font-size: 11pt; font-weight: bold; text-decoration: underline; margin-top: 1rem; margin-bottom: 1rem;">
-                REKAP PERTANGGUNGAN IMPREST FUND / PANJAR KERJA *)
-            </div>
-            
-            <table style="font-size: 10pt; margin-bottom: 1rem; width: 100%;">
-                <tr><td style="width: 15%;">Unit Kerja</td><td>: Direktorat Operation</td></tr>
-                <tr><td>Cost Center</td><td>: TA03J08 - Semarang</td></tr>
-                <tr><td>Nama Project</td><td>: ${projectName}</td></tr>
-            </table>
+        <table style="font-size: 10pt; margin-bottom: 1rem; width: 100%;">
+            <tr><td style="width: 15%;">Unit Kerja</td><td>: Direktorat Operation</td></tr>
+            <tr><td>Cost Center</td><td>: TA03J08 - Semarang</td></tr>
+            <tr><td>Nama Project</td><td>: ${projectName}</td></tr>
+        </table>
 
-            <table style="width: 100%; border-collapse: collapse; font-size: 8pt; margin-bottom: 0.5rem;">
-                <thead style="background-color: #DDEBF7; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
-                    <tr>
-                        <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">No. Urut</th>
-                        <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">TANGGAL</th>
-                        <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">No. Kuitansi</th>
-                        <th rowspan="2" style="border: 1px solid black; padding: 4px; width: 20%; vertical-align: middle;">URAIAN</th>
-                        <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">ID PROJECT</th>
-                        <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">No. Akun</th>
-                        <th colspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">NILAI PERTANGGUNGAN</th>
-                        <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">NILAI KUITANSI</th>
-                        <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">PPh 21, 23 / 4(2) *)<br/>(Dipotong Pihak III)</th>
-                        <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">BAYAR KE MITRA</th>
-                    </tr>
-                    <tr>
-                        <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">PPN (Disetor Mitra)</th>
-                        <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">DPP</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${tableRows}
-                </tbody>
-                <tfoot>
-                    <tr style="font-weight: bold;">
-                        <td colspan="6" style="border: 1px solid black; padding: 2px 4px; text-align: center;">JUMLAH</td>
-                        <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
-                        <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
-                        <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
-                        <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
-                        <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
-                    </tr>
-                </tfoot>
-            </table>
+        <table style="width: 100%; border-collapse: collapse; font-size: 8pt; margin-bottom: 0.5rem;">
+            <thead style="background-color: #DDEBF7; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                <tr>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">No. Urut</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">TANGGAL</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">No. Kuitansi</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px; width: 20%; vertical-align: middle;">URAIAN</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">ID PROJECT</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">No. Akun</th>
+                    <th colspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">NILAI PERTANGGUNGAN</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">NILAI KUITANSI</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">PPh 21, 23 / 4(2) *)<br/>(Dipotong Pihak III)</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px; vertical-align: middle;">BAYAR KE MITRA</th>
+                </tr>
+                <tr>
+                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">PPN (Disetor Mitra)</th>
+                    <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">DPP</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${tableRows}
+            </tbody>
+            <tfoot>
+                <tr style="font-weight: bold;">
+                    <td colspan="6" style="border: 1px solid black; padding: 2px 4px; text-align: center;">JUMLAH</td>
+                    <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">-</td>
+                    <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
+                    <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
+                    <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${totalPph > 0 ? totalPph.toLocaleString('id-ID') : '-'}</td>
+                    <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${totalBayar.toLocaleString('id-ID')}</td>
+                </tr>
+            </tfoot>
+        </table>
 
-             <div style="margin-top: 1rem; display: flex; justify-content: space-between; align-items: flex-start;">
-                <div style="width: 50%;">
-                    <table style="font-size: 10pt;">
-                        <tr><td style="padding-right: 8px;">No. Dokumen</td><td>: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/KU/TA-0203/SMG/02-2026</td></tr>
-                        <tr><td style="padding-right: 8px;">Berkas diterima tanggal</td><td>: ${formattedDate}</td></tr>
-                        <tr><td style="padding-right: 8px;">Berkas lengkap tanggal</td><td>: ${formattedDate}</td></tr>
-                    </table>
-                </div>
-                <div style="width: 48%;">
-                    <table style="width: 100%; border-collapse: collapse; font-size: 8pt;">
-                        <thead style="background-color: #DDEBF7; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
-                            <tr><th colspan="8" style="border: 1px solid black; padding: 2px 4px; text-align: left;">REKAP:</th></tr>
-                            <tr>
-                                ${['No.', 'ID PROJECT', 'AKUN', 'JUMLAH', 'PPN', 'NILAI KUITANSI', 'PPh', 'BAYAR KE MITRA'].map(h => `<th style="border: 1px solid black; padding: 2px 4px; font-weight: bold;">${h}</th>`).join('')}
-                            </tr>
-                        </thead>
-                        <tbody>${rekapTableContent}</tbody>
-                    </table>
-                </div>
+         <div style="margin-top: 1rem; display: flex; justify-content: space-between; align-items: flex-start;">
+            <div style="width: 50%;">
+                <table style="font-size: 10pt;">
+                    <tr><td style="padding-right: 8px;">No. Dokumen</td><td>: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/KU/TA-0203/SMG/02-2026</td></tr>
+                    <tr><td style="padding-right: 8px;">Berkas diterima tanggal</td><td>: ${formattedDate}</td></tr>
+                    <tr><td style="padding-right: 8px;">Berkas lengkap tanggal</td><td>: ${formattedDate}</td></tr>
+                </table>
+            </div>
+            <div style="width: 48%;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 8pt;">
+                    <thead style="background-color: #DDEBF7; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                        <tr><th colspan="8" style="border: 1px solid black; padding: 2px 4px; text-align: left;">REKAP:</th></tr>
+                        <tr>
+                            ${['No.', 'ID PROJECT', 'AKUN', 'JUMLAH', 'PPN', 'NILAI KUITANSI', 'PPh', 'BAYAR KE MITRA'].map(h => `<th style="border: 1px solid black; padding: 2px 4px; font-weight: bold;">${h}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>${rekapTableContent}</tbody>
+                </table>
             </div>
         </div>
         
@@ -667,34 +710,36 @@ function ReportPreview({
     <>
       <style>{`
         @media print {
-          body > *:not(#print-section) {
-            display: none !important;
-          }
-          
-          #print-section-container {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            margin: 0;
-            padding: 0;
-          }
-
-          .printable-page {
-            box-shadow: none !important;
-            border: none !important;
-            margin: 0 !important;
-            padding: 1cm !important;
-            box-sizing: border-box;
-            width: auto !important;
-            height: auto !important;
-            min-height: 0 !important;
-            page-break-after: always;
-          }
-
-          .printable-page:last-child {
-            page-break-after: auto;
-          }
+            body > *:not(#print-section-container) {
+                display: none !important;
+            }
+            #print-section-container {
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100% !important;
+                height: auto !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            #print-section {
+                margin: 0 !important;
+                padding: 0 !important;
+                background-color: white !important;
+            }
+            .printable-page {
+                box-shadow: none !important;
+                border: none !important;
+                margin: 0 !important;
+                width: 100% !important;
+                height: auto !important;
+                min-height: 0 !important;
+                page-break-after: always;
+                box-sizing: border-box;
+            }
+            .printable-page:last-child {
+                page-break-after: auto;
+            }
         }
       `}</style>
       <div className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4 print:p-0 print:bg-white" id="print-section-container">
