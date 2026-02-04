@@ -645,29 +645,67 @@ function ReportPreview({
   onClose: () => void;
 }) {
 
+  // Helper function to trigger the print dialog and clean up
+  const triggerPrint = (printIframe: HTMLIFrameElement) => {
+      try {
+        printIframe.contentWindow?.focus();
+        printIframe.contentWindow?.print();
+      } catch (e) {
+        console.error('Print failed:', e);
+        toast({
+            variant: "destructive",
+            title: "Gagal Mencetak",
+            description: "Terjadi kesalahan saat membuka dialog cetak.",
+        });
+      } finally {
+        // A short delay before removing the iframe can help ensure browser compatibility
+        setTimeout(() => {
+            if (document.body.contains(printIframe)) {
+                document.body.removeChild(printIframe);
+            }
+        }, 1000);
+      }
+  };
+
   const handlePrint = () => {
+    // The orientation is consistent for all pages passed to this component.
     const orientation = pages.length > 0 ? pages[0].orientation : 'portrait';
 
     const printIframe = document.createElement('iframe');
-    printIframe.style.display = 'none';
+    // Keep it off-screen but not display:none as some browsers have issues
+    printIframe.style.position = 'absolute';
+    printIframe.style.width = '0px';
+    printIframe.style.height = '0px';
+    printIframe.style.left = '-9999px';
     document.body.appendChild(printIframe);
 
     const iframeDoc = printIframe.contentWindow?.document;
     if (!iframeDoc) {
+      console.error('Could not access iframe document.');
       document.body.removeChild(printIframe);
+      toast({
+        variant: 'destructive',
+        title: 'Gagal Mempersiapkan Cetak',
+        description: 'Tidak dapat membuat dokumen cetak.'
+      });
       return;
     }
 
     const allPagesHtml = pages.map(page =>
-        '<div style="page-break-after: always;">' + page.html + '</div>'
+        `<div style="page-break-after: always;">${page.html}</div>`
     ).join('');
 
     const printStyles = `
-        @page { size: A4 ${orientation}; margin: 1cm; }
-        body { margin: 0; }
+        @page {
+          size: A4 ${orientation};
+          margin: 1cm;
+        }
+        body {
+          margin: 0;
+        }
         * {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
         }
     `;
 
@@ -677,20 +715,37 @@ function ReportPreview({
     iframeDoc.write(htmlContent);
     iframeDoc.close();
 
-    setTimeout(() => {
-      try {
-        printIframe.contentWindow?.focus();
-        printIframe.contentWindow?.print();
-      } catch (e) {
-        console.error('Print failed:', e);
-      } finally {
-        if (document.body.contains(printIframe)) {
-            document.body.removeChild(printIframe);
-        }
-      }
-    }, 1500); // Increased timeout for image loading
-  };
+    // --- NEW ROBUST LOGIC: Wait for all images to load ---
+    const images = Array.from(iframeDoc.getElementsByTagName('img'));
+    
+    if (images.length === 0) {
+        // No images, print immediately
+        triggerPrint(printIframe);
+        return;
+    }
 
+    const imageLoadPromises = images.map(img => {
+      return new Promise<void>((resolve) => {
+        // If image is already loaded from cache, resolve immediately
+        if (img.complete && img.naturalHeight !== 0) {
+          resolve();
+        } else {
+          // Otherwise, wait for the load or error event
+          img.onload = () => resolve();
+          // Important: also resolve on error so one broken image doesn't stop the entire print job
+          img.onerror = () => {
+            console.warn(`Could not load image for printing: ${img.src}`);
+            resolve();
+          };
+        }
+      });
+    });
+
+    // When all image promises have resolved (or failed), trigger the print dialog
+    Promise.all(imageLoadPromises).then(() => {
+        triggerPrint(printIframe);
+    });
+  };
 
   return (
     <div id="print-section-container" className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4">
@@ -849,7 +904,7 @@ export default function ExportPage() {
                 return !isNaN(d.getTime()) ? d.getTime() : 0;
             }
             if (date instanceof Date) { // JavaScript Date
-                return !isNaN(date.getTime()) ? date.getTime() : 0;
+                return !isNaN(date.getTime()) ? d.getTime() : 0;
             }
             const d = new Date(date); // String date
             return isNaN(d.getTime()) ? 0 : d.getTime();
