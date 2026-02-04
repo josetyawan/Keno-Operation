@@ -174,7 +174,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
             PT. TELKOM AKSES<br/>
             FINANCE REGIONAL III
         </div>
-        <div style="text-align: center; font-size: 11pt; font-weight: bold; text-decoration: underline; margin-top: 1rem; margin-bottom: 1rem;">
+        <div style="text-align: center; font-size: 11pt; font-weight: bold; margin-top: 1rem; margin-bottom: 1rem;">
             REKAP PERTANGGUNGAN IMPREST FUND / PANJAR KERJA *)
         </div>
         
@@ -270,7 +270,7 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; background-color: white; page-break-inside: avoid;">
         <div style="text-align: center; font-weight: bold; line-height: 1.2;">
-            <p style="margin: 0; font-size: 12pt; text-decoration: underline;">PERTANGGUNGAN OPERASIONAL</p>
+            <p style="margin: 0; font-size: 12pt;">PERTANGGUNGAN OPERASIONAL</p>
             <p style="margin: 0; font-size: 12pt;">${areaTitle}</p>
             <p style="margin: 0; font-size: 12pt;">PEKERJAAN: ${pekerjaan.toUpperCase()}</p>
             <p style="margin: 0; font-size: 12pt;">ID PROJECT: ${idProject}</p>
@@ -587,7 +587,7 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 9pt; background-color: white; page-break-inside: avoid;">
-        <h2 style="text-align: left; font-size: 14pt; margin: 0; font-weight: bold; text-decoration: underline; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${title}</h2>
+        <h2 style="text-align: left; font-size: 14pt; margin: 0; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${title}</h2>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 1px solid black; font-size: 8pt;">
             <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
