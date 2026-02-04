@@ -86,25 +86,20 @@ const getStatusVariant = (status: Nota['status']): VariantProps<typeof badgeVari
 const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectType: ProjectType): string => {
     const today = new Date();
     const formattedDate = format(today, 'dd/MM/yyyy');
+    const saShort = serviceArea.replace('SA ', '');
+    const projectName = `IF SEMARANG - SMG OPR - Ops ${projectType} Service Area ${saShort}`;
+    const idProjectDisplay = projectType === 'B2B IOAN' ? 'TIF-215/2026' : (projectType === 'PROVISIONING' ? 'TIF-32/2026' : (projectType === 'SPPG' ? 'PPR-38/2025' : '-'));
 
     let grandTotal = 0;
-
-    const saShort = serviceArea.replace('SA ', '');
-
     const tableRows = notas.map((nota, index) => {
         grandTotal += nota.nominal;
-        let idProject = '-';
-        if (projectType === 'B2B IOAN') idProject = 'TIF-215/2026';
-        else if (projectType === 'PROVISIONING') idProject = 'TIF-32/2026';
-        else if (projectType === 'SPPG') idProject = 'PPR-38/2025';
-
         return `
             <tr>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${index + 1}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${format(nota.tanggal.toDate(), 'dd/MM/yyyy')}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${index + 1}</td>
                 <td style="border: 1px solid black; padding: 2px 4px;">${nota.segmen}</td>
-                <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${idProject}</td>
+                <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${idProjectDisplay}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
@@ -114,12 +109,9 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
             </tr>
         `;
     }).join('');
-    
-    const projectName = `IF SEMARANG - SMG OPR - Ops ${projectType} Service Area ${saShort}`;
-    const idProjectDisplay = projectType === 'B2B IOAN' ? 'TIF-215/2026' : (projectType === 'PROVISIONING' ? 'TIF-32/2026' : (projectType === 'SPPG' ? 'PPR-38/2025' : '-'));
 
     return `
-    <div style="font-family: Arial, sans-serif; color: black; font-size: 10pt; padding: 0; width: 100%; height: 100%; box-sizing: border-box; display: flex; flex-direction: column;">
+    <div style="font-family: Arial, sans-serif; color: black; font-size: 10pt; width: 100%; height: 100%; box-sizing: border-box; display: flex; flex-direction: column;">
         
         <div style="text-align: left; font-size: 11pt; font-weight: bold;">
             PT. TELKOM AKSES<br/>
@@ -129,10 +121,10 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
             REKAP PERTANGGUNGAN IMPREST FUND / PANJAR KERJA *)
         </div>
         
-        <table style="font-size: 10pt; margin-bottom: 1rem;">
-            <tr><td style="padding-right: 8px;">Unit Kerja</td><td>: Direktorat Operation</td></tr>
-            <tr><td style="padding-right: 8px;">Cost Center</td><td>: TA03J08 - Semarang</td></tr>
-            <tr><td style="padding-right: 8px;">Nama Project</td><td>: ${projectName}</td></tr>
+        <table style="font-size: 10pt; margin-bottom: 1rem; width: 100%;">
+            <tr><td style="width: 15%;">Unit Kerja</td><td>: Direktorat Operation</td></tr>
+            <tr><td>Cost Center</td><td>: TA03J08 - Semarang</td></tr>
+            <tr><td>Nama Project</td><td>: ${projectName}</td></tr>
         </table>
 
         <table style="width: 100%; border-collapse: collapse; font-size: 9pt; margin-bottom: 0.5rem;">
@@ -277,7 +269,7 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
             <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <td style="padding: 4px 8px; border: 1px solid black; text-align: center;">${index + 1}</td>
                 <td style="padding: 4px 8px; border: 1px solid black;">${segmen}</td>
-                <td style="padding: 4px 8px; border: 1px solid black; text-align: left;">Rp${data.total.toLocaleString('id-ID')}</td>
+                <td style="padding: 4px 8px; border: 1px solid black; text-align: left;">Rp ${data.total.toLocaleString('id-ID')}</td>
             </tr>
         `;
     }).join('');
@@ -291,26 +283,26 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
     let idProject = '-';
 
     if (projectType === 'B2B IOAN') {
-        pekerjaan = `B2B IOAN SA ${saShort}`;
+        pekerjaan = `B2B IOAN ${saShort}`;
         idProject = 'TIF-215/2026';
     } else if (projectType === 'PROVISIONING') {
-        pekerjaan = `PROVISIONING SA ${saShort}`;
+        pekerjaan = `PROVISIONING ${saShort}`;
         idProject = 'TIF-32/2026';
     } else if (projectType === 'SPPG') {
-        pekerjaan = `SPPG SA ${saShort}`;
+        pekerjaan = `SPPG ${saShort}`;
         idProject = 'PPR-38/2025';
     } else if (projectType === 'BBM GENSET') {
-        pekerjaan = `BBM GENSET SA ${saShort}`;
+        pekerjaan = `BBM GENSET ${saShort}`;
         idProject = 'Ditagihkan ke Unit Lain';
     } else if (serviceArea === 'all') {
         pekerjaan = 'SEMUA SA';
     }
 
     return `
-    <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; padding: 1cm; width: 210mm; min-height: 297mm; background-color: white; box-shadow: 0 0 5px rgba(0,0,0,0.1);">
+    <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; background-color: white;">
         <div style="text-align: center; font-weight: bold; line-height: 1.2;">
             <p style="margin: 0; font-size: 12pt; text-decoration: underline;">PERTANGGUNGAN OPERASIONAL</p>
-            <p style="margin: 0; font-size: 12pt;">SERVICE AREA ${saShort.toUpperCase()}</p>
+            <p style="margin: 0; font-size: 12pt;">${saShort.toUpperCase()}</p>
             <p style="margin: 0; font-size: 12pt;">PEKERJAAN : ${pekerjaan.toUpperCase()}</p>
             <p style="margin: 0; font-size: 12pt;">ID PROJECT : ${idProject}</p>
         </div>
@@ -329,7 +321,7 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
             <tfoot style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                     <td colspan="2" style="padding: 4px 8px; border: 1px solid black; text-align: center;">TOTAL</td>
-                    <td style="padding: 4px 8px; border: 1px solid black; text-align: left;">Rp${grandTotal.toLocaleString('id-ID')}</td>
+                    <td style="padding: 4px 8px; border: 1px solid black; text-align: left;">Rp ${grandTotal.toLocaleString('id-ID')}</td>
                 </tr>
             </tfoot>
         </table>
@@ -381,7 +373,7 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
     const formattedDate = format(today, 'dd MMMM yyyy', { locale: idLocale });
 
     return `
-    <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; padding: 1cm; width: 210mm; min-height: 297mm; background-color: white; box-shadow: 0 0 5px rgba(0,0,0,0.1);">
+    <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; background-color: white;">
         <h2 style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${title}</h2>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
@@ -483,7 +475,7 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
     const formattedDate = format(today, 'dd MMMM yyyy', { locale: idLocale });
 
     return `
-    <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; padding: 1cm; width: 210mm; min-height: 297mm; background-color: white; box-shadow: 0 0 5px rgba(0,0,0,0.1);">
+    <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; background-color: white;">
         <h2 style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${title}</h2>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
@@ -542,7 +534,7 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
     const formattedDate = format(today, 'dd MMMM yyyy', { locale: idLocale });
 
     return `
-    <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; padding: 1cm; width: 210mm; min-height: 297mm; background-color: white; box-shadow: 0 0 5px rgba(0,0,0,0.1);">
+    <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; background-color: white;">
         <h2 style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${title}</h2>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
@@ -625,7 +617,7 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
     const headers = ['No', 'TANGGAL', 'KET', 'NO PLAT', 'SELISIH', 'KM AWAL', 'KM AKHIR', 'KEPERLUAN', 'Eviden KM', 'Eviden KM Awal', 'Eviden KM Akhir', 'PIC', 'Nilai'];
 
     return `
-    <div style="font-family: Arial, sans-serif; color: black; font-size: 9pt; padding: 1cm; width: 210mm; min-height: 297mm; background-color: white; box-shadow: 0 0 5px rgba(0,0,0,0.1);">
+    <div style="font-family: Arial, sans-serif; color: black; font-size: 9pt; background-color: white;">
         <h2 style="text-align: left; font-size: 14pt; margin: 0; font-weight: bold; text-decoration: underline; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${title}</h2>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 1px solid black; font-size: 8pt;">
@@ -663,7 +655,7 @@ const generateSimpleEvidenReport = (notas: Nota[], title: string): string => {
     const headers = ['No', 'Tanggal', 'Keterangan', 'Eviden', 'PIC', 'Nilai'];
 
     return `
-    <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; padding: 1cm; width: 210mm; min-height: 297mm; background-color: white; box-shadow: 0 0 5px rgba(0,0,0,0.1);">
+    <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; background-color: white;">
         <h2 style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${title}</h2>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 1px solid black; font-size: 10pt;">
@@ -746,7 +738,7 @@ function ReportPreview({
                         <div
                             key={index}
                             className="bg-white shadow-lg"
-                            style={page.orientation === 'landscape' ? {width: '297mm', minHeight: '210mm', padding: '0.5cm'} : {width: '210mm', minHeight: '297mm', padding: '1cm'}}
+                            style={page.orientation === 'landscape' ? {width: '297mm', minHeight: '200mm', padding: '0.5cm'} : {width: '210mm', minHeight: '287mm', padding: '1cm'}}
                             dangerouslySetInnerHTML={{ __html: page.html }}
                         />
                     ))}
