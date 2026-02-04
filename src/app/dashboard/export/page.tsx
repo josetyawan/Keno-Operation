@@ -137,15 +137,16 @@ const generateRekapitulasiReport = (notas: Nota[], month: string, year: string, 
                     <p style="margin: 0;">&nbsp;</p>
                     <p style="margin: 0;">Menyetujui,</p>
                     <br/><br/><br/><br/>
-                    <p style="text-decoration: underline; font-weight: bold; margin: 0;">Lutfi Akhmad</p>
-                    <p style="margin: 0;">HSA Kudus</p>
+                    <p style="text-decoration: underline; font-weight: bold; margin: 0;">GALIH AJI KUSUMAH</p>
+                    <p style="margin: 0;">MGR BRANCH SEMARANG</p>
                 </td>
                 <td style="width: 50%; vertical-align: top;">
                     <p style="margin: 0;">Kudus, ${formattedDate}</p>
                     <p style="margin: 0;">Pembuat Rincian</p>
                     <br/><br/><br/><br/>
-                    <p style="text-decoration: underline; font-weight: bold; margin: 0;">Joko Wahyu Setyawan</p>
-                    <p style="margin: 0;">Officer Kudus</p>
+                    <p style="text-decoration: underline; font-weight: bold; margin: 0;">J. WAHYU SETYAWAN</p>
+                    <p style="margin: 0;">Officer 3 Service Area Kudus</p>
+                    <p style="margin: 0;">876858</p>
                 </td>
             </tr>
         </table>
@@ -203,15 +204,16 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
                     <p style="margin: 0;">&nbsp;</p>
                     <p style="margin: 0;">Menyetujui,</p>
                     <br/><br/><br/><br/>
-                    <p style="text-decoration: underline; font-weight: bold; margin: 0;">Lutfi Akhmad</p>
-                    <p style="margin: 0;">HSA Kudus</p>
+                    <p style="text-decoration: underline; font-weight: bold; margin: 0;">GALIH AJI KUSUMAH</p>
+                    <p style="margin: 0;">MGR BRANCH SEMARANG</p>
                 </td>
                 <td style="width: 50%; vertical-align: top;">
                     <p style="margin: 0;">Kudus, ${formattedDate}</p>
                     <p style="margin: 0;">Pembuat Rincian</p>
                     <br/><br/><br/><br/>
-                    <p style="text-decoration: underline; font-weight: bold; margin: 0;">Joko Wahyu Setyawan</p>
-                    <p style="margin: 0;">Officer Kudus</p>
+                    <p style="text-decoration: underline; font-weight: bold; margin: 0;">J. WAHYU SETYAWAN</p>
+                    <p style="margin: 0;">Officer 3 Service Area Kudus</p>
+                    <p style="margin: 0;">876858</p>
                 </td>
             </tr>
         </table>
@@ -300,15 +302,16 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
                     <p style="margin: 0;">&nbsp;</p>
                     <p style="margin: 0;">Menyetujui,</p>
                     <br/><br/><br/><br/>
-                    <p style="text-decoration: underline; font-weight: bold; margin: 0;">Lutfi Akhmad</p>
-                    <p style="margin: 0;">HSA Kudus</p>
+                    <p style="text-decoration: underline; font-weight: bold; margin: 0;">GALIH AJI KUSUMAH</p>
+                    <p style="margin: 0;">MGR BRANCH SEMARANG</p>
                 </td>
                 <td style="width: 50%; vertical-align: top;">
                     <p style="margin: 0;">Kudus, ${formattedDate}</p>
                     <p style="margin: 0;">Pembuat Rincian</p>
                     <br/><br/><br/><br/>
-                    <p style="text-decoration: underline; font-weight: bold; margin: 0;">Joko Wahyu Setyawan</p>
-                    <p style="margin: 0;">Officer Kudus</p>
+                    <p style="text-decoration: underline; font-weight: bold; margin: 0;">J. WAHYU SETYAWAN</p>
+                    <p style="margin: 0;">Officer 3 Service Area Kudus</p>
+                    <p style="margin: 0;">876858</p>
                 </td>
             </tr>
         </table>
@@ -357,15 +360,16 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
                     <p style="margin: 0;">&nbsp;</p>
                     <p style="margin: 0;">Menyetujui,</p>
                     <br/><br/><br/><br/>
-                    <p style="text-decoration: underline; font-weight: bold; margin: 0;">Lutfi Akhmad</p>
-                    <p style="margin: 0;">HSA Kudus</p>
+                    <p style="text-decoration: underline; font-weight: bold; margin: 0;">GALIH AJI KUSUMAH</p>
+                    <p style="margin: 0;">MGR BRANCH SEMARANG</p>
                 </td>
                 <td style="width: 50%; vertical-align: top;">
                     <p style="margin: 0;">Kudus, ${formattedDate}</p>
                     <p style="margin: 0;">Pembuat Rincian</p>
                     <br/><br/><br/><br/>
-                    <p style="text-decoration: underline; font-weight: bold; margin: 0;">Joko Wahyu Setyawan</p>
-                    <p style="margin: 0;">Officer Kudus</p>
+                    <p style="text-decoration: underline; font-weight: bold; margin: 0;">J. WAHYU SETYAWAN</p>
+                    <p style="margin: 0;">Officer 3 Service Area Kudus</p>
+                    <p style="margin: 0;">876858</p>
                 </td>
             </tr>
         </table>
