@@ -110,34 +110,29 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
         <table style="width: 100%; text-align: center; border-collapse: collapse;">
             <tbody>
                 <tr>
-                    <td style="width: 25%;">Mengetahui<br/>Pemilik Anggaran,</td>
-                    <td style="width: 25%;">Mengetahui<br/>Pengelola IF / Panjar,</td>
-                    <td style="width: 25%;"></td>
-                    <td style="width: 25%;">Semarang, ${formattedDate}<br/>Dibuat/Diajukan oleh,</td>
+                    <td style="width: 33.3%;">Mengetahui<br/>Pemilik Anggaran,</td>
+                    <td style="width: 33.3%;">Mengetahui<br/>Pengelola IF / Panjar,</td>
+                    <td style="width: 33.3%;">Semarang, ${formattedDate}<br/>Dibuat/Diajukan oleh,</td>
                 </tr>
                 <tr>
                     <td style="height: 60px;"></td>
                     <td></td>
                     <td></td>
-                    <td></td>
                 </tr>
                 <tr>
-                    <td style="text-decoration: underline; font-weight: bold;">GALIH AJI KUSUMAH</td>
-                    <td style="text-decoration: underline; font-weight: bold;">MUHAMMAD IKSAN</td>
-                    <td></td>
-                    <td style="text-decoration: underline; font-weight: bold;">DESSY WAHYUNINGTIAS</td>
+                    <td style="font-weight: bold;">GALIH AJI KUSUMAH</td>
+                    <td style="font-weight: bold;">MUHAMMAD IKSAN</td>
+                    <td style="font-weight: bold;">DESSY WAHYUNINGTIAS</td>
                 </tr>
                 <tr>
                     <td>MGR BRANCH SEMARANG</td>
                     <td>MGR SHARED SERVICE REGIONAL JAWA TENGAH & DIY</td>
-                    <td></td>
                     <td>OFF3 BUSINESS SUPPORT SEMARANG</td>
                 </tr>
                 <tr>
-                    <td colspan="4" style="height: 20px;"></td>
+                    <td colspan="3" style="height: 20px;"></td>
                 </tr>
                 <tr>
-                    <td></td>
                     <td>Menyetujui,<br/>Penanggung Jawab IF</td>
                     <td>Mengetahui<br/>Pengelola IF</td>
                     <td></td>
@@ -146,25 +141,19 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
                     <td style="height: 60px;"></td>
                     <td></td>
                     <td></td>
-                    <td></td>
                 </tr>
                 <tr>
-                    <td></td>
-                    <td style="text-decoration: underline; font-weight: bold;">HENRY SOEDIDARMA</td>
-                    <td style="text-decoration: underline; font-weight: bold;">ARIZA ARBAATUS SOLIHA</td>
+                    <td style="font-weight: bold;">HENRY SOEDIDARMA</td>
+                    <td style="font-weight: bold;">ARIZA ARBAATUS SOLIHA</td>
                     <td></td>
                 </tr>
                  <tr>
-                    <td></td>
                     <td>GM REGIONAL JAWA TENGAH DIY</td>
                     <td>MGR BUSINESS SUPPORT AREA JAWA BALI</td>
                     <td></td>
                 </tr>
             </tbody>
         </table>
-        <div style="border: 1px solid black; padding: 8px; font-weight: bold; width: 150px; text-align: left; margin-top: 1.5rem;">
-            DOC ID :
-        </div>
     </div>
     `;
 
@@ -186,7 +175,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
 
         <div style="flex-grow: 1;">
             <table style="width: 100%; border-collapse: collapse; font-size: 8pt;">
-                <thead style="background-color: #DDEBF7; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                     <tr>
                         <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">No. Urut</th>
                         <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">TANGGAL</th>
@@ -276,7 +265,7 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
             <p style="margin: 0; font-size: 12pt;">ID PROJECT: ${idProject}</p>
         </div>
         <br/>
-        <table style="width: 100%; border-collapse: collapse; border: 1px solid black;">
+        <table style="width: 100%; border-collapse: collapse; border: 1px solid black; page-break-after: avoid;">
             <thead style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr>
                     <th style="padding: 4px 8px; border: 1px solid black; width: 5%;">NO</th>
@@ -298,20 +287,20 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
             <p style="margin: 0;">Terbilang : (${terbilangText.charAt(0).toUpperCase() + terbilangText.slice(1)} Rupiah)</p>
         </div>
         <br/><br/>
-        <table style="width: 100%; text-align: center; font-size: 11pt;">
+        <table style="width: 100%; text-align: center; font-size: 11pt; page-break-inside: avoid;">
             <tr>
                 <td style="width: 50%; vertical-align: top;">
                     <p style="margin: 0;">&nbsp;</p>
                     <p style="margin: 0;">Menyetujui,</p>
                     <br/><br/><br/><br/>
-                    <p style="text-decoration: underline; font-weight: bold; margin: 0;">GALIH AJI KUSUMAH</p>
+                    <p style="font-weight: bold; margin: 0;">GALIH AJI KUSUMAH</p>
                     <p style="margin: 0;">MGR BRANCH SEMARANG</p>
                 </td>
                 <td style="width: 50%; vertical-align: top;">
                     <p style="margin: 0;">Kudus, ${formattedDate}</p>
                     <p style="margin: 0;">Pembuat Rincian</p>
                     <br/><br/><br/><br/>
-                    <p style="text-decoration: underline; font-weight: bold; margin: 0;">J. WAHYU SETYAWAN</p>
+                    <p style="font-weight: bold; margin: 0;">J. WAHYU SETYAWAN</p>
                     <p style="margin: 0;">Officer 3 Service Area Kudus</p>
                     <p style="margin: 0;">876858</p>
                 </td>
@@ -321,34 +310,58 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
 };
 
 const generateJasaReport = (notas: Nota[], title: string): string => {
+    const groupedByDate = notas.reduce((acc, nota) => {
+        const dateKey = format(nota.tanggal.toDate(), 'yyyy-MM-dd');
+        if (!acc[dateKey]) {
+            acc[dateKey] = [];
+        }
+        acc[dateKey].push(nota);
+        return acc;
+    }, {} as Record<string, Nota[]>);
+
+    const sortedDates = Object.keys(groupedByDate).sort();
+    
     let grandTotal = 0;
-    const tableRows = notas.map((nota, index) => {
-        const dpp = nota.nominal / 1.02;
-        const pph = nota.nominal - dpp;
-        grandTotal += nota.nominal;
-        return `
-        <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
-            <td style="padding: 4px; border: 1px solid black; text-align: center;">${index + 1}</td>
-            <td style="padding: 4px; border: 1px solid black;">${format(nota.tanggal.toDate(), 'dd/MM/yyyy')}</td>
-            <td style="padding: 4px; border: 1px solid black;">${nota.keterangan || nota.namaBarang || '-'}</td>
-            <td style="padding: 4px; border: 1px solid black; text-align: right;">${dpp.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-            <td style="padding: 4px; border: 1px solid black; text-align: right;">${pph.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-            <td style="padding: 4px; border: 1px solid black; text-align: right;">${nota.nominal.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-        </tr>
+    let tableRows = '';
+
+    for (const dateKey of sortedDates) {
+        const notasOnDate = groupedByDate[dateKey];
+        let dateSubtotal = 0;
+
+        for (const nota of notasOnDate) {
+            const dpp = nota.nominal / 1.02;
+            const pph = nota.nominal - dpp;
+            dateSubtotal += nota.nominal;
+            tableRows += `
+            <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                <td style="padding: 4px; border: 1px solid black;">${format(nota.tanggal.toDate(), 'dd/MM/yyyy')}</td>
+                <td style="padding: 4px; border: 1px solid black;">${nota.keterangan || nota.namaBarang || '-'}</td>
+                <td style="padding: 4px; border: 1px solid black; text-align: right;">${dpp.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                <td style="padding: 4px; border: 1px solid black; text-align: right;">${pph.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                <td style="padding: 4px; border: 1px solid black; text-align: right;">${nota.nominal.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+            </tr>
+            `;
+        }
+        grandTotal += dateSubtotal;
+         tableRows += `
+            <tr style="font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                <td colspan="4" style="padding: 4px; border: 1px solid black; text-align: right;">JUMLAH</td>
+                <td style="padding: 4px; border: 1px solid black; text-align: right;">${dateSubtotal.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+            </tr>
         `;
-    }).join('');
+    }
 
     const today = new Date();
     const formattedDate = format(today, 'dd MMMM yyyy', { locale: idLocale });
+    const terbilangText = toWords(grandTotal);
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; background-color: white; page-break-inside: avoid;">
-        <h2 style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${title}</h2>
+        <div style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${title}</div>
         <br/>
-        <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
+        <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt; page-break-after: avoid;">
             <thead style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr>
-                    <th style="padding: 4px; border: 1px solid black; width: 5%;">NO</th>
                     <th style="padding: 4px; border: 1px solid black; width: 10%;">TANGGAL</th>
                     <th style="padding: 4px; border: 1px solid black;">KETERANGAN</th>
                     <th style="padding: 4px; border: 1px solid black; width: 15%;">DPP</th>
@@ -357,28 +370,25 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
                 </tr>
             </thead>
             <tbody>${tableRows}</tbody>
-            <tfoot style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
-                <tr style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
-                    <td colspan="5" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">TOTAL</td>
-                    <td style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">${grandTotal.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                </tr>
-            </tfoot>
         </table>
+         <div style="margin-top: 20px;">
+            <p style="margin: 0;">Terbilang : (${terbilangText.charAt(0).toUpperCase() + terbilangText.slice(1)} Rupiah)</p>
+        </div>
         <br/><br/>
-        <table style="width: 100%; text-align: center; font-size: 11pt;">
+        <table style="width: 100%; text-align: center; font-size: 11pt; page-break-inside: avoid;">
             <tr>
                 <td style="width: 50%; vertical-align: top;">
                     <p style="margin: 0;">&nbsp;</p>
                     <p style="margin: 0;">Menyetujui,</p>
                     <br/><br/><br/><br/>
-                    <p style="text-decoration: underline; font-weight: bold; margin: 0;">GALIH AJI KUSUMAH</p>
+                    <p style="font-weight: bold; margin: 0;">GALIH AJI KUSUMAH</p>
                     <p style="margin: 0;">MGR BRANCH SEMARANG</p>
                 </td>
                 <td style="width: 50%; vertical-align: top;">
                     <p style="margin: 0;">Kudus, ${formattedDate}</p>
                     <p style="margin: 0;">Pembuat Rincian</p>
                     <br/><br/><br/><br/>
-                    <p style="text-decoration: underline; font-weight: bold; margin: 0;">J. WAHYU SETYAWAN</p>
+                    <p style="font-weight: bold; margin: 0;">J. WAHYU SETYAWAN</p>
                     <p style="margin: 0;">Officer 3 Service Area Kudus</p>
                     <p style="margin: 0;">876858</p>
                 </td>
@@ -403,21 +413,18 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
     
     let grandTotal = 0;
     let tableRows = '';
-    let overallIndex = 0;
 
     for (const dateKey of sortedDates) {
         const notasOnDate = groupedByDate[dateKey];
         let dateSubtotal = 0;
 
         for (const nota of notasOnDate) {
-            overallIndex++;
             grandTotal += nota.nominal;
             dateSubtotal += nota.nominal;
             const staticKeterangan = nota.segmen;
 
             tableRows += `
                 <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
-                    <td style="padding: 4px; border: 1px solid black; text-align: center;">${overallIndex}</td>
                     <td style="padding: 4px; border: 1px solid black;">${format(nota.tanggal.toDate(), 'dd-MMM-yy', { locale: idLocale })}</td>
                     <td style="padding: 4px; border: 1px solid black;">${staticKeterangan}</td>
                     <td style="padding: 4px; border: 1px solid black;">${nota.noPlatKendaraan || '-'}</td>
@@ -433,7 +440,7 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
         // Render subtotal row for the date
         tableRows += `
             <tr style="font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
-                <td colspan="7" style="padding: 4px; border: 1px solid black; text-align: right;">JUMLAH</td>
+                <td colspan="6" style="padding: 4px; border: 1px solid black; text-align: right;">JUMLAH</td>
                 <td style="padding: 4px; border: 1px solid black; text-align: right;">Rp${dateSubtotal.toLocaleString('id-ID')}</td>
                 <td style="padding: 4px; border: 1px solid black;"></td>
             </tr>
@@ -442,41 +449,46 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
 
     const today = new Date();
     const formattedDate = format(today, 'dd MMMM yyyy', { locale: idLocale });
+    const terbilangText = toWords(grandTotal);
+
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; background-color: white; page-break-inside: avoid;">
-        <h2 style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${title}</h2>
+        <div style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${title}</div>
         <br/>
-        <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
+        <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt; page-break-after: avoid;">
             <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr>
-                    ${['NO', 'TANGGAL', 'KETERANGAN', 'NO PLAT', 'KM AWAL', 'KM AKHIR', 'URAIAN PEKERJAAN', 'JUMLAH', 'NAMA'].map(h => `<th style="padding: 4px; border: 1px solid black;">${h}</th>`).join('')}
+                    ${['TANGGAL', 'KETERANGAN', 'NO PLAT', 'KM AWAL', 'KM AKHIR', 'URAIAN PEKERJAAN', 'JUMLAH', 'NAMA'].map(h => `<th style="padding: 4px; border: 1px solid black;">${h}</th>`).join('')}
                 </tr>
             </thead>
             <tbody>${tableRows}</tbody>
             <tfoot style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
-                    <td colspan="7" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">TOTAL</td>
+                    <td colspan="6" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">TOTAL</td>
                     <td style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">Rp${grandTotal.toLocaleString('id-ID')}</td>
                     <td style="padding: 4px; border: 1px solid black;"></td>
                 </tr>
             </tfoot>
         </table>
+         <div style="margin-top: 20px;">
+            <p style="margin: 0;">Terbilang : (${terbilangText.charAt(0).toUpperCase() + terbilangText.slice(1)} Rupiah)</p>
+        </div>
         <br/><br/>
-        <table style="width: 100%; text-align: center; font-size: 11pt;">
+        <table style="width: 100%; text-align: center; font-size: 11pt; page-break-inside: avoid;">
             <tr>
                 <td style="width: 50%; vertical-align: top;">
                     <p style="margin: 0;">&nbsp;</p>
                     <p style="margin: 0;">Menyetujui,</p>
                     <br/><br/><br/><br/>
-                    <p style="text-decoration: underline; font-weight: bold; margin: 0;">GALIH AJI KUSUMAH</p>
+                    <p style="font-weight: bold; margin: 0;">GALIH AJI KUSUMAH</p>
                     <p style="margin: 0;">MGR BRANCH SEMARANG</p>
                 </td>
                 <td style="width: 50%; vertical-align: top;">
                     <p style="margin: 0;">Kudus, ${formattedDate}</p>
                     <p style="margin: 0;">Pembuat Rincian</p>
                     <br/><br/><br/><br/>
-                    <p style="text-decoration: underline; font-weight: bold; margin: 0;">J. WAHYU SETYAWAN</p>
+                    <p style="font-weight: bold; margin: 0;">J. WAHYU SETYAWAN</p>
                     <p style="margin: 0;">Officer 3 Service Area Kudus</p>
                     <p style="margin: 0;">876858</p>
                 </td>
@@ -486,55 +498,77 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
 };
 
 const generateMaterialReport = (notas: Nota[], title: string): string => {
+    const groupedByDate = notas.reduce((acc, nota) => {
+        const dateKey = format(nota.tanggal.toDate(), 'yyyy-MM-dd');
+        if (!acc[dateKey]) {
+            acc[dateKey] = [];
+        }
+        acc[dateKey].push(nota);
+        return acc;
+    }, {} as Record<string, Nota[]>);
+    
+    const sortedDates = Object.keys(groupedByDate).sort();
+
     let grandTotal = 0;
-    const tableRows = notas.map((nota, index) => {
-        grandTotal += nota.nominal;
-        return `
-        <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
-            <td style="padding: 4px; border: 1px solid black; text-align: center;">${index + 1}</td>
-            <td style="padding: 4px; border: 1px solid black;">${format(nota.tanggal.toDate(), 'dd/MM/yyyy')}</td>
-            <td style="padding: 4px; border: 1px solid black;">${nota.namaBarang || '-'}</td>
-            <td style="padding: 4px; border: 1px solid black;">${nota.keterangan || '-'}</td>
-            <td style="padding: 4px; border: 1px solid black; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
-        </tr>`;
-    }).join('');
+    let tableRows = '';
+
+    for (const dateKey of sortedDates) {
+        const notasOnDate = groupedByDate[dateKey];
+        let dateSubtotal = 0;
+
+        for (const nota of notasOnDate) {
+            dateSubtotal += nota.nominal;
+            tableRows += `
+            <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                <td style="padding: 4px; border: 1px solid black;">${format(nota.tanggal.toDate(), 'dd/MM/yyyy')}</td>
+                <td style="padding: 4px; border: 1px solid black;">${nota.namaBarang || '-'}</td>
+                <td style="padding: 4px; border: 1px solid black; white-space: normal; word-break: break-all;">${nota.keterangan || '-'}</td>
+                <td style="padding: 4px; border: 1px solid black; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
+            </tr>`;
+        }
+        grandTotal += dateSubtotal;
+        tableRows += `
+            <tr style="font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                <td colspan="3" style="padding: 4px; border: 1px solid black; text-align: right;">JUMLAH</td>
+                <td style="padding: 4px; border: 1px solid black; text-align: right;">${dateSubtotal.toLocaleString('id-ID')}</td>
+            </tr>
+        `;
+    }
 
     const today = new Date();
     const formattedDate = format(today, 'dd MMMM yyyy', { locale: idLocale });
+    const terbilangText = toWords(grandTotal);
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; background-color: white; page-break-inside: avoid;">
-        <h2 style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${title}</h2>
+        <div style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${title}</div>
         <br/>
-        <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
+        <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt; page-break-after: avoid;">
             <thead style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr>
-                    ${['NO', 'TANGGAL', 'Nama Barang', 'Keterangan', 'Jumlah'].map(h => `<th style="padding: 4px; border: 1px solid black;">${h}</th>`).join('')}
+                    ${['TANGGAL', 'Nama Barang', 'Keterangan', 'Jumlah'].map(h => `<th style="padding: 4px; border: 1px solid black;">${h}</th>`).join('')}
                 </tr>
             </thead>
             <tbody>${tableRows}</tbody>
-            <tfoot style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
-                <tr style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
-                    <td colspan="4" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">TOTAL</td>
-                    <td style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
-                </tr>
-            </tfoot>
         </table>
+        <div style="margin-top: 20px;">
+            <p style="margin: 0;">Terbilang : (${terbilangText.charAt(0).toUpperCase() + terbilangText.slice(1)} Rupiah)</p>
+        </div>
         <br/><br/>
-        <table style="width: 100%; text-align: center; font-size: 11pt;">
+        <table style="width: 100%; text-align: center; font-size: 11pt; page-break-inside: avoid;">
             <tr>
                 <td style="width: 50%; vertical-align: top;">
                     <p style="margin: 0;">&nbsp;</p>
                     <p style="margin: 0;">Menyetujui,</p>
                     <br/><br/><br/><br/>
-                    <p style="text-decoration: underline; font-weight: bold; margin: 0;">GALIH AJI KUSUMAH</p>
+                    <p style="font-weight: bold; margin: 0;">GALIH AJI KUSUMAH</p>
                     <p style="margin: 0;">MGR BRANCH SEMARANG</p>
                 </td>
                 <td style="width: 50%; vertical-align: top;">
                     <p style="margin: 0;">Kudus, ${formattedDate}</p>
                     <p style="margin: 0;">Pembuat Rincian</p>
                     <br/><br/><br/><br/>
-                    <p style="text-decoration: underline; font-weight: bold; margin: 0;">J. WAHYU SETYAWAN</p>
+                    <p style="font-weight: bold; margin: 0;">J. WAHYU SETYAWAN</p>
                     <p style="margin: 0;">Officer 3 Service Area Kudus</p>
                     <p style="margin: 0;">876858</p>
                 </td>
@@ -587,7 +621,7 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 9pt; background-color: white; page-break-inside: avoid;">
-        <h2 style="text-align: left; font-size: 14pt; margin: 0; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${title}</h2>
+        <div style="text-align: left; font-size: 14pt; margin: 0; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${title}</div>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 1px solid black; font-size: 8pt;">
             <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
@@ -625,7 +659,7 @@ const generateSimpleEvidenReport = (notas: Nota[], title: string): string => {
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; background-color: white; page-break-inside: avoid;">
-        <h2 style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${title}</h2>
+        <div style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${title}</div>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 1px solid black; font-size: 10pt;">
             <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
@@ -906,7 +940,8 @@ export default function ExportPage() {
                 return !isNaN(d.getTime()) ? d.getTime() : 0;
             }
             if (date instanceof Date) { // JavaScript Date
-                return !isNaN(date.getTime()) ? d.getTime() : 0;
+                const d = date;
+                return !isNaN(d.getTime()) ? d.getTime() : 0;
             }
             const d = new Date(date); // String date
             return isNaN(d.getTime()) ? 0 : d.getTime();
@@ -1012,9 +1047,8 @@ export default function ExportPage() {
                         if (notasInSegment.length === 0) continue;
 
                         let segmentHtml = '';
-                        const projectTitlePart = projectType === 'Lainnya' ? '' : projectType + ' - ';
                         const saTitlePart = reportSA.replace(/^SA /, '') === 'SEMUA SA' ? 'SEMUA' : reportSA.replace(/^SA /, '');
-                        const title = `Perincian Nota ${segment} - ${projectTitlePart}${saTitlePart}`;
+                        const title = `Perincian Nota ${segment} - SERVICE AREA ${saTitlePart}`;
                         
                          const bbmR2R4Segments = [
                             'BBM R2 Harian B2B IOAN', 'BBM R2 Harian PROVISIONING',
@@ -1056,12 +1090,11 @@ export default function ExportPage() {
                         const notasInSegment = evidenGroupedBySegmentBBM[segment];
                         if (notasInSegment.length === 0) continue;
                         
-                        const projectTitlePart = projectType === 'Lainnya' ? '' : projectType + ' - ';
                         const saTitlePart = reportSA.replace(/^SA /, '') === 'SEMUA SA' ? 'SEMUA' : reportSA.replace(/^SA /, '');
-                        const title = `Eviden Foto - Perincian Nota ${segment} - ${projectTitlePart}${saTitlePart}`;
+                        const title = `Eviden Foto - Perincian Nota ${segment} - SERVICE AREA ${saTitlePart}`;
                         
                         const segmentHtml = generateEvidenReport(notasInSegment, title);
-                        pages.push({ html: segmentHtml, orientation: 'portrait' });
+                        pages.push({ html: segmentHtml, orientation: orientation });
                     }
 
 
@@ -1078,9 +1111,8 @@ export default function ExportPage() {
                         const notasInSegment = evidenGroupedBySegment[segment];
                         if (notasInSegment.length === 0) continue;
                         
-                        const projectTitlePart = projectType === 'Lainnya' ? '' : projectType + ' - ';
                         const saTitlePart = reportSA.replace(/^SA /, '') === 'SEMUA SA' ? 'SEMUA' : reportSA.replace(/^SA /, '');
-                        const title = `Eviden Foto - Perincian Nota ${segment} - ${projectTitlePart}${saTitlePart}`;
+                        const title = `Eviden Foto - Perincian Nota ${segment} - SERVICE AREA ${saTitlePart}`;
                         
                         const segmentHtml = generateSimpleEvidenReport(notasInSegment, title);
                         pages.push({ html: segmentHtml, orientation: 'portrait' });
