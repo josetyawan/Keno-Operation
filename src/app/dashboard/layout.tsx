@@ -138,13 +138,40 @@ export default function DashboardLayout({
       return;
     }
 
-    // Case 2: User is authenticated, but their profile document doesn't exist
-    // This is now a critical error state. The profile should have been created at sign-up.
+    // Case 2: User is authenticated, but their profile document doesn't exist.
+    // This is a self-healing mechanism for accounts created in a broken state.
     if (!userProfile) {
-        console.error("CRITICAL: User is authenticated but Firestore profile document is missing.");
+        console.warn(`User profile for ${user.uid} is missing. Creating a new default profile.`);
+        
+        const newUserDocRef = doc(firestore, 'users', user.uid);
+        const newUserProfileData: UserProfile = {
+            id: user.uid,
+            email: user.email!,
+            role: 'user',
+            registrationStatus: 'pending',
+            displayName: user.email?.split('@')[0] || 'New User',
+            firstName: '',
+            lastName: '',
+            nik: '',
+            phone: '',
+        };
+
+        // We don't await this. We create the doc and immediately sign out the user.
+        // The next time they log in, the document will exist and they will be
+        // correctly handled as a 'pending' user.
+        setDoc(newUserDocRef, newUserProfileData, { merge: true }).catch(err => {
+            // If even creating the document fails, log the user out with a more severe error.
+            console.error("CRITICAL: Failed to create missing user profile document.", err);
+            handleSignOutAndRedirect(
+                'Gagal Membuat Profil',
+                'Terjadi kesalahan kritis saat mencoba memperbaiki akun Anda. Hubungi admin.'
+            );
+        });
+
+        // Sign the user out with a friendly message explaining what happened.
         handleSignOutAndRedirect(
-            'Profil Database Tidak Ditemukan',
-            'Akun Anda valid, tetapi profil database Anda hilang. Silakan hubungi admin untuk pemulihan.'
+            'Profil Baru Dibuat',
+            'Profil Anda telah dibuat. Akun Anda kini menunggu persetujuan admin. Silakan coba masuk lagi nanti.'
         );
         return;
     }
