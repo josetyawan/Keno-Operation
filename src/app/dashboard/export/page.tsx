@@ -355,11 +355,10 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
 
     const today = new Date();
     const formattedDate = format(today, 'dd MMMM yyyy', { locale: idLocale });
-    const terbilangText = toWords(grandTotal);
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; background-color: white; page-break-inside: avoid;">
-        <div style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${title}</div>
+        <div style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left;">${title}</div>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
             <thead style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
@@ -379,9 +378,6 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
                 </tr>
             </tfoot>
         </table>
-         <div style="margin-top: 20px;">
-            <p style="margin: 0;">Terbilang : (${terbilangText.charAt(0).toUpperCase() + terbilangText.slice(1)} Rupiah)</p>
-        </div>
         <br/><br/>
         <div style="width: 100%; text-align: center; font-size: 11pt; page-break-inside: avoid;">
             <table style="width: 100%; text-align: center; font-size: 11pt;">
@@ -459,12 +455,11 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
 
     const today = new Date();
     const formattedDate = format(today, 'dd MMMM yyyy', { locale: idLocale });
-    const terbilangText = toWords(grandTotal);
 
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; background-color: white; page-break-inside: avoid;">
-        <div style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${title}</div>
+        <div style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left;">${title}</div>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
             <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
@@ -480,9 +475,6 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
                 </tr>
             </tfoot>
         </table>
-         <div style="margin-top: 20px;">
-            <p style="margin: 0;">Terbilang : (${terbilangText.charAt(0).toUpperCase() + terbilangText.slice(1)} Rupiah)</p>
-        </div>
         <br/><br/>
         <div style="width: 100%; text-align: center; font-size: 11pt; page-break-inside: avoid;">
             <table style="width: 100%; text-align: center; font-size: 11pt;">
@@ -548,11 +540,10 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
 
     const today = new Date();
     const formattedDate = format(today, 'dd MMMM yyyy', { locale: idLocale });
-    const terbilangText = toWords(grandTotal);
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; background-color: white; page-break-inside: avoid;">
-        <div style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${title}</div>
+        <div style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left;">${title}</div>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
             <thead style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
@@ -568,9 +559,6 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
                 </tr>
             </tfoot>
         </table>
-        <div style="margin-top: 20px;">
-            <p style="margin: 0;">Terbilang : (${terbilangText.charAt(0).toUpperCase() + terbilangText.slice(1)} Rupiah)</p>
-        </div>
         <br/><br/>
         <div style="width: 100%; text-align: center; font-size: 11pt; page-break-inside: avoid;">
             <table style="width: 100%; text-align: center; font-size: 11pt;">
@@ -640,7 +628,7 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 9pt; background-color: white; page-break-inside: avoid;">
-        <div style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${title}</div>
+        <div style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left;">${title}</div>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 1px solid black; font-size: 8pt;">
             <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
@@ -678,7 +666,7 @@ const generateSimpleEvidenReport = (notas: Nota[], title: string): string => {
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; background-color: white; page-break-inside: avoid;">
-        <div style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${title}</div>
+        <div style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left;">${title}</div>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 1px solid black; font-size: 10pt;">
             <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
