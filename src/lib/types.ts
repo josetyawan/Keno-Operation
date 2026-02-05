@@ -32,3 +32,9 @@ export type UserProfile = {
     phone?: string;
     registrationStatus: 'pending' | 'approved';
 };
+
+export type ProjectID = {
+  id: string;
+  projectType: string;
+  pid: string;
+};

@@ -46,7 +46,7 @@ import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { format, getMonth, getYear, startOfDay, endOfDay } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
-import type { Nota } from '@/lib/types';
+import type { Nota, ProjectID } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge, badgeVariants } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -83,7 +83,7 @@ const getStatusVariant = (status: Nota['status']): VariantProps<typeof badgeVari
 
 // --- Report Generation Logic ---
 
-const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectType: ProjectType): string => {
+const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectType: ProjectType, pids: ProjectID[]): string => {
     const today = new Date();
     const reportDate = notas.length > 0 ? notas[0].tanggal.toDate() : today;
     const monthName = format(reportDate, 'MMM', { locale: idLocale });
@@ -91,12 +91,8 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
     
     const saShort = serviceArea.replace('SA ', '');
     const projectName = `IF JATENG - SMG OPR - Ops SA ${saShort} (${monthName})`;
-
-    let idProject = '-';
-    if (projectType === 'B2B IOAN') idProject = 'TIF-215/2026';
-    else if (projectType === 'PROVISIONING') idProject = 'TIF-32/2026';
-    else if (projectType === 'SPPG') idProject = 'PPR-38/2025';
-    else if (projectType === 'BBM GENSET') idProject = 'Ditagihkan ke Unit Lain';
+    
+    const idProject = pids.find(p => p.projectType === projectType)?.pid || (projectType === 'BBM GENSET' ? 'Ditagihkan ke Unit Lain' : '-');
 
     let grandTotal = 0;
     const tableRows = notas.map((nota, index) => {
@@ -284,7 +280,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
 };
 
 
-const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectType: ProjectType): string => {
+const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectType: ProjectType, pids: ProjectID[]): string => {
     const groupedBySegmen = notas.reduce((acc, nota) => {
         const key = nota.segmen;
         if (!acc[key]) {
@@ -313,20 +309,17 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
 
     let saShort = serviceArea.replace('SA ', '');
     let pekerjaan = saShort;
-    let idProject = '-';
+    
+    const idProject = pids.find(p => p.projectType === projectType)?.pid || (projectType === 'BBM GENSET' ? 'Ditagihkan ke Unit Lain' : '-');
 
     if (projectType === 'B2B IOAN') {
         pekerjaan = `B2B IOAN ${saShort}`;
-        idProject = 'TIF-215/2026';
     } else if (projectType === 'PROVISIONING') {
         pekerjaan = `PROVISIONING ${saShort}`;
-        idProject = 'TIF-32/2026';
     } else if (projectType === 'SPPG') {
         pekerjaan = `SPPG ${saShort}`;
-        idProject = 'PPR-38/2025';
     } else if (projectType === 'BBM GENSET') {
         pekerjaan = `BBM GENSET ${saShort}`;
-        idProject = 'Ditagihkan ke Unit Lain';
     } else if (serviceArea === 'all') {
         pekerjaan = 'SEMUA';
         saShort = '';
@@ -940,7 +933,12 @@ export default function ExportPage() {
         return query(collection(firestore, 'notas'), orderBy('dateCreated', 'desc'));
     }, [firestore]);
 
-    const { data: notas, isLoading } = useCollection<Nota>(notasQuery);
+    const { data: notas, isLoading: isLoadingNotas } = useCollection<Nota>(notasQuery);
+    
+    const pidsQuery = useMemoFirebase(() => {
+        return query(collection(firestore, 'project-ids'));
+    }, [firestore]);
+    const { data: pids, isLoading: isLoadingPids } = useCollection<ProjectID>(pidsQuery);
 
     const [filterType, setFilterType] = useState('monthly');
     const [selectedMonth, setSelectedMonth] = useState<string>('');
@@ -957,6 +955,7 @@ export default function ExportPage() {
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
+    const isLoading = isLoadingNotas || isLoadingPids;
 
     const monthOptions = useMemo(() => getMonthYearOptions(notas || []), [notas]);
 
@@ -1086,6 +1085,15 @@ export default function ExportPage() {
             });
             return [];
         }
+        
+        if (isLoadingPids) {
+            toast({
+                variant: "destructive",
+                title: "Data PID belum termuat",
+                description: "Silakan tunggu sebentar dan coba lagi.",
+            });
+            return [];
+        }
 
         const selectedNotas = filteredNotas.filter(n => selectedNotaIds.includes(n.id)) || [];
         const sortedNotas = selectedNotas.sort((a,b) => a.tanggal.toDate().getTime() - b.tanggal.toDate().getTime());
@@ -1109,7 +1117,7 @@ export default function ExportPage() {
                 if (orientation === 'landscape') {
                      // Only Imprest Fund Cover is landscape
                     if (projectType !== 'BBM GENSET') {
-                        const coverHtml = generateImprestFundCover(notasForProject, reportSA, projectType);
+                        const coverHtml = generateImprestFundCover(notasForProject, reportSA, projectType, pids || []);
                         pages.push({ html: coverHtml, orientation: 'landscape' });
                     }
                 }
@@ -1117,7 +1125,7 @@ export default function ExportPage() {
                 // Portrait pages
                 if (orientation === 'portrait') {
                     // Rekapitulasi
-                    const rekapHtml = generateRekapitulasiReport(notasForProject, reportSA, projectType);
+                    const rekapHtml = generateRekapitulasiReport(notasForProject, reportSA, projectType, pids || []);
                     pages.push({ html: rekapHtml, orientation: 'portrait' });
                     
                     // Perincian

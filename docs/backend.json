@@ -175,6 +175,31 @@
         "dateCreated",
         "status"
       ]
+    },
+    "ProjectID": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Project ID",
+      "type": "object",
+      "description": "Represents a Project ID used in financial reports.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ProjectID entity."
+        },
+        "projectType": {
+          "type": "string",
+          "description": "The type of project this ID belongs to (e.g., B2B IOAN, PROVISIONING)."
+        },
+        "pid": {
+          "type": "string",
+          "description": "The actual Project ID string (e.g., TIF-215/2026)."
+        }
+      },
+      "required": [
+        "id",
+        "projectType",
+        "pid"
+      ]
     }
   },
   "auth": {
@@ -213,6 +238,22 @@
             {
               "name": "notaId",
               "description": "The unique identifier for the nota."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/project-ids/{projectID}",
+        "definition": {
+          "entityName": "ProjectID",
+          "schema": {
+            "$ref": "#/backend/entities/ProjectID"
+          },
+          "description": "Stores the mapping of project types to their specific Project IDs for reporting.",
+          "params": [
+            {
+              "name": "projectID",
+              "description": "The unique identifier for the Project ID mapping."
             }
           ]
         }
