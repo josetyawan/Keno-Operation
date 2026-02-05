@@ -34,11 +34,25 @@ export default function ForgotPasswordPage() {
       setIsSuccess(true);
     } catch (error) {
       let title = 'Gagal Mengirim Email';
-      let description = 'Terjadi kesalahan. Silakan coba lagi.';
+      let description = 'Terjadi kesalahan yang tidak diketahui. Silakan coba lagi.';
       if (error instanceof FirebaseError) {
-        if (error.code === 'auth/user-not-found') {
-          title = 'Pengguna Tidak Ditemukan';
-          description = 'Tidak ada akun yang terdaftar dengan email ini.';
+        switch (error.code) {
+            case 'auth/user-not-found':
+                title = 'Pengguna Tidak Ditemukan';
+                description = 'Tidak ada akun yang terdaftar dengan email ini.';
+                break;
+            case 'auth/invalid-email':
+                title = 'Email Tidak Valid';
+                description = 'Format alamat email yang Anda masukkan tidak benar.';
+                break;
+            case 'auth/network-request-failed':
+                title = 'Kesalahan Jaringan';
+                description = 'Tidak dapat terhubung ke layanan kami. Periksa koneksi internet Anda.';
+                break;
+            default:
+                // Use the generic message for other Firebase errors
+                description = `Terjadi kesalahan. (${error.code})`;
+                break;
         }
       }
       toast({
