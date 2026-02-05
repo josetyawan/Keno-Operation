@@ -7,6 +7,7 @@ import type { FirebaseApp } from 'firebase/app';
 import type { Auth } from 'firebase/auth';
 import type { Firestore } from 'firebase/firestore';
 import type { Storage } from 'firebase/storage';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface FirebaseClientProviderProps {
   children: ReactNode;
@@ -29,12 +30,24 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
   }, []);
 
   if (!firebaseServices) {
-    // While Firebase is initializing, we can return a loader or null.
-    // For this app, returning null is fine as the layout will just be empty
-    // for a split second, and then the auth state will take over.
-    return null; 
+    // On the server, and on the initial client render, show a loader.
+    // This ensures the server and client render the same thing initially,
+    // preventing a hydration mismatch error.
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="flex flex-col items-center gap-4 w-full max-w-md p-8">
+          <Skeleton className="h-12 w-12 rounded-full" />
+          <div className="space-y-2 w-full">
+            <Skeleton className="h-6 w-3/4 mx-auto" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-5/6" />
+          </div>
+        </div>
+      </div>
+    );
   }
 
+  // Once Firebase is initialized on the client, render the actual app.
   return (
     <FirebaseProvider
       firebaseApp={firebaseServices.firebaseApp}
