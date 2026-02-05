@@ -90,7 +90,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
     
     const saShort = serviceArea.replace('SA ', '');
     const monthName = format(reportDate, 'MMM', { locale: idLocale });
-    const projectName = `IF JATENG - SMG OPR - Ops SA Area ${saShort} (${monthName})`;
+    const projectName = `IF JATENG - SMG OPR - Ops SA ${saShort} (${monthName})`;
 
     let idProject = '-';
     if (projectType === 'B2B IOAN') idProject = 'TIF-215/2026';
