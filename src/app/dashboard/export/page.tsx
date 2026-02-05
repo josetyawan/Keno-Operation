@@ -86,10 +86,10 @@ const getStatusVariant = (status: Nota['status']): VariantProps<typeof badgeVari
 const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectType: ProjectType): string => {
     const today = new Date();
     const reportDate = notas.length > 0 ? notas[0].tanggal.toDate() : today;
+    const monthName = format(reportDate, 'MMM', { locale: idLocale });
     const formattedDate = format(reportDate, 'dd/MM/yyyy');
     
     const saShort = serviceArea.replace('SA ', '');
-    const monthName = format(reportDate, 'MMM', { locale: idLocale });
     const projectName = `IF JATENG - SMG OPR - Ops SA ${saShort} (${monthName})`;
 
     let idProject = '-';
@@ -258,11 +258,8 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
                     <th rowspan="2" style="border: 1px solid black; padding: 2px; vertical-align: middle;">NILAI PERTANGGUNGAN</th>
                     <th rowspan="2" style="border: 1px solid black; padding: 2px; vertical-align: middle;">PPN (Disetor Mitra)</th>
                     <th rowspan="2" style="border: 1px solid black; padding: 2px; vertical-align: middle;">NILAI KUITANSI</th>
-                    <th style="border: 1px solid black; padding: 2px; border-bottom: none;">PPh</th>
+                    <th style="border: 1px solid black; padding: 2px;">PPh<br/><span style="font-weight: normal;">PPh 21, 23, 4(2) *)</span></th>
                     <th rowspan="2" style="border: 1px solid black; padding: 2px; vertical-align: middle;">BAYAR KE MITRA</th>
-                </tr>
-                <tr>
-                    <th style="border: 1px solid black; padding: 2px; border-top: none; font-weight: normal;">PPh 21, 23, 4(2) *)</th>
                 </tr>
             </thead>
             <tbody>
@@ -375,14 +372,14 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
                         <p style="margin: 0;">&nbsp;</p>
                         <p style="margin: 0;">Menyetujui,</p>
                         <br/><br/><br/><br/>
-                        <p style="font-weight: bold; margin: 0;">GALIH AJI KUSUMAH</p>
+                        <p style="font-weight: bold; margin: 0; text-decoration: underline;">GALIH AJI KUSUMAH</p>
                         <p style="margin: 0;">MGR BRANCH SEMARANG</p>
                     </td>
                     <td style="width: 50%; vertical-align: top;">
                         <p style="margin: 0;">Kudus, ${formattedDate}</p>
                         <p style="margin: 0;">Pembuat Rincian</p>
                         <br/><br/><br/><br/>
-                        <p style="font-weight: bold; margin: 0;">J. WAHYU SETYAWAN</p>
+                        <p style="font-weight: bold; margin: 0; text-decoration: underline;">J. WAHYU SETYAWAN</p>
                         <p style="margin: 0;">Officer 3 Service Area Kudus</p>
                         <p style="margin: 0;">876858</p>
                     </td>
@@ -468,14 +465,14 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
                         <p style="margin: 0;">&nbsp;</p>
                         <p style="margin: 0;">Menyetujui,</p>
                         <br/><br/><br/><br/>
-                        <p style="font-weight: bold; margin: 0;">GALIH AJI KUSUMAH</p>
+                        <p style="font-weight: bold; margin: 0; text-decoration: underline;">GALIH AJI KUSUMAH</p>
                         <p style="margin: 0;">MGR BRANCH SEMARANG</p>
                     </td>
                     <td style="width: 50%; vertical-align: top;">
                         <p style="margin: 0;">Kudus, ${formattedDate}</p>
                         <p style="margin: 0;">Pembuat Rincian</p>
                         <br/><br/><br/><br/>
-                        <p style="font-weight: bold; margin: 0;">J. WAHYU SETYAWAN</p>
+                        <p style="font-weight: bold; margin: 0; text-decoration: underline;">J. WAHYU SETYAWAN</p>
                         <p style="margin: 0;">Officer 3 Service Area Kudus</p>
                         <p style="margin: 0;">876858</p>
                     </td>
@@ -565,14 +562,14 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
                         <p style="margin: 0;">&nbsp;</p>
                         <p style="margin: 0;">Menyetujui,</p>
                         <br/><br/><br/><br/>
-                        <p style="font-weight: bold; margin: 0;">GALIH AJI KUSUMAH</p>
+                        <p style="font-weight: bold; margin: 0; text-decoration: underline;">GALIH AJI KUSUMAH</p>
                         <p style="margin: 0;">MGR BRANCH SEMARANG</p>
                     </td>
                     <td style="width: 50%; vertical-align: top;">
                         <p style="margin: 0;">Kudus, ${formattedDate}</p>
                         <p style="margin: 0;">Pembuat Rincian</p>
                         <br/><br/><br/><br/>
-                        <p style="font-weight: bold; margin: 0;">J. WAHYU SETYAWAN</p>
+                        <p style="font-weight: bold; margin: 0; text-decoration: underline;">J. WAHYU SETYAWAN</p>
                         <p style="margin: 0;">Officer 3 Service Area Kudus</p>
                         <p style="margin: 0;">876858</p>
                     </td>
@@ -649,14 +646,14 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
                         <p style="margin: 0;">&nbsp;</p>
                         <p style="margin: 0;">Menyetujui,</p>
                         <br/><br/><br/><br/>
-                        <p style="font-weight: bold; margin: 0;">GALIH AJI KUSUMAH</p>
+                        <p style="font-weight: bold; margin: 0; text-decoration: underline;">GALIH AJI KUSUMAH</p>
                         <p style="margin: 0;">MGR BRANCH SEMARANG</p>
                     </td>
                     <td style="width: 50%; vertical-align: top;">
                         <p style="margin: 0;">Kudus, ${formattedDate}</p>
                         <p style="margin: 0;">Pembuat Rincian</p>
                         <br/><br/><br/><br/>
-                        <p style="font-weight: bold; margin: 0;">J. WAHYU SETYAWAN</p>
+                        <p style="font-weight: bold; margin: 0; text-decoration: underline;">J. WAHYU SETYAWAN</p>
                         <p style="margin: 0;">Officer 3 Service Area Kudus</p>
                         <p style="margin: 0;">876858</p>
                     </td>
