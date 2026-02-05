@@ -85,80 +85,145 @@ const getStatusVariant = (status: Nota['status']): VariantProps<typeof badgeVari
 
 const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectType: ProjectType): string => {
     const today = new Date();
-    const formattedDate = format(today, 'dd/MM/yyyy');
+    const reportDate = notas.length > 0 ? notas[0].tanggal.toDate() : today;
+    const formattedDate = format(reportDate, 'dd/MM/yyyy');
+    
     const saShort = serviceArea.replace('SA ', '');
-    const projectName = `IF SEMARANG - SMG OPR - Ops ${projectType} Service Area ${saShort}`;
+    const monthName = format(reportDate, 'MMM', { locale: idLocale });
+    const projectName = `IF SEMARANG - SMG OPR - Ops ${projectType} Area ${saShort} (${monthName})`;
+
+    let idProject = '-';
+    if (projectType === 'B2B IOAN') idProject = 'TIF-215/2026';
+    else if (projectType === 'PROVISIONING') idProject = 'TIF-32/2026';
+    else if (projectType === 'SPPG') idProject = 'PPR-38/2025';
+    else if (projectType === 'BBM GENSET') idProject = 'Ditagihkan ke Unit Lain';
 
     let grandTotal = 0;
     const tableRows = notas.map((nota, index) => {
         grandTotal += nota.nominal;
         return `
-            <tr>
+            <tr style="font-size: 8pt;">
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${index + 1}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${format(nota.tanggal.toDate(), 'dd/MM/yyyy')}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${index + 1}</td>
                 <td style="border: 1px solid black; padding: 2px 4px;">${nota.segmen}</td>
-                <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">-</td>
-                <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">-</td>
+                <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${idProject}</td>
+                <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
+                <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
+                <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
+                <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
+                <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
+                <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
             </tr>
         `;
     }).join('');
-    
-    const signatureTable = `
-    <div style="font-size: 8pt; width: 100%; page-break-inside: avoid; margin-top: 1.5rem;">
-        <table style="width: 100%; text-align: center; border-collapse: collapse;">
-            <tbody>
-                <tr>
-                    <td style="width: 33.3%;">Mengetahui<br/>Pemilik Anggaran,</td>
-                    <td style="width: 33.3%;">Mengetahui<br/>Pengelola IF / Panjar,</td>
-                    <td style="width: 33.3%;">Semarang, ${formattedDate}<br/>Dibuat/Diajukan oleh,</td>
-                </tr>
-                <tr>
-                    <td style="height: 60px;"></td>
-                    <td></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td style="font-weight: bold;">GALIH AJI KUSUMAH</td>
-                    <td style="font-weight: bold;">MUHAMMAD IKSAN</td>
-                    <td style="font-weight: bold;">DESSY WAHYUNINGTIAS</td>
-                </tr>
-                <tr>
-                    <td>MGR BRANCH SEMARANG</td>
-                    <td>MGR SHARED SERVICE REGIONAL JAWA TENGAH & DIY</td>
-                    <td>OFF3 BUSINESS SUPPORT SEMARANG</td>
-                </tr>
-                <tr>
-                    <td colspan="3" style="height: 20px;"></td>
-                </tr>
-                <tr>
-                    <td>Menyetujui,<br/>Penanggung Jawab IF</td>
-                    <td>Mengetahui<br/>Pengelola IF</td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td style="height: 60px;"></td>
-                    <td></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td style="font-weight: bold;">HENRY SOEDIDARMA</td>
-                    <td style="font-weight: bold;">ARIZA ARBAATUS SOLIHA</td>
-                    <td></td>
-                </tr>
-                 <tr>
-                    <td>GM REGIONAL JAWA TENGAH DIY</td>
-                    <td>MGR BUSINESS SUPPORT AREA JAWA BALI</td>
-                    <td></td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
+
+    const docInfoBlock = `
+    <table style="width: 100%; font-size: 8pt; margin-top: 20px;">
+        <tr>
+            <td style="width: 50%; vertical-align: top;">
+                <table style="font-size: 8pt;">
+                    <tr><td style="white-space: nowrap;">No. Dokumen</td><td>: /KU/TA-0203/SMG/02-2026</td></tr>
+                    <tr><td style="white-space: nowrap;">Berkas diterima tanggal</td><td>: ${formattedDate}</td></tr>
+                    <tr><td style="white-space: nowrap;">Berkas lengkap tanggal</td><td>: ${formattedDate}</td></tr>
+                </table>
+            </td>
+            <td style="width: 50%; vertical-align: top;">
+                <table style="width: 100%; font-size: 8pt; border-collapse: collapse; border: 1px solid black;">
+                    <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                        <tr>
+                            <th style="border: 1px solid black; padding: 2px;">No.</th>
+                            <th style="border: 1px solid black; padding: 2px;">ID PROJECT</th>
+                            <th style="border: 1px solid black; padding: 2px;">AKUN</th>
+                            <th style="border: 1px solid black; padding: 2px;">JUMLAH</th>
+                            <th style="border: 1px solid black; padding: 2px;">PPN</th>
+                            <th style="border: 1px solid black; padding: 2px;">NILAI KUITANSI</th>
+                            <th style="border: 1px solid black; padding: 2px;">PPh</th>
+                            <th style="border: 1px solid black; padding: 2px;">BAYAR KE MITRA</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="border: 1px solid black; padding: 2px; text-align: center;">1</td>
+                            <td style="border: 1px solid black; padding: 2px; text-align: center;">${idProject}</td>
+                            <td style="border: 1px solid black; padding: 2px; text-align: center;">-</td>
+                            <td style="border: 1px solid black; padding: 2px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
+                            <td style="border: 1px solid black; padding: 2px; text-align: center;">-</td>
+                            <td style="border: 1px solid black; padding: 2px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
+                            <td style="border: 1px solid black; padding: 2px; text-align: center;">-</td>
+                            <td style="border: 1px solid black; padding: 2px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
+                        </tr>
+                    </tbody>
+                    <tfoot style="font-weight: bold;">
+                         <tr>
+                            <td colspan="3" style="border: 1px solid black; padding: 2px; text-align: center;">JUMLAH</td>
+                            <td style="border: 1px solid black; padding: 2px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
+                            <td style="border: 1px solid black; padding: 2px; text-align: center;">-</td>
+                            <td style="border: 1px solid black; padding: 2px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
+                            <td style="border: 1px solid black; padding: 2px; text-align: center;">-</td>
+                            <td style="border: 1px solid black; padding: 2px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </td>
+        </tr>
+    </table>
+    `;
+
+    const signatureBlock = `
+    <table style="width: 100%; font-size: 8pt; text-align: center; margin-top: 20px; border-collapse: collapse;">
+        <tbody>
+            <!-- Top row of signatories -->
+            <tr>
+                <td style="width: 33.3%;">Mengetahui<br/>Pemilik Anggaran,</td>
+                <td style="width: 33.3%;">Mengetahui<br/>Pengelola IF / Panjar,</td>
+                <td style="width: 33.3%;">Semarang, ${formattedDate}<br/>Dibuat/Diajukan oleh,</td>
+            </tr>
+            <tr>
+                <td style="height: 60px;"></td>
+                <td style="height: 60px;"></td>
+                <td style="height: 60px;"></td>
+            </tr>
+            <tr>
+                <td style="font-weight: bold;">GALIH AJI KUSUMAH</td>
+                <td style="font-weight: bold;">MUHAMMAD IKSAN</td>
+                <td style="font-weight: bold;">DESSY WAHYUNINGTIAS</td>
+            </tr>
+            <tr>
+                <td>MGR BRANCH SEMARANG</td>
+                <td>MGR SHARED SERVICE REGIONAL JAWA TENGAH & DIY</td>
+                <td>OFF3 BUSINESS SUPPORT SEMARANG</td>
+            </tr>
+            <tr><td colspan="3" style="height: 20px;"></td></tr>
+
+            <!-- Bottom row of signatories -->
+            <tr>
+                <td>Menyetujui,<br/>Penanggung Jawab IF</td>
+                <td></td>
+                <td>Mengetahui<br/>Pengelola IF</td>
+            </tr>
+            <tr>
+                <td style="height: 60px;"></td>
+                <td></td>
+                <td style="height: 60px;"></td>
+            </tr>
+            <tr>
+                <td style="font-weight: bold;">HENRY SOEDIDARMA</td>
+                <td></td>
+                <td style="font-weight: bold;">ARIZA ARBAATUS SOLIHA</td>
+            </tr>
+            <tr>
+                <td>GM REGIONAL JAWA TENGAH DIY</td>
+                <td></td>
+                <td>MGR BUSINESS SUPPORT AREA JAWA BALI</td>
+            </tr>
+        </tbody>
+    </table>
     `;
 
     return `
-    <div style="font-family: Arial, sans-serif; color: black; font-size: 9pt; width: 100%; height: 100%; box-sizing: border-box; page-break-inside: avoid; display: flex; flex-direction: column;">
+    <div style="font-family: Arial, sans-serif; color: black; font-size: 9pt; width: 100%; height: 100%; box-sizing: border-box; page-break-inside: avoid; position: relative;">
         <div style="text-align: left; font-size: 11pt; font-weight: bold;">
             PT. TELKOM AKSES<br/>
             FINANCE REGIONAL III
@@ -167,40 +232,54 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
             REKAP PERTANGGUNGAN IMPREST FUND / PANJAR KERJA *)
         </div>
         
-        <table style="font-size: 10pt; margin-bottom: 1rem; width: 100%;">
-            <tr><td style="width: 15%;">Unit Kerja</td><td>: Direktorat Operation</td></tr>
+        <table style="font-size: 8pt; margin-bottom: 1rem; width: 100%;">
+            <tr><td style="width: 10%;">Unit Kerja</td><td>: Direktorat Operation</td></tr>
             <tr><td>Cost Center</td><td>: TA03J08 - Semarang</td></tr>
             <tr><td>Nama Project</td><td>: ${projectName}</td></tr>
         </table>
 
-        <div style="flex-grow: 1;">
-            <table style="width: 100%; border-collapse: collapse; font-size: 8pt;">
-                <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
-                    <tr>
-                        <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">No. Urut</th>
-                        <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">TANGGAL</th>
-                        <th style="border: 1px solid black; padding: 4px; vertical-align: middle;">No. Kuitansi</th>
-                        <th style="border: 1px solid black; padding: 4px; width: 35%; vertical-align: middle;">URAIAN</th>
-                        <th style="border: 1px solid black; padding: 4px;">PPN (Disetor Mitra)</th>
-                        <th style="border: 1px solid black; padding: 4px;">DPP</th>
-                        <th style="border: 1px solid black; padding: 4px;">NILAI KUITANSI</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${tableRows}
-                </tbody>
-                <tfoot>
-                    <tr style="font-weight: bold;">
-                        <td colspan="4" style="border: 1px solid black; padding: 2px 4px; text-align: center;">JUMLAH</td>
-                        <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">-</td>
-                        <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">-</td>
-                        <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
+        <table style="width: 100%; border-collapse: collapse; font-size: 7pt;">
+            <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                <tr>
+                    <th rowspan="="2" style="border: 1px solid black; padding: 2px; vertical-align: middle;">No. Urut</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 2px; vertical-align: middle;">TANGGAL</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 2px; vertical-align: middle;">No. Kuitansi</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 2px; vertical-align: middle; width: 20%;">URAIAN</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 2px; vertical-align: middle;">ID PROJECT</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 2px; vertical-align: middle;">No. Akun</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 2px; vertical-align: middle;">NILAI PERTANGGUNGAN</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 2px; vertical-align: middle;">PPN (Disetor Mitra)</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 2px; vertical-align: middle;">NILAI KUITANSI</th>
+                    <th colspan="2" style="border: 1px solid black; padding: 2px; vertical-align: middle;">PPh</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 2px; vertical-align: middle;">BAYAR KE MITRA</th>
+                </tr>
+                <tr>
+                    <th style="border: 1px solid black; padding: 2px; vertical-align: middle; font-size: 7pt;">PPh 21, 23</th>
+                    <th style="border: 1px solid black; padding: 2px; vertical-align: middle; font-size: 7pt;">PPh 4(2) *)</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${tableRows}
+            </tbody>
+            <tfoot style="font-weight: bold;">
+                <tr style="font-size: 8pt;">
+                    <td colspan="6" style="border: 1px solid black; padding: 2px 4px; text-align: center;">JUMLAH</td>
+                    <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
+                    <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
+                    <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
+                    <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
+                    <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
+                    <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
+                </tr>
+            </tfoot>
+        </table>
         
-        <div style="margin-top: auto;">${signatureTable}</div>
+        ${docInfoBlock}
+        ${signatureBlock}
+
+        <div style="position: absolute; bottom: 40px; left: 20px; border: 1px solid black; padding: 5px 10px 20px 10px; font-size: 8pt;">
+            DOC ID :
+        </div>
     </div>
     `;
 };
@@ -253,7 +332,7 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
         pekerjaan = 'SEMUA';
         saShort = '';
     }
-
+    
     const areaTitle = saShort ? `SERVICE AREA ${saShort.toUpperCase()}` : '';
 
     return `
@@ -312,6 +391,7 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
 };
 
 const generateJasaReport = (notas: Nota[], title: string): string => {
+    // Group notas by date
     const groupedByDate = notas.reduce((acc, nota) => {
         const dateKey = format(nota.tanggal.toDate(), 'yyyy-MM-dd');
         if (!acc[dateKey]) {
@@ -320,7 +400,7 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
         acc[dateKey].push(nota);
         return acc;
     }, {} as Record<string, Nota[]>);
-
+    
     const sortedDates = Object.keys(groupedByDate).sort();
     
     let grandTotal = 0;
@@ -1101,7 +1181,7 @@ export default function ExportPage() {
                         const title = `Eviden Foto - Perincian Nota ${segment} - SERVICE AREA ${saTitlePart}`;
                         
                         const segmentHtml = generateEvidenReport(notasInSegment, title);
-                        pages.push({ html: segmentHtml, orientation: "portrait" });
+                        pages.push({ html: segmentHtml, orientation: 'portrait' });
                     }
 
 
