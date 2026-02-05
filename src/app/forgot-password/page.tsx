@@ -10,6 +10,7 @@ import { useAuth, sendPasswordReset } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { FirebaseError } from 'firebase/app';
 import { MailCheck } from 'lucide-react';
+import type { ActionCodeSettings } from 'firebase/auth';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -30,7 +31,13 @@ export default function ForgotPasswordPage() {
     }
     setIsLoading(true);
     try {
-      await sendPasswordReset(auth, email);
+      // Direct the user back to the app's reset-password page after clicking the email link.
+      const actionCodeSettings: ActionCodeSettings = {
+        url: `${window.location.origin}/reset-password`,
+        handleCodeInApp: true,
+      };
+
+      await sendPasswordReset(auth, email, actionCodeSettings);
       setIsSuccess(true);
     } catch (error) {
       let title = 'Gagal Mengirim Email';
@@ -72,7 +79,7 @@ export default function ForgotPasswordPage() {
             <MailCheck className="mx-auto h-12 w-12 text-green-500 mb-4" />
           <h1 className="text-2xl font-bold mb-4">Periksa Email Anda</h1>
           <p className="text-muted-foreground mb-6">
-            Kami telah mengirimkan tautan untuk mereset password Anda ke <span className="font-bold">{email}</span>. Silakan periksa kotak masuk Anda.
+            Kami telah mengirimkan tautan untuk mereset password Anda ke <span className="font-bold">{email}</span>. Silakan klik link di dalam email tersebut.
           </p>
           <Button asChild>
             <Link href="/login">Kembali ke Login</Link>
