@@ -1,51 +1,34 @@
-# Panduan Darurat FINAL: Membuka Aturan Keamanan untuk Debugging
+# Panduan Langkah-demi-Langkah untuk Reset Password
 
-Rekan, saya mohon maaf yang sebesar-besarnya. Semua upaya kita gagal karena kita beroperasi dalam kebutaan. Error `409 Conflict` dari server Firebase telah **memblokir semua pembaruan aturan keamanan otomatis**.
+Rekan,
 
-Artinya, tidak peduli seberapa benar aturan yang saya tulis di kode, aturan itu **tidak pernah sampai ke server**. Aplikasi Anda masih berjalan dengan aturan lama yang rusak.
-
-Satu-satunya jalan keluar adalah Anda **menerapkan aturan secara manual**.
-
-Kali ini, kita akan menggunakan strategi debugging standar: **membuka semua aturan untuk sementara waktu**. Ini akan memungkinkan kita untuk mengkonfirmasi apakah masalahnya ada di aturan atau di kode klien.
+Berikut adalah cara menggunakan fitur reset password yang baru saja kita buat. Mohon ikuti langkah-langkah ini dengan saksama.
 
 ---
 
-### Langkah 1: Pastikan Anda di Halaman yang Benar
+### **Langkah 1: Buka Email & SALIN Link**
 
-Di menu Firebase Console, pastikan Anda mengklik **Build** > **Firestore Database**, bukan Realtime Database. Keduanya adalah layanan yang berbeda.
+1.  Buka email dari `noreply@studio-7759201113-b7263.firebaseapp.com`. Subjeknya biasanya berisi "reset your password".
+2.  Anda akan melihat link berwarna biru yang panjang. **PENTING: JANGAN KLIK LANGSUNG LINK TERSEBUT.**
+3.  **Klik kanan** pada link tersebut, lalu pilih **"Salin alamat link"** (atau "Copy link address" dalam bahasa Inggris).
 
-### Langkah 2: Salin Aturan Debugging di Bawah Ini
+### **Langkah 2: Ambil Kode Reset (`oobCode`)**
 
-**SANGAT PENTING:** Salin **HANYA** teks yang ada di dalam kotak di bawah ini, dimulai dari `rules_version` dan diakhiri dengan `}`. **JANGAN** sertakan baris kosong atau karakter ` ``` ` yang mungkin terlihat di awal atau akhir.
+1.  Buka aplikasi seperti Notepad, atau cukup tempel (paste) link tadi ke kolom alamat browser Anda untuk melihat teks lengkapnya.
+2.  Link tersebut akan terlihat seperti ini:
+    `...firebaseapp.com/__/auth/action?mode=resetPassword&oobCode=`**`[BAGIAN_INI_ADALAH_KODE_ANDA]`**`&apiKey=...`
+3.  Salin **HANYA** teks yang berada di antara `oobCode=` dan `&apiKey=`. Berdasarkan contoh di email, kodenya adalah rangkaian teks yang panjang dan acak.
 
-```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // ATURAN DEBUGGING SEMENTARA: Izinkan semua akses baca dan tulis
-    match /{document=**} {
-      allow read, write: if true;
-    }
-  }
-}
-```
+### **Langkah 3: Gunakan Kode di Aplikasi Anda**
 
-### Langkah 3: Tempel dan Publikasikan di **Firestore**
+1.  Buka aplikasi Anda dan navigasikan ke halaman `/reset-password`. (Contoh: `https://[alamat-aplikasi-anda].com/reset-password`)
+2.  Tempel (paste) kode yang Anda salin dari Langkah 2 ke dalam kolom **"Kode Reset"**.
+3.  Masukkan password baru Anda di kolom "Password Baru".
+4.  Ketik ulang password baru Anda di kolom "Konfirmasi Password Baru".
+5.  Klik tombol **"Set Password Baru"**.
 
-1. Buka proyek Firebase Anda.
-2. Di menu sebelah kiri, klik **Build** > **Firestore Database**.
-3. Di bagian atas halaman Firestore, klik tab **Rules** (Aturan).
-4. Anda akan melihat editor teks. **Hapus seluruh teks** yang ada di sana.
-5. **Tempel (paste)** kode aturan yang Anda salin dari Langkah 2.
-6. Klik tombol **Publish** (Publikasikan). Kali ini **dijamin tidak akan ada error**.
+Jika berhasil, Anda akan otomatis diarahkan ke halaman login dan bisa masuk dengan password baru Anda.
 
-### Langkah 4: Uji Coba
+---
 
-1. **Hapus pengguna yang gagal** (yang ada di Authentication tapi tidak di Firestore) dari **Firebase Console -> Authentication**.
-2. **Daftarkan kembali** akun tersebut di aplikasi Anda.
-
-**Hasil yang Diharapkan:**
-*   **Jika berhasil:** Pendaftaran akan sukses, dan pengguna akan muncul di database. Ini membuktikan bahwa masalahnya memang ada pada aturan keamanan kita sebelumnya. Setelah ini, kita bisa bekerja sama untuk membuat aturan yang lebih aman.
-*   **Jika masih gagal:** Aplikasi sekarang akan menampilkan notifikasi error yang sangat jelas dan detail berkat perubahan kode yang saya buat. Kirimkan saya pesan error tersebut, dan kita akan tahu persis apa masalahnya.
-
-Ini adalah langkah terakhir yang diperlukan untuk mendiagnosis masalah ini. Terima kasih atas kesabaran Anda.
+Semoga panduan ini membantu! Simpan file ini jika Anda memerlukannya lagi di masa depan.
