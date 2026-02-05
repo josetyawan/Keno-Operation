@@ -1,7 +1,7 @@
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
-// import { FirebaseClientProvider } from '@/firebase';
+import { FirebaseClientProvider } from '@/firebase';
 
 export const metadata: Metadata = {
   title: 'NotaKu',
@@ -21,12 +21,9 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased">
-        {/*
-          Temporarily disabling Firebase provider for diagnostics.
-          This will break pages that rely on Firebase, but allows us to test
-          if the core Next.js app can run on App Hosting.
-        */}
-        {children}
+        <FirebaseClientProvider>
+          {children}
+        </FirebaseClientProvider>
         <Toaster />
       </body>
     </html>
