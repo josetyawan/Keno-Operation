@@ -1,33 +1,10 @@
 'use client';
 
-import { firebaseConfig } from '@/firebase/config';
-import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore'
-import { getStorage } from 'firebase/storage';
+// This barrel file re-exports all firebase utilities.
+// Initialization logic is separated into `init.ts` to prevent potential
+// module-loading cycles during Server-Side Rendering (SSR).
 
-// IMPORTANT: DO NOT MODIFY THIS FUNCTION
-export function initializeFirebase() {
-  if (!getApps().length) {
-    // In App Hosting, initializeApp() with no args uses the auto-configured FIREBASE_CONFIG.
-    // We will rely on this exclusively. If it fails, the app should crash, which is what we want for debugging.
-    const firebaseApp = initializeApp();
-    return getSdks(firebaseApp);
-  }
-
-  // If already initialized, return the SDKs with the already initialized App
-  return getSdks(getApp());
-}
-
-export function getSdks(firebaseApp: FirebaseApp) {
-  return {
-    firebaseApp,
-    auth: getAuth(firebaseApp),
-    firestore: getFirestore(firebaseApp),
-    storage: getStorage(firebaseApp)
-  };
-}
-
+export * from './init';
 export * from './provider';
 export * from './client-provider';
 export * from './firestore/use-collection';
