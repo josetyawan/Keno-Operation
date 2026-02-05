@@ -123,7 +123,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
         <tr>
             <td style="width: 50%; vertical-align: top;">
                 <table style="font-size: 8pt;">
-                    <tr><td style="white-space: nowrap;">No. Dokumen</td><td>: /KU/TA-0203/SMG/02-2026</td></tr>
+                    <tr><td style="white-space: nowrap;">No. Dokumen</td><td>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/KU/TA-0203/SMG/02-2026</td></tr>
                     <tr><td style="white-space: nowrap;">Berkas diterima tanggal</td><td>: ${formattedDate}</td></tr>
                     <tr><td style="white-space: nowrap;">Berkas lengkap tanggal</td><td>: ${formattedDate}</td></tr>
                 </table>
@@ -150,7 +150,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
                             <td style="border: 1px solid black; padding: 2px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
                             <td style="border: 1px solid black; padding: 2px; text-align: center;">-</td>
                             <td style="border: 1px solid black; padding: 2px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
-                            <td style="border: 1px solid black; padding: 2px; text-align: center;">&nbsp;</td>
+                            <td style="border: 1px solid black; padding: 2px; text-align: center;">-</td>
                             <td style="border: 1px solid black; padding: 2px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
                         </tr>
                     </tbody>
@@ -160,7 +160,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
                             <td style="border: 1px solid black; padding: 2px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
                             <td style="border: 1px solid black; padding: 2px; text-align: center;">-</td>
                             <td style="border: 1px solid black; padding: 2px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
-                            <td style="border: 1px solid black; padding: 2px; text-align: center;">&nbsp;</td>
+                            <td style="border: 1px solid black; padding: 2px; text-align: center;">-</td>
                             <td style="border: 1px solid black; padding: 2px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
                         </tr>
                     </tfoot>
@@ -258,7 +258,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
                     <th rowspan="2" style="border: 1px solid black; padding: 2px; vertical-align: middle;">NILAI PERTANGGUNGAN</th>
                     <th rowspan="2" style="border: 1px solid black; padding: 2px; vertical-align: middle;">PPN (Disetor Mitra)</th>
                     <th rowspan="2" style="border: 1px solid black; padding: 2px; vertical-align: middle;">NILAI KUITANSI</th>
-                    <th colspan="1" style="border: 1px solid black; padding: 2px;">PPh</th>
+                    <th style="border: 1px solid black; padding: 2px;">PPh</th>
                     <th rowspan="2" style="border: 1px solid black; padding: 2px; vertical-align: middle;">BAYAR KE MITRA</th>
                 </tr>
                 <tr>
