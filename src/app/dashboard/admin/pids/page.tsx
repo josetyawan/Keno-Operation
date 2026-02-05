@@ -114,6 +114,7 @@ export default function AdminPIDsPage() {
   const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
   const [pidToEdit, setPidToEdit] = useState<ProjectID | null>(null);
   const [pidToDelete, setPidToDelete] = useState<ProjectID | null>(null);
+  const [hasBeenSeeded, setHasBeenSeeded] = useState(false); // Prevent re-seeding
 
   // Redirect if user is not an admin
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
@@ -137,6 +138,33 @@ export default function AdminPIDsPage() {
   }, [firestore, currentUserProfile]);
 
   const { data: pids, isLoading: arePidsLoading } = useCollection<ProjectID>(pidsQuery);
+
+  // Seed initial data if the collection is empty
+  useEffect(() => {
+    if (firestore && pids?.length === 0 && !arePidsLoading && !hasBeenSeeded && currentUserProfile?.role === 'admin') {
+      const initialPids = [
+        { projectType: 'B2B IOAN', pid: 'TIF-215/2026' },
+        { projectType: 'PROVISIONING', pid: '-' },
+        { projectType: 'SPPG', pid: '-' },
+        { projectType: 'BBM GENSET', pid: 'Ditagihkan ke Unit Lain' },
+        { projectType: 'Lainnya', pid: '-' },
+      ];
+
+      const pidsCollection = collection(firestore, 'project-ids');
+      initialPids.forEach(pidData => {
+        addDocumentNonBlocking(pidsCollection, pidData);
+      });
+      
+      setHasBeenSeeded(true);
+      
+      toast({
+          title: 'Data Awal Ditambahkan',
+          description: 'Project ID bawaan telah ditambahkan ke database.',
+          duration: 5000,
+      });
+    }
+  }, [pids, arePidsLoading, firestore, hasBeenSeeded, currentUserProfile, toast]);
+
 
   const handleCreate = () => {
     setPidToEdit(null);
@@ -188,7 +216,7 @@ export default function AdminPIDsPage() {
 
   const isLoading = isUserLoading || isProfileLoading || arePidsLoading;
 
-  if (isLoading) {
+  if (isLoading && (!pids || pids.length === 0)) {
       return (
           <div>
               <div className="flex items-center justify-between mb-8">
@@ -256,7 +284,13 @@ export default function AdminPIDsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {pids && pids.length > 0 ? (
+              {arePidsLoading && pids?.length === 0 ? (
+                <TableRow>
+                    <TableCell colSpan={3} className="h-24 text-center">
+                        Memuat data awal...
+                    </TableCell>
+                </TableRow>
+              ) : pids && pids.length > 0 ? (
                 pids.map(p => (
                   <TableRow key={p.id}>
                     <TableCell className="font-medium">{p.projectType}</TableCell>
