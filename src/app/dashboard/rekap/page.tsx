@@ -31,7 +31,7 @@ import {
 import { ArrowLeft, Calendar as CalendarIcon, Loader2, Bot, Wallet, CheckCircle } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc, updateDocumentNonBlocking } from '@/firebase';
 import { collection, query, where, Timestamp, doc } from 'firebase/firestore';
-import { format, startOfDay, endOfDay } from 'date-fns';
+import { format, startOfDay, endOfDay, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import type { Nota, UserProfile } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -50,6 +50,14 @@ type RekapDataItem = {
     tanggal: string;
     nominal: number;
     userId: string;
+};
+
+const safeToDate = (timestamp: any): Date | null => {
+    if (!timestamp) return null;
+    if (timestamp.toDate) return timestamp.toDate();
+    if (timestamp instanceof Date && isValid(timestamp)) return timestamp;
+    const d = new Date(timestamp);
+    return isValid(d) ? d : null;
 };
 
 export default function RekapPage() {
@@ -139,7 +147,7 @@ export default function RekapPage() {
 
         for (const userId of sortedUserIds) {
             // Sort this user's notas by date
-            const userNotas = groupedByUser[userId].sort((a,b) => (a.tanggal?.toDate ? a.tanggal.toDate().getTime() : 0) - (b.tanggal?.toDate ? b.tanggal.toDate().getTime() : 0));
+            const userNotas = groupedByUser[userId].sort((a,b) => (safeToDate(a.tanggal)?.getTime() ?? 0) - (safeToDate(b.tanggal)?.getTime() ?? 0));
             const user = userMap.get(userId);
             let userSubtotal = 0;
             const userName = (user?.displayName || 'Unknown').replace(/\s/g, '');
@@ -147,11 +155,12 @@ export default function RekapPage() {
 
             // Add individual nota items
             userNotas.forEach(nota => {
+                const notaDate = safeToDate(nota.tanggal);
                 finalRekapData.push({
                     phone: user?.phone || 'No-Pembayaran',
                     name: userName,
                     segmen: nota.segmen,
-                    tanggal: nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd/MM/yy') : '??/??/??',
+                    tanggal: notaDate ? format(notaDate, 'dd/MM/yy') : '??/??/??',
                     nominal: nota.nominal,
                     userId: userId,
                 });
@@ -505,3 +514,5 @@ export default function RekapPage() {
         </div>
     );
 }
+
+    

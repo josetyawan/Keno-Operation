@@ -44,7 +44,7 @@ import {
 import { ArrowLeft, Edit, Trash2, Filter, FileArchive, Printer, Calendar as CalendarIcon, Loader2 } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
-import { format, getMonth, getYear, startOfDay, endOfDay } from 'date-fns';
+import { format, getMonth, getYear, startOfDay, endOfDay, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import type { Nota, ProjectID } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -58,6 +58,15 @@ import type { VariantProps } from 'class-variance-authority';
 import { useRouter } from 'next/navigation';
 
 type ProjectType = 'B2B IOAN' | 'PROVISIONING' | 'SPPG' | 'BBM GENSET' | 'Lainnya';
+
+const safeToDate = (timestamp: any): Date | null => {
+    if (!timestamp) return null;
+    if (timestamp.toDate) return timestamp.toDate();
+    if (timestamp instanceof Date && isValid(timestamp)) return timestamp;
+    const d = new Date(timestamp);
+    return isValid(d) ? d : null;
+};
+
 
 const getProjectType = (segmen: string): ProjectType => {
     if (segmen === 'BBM Genset') return 'BBM GENSET';
@@ -85,7 +94,9 @@ const getStatusVariant = (status: Nota['status']): VariantProps<typeof badgeVari
 
 const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectType: ProjectType, pids: ProjectID[]): string => {
     const today = new Date();
-    const reportDate = (notas.length > 0 && notas[0].tanggal?.toDate) ? notas[0].tanggal.toDate() : today;
+    const firstNotaDate = (notas.length > 0) ? safeToDate(notas[0].tanggal) : null;
+    const reportDate = firstNotaDate || today;
+
     const monthName = format(reportDate, 'MMM', { locale: idLocale });
     const formattedDate = format(reportDate, 'dd/MM/yyyy');
     
@@ -97,10 +108,11 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
     let grandTotal = 0;
     const tableRows = notas.map((nota, index) => {
         grandTotal += nota.nominal;
+        const notaDate = safeToDate(nota.tanggal);
         return `
             <tr style="font-size: 8pt;">
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${index + 1}</td>
-                <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd/MM/yyyy') : '-'}</td>
+                <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${notaDate ? format(notaDate, 'dd/MM/yyyy') : '-'}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${index + 1}</td>
                 <td style="border: 1px solid black; padding: 2px 4px;">${nota.segmen}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${idProject}</td>
@@ -385,7 +397,8 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
 const generateJasaReport = (notas: Nota[], title: string): string => {
     // Group notas by date
     const groupedByDate = notas.reduce((acc, nota) => {
-        const dateKey = nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'yyyy-MM-dd') : 'invalid-date';
+        const notaDate = safeToDate(nota.tanggal);
+        const dateKey = notaDate ? format(notaDate, 'yyyy-MM-dd') : 'invalid-date';
         if (!acc[dateKey]) {
             acc[dateKey] = [];
         }
@@ -404,12 +417,13 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
         let dateSubtotal = 0;
 
         for (const nota of notasOnDate) {
+            const notaDate = safeToDate(nota.tanggal);
             const dpp = nota.nominal / 1.02;
             const pph = nota.nominal - dpp;
             dateSubtotal += nota.nominal;
             tableRows += `
             <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
-                <td style="padding: 4px; border: 1px solid black;">${nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd/MM/yyyy') : '-'}</td>
+                <td style="padding: 4px; border: 1px solid black;">${notaDate ? format(notaDate, 'dd/MM/yyyy') : '-'}</td>
                 <td style="padding: 4px; border: 1px solid black; white-space: normal; word-break: break-all;">${nota.keterangan || nota.namaBarang || '-'}</td>
                 <td style="padding: 4px; border: 1px solid black; text-align: right;">${dpp.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 <td style="padding: 4px; border: 1px solid black; text-align: right;">${pph.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
@@ -480,7 +494,8 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
 const generateBBMReport = (notas: Nota[], title: string): string => {
     // Group notas by date
     const groupedByDate = notas.reduce((acc, nota) => {
-        const dateKey = nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'yyyy-MM-dd') : 'invalid-date';
+        const notaDate = safeToDate(nota.tanggal);
+        const dateKey = notaDate ? format(notaDate, 'yyyy-MM-dd') : 'invalid-date';
         if (!acc[dateKey]) {
             acc[dateKey] = [];
         }
@@ -499,13 +514,14 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
         let dateSubtotal = 0;
 
         for (const nota of notasOnDate) {
+            const notaDate = safeToDate(nota.tanggal);
             grandTotal += nota.nominal;
             dateSubtotal += nota.nominal;
             const staticKeterangan = nota.segmen;
 
             tableRows += `
                 <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
-                    <td style="padding: 4px; border: 1px solid black;">${nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd-MMM-yy', { locale: idLocale }) : '-'}</td>
+                    <td style="padding: 4px; border: 1px solid black;">${notaDate ? format(notaDate, 'dd-MMM-yy', { locale: idLocale }) : '-'}</td>
                     <td style="padding: 4px; border: 1px solid black;">${staticKeterangan}</td>
                     <td style="padding: 4px; border: 1px solid black;">${nota.noPlatKendaraan || '-'}</td>
                     <td style="padding: 4px; border: 1px solid black; text-align: center;">${nota.kmAwal || '-'}</td>
@@ -576,7 +592,8 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
 
 const generateMaterialReport = (notas: Nota[], title: string): string => {
     const groupedByDate = notas.reduce((acc, nota) => {
-        const dateKey = nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'yyyy-MM-dd') : 'invalid-date';
+        const notaDate = safeToDate(nota.tanggal);
+        const dateKey = notaDate ? format(notaDate, 'yyyy-MM-dd') : 'invalid-date';
         if (!acc[dateKey]) {
             acc[dateKey] = [];
         }
@@ -595,10 +612,11 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
         let dateSubtotal = 0;
 
         for (const nota of notasOnDate) {
+            const notaDate = safeToDate(nota.tanggal);
             dateSubtotal += nota.nominal;
             tableRows += `
             <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
-                <td style="padding: 4px; border: 1px solid black;">${nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd/MM/yyyy') : '-'}</td>
+                <td style="padding: 4px; border: 1px solid black;">${notaDate ? format(notaDate, 'dd/MM/yyyy') : '-'}</td>
                 <td style="padding: 4px; border: 1px solid black;">${nota.namaBarang || '-'}</td>
                 <td style="padding: 4px; border: 1px solid black; white-space: normal; word-break: break-all;">${nota.keterangan || '-'}</td>
                 <td style="padding: 4px; border: 1px solid black; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
@@ -661,6 +679,7 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
 
 const generateEvidenReport = (notas: Nota[], title: string): string => {
     const tableRows = notas.map((nota, index) => {
+        const notaDate = safeToDate(nota.tanggal);
         // Form supports 4 images for Keperluan, 3 for KM readings.
         const keperluanImageUrls = (nota.fotoEvidenUrls || []).slice(0, 4);
         const evidenKmUrl = nota.fotoEvidenUrls?.[4]; // Corresponds to KM Awal Bulan
@@ -684,7 +703,7 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
         return `
         <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
             <td style="border: 1px solid black; padding: 4px; text-align: center; vertical-align: top;">${index + 1}</td>
-            <td style="border: 1px solid black; padding: 4px; vertical-align: top; white-space: nowrap;">${nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd MMMM yyyy', { locale: idLocale }) : '-'}</td>
+            <td style="border: 1px solid black; padding: 4px; vertical-align: top; white-space: nowrap;">${notaDate ? format(notaDate, 'dd MMMM yyyy', { locale: idLocale }) : '-'}</td>
             <td style="border: 1px solid black; padding: 4px; background-color: #FFDDDD; vertical-align: top; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${ketText}</td>
             <td style="border: 1px solid black; padding: 4px; vertical-align: top;">${nota.noPlatKendaraan || '-'}</td>
             <td style="border: 1px solid black; padding: 4px; text-align: center; vertical-align: top;">${selisih}</td>
@@ -718,6 +737,7 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
 
 const generateSimpleEvidenReport = (notas: Nota[], title: string): string => {
     const tableRows = notas.map((nota, index) => {
+        const notaDate = safeToDate(nota.tanggal);
         const evidenImagesHtml = (nota.fotoEvidenUrls || []).map(url => 
             `<img src="${url}" style="width: 60px; height: auto; object-fit: contain; border: 1px solid #eee;"/>`
         ).join('');
@@ -729,7 +749,7 @@ const generateSimpleEvidenReport = (notas: Nota[], title: string): string => {
         return `
         <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
             <td style="border: 1px solid black; padding: 4px; text-align: center; vertical-align: top;">${index + 1}</td>
-            <td style="border: 1px solid black; padding: 4px; vertical-align: top; white-space: nowrap;">${nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd MMMM yyyy', { locale: idLocale }) : '-'}</td>
+            <td style="border: 1px solid black; padding: 4px; vertical-align: top; white-space: nowrap;">${notaDate ? format(notaDate, 'dd MMMM yyyy', { locale: idLocale }) : '-'}</td>
             <td style="border: 1px solid black; padding: 4px; vertical-align: top;">${nota.namaBarang || nota.keterangan || '-'}</td>
             <td style="border: 1px solid black; padding: 4px; vertical-align: top;">${evidenCellContent}</td>
             <td style="border: 1px solid black; padding: 4px; vertical-align: top;">${nota.namaPic}</td>
@@ -907,18 +927,7 @@ function ReportPreview({
 const getMonthYearOptions = (notas: Nota[]) => {
     const monthYears = new Set<string>();
     notas.forEach(nota => {
-        let date: Date | null = null;
-        if (nota.tanggal?.toDate) {
-            // Firestore Timestamp
-            date = nota.tanggal.toDate();
-        } else if (typeof nota.tanggal === 'string' && new Date(nota.tanggal).toString() !== 'Invalid Date') {
-            // ISO string
-            date = new Date(nota.tanggal);
-        } else if (nota.tanggal instanceof Date) {
-            // JavaScript Date object
-            date = nota.tanggal;
-        }
-
+        const date = safeToDate(nota.tanggal);
         if (date) {
             monthYears.add(format(date, 'yyyy-MM'));
         }
@@ -985,11 +994,8 @@ export default function ExportPage() {
 
             const [year, month] = currentMonth.split('-').map(Number);
             result = notas.filter(nota => {
-                let date: Date | null = null;
-                if (nota.tanggal?.toDate) { date = nota.tanggal.toDate(); } 
-                else if (nota.tanggal instanceof Date) { date = nota.tanggal; }
+                const date = safeToDate(nota.tanggal);
                 if (!date) return false;
-
                 return getYear(date) === year && getMonth(date) === month - 1;
             });
         } else if (filterType === 'range') {
@@ -997,8 +1003,8 @@ export default function ExportPage() {
             const fromDate = startOfDay(dateRange.from);
             const toDate = endOfDay(dateRange.to);
             result = notas.filter(nota => {
-                if (!nota.tanggal?.toDate) return false;
-                const date = nota.tanggal.toDate();
+                const date = safeToDate(nota.tanggal);
+                if (!date) return false;
                 return date >= fromDate && date <= toDate;
             });
         } else if (filterType === 'verified') {
@@ -1006,9 +1012,9 @@ export default function ExportPage() {
              const fromDate = startOfDay(verifiedDateRange.from);
              const toDate = endOfDay(verifiedDateRange.to);
              result = notas.filter(nota => {
-                if (nota.status !== 'verified' || !nota.tanggalVerifikasi?.toDate) return false;
-                const date = nota.tanggalVerifikasi.toDate();
-                return date >= fromDate && date <= toDate;
+                const verifiedDate = safeToDate(nota.tanggalVerifikasi);
+                if (nota.status !== 'verified' || !verifiedDate) return false;
+                return verifiedDate >= fromDate && verifiedDate <= toDate;
             });
         }
         
@@ -1021,20 +1027,9 @@ export default function ExportPage() {
         }
 
         return result.sort((a, b) => {
-          const toTime = (date: any): number => {
-            if (!date) return 0;
-            if (date.toDate) { // Firestore Timestamp
-                const d = date.toDate();
-                return !isNaN(d.getTime()) ? d.getTime() : 0;
-            }
-            if (date instanceof Date) { // JavaScript Date
-                const d = date;
-                return !isNaN(d.getTime()) ? d.getTime() : 0;
-            }
-            const d = new Date(date); // String date
-            return isNaN(d.getTime()) ? 0 : d.getTime();
-          };
-          return toTime(a.tanggal) - toTime(b.tanggal);
+            const timeA = safeToDate(a.tanggal)?.getTime() ?? 0;
+            const timeB = safeToDate(b.tanggal)?.getTime() ?? 0;
+            return timeA - timeB;
         });
     }, [notas, filterType, selectedMonth, monthOptions, dateRange, verifiedDateRange, selectedSA, selectedStatus]);
 
@@ -1099,7 +1094,7 @@ export default function ExportPage() {
         }
 
         const selectedNotas = filteredNotas.filter(n => selectedNotaIds.includes(n.id)) || [];
-        const sortedNotas = selectedNotas.sort((a,b) => (a.tanggal?.toDate ? a.tanggal.toDate().getTime() : 0) - (b.tanggal?.toDate ? b.tanggal.toDate().getTime() : 0));
+        const sortedNotas = selectedNotas.sort((a,b) => (safeToDate(a.tanggal)?.getTime() ?? 0) - (safeToDate(b.tanggal)?.getTime() ?? 0));
         const pages: {html: string, orientation: 'portrait' | 'landscape'}[] = [];
 
         try {
@@ -1464,7 +1459,7 @@ export default function ExportPage() {
                                                     </div>
                                                 </div>
                                                 <p className="text-sm text-muted-foreground truncate mt-1">
-                                                    {nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd MMM yyyy', { locale: idLocale }) : 'Invalid Date'}
+                                                    {safeToDate(nota.tanggal) ? format(safeToDate(nota.tanggal)!, 'dd MMM yyyy', { locale: idLocale }) : 'Invalid Date'}
                                                 </p>
                                             </div>
                                             <div className="flex items-center">
@@ -1502,3 +1497,5 @@ export default function ExportPage() {
         </>
     );
 }
+
+    

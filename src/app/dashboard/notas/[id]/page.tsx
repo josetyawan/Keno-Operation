@@ -9,7 +9,7 @@ import {
   CardTitle,
   CardFooter,
 } from '@/components/ui/card';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { Badge, badgeVariants } from '@/components/ui/badge';
 import Link from 'next/link';
@@ -40,6 +40,14 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { sendRejectionNotice } from '@/ai/flows/send-rejection-notice';
+
+const safeToDate = (timestamp: any): Date | null => {
+    if (!timestamp) return null;
+    if (timestamp.toDate) return timestamp.toDate();
+    if (timestamp instanceof Date && isValid(timestamp)) return timestamp;
+    const d = new Date(timestamp);
+    return isValid(d) ? d : null;
+};
 
 
 const getStatusVariant = (status: Nota['status']): VariantProps<typeof badgeVariants>['variant'] => {
@@ -112,8 +120,9 @@ export default function NotaDetailPage() {
         });
         return;
     }
-
-    if (!nota || !nota.tanggal?.toDate) {
+    
+    const notaDate = safeToDate(nota?.tanggal);
+    if (!nota || !notaDate) {
       toast({
         variant: "destructive",
         title: "Data Laporan Tidak Lengkap",
@@ -136,7 +145,7 @@ export default function NotaDetailPage() {
     // Send Telegram Notification
     sendRejectionNotice({
       picName: nota.namaPic,
-      notaDate: format(nota.tanggal.toDate(), 'dd MMM yyyy', { locale: idLocale }),
+      notaDate: format(notaDate, 'dd MMM yyyy', { locale: idLocale }),
       segment: nota.segmen,
       reason: reason,
     }).catch(err => {
@@ -218,7 +227,9 @@ export default function NotaDetailPage() {
     notFound();
   }
 
-  const tanggalLaporan = nota.tanggal?.toDate ? nota.tanggal.toDate() : new Date();
+  const tanggalLaporan = safeToDate(nota.tanggal) || new Date();
+  const tanggalVerifikasi = safeToDate(nota.tanggalVerifikasi);
+  const tanggalPembayaran = safeToDate(nota.tanggalPembayaran);
   
   const notaContentForSummary = `
   Tanggal: ${format(tanggalLaporan, 'dd MMMM yyyy')}
@@ -257,11 +268,11 @@ export default function NotaDetailPage() {
             <CardTitle>Laporan Segmen: {nota.segmen}</CardTitle>
               <CardDescription>
                 Oleh {nota.userEmail} di <strong>{nota.serviceArea}</strong> pada {format(tanggalLaporan, 'PPPPp')}
-                {nota.status === 'verified' && nota.tanggalVerifikasi?.toDate && (
-                      ` | Diverifikasi pada: ${format(nota.tanggalVerifikasi.toDate(), 'dd MMM yyyy')}`
+                {nota.status === 'verified' && tanggalVerifikasi && (
+                      ` | Diverifikasi pada: ${format(tanggalVerifikasi, 'dd MMM yyyy')}`
                   )}
-                {nota.status === 'paid' && nota.tanggalPembayaran?.toDate && (
-                        ` | Dibayar pada: ${format(nota.tanggalPembayaran.toDate(), 'dd MMM yyyy')}`
+                {nota.status === 'paid' && tanggalPembayaran && (
+                        ` | Dibayar pada: ${format(tanggalPembayaran, 'dd MMM yyyy')}`
                     )}
               </CardDescription>
           </CardHeader>
@@ -492,3 +503,5 @@ export default function NotaDetailPage() {
     </>
   );
 }
+
+    
