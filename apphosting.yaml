@@ -1,7 +1,14 @@
 # Settings to manage and configure a Firebase App Hosting backend.
 # https://firebase.google.com/docs/app-hosting/configure
 
+run:
+  command: npm run start
+
+runtime: nodejs18
+
 runConfig:
-  # Increase this value if you'd like to automatically spin up
-  # more instances in response to increased traffic.
   maxInstances: 1
+
+env:
+  - variable: GEMINI_API_KEY
+    value: "AIzaSyDR1T6v23MxvIBHt3z2GFBj2OfPhEBsLkA"
