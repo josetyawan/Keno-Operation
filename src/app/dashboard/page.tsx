@@ -182,14 +182,32 @@ export default function DashboardPage() {
   const { data: notas, isLoading: isNotasLoading } = useCollection<Nota>(notasQuery);
   
   const usersQuery = useMemoFirebase(() => {
-    return query(collection(firestore, 'users'));
-  }, [firestore]);
+    // Only admins are allowed to fetch all users.
+    if (isProfileLoading) {
+        return null;
+    }
+    if (isAdmin) {
+        return query(collection(firestore, 'users'));
+    }
+    return null;
+  }, [firestore, isAdmin, isProfileLoading]);
+
   const { data: users, isLoading: isUsersLoading } = useCollection<UserProfile>(usersQuery);
 
   const userMap = useMemo(() => {
-    if (!users) return new Map<string, UserProfile>();
-    return new Map(users.map(u => [u.id, u]));
-  }, [users]);
+    // For admins, create a map of all users from the collection query
+    if (isAdmin) {
+        if (!users) return new Map<string, UserProfile>();
+        return new Map(users.map(u => [u.id, u]));
+    }
+    
+    // For non-admins, create a map containing only their own profile
+    if (userProfile) {
+        return new Map([[userProfile.id, userProfile]]);
+    }
+
+    return new Map<string, UserProfile>();
+  }, [users, isAdmin, userProfile]);
 
   const filteredNotas = useMemo(() => {
       if (!notas) return [];
