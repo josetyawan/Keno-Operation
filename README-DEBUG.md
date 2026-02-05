@@ -16,9 +16,9 @@ Di menu Firebase Console, pastikan Anda mengklik **Build** > **Firestore Databas
 
 ### Langkah 2: Salin Aturan Debugging di Bawah Ini
 
-Penting: Salin **HANYA** teks yang ada di dalam kotak abu-abu di bawah ini. **JANGAN** sertakan baris dengan ` ```rules ` atau baris terakhir dengan ` ``` `.
+**SANGAT PENTING:** Salin **HANYA** teks yang ada di dalam kotak di bawah ini, dimulai dari `rules_version` dan diakhiri dengan `}`. **JANGAN** sertakan baris kosong atau karakter ` ``` ` yang mungkin terlihat di awal atau akhir.
 
-```rules
+```
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
