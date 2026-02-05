@@ -103,29 +103,7 @@ export default function DashboardLayout({
     }
   }, [auth, router, toast]);
 
-  // Effect to automatically promote the super admin user
-  useEffect(() => {
-    if (user && userProfile && firestore) {
-      const isSuperAdminEmail = user.email === 'jokowahyusisnaker123@gmail.com';
-      const isNotAdminRole = userProfile.role !== 'admin';
-      const isNotApproved = userProfile.registrationStatus !== 'approved';
-
-      if (isSuperAdminEmail && (isNotAdminRole || isNotApproved)) {
-        console.log("Super admin detected with incorrect role/status. Upgrading...");
-        const userToUpgradeRef = doc(firestore, 'users', user.uid);
-        updateDocumentNonBlocking(userToUpgradeRef, { 
-          role: 'admin', 
-          registrationStatus: 'approved' 
-        });
-        toast({
-          title: "Admin Privileges Granted",
-          description: "Your account has been automatically upgraded to Admin.",
-        });
-      }
-    }
-  }, [user, userProfile, firestore, toast]);
-
-  // Use effect for redirection logic
+  // Combined effect for user state management (redirection, self-healing, promotion)
    useEffect(() => {
     // Don't do anything until both auth and profile loading are complete
     if (isUserLoading || isProfileLoading) {
@@ -157,10 +135,7 @@ export default function DashboardLayout({
         };
 
         // We don't await this. We create the doc and immediately sign out the user.
-        // The next time they log in, the document will exist and they will be
-        // correctly handled as a 'pending' user.
         setDoc(newUserDocRef, newUserProfileData, { merge: true }).catch(err => {
-            // If even creating the document fails, log the user out with a more severe error.
             console.error("CRITICAL: Failed to create missing user profile document.", err);
             handleSignOutAndRedirect(
                 'Gagal Membuat Profil',
@@ -176,7 +151,29 @@ export default function DashboardLayout({
         return;
     }
     
-    // Case 3: User has a profile, but it's not approved yet
+    // Case 3: Super Admin Check & Auto-Promotion
+    // This runs before the 'pending' check to allow promotion.
+    const isSuperAdminEmail = user.email === 'jokowahyusisnaker123@gmail.com';
+    const isNotAdminRole = userProfile.role !== 'admin';
+    const isNotApproved = userProfile.registrationStatus !== 'approved';
+
+    if (isSuperAdminEmail && (isNotAdminRole || isNotApproved)) {
+        console.log("Super admin detected with incorrect role/status. Upgrading...");
+        const userToUpgradeRef = doc(firestore, 'users', user.uid);
+        updateDocumentNonBlocking(userToUpgradeRef, { 
+            role: 'admin', 
+            registrationStatus: 'approved' 
+        });
+        toast({
+            title: "Admin Privileges Granted",
+            description: "Your account has been automatically upgraded to Admin.",
+        });
+        // Return here to prevent the pending check from running on this render.
+        // The component will re-render with the updated profile.
+        return;
+    }
+    
+    // Case 4: User has a profile, but it's not approved yet (and they are not the super admin)
     if (userProfile.registrationStatus === 'pending') {
       handleSignOutAndRedirect(
         'Akun Menunggu Persetujuan',
@@ -185,7 +182,7 @@ export default function DashboardLayout({
       return;
     }
 
-  }, [user, isUserLoading, userProfile, isProfileLoading, router, firestore, handleSignOutAndRedirect]);
+  }, [user, isUserLoading, userProfile, isProfileLoading, router, firestore, handleSignOutAndRedirect, toast]);
 
 
   // Show skeleton while loading auth or profile (if user object exists)
