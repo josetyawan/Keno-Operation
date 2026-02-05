@@ -219,7 +219,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
             </tr>
             <tr>
                 <td style="vertical-align: bottom; text-align: left; padding-top: 20px;">
-                     <div style="border: 1px solid black; padding: 5px 10px 20px 10px; font-size: 8pt; display: inline-block;">
+                     <div style="border: 1px solid black; padding: 5px 40px 20px 10px; font-size: 8pt; display: inline-block;">
                         DOC ID :
                     </div>
                 </td>
@@ -237,7 +237,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
             FINANCE REGIONAL III
         </div>
         <div style="text-align: center; font-size: 11pt; font-weight: bold; margin-top: 1rem; margin-bottom: 1rem;">
-            REKAP PERTANGGUNGAN IMPREST FUND / PANJAR KERJA *)
+            REKAP PERTANGGUNGAN IMPREST FUND <span style="text-decoration: line-through;">/ PANJAR KERJA</span> *)
         </div>
         
         <table style="font-size: 8pt; margin-bottom: 1rem; width: 100%;">
@@ -332,7 +332,7 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
         saShort = '';
     }
     
-    const areaTitle = saShort ? `SERVICE AREA ${saShort.toUpperCase()}` : '';
+    const areaTitle = saShort ? `SERVICE AREA ${saShort.toUpperCase()}` : 'SEMUA';
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; background-color: white; page-break-inside: avoid;">
@@ -416,7 +416,7 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
             tableRows += `
             <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <td style="padding: 4px; border: 1px solid black;">${format(nota.tanggal.toDate(), 'dd/MM/yyyy')}</td>
-                <td style="padding: 4px; border: 1px solid black;">${nota.keterangan || nota.namaBarang || '-'}</td>
+                <td style="padding: 4px; border: 1px solid black; white-space: normal; word-break: break-all;">${nota.keterangan || nota.namaBarang || '-'}</td>
                 <td style="padding: 4px; border: 1px solid black; text-align: right;">${dpp.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 <td style="padding: 4px; border: 1px solid black; text-align: right;">${pph.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 <td style="padding: 4px; border: 1px solid black; text-align: right;">${nota.nominal.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
@@ -437,10 +437,10 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; background-color: white; page-break-inside: avoid;">
-        <div style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left;">${title}</div>
+        <div style="font-size: 12pt; margin: 0; font-weight: bold; text-align: left;">${title}</div>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
-            <thead style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+            <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr>
                     <th style="padding: 4px; border: 1px solid black; width: 10%;">TANGGAL</th>
                     <th style="padding: 4px; border: 1px solid black;">KETERANGAN</th>
@@ -538,7 +538,7 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; background-color: white; page-break-inside: avoid;">
-        <div style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left;">${title}</div>
+        <div style="font-size: 12pt; margin: 0; font-weight: bold; text-align: left;">${title}</div>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
             <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
@@ -622,10 +622,10 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; background-color: white; page-break-inside: avoid;">
-        <div style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left;">${title}</div>
+        <div style="font-size: 12pt; margin: 0; font-weight: bold; text-align: left;">${title}</div>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
-            <thead style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+            <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr>
                     ${['TANGGAL', 'Nama Barang', 'Keterangan', 'Jumlah'].map(h => `<th style="padding: 4px; border: 1px solid black;">${h}</th>`).join('')}
                 </tr>
@@ -707,7 +707,7 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 9pt; background-color: white; page-break-inside: avoid;">
-        <div style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left;">${title}</div>
+        <div style="font-size: 12pt; margin: 0; font-weight: bold; text-align: left;">${title}</div>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 1px solid black; font-size: 8pt;">
             <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
@@ -745,7 +745,7 @@ const generateSimpleEvidenReport = (notas: Nota[], title: string): string => {
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; background-color: white; page-break-inside: avoid;">
-        <div style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left;">${title}</div>
+        <div style="font-size: 12pt; margin: 0; font-weight: bold; text-align: left;">${title}</div>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 1px solid black; font-size: 10pt;">
             <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
