@@ -265,7 +265,7 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
             <div style="margin: 0; font-size: 12pt;">ID PROJECT: ${idProject}</div>
         </div>
         <br/>
-        <table style="width: 100%; border-collapse: collapse; border: 1px solid black; page-break-after: avoid;">
+        <table style="width: 100%; border-collapse: collapse; border: 1px solid black;">
             <thead style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr>
                     <th style="padding: 4px 8px; border: 1px solid black; width: 5%;">NO</th>
@@ -361,7 +361,7 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; background-color: white; page-break-inside: avoid;">
         <div style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${title}</div>
         <br/>
-        <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt; page-break-after: avoid;">
+        <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
             <thead style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr>
                     <th style="padding: 4px; border: 1px solid black; width: 10%;">TANGGAL</th>
@@ -466,7 +466,7 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; background-color: white; page-break-inside: avoid;">
         <div style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${title}</div>
         <br/>
-        <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt; page-break-after: avoid;">
+        <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
             <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr>
                     ${['TANGGAL', 'KETERANGAN', 'NO PLAT', 'KM AWAL', 'KM AKHIR', 'URAIAN PEKERJAAN', 'JUMLAH', 'NAMA'].map(h => `<th style="padding: 4px; border: 1px solid black;">${h}</th>`).join('')}
@@ -475,9 +475,8 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
             <tbody>${tableRows}</tbody>
             <tfoot style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
-                    <td colspan="6" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">TOTAL</td>
+                    <td colspan="7" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">TOTAL</td>
                     <td style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">Rp${grandTotal.toLocaleString('id-ID')}</td>
-                    <td style="padding: 4px; border: 1px solid black;"></td>
                 </tr>
             </tfoot>
         </table>
@@ -555,7 +554,7 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; background-color: white; page-break-inside: avoid;">
         <div style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${title}</div>
         <br/>
-        <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt; page-break-after: avoid;">
+        <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
             <thead style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr>
                     ${['TANGGAL', 'Nama Barang', 'Keterangan', 'Jumlah'].map(h => `<th style="padding: 4px; border: 1px solid black;">${h}</th>`).join('')}
@@ -641,7 +640,7 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 9pt; background-color: white; page-break-inside: avoid;">
-        <div style="text-align: left; font-size: 14pt; margin: 0; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${title}</div>
+        <div style="font-size: 14pt; margin: 0; font-weight: bold; text-align: left; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${title}</div>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 1px solid black; font-size: 8pt;">
             <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
