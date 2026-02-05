@@ -90,7 +90,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
     
     const saShort = serviceArea.replace('SA ', '');
     const monthName = format(reportDate, 'MMM', { locale: idLocale });
-    const projectName = `IF SEMARANG - SMG OPR - Ops ${projectType} Area ${saShort} (${monthName})`;
+    const projectName = `IF JATENG - SMG OPR - Ops SA Area ${saShort} (${monthName})`;
 
     let idProject = '-';
     if (projectType === 'B2B IOAN') idProject = 'TIF-215/2026';
@@ -150,7 +150,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
                             <td style="border: 1px solid black; padding: 2px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
                             <td style="border: 1px solid black; padding: 2px; text-align: center;">-</td>
                             <td style="border: 1px solid black; padding: 2px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
-                            <td style="border: 1px solid black; padding: 2px; text-align: center;">-</td>
+                            <td style="border: 1px solid black; padding: 2px; text-align: center;">&nbsp;</td>
                             <td style="border: 1px solid black; padding: 2px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
                         </tr>
                     </tbody>
@@ -160,7 +160,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
                             <td style="border: 1px solid black; padding: 2px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
                             <td style="border: 1px solid black; padding: 2px; text-align: center;">-</td>
                             <td style="border: 1px solid black; padding: 2px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
-                            <td style="border: 1px solid black; padding: 2px; text-align: center;">-</td>
+                            <td style="border: 1px solid black; padding: 2px; text-align: center;">&nbsp;</td>
                             <td style="border: 1px solid black; padding: 2px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
                         </tr>
                     </tfoot>
@@ -234,7 +234,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
     <div style="font-family: Arial, sans-serif; color: black; font-size: 9pt; width: 100%; height: 100%; box-sizing: border-box; page-break-inside: avoid;">
         <div style="text-align: left; font-size: 11pt; font-weight: bold;">
             PT. TELKOM AKSES<br/>
-            FINANCE REGIONAL III
+            FINANCE REGIONAL JAWA BALI
         </div>
         <div style="text-align: center; font-size: 11pt; font-weight: bold; margin-top: 1rem; margin-bottom: 1rem;">
             REKAP PERTANGGUNGAN IMPREST FUND <span style="text-decoration: line-through;">/ PANJAR KERJA</span> *)
@@ -248,18 +248,21 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
 
         <table style="width: 100%; border-collapse: collapse; font-size: 7pt;">
             <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                 <tr>
+                    <th rowspan="2" style="border: 1px solid black; padding: 2px; vertical-align: middle;">No. Urut</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 2px; vertical-align: middle;">TANGGAL</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 2px; vertical-align: middle;">No. Kuitansi</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 2px; vertical-align: middle; width: 20%;">URAIAN</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 2px; vertical-align: middle;">ID PROJECT</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 2px; vertical-align: middle;">No. Akun</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 2px; vertical-align: middle;">NILAI PERTANGGUNGAN</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 2px; vertical-align: middle;">PPN (Disetor Mitra)</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 2px; vertical-align: middle;">NILAI KUITANSI</th>
+                    <th colspan="1" style="border: 1px solid black; padding: 2px;">PPh</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 2px; vertical-align: middle;">BAYAR KE MITRA</th>
+                </tr>
                 <tr>
-                    <th style="border: 1px solid black; padding: 2px; vertical-align: middle;">No. Urut</th>
-                    <th style="border: 1px solid black; padding: 2px; vertical-align: middle;">TANGGAL</th>
-                    <th style="border: 1px solid black; padding: 2px; vertical-align: middle;">No. Kuitansi</th>
-                    <th style="border: 1px solid black; padding: 2px; vertical-align: middle; width: 20%;">URAIAN</th>
-                    <th style="border: 1px solid black; padding: 2px; vertical-align: middle;">ID PROJECT</th>
-                    <th style="border: 1px solid black; padding: 2px; vertical-align: middle;">No. Akun</th>
-                    <th style="border: 1px solid black; padding: 2px; vertical-align: middle;">NILAI PERTANGGUNGAN</th>
-                    <th style="border: 1px solid black; padding: 2px; vertical-align: middle;">PPN (Disetor Mitra)</th>
-                    <th style="border: 1px solid black; padding: 2px; vertical-align: middle;">NILAI KUITANSI</th>
-                    <th style="border: 1px solid black; padding: 2px; vertical-align: middle;">PPh</th>
-                    <th style="border: 1px solid black; padding: 2px; vertical-align: middle;">BAYAR KE MITRA</th>
+                    <th style="border: 1px solid black; padding: 2px;">PPh 21, 23, 4(2) *)</th>
                 </tr>
             </thead>
             <tbody>
