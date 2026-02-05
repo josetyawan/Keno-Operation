@@ -135,6 +135,7 @@ export default function NewNotaPage() {
     'Konsumsi Lembur B2B IOAN',
     'Konsumsi Lembur PROVISIONING',
     'MATERIAL SPPG',
+    'ISI PANTRY',
   ];
   
   const isBBMKendaraan = segmen && bbmKendaraanSegments.includes(segmen);
@@ -363,6 +364,7 @@ export default function NewNotaPage() {
                         <SelectItem value="Konsumsi Lembur B2B IOAN">Konsumsi Lembur B2B IOAN</SelectItem>
                         <SelectItem value="Konsumsi Lembur PROVISIONING">Konsumsi Lembur PROVISIONING</SelectItem>
                         <SelectItem value="MATERIAL SPPG">MATERIAL SPPG</SelectItem>
+                        <SelectItem value="ISI PANTRY">ISI PANTRY</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

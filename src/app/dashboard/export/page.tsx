@@ -39,9 +39,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { ArrowLeft, Edit, Trash2, Filter, FileArchive, Printer, Calendar as CalendarIcon, Loader2 } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Filter, FileArchive, Printer, Calendar as CalendarIcon, Loader2, Files } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { format, getMonth, getYear, startOfDay, endOfDay, isValid } from 'date-fns';
@@ -56,6 +55,8 @@ import { toWords } from '@/lib/number-to-words';
 import Image from 'next/image';
 import type { VariantProps } from 'class-variance-authority';
 import { useRouter } from 'next/navigation';
+import { AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
 
 type ProjectType = 'B2B IOAN' | 'PROVISIONING' | 'SPPG' | 'BBM GENSET' | 'Lainnya';
 
@@ -71,7 +72,7 @@ const safeToDate = (timestamp: any): Date | null => {
 const getProjectType = (segmen: string): ProjectType => {
     if (segmen === 'BBM Genset') return 'BBM GENSET';
     if (segmen.includes('SPPG')) return 'SPPG';
-    if (segmen.includes('B2B IOAN')) return 'B2B IOAN';
+    if (segmen.includes('B2B IOAN') || segmen === 'ISI PANTRY') return 'B2B IOAN';
     if (segmen.includes('PROVISIONING') || segmen === 'Perincian Nota ATK') return 'PROVISIONING';
     return 'Lainnya';
 };
@@ -778,112 +779,12 @@ const generateSimpleEvidenReport = (notas: Nota[], title: string): string => {
 function ReportPreview({
   pages,
   onClose,
+  onPrint,
 }: {
   pages: {html: string, orientation: 'portrait' | 'landscape'}[];
   onClose: () => void;
+  onPrint: (orientation: 'portrait' | 'landscape' | 'all') => void;
 }) {
-
-  // Helper function to trigger the print dialog and clean up
-  const triggerPrint = (printIframe: HTMLIFrameElement) => {
-      try {
-        printIframe.contentWindow?.focus();
-        printIframe.contentWindow?.print();
-      } catch (e) {
-        console.error('Print failed:', e);
-        toast({
-            variant: "destructive",
-            title: "Gagal Mencetak",
-            description: "Terjadi kesalahan saat membuka dialog cetak.",
-        });
-      } finally {
-        // A short delay before removing the iframe can help ensure browser compatibility
-        setTimeout(() => {
-            if (document.body.contains(printIframe)) {
-                document.body.removeChild(printIframe);
-            }
-        }, 1000);
-      }
-  };
-
-  const handlePrint = () => {
-    // The orientation is consistent for all pages passed to this component.
-    const orientation = pages.length > 0 ? pages[0].orientation : 'portrait';
-
-    const printIframe = document.createElement('iframe');
-    // Keep it off-screen but not display:none as some browsers have issues
-    printIframe.style.position = 'absolute';
-    printIframe.style.width = '0px';
-    printIframe.style.height = '0px';
-    printIframe.style.left = '-9999px';
-    document.body.appendChild(printIframe);
-
-    const iframeDoc = printIframe.contentWindow?.document;
-    if (!iframeDoc) {
-      console.error('Could not access iframe document.');
-      document.body.removeChild(printIframe);
-      toast({
-        variant: 'destructive',
-        title: 'Gagal Mempersiapkan Cetak',
-        description: 'Tidak dapat membuat dokumen cetak.'
-      });
-      return;
-    }
-
-    const allPagesHtml = pages.map(page =>
-        `<div style="page-break-after: always;">${page.html}</div>`
-    ).join('');
-
-    const printStyles = `
-        @page {
-          size: A4 ${orientation};
-          margin: 1cm;
-        }
-        body {
-          margin: 0;
-        }
-        * {
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-        }
-    `;
-
-    const htmlContent = `<html><head><title>Cetak Laporan</title><style>${printStyles}</style></head><body>${allPagesHtml}</body></html>`;
-
-    iframeDoc.open();
-    iframeDoc.write(htmlContent);
-    iframeDoc.close();
-
-    // --- NEW ROBUST LOGIC: Wait for all images to load ---
-    const images = Array.from(iframeDoc.getElementsByTagName('img'));
-    
-    if (images.length === 0) {
-        // No images, print immediately
-        triggerPrint(printIframe);
-        return;
-    }
-
-    const imageLoadPromises = images.map(img => {
-      return new Promise<void>((resolve) => {
-        // If image is already loaded from cache, resolve immediately
-        if (img.complete && img.naturalHeight !== 0) {
-          resolve();
-        } else {
-          // Otherwise, wait for the load or error event
-          img.onload = () => resolve();
-          // Important: also resolve on error so one broken image doesn't stop the entire print job
-          img.onerror = () => {
-            console.warn(`Could not load image for printing: ${img.src}`);
-            resolve();
-          };
-        }
-      });
-    });
-
-    // When all image promises have resolved (or failed), trigger the print dialog
-    Promise.all(imageLoadPromises).then(() => {
-        triggerPrint(printIframe);
-    });
-  };
 
   return (
     <div id="print-section-container" className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4">
@@ -892,9 +793,17 @@ function ReportPreview({
           <CardTitle>Pratinjau Laporan</CardTitle>
           <div className="flex gap-2">
             <Button variant="outline" onClick={onClose}>Tutup</Button>
-            <Button onClick={handlePrint}>
+            <Button onClick={() => onPrint('all')}>
+              <Files className="mr-2" />
+              Cetak Semua
+            </Button>
+            <Button onClick={() => onPrint('landscape')}>
+              <FileArchive className="mr-2" />
+              Cetak Cover (Lanskap)
+            </Button>
+             <Button onClick={() => onPrint('portrait')}>
               <Printer className="mr-2" />
-              Cetak
+              Cetak Rincian (Potret)
             </Button>
           </div>
         </CardHeader>
@@ -1074,7 +983,7 @@ export default function ExportPage() {
     };
 
 
-    const generatePages = (orientation: 'portrait' | 'landscape') => {
+    const generatePages = (orientation: 'portrait' | 'landscape' | 'all') => {
         if (selectedNotaIds.length === 0) {
             toast({
                 variant: "destructive",
@@ -1112,7 +1021,7 @@ export default function ExportPage() {
                 const reportSA = selectedSA === 'all' ? 'SEMUA SA' : selectedSA;
                 
                 // Landscape pages
-                if (orientation === 'landscape') {
+                if (orientation === 'landscape' || orientation === 'all') {
                      // Only Imprest Fund Cover is landscape
                     if (projectType !== 'BBM GENSET') {
                         const coverHtml = generateImprestFundCover(notasForProject, reportSA, projectType, pids || []);
@@ -1121,7 +1030,7 @@ export default function ExportPage() {
                 }
 
                 // Portrait pages
-                if (orientation === 'portrait') {
+                if (orientation === 'portrait' || orientation === 'all') {
                     // Rekapitulasi
                     const rekapHtml = generateRekapitulasiReport(notasForProject, reportSA, projectType, pids || []);
                     pages.push({ html: rekapHtml, orientation: 'portrait' });
@@ -1224,8 +1133,75 @@ export default function ExportPage() {
             return [];
         }
     };
+
+    const handlePrint = (orientation: 'portrait' | 'landscape' | 'all') => {
+        const pagesToPrint = reportPages.filter(p => orientation === 'all' || p.orientation === orientation);
+
+        if (pagesToPrint.length === 0) {
+            toast({ variant: 'destructive', title: 'Tidak Ada Laporan', description: `Tidak ada laporan dengan orientasi ${orientation} untuk dicetak.` });
+            return;
+        }
+
+        const printIframe = document.createElement('iframe');
+        printIframe.style.position = 'absolute';
+        printIframe.style.width = '0px';
+        printIframe.style.height = '0px';
+        printIframe.style.left = '-9999px';
+        document.body.appendChild(printIframe);
+        
+        const iframeDoc = printIframe.contentWindow?.document;
+        if (!iframeDoc) {
+          console.error('Could not access iframe document.');
+          document.body.removeChild(printIframe);
+          toast({ variant: 'destructive', title: 'Gagal Mempersiapkan Cetak' });
+          return;
+        }
+        
+        const allPagesHtml = pagesToPrint.map(page =>
+            `<div style="page-break-after: always; -webkit-print-color-adjust: exact; print-color-adjust: exact;">${page.html}</div>`
+        ).join('');
+
+        const printStyles = `
+            @page {
+              size: A4 ${orientation === 'landscape' ? 'landscape' : 'portrait'};
+              margin: 1cm;
+            }
+            body { margin: 0; }
+        `;
+
+        const htmlContent = `<html><head><title>Cetak Laporan</title><style>${printStyles}</style></head><body>${allPagesHtml}</body></html>`;
+        
+        iframeDoc.open();
+        iframeDoc.write(htmlContent);
+        iframeDoc.close();
+
+        const images = Array.from(iframeDoc.getElementsByTagName('img'));
+        const imageLoadPromises = images.map(img => new Promise<void>(resolve => {
+            if (img.complete) resolve();
+            else {
+                img.onload = () => resolve();
+                img.onerror = () => { console.warn(`Could not load image: ${img.src}`); resolve(); };
+            }
+        }));
+
+        Promise.all(imageLoadPromises).then(() => {
+            try {
+                printIframe.contentWindow?.focus();
+                printIframe.contentWindow?.print();
+            } catch (e) {
+                console.error('Print failed:', e);
+                toast({ variant: "destructive", title: "Gagal Mencetak" });
+            } finally {
+                setTimeout(() => {
+                    if (document.body.contains(printIframe)) {
+                        document.body.removeChild(printIframe);
+                    }
+                }, 1000);
+            }
+        });
+    };
     
-    const handleGenerateReport = (orientation: 'portrait' | 'landscape') => {
+    const handleGenerateReport = (orientation: 'portrait' | 'landscape' | 'all') => {
         setIsGenerating(true);
         const generatedPages = generatePages(orientation);
         if (generatedPages.length > 0) {
@@ -1481,19 +1457,15 @@ export default function ExportPage() {
 
                     <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm py-3 mt-auto border-t -mx-6 px-6">
                         <div className="max-w-4xl mx-auto flex justify-around items-center gap-4">
-                            <Button variant="outline" size="lg" onClick={() => handleGenerateReport('landscape')} disabled={isGenerating || selectedNotaIds.length === 0}>
-                                {isGenerating ? <Loader2 className="mr-2 animate-spin"/> : <FileArchive className="mr-2" />}
-                                Cetak Cover (Lanskap)
-                            </Button>
-                            <Button size="lg" onClick={() => handleGenerateReport('portrait')} disabled={isGenerating || selectedNotaIds.length === 0}>
-                                {isGenerating ? <Loader2 className="mr-2 animate-spin"/> : <Printer className="mr-2" />}
-                                Cetak Rincian (Potret)
+                            <Button variant="default" size="lg" onClick={() => handleGenerateReport('all')} disabled={isGenerating || selectedNotaIds.length === 0}>
+                                {isGenerating ? <Loader2 className="mr-2 animate-spin"/> : <Files className="mr-2" />}
+                                Cetak Semua
                             </Button>
                         </div>
                     </div>
                 </div>
             </div>
-            {reportPages.length > 0 && <ReportPreview pages={reportPages} onClose={() => setReportPages([])} />}
+            {reportPages.length > 0 && <ReportPreview pages={reportPages} onClose={() => setReportPages([])} onPrint={handlePrint} />}
         </>
     );
 }
