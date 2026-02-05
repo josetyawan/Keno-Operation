@@ -259,10 +259,10 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; background-color: white; page-break-inside: avoid;">
         <div style="text-align: center; font-weight: bold; line-height: 1.2;">
-            <p style="margin: 0; font-size: 12pt;">PERTANGGUNGAN OPERASIONAL</p>
-            <p style="margin: 0; font-size: 12pt;">${areaTitle}</p>
-            <p style="margin: 0; font-size: 12pt;">PEKERJAAN: ${pekerjaan.toUpperCase()}</p>
-            <p style="margin: 0; font-size: 12pt;">ID PROJECT: ${idProject}</p>
+            <div style="margin: 0; font-size: 12pt;">PERTANGGUNGAN OPERASIONAL</div>
+            <div style="margin: 0; font-size: 12pt;">${areaTitle}</div>
+            <div style="margin: 0; font-size: 12pt;">PEKERJAAN: ${pekerjaan.toUpperCase()}</div>
+            <div style="margin: 0; font-size: 12pt;">ID PROJECT: ${idProject}</div>
         </div>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 1px solid black; page-break-after: avoid;">
@@ -287,25 +287,27 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
             <p style="margin: 0;">Terbilang : (${terbilangText.charAt(0).toUpperCase() + terbilangText.slice(1)} Rupiah)</p>
         </div>
         <br/><br/>
-        <table style="width: 100%; text-align: center; font-size: 11pt; page-break-inside: avoid;">
-            <tr>
-                <td style="width: 50%; vertical-align: top;">
-                    <p style="margin: 0;">&nbsp;</p>
-                    <p style="margin: 0;">Menyetujui,</p>
-                    <br/><br/><br/><br/>
-                    <p style="font-weight: bold; margin: 0;">GALIH AJI KUSUMAH</p>
-                    <p style="margin: 0;">MGR BRANCH SEMARANG</p>
-                </td>
-                <td style="width: 50%; vertical-align: top;">
-                    <p style="margin: 0;">Kudus, ${formattedDate}</p>
-                    <p style="margin: 0;">Pembuat Rincian</p>
-                    <br/><br/><br/><br/>
-                    <p style="font-weight: bold; margin: 0;">J. WAHYU SETYAWAN</p>
-                    <p style="margin: 0;">Officer 3 Service Area Kudus</p>
-                    <p style="margin: 0;">876858</p>
-                </td>
-            </tr>
-        </table>
+        <div style="width: 100%; text-align: center; font-size: 11pt; page-break-inside: avoid;">
+            <table style="width: 100%; text-align: center; font-size: 11pt;">
+                <tr>
+                    <td style="width: 50%; vertical-align: top;">
+                        <p style="margin: 0;">&nbsp;</p>
+                        <p style="margin: 0;">Menyetujui,</p>
+                        <br/><br/><br/><br/>
+                        <p style="font-weight: bold; margin: 0;">GALIH AJI KUSUMAH</p>
+                        <p style="margin: 0;">MGR BRANCH SEMARANG</p>
+                    </td>
+                    <td style="width: 50%; vertical-align: top;">
+                        <p style="margin: 0;">Kudus, ${formattedDate}</p>
+                        <p style="margin: 0;">Pembuat Rincian</p>
+                        <br/><br/><br/><br/>
+                        <p style="font-weight: bold; margin: 0;">J. WAHYU SETYAWAN</p>
+                        <p style="margin: 0;">Officer 3 Service Area Kudus</p>
+                        <p style="margin: 0;">876858</p>
+                    </td>
+                </tr>
+            </table>
+        </div>
     </div>`;
 };
 
@@ -370,30 +372,38 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
                 </tr>
             </thead>
             <tbody>${tableRows}</tbody>
+            <tfoot style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                <tr style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                    <td colspan="4" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">TOTAL</td>
+                    <td style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">Rp${grandTotal.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                </tr>
+            </tfoot>
         </table>
          <div style="margin-top: 20px;">
             <p style="margin: 0;">Terbilang : (${terbilangText.charAt(0).toUpperCase() + terbilangText.slice(1)} Rupiah)</p>
         </div>
         <br/><br/>
-        <table style="width: 100%; text-align: center; font-size: 11pt; page-break-inside: avoid;">
-            <tr>
-                <td style="width: 50%; vertical-align: top;">
-                    <p style="margin: 0;">&nbsp;</p>
-                    <p style="margin: 0;">Menyetujui,</p>
-                    <br/><br/><br/><br/>
-                    <p style="font-weight: bold; margin: 0;">GALIH AJI KUSUMAH</p>
-                    <p style="margin: 0;">MGR BRANCH SEMARANG</p>
-                </td>
-                <td style="width: 50%; vertical-align: top;">
-                    <p style="margin: 0;">Kudus, ${formattedDate}</p>
-                    <p style="margin: 0;">Pembuat Rincian</p>
-                    <br/><br/><br/><br/>
-                    <p style="font-weight: bold; margin: 0;">J. WAHYU SETYAWAN</p>
-                    <p style="margin: 0;">Officer 3 Service Area Kudus</p>
-                    <p style="margin: 0;">876858</p>
-                </td>
-            </tr>
-        </table>
+        <div style="width: 100%; text-align: center; font-size: 11pt; page-break-inside: avoid;">
+            <table style="width: 100%; text-align: center; font-size: 11pt;">
+                <tr>
+                    <td style="width: 50%; vertical-align: top;">
+                        <p style="margin: 0;">&nbsp;</p>
+                        <p style="margin: 0;">Menyetujui,</p>
+                        <br/><br/><br/><br/>
+                        <p style="font-weight: bold; margin: 0;">GALIH AJI KUSUMAH</p>
+                        <p style="margin: 0;">MGR BRANCH SEMARANG</p>
+                    </td>
+                    <td style="width: 50%; vertical-align: top;">
+                        <p style="margin: 0;">Kudus, ${formattedDate}</p>
+                        <p style="margin: 0;">Pembuat Rincian</p>
+                        <br/><br/><br/><br/>
+                        <p style="font-weight: bold; margin: 0;">J. WAHYU SETYAWAN</p>
+                        <p style="margin: 0;">Officer 3 Service Area Kudus</p>
+                        <p style="margin: 0;">876858</p>
+                    </td>
+                </tr>
+            </table>
+        </div>
     </div>`;
 };
 
@@ -475,25 +485,27 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
             <p style="margin: 0;">Terbilang : (${terbilangText.charAt(0).toUpperCase() + terbilangText.slice(1)} Rupiah)</p>
         </div>
         <br/><br/>
-        <table style="width: 100%; text-align: center; font-size: 11pt; page-break-inside: avoid;">
-            <tr>
-                <td style="width: 50%; vertical-align: top;">
-                    <p style="margin: 0;">&nbsp;</p>
-                    <p style="margin: 0;">Menyetujui,</p>
-                    <br/><br/><br/><br/>
-                    <p style="font-weight: bold; margin: 0;">GALIH AJI KUSUMAH</p>
-                    <p style="margin: 0;">MGR BRANCH SEMARANG</p>
-                </td>
-                <td style="width: 50%; vertical-align: top;">
-                    <p style="margin: 0;">Kudus, ${formattedDate}</p>
-                    <p style="margin: 0;">Pembuat Rincian</p>
-                    <br/><br/><br/><br/>
-                    <p style="font-weight: bold; margin: 0;">J. WAHYU SETYAWAN</p>
-                    <p style="margin: 0;">Officer 3 Service Area Kudus</p>
-                    <p style="margin: 0;">876858</p>
-                </td>
-            </tr>
-        </table>
+        <div style="width: 100%; text-align: center; font-size: 11pt; page-break-inside: avoid;">
+            <table style="width: 100%; text-align: center; font-size: 11pt;">
+                <tr>
+                    <td style="width: 50%; vertical-align: top;">
+                        <p style="margin: 0;">&nbsp;</p>
+                        <p style="margin: 0;">Menyetujui,</p>
+                        <br/><br/><br/><br/>
+                        <p style="font-weight: bold; margin: 0;">GALIH AJI KUSUMAH</p>
+                        <p style="margin: 0;">MGR BRANCH SEMARANG</p>
+                    </td>
+                    <td style="width: 50%; vertical-align: top;">
+                        <p style="margin: 0;">Kudus, ${formattedDate}</p>
+                        <p style="margin: 0;">Pembuat Rincian</p>
+                        <br/><br/><br/><br/>
+                        <p style="font-weight: bold; margin: 0;">J. WAHYU SETYAWAN</p>
+                        <p style="margin: 0;">Officer 3 Service Area Kudus</p>
+                        <p style="margin: 0;">876858</p>
+                    </td>
+                </tr>
+            </table>
+        </div>
     </div>`;
 };
 
@@ -550,30 +562,38 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
                 </tr>
             </thead>
             <tbody>${tableRows}</tbody>
+            <tfoot style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                <tr style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                    <td colspan="3" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">TOTAL</td>
+                    <td style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">Rp${grandTotal.toLocaleString('id-ID')}</td>
+                </tr>
+            </tfoot>
         </table>
         <div style="margin-top: 20px;">
             <p style="margin: 0;">Terbilang : (${terbilangText.charAt(0).toUpperCase() + terbilangText.slice(1)} Rupiah)</p>
         </div>
         <br/><br/>
-        <table style="width: 100%; text-align: center; font-size: 11pt; page-break-inside: avoid;">
-            <tr>
-                <td style="width: 50%; vertical-align: top;">
-                    <p style="margin: 0;">&nbsp;</p>
-                    <p style="margin: 0;">Menyetujui,</p>
-                    <br/><br/><br/><br/>
-                    <p style="font-weight: bold; margin: 0;">GALIH AJI KUSUMAH</p>
-                    <p style="margin: 0;">MGR BRANCH SEMARANG</p>
-                </td>
-                <td style="width: 50%; vertical-align: top;">
-                    <p style="margin: 0;">Kudus, ${formattedDate}</p>
-                    <p style="margin: 0;">Pembuat Rincian</p>
-                    <br/><br/><br/><br/>
-                    <p style="font-weight: bold; margin: 0;">J. WAHYU SETYAWAN</p>
-                    <p style="margin: 0;">Officer 3 Service Area Kudus</p>
-                    <p style="margin: 0;">876858</p>
-                </td>
-            </tr>
-        </table>
+        <div style="width: 100%; text-align: center; font-size: 11pt; page-break-inside: avoid;">
+            <table style="width: 100%; text-align: center; font-size: 11pt;">
+                <tr>
+                    <td style="width: 50%; vertical-align: top;">
+                        <p style="margin: 0;">&nbsp;</p>
+                        <p style="margin: 0;">Menyetujui,</p>
+                        <br/><br/><br/><br/>
+                        <p style="font-weight: bold; margin: 0;">GALIH AJI KUSUMAH</p>
+                        <p style="margin: 0;">MGR BRANCH SEMARANG</p>
+                    </td>
+                    <td style="width: 50%; vertical-align: top;">
+                        <p style="margin: 0;">Kudus, ${formattedDate}</p>
+                        <p style="margin: 0;">Pembuat Rincian</p>
+                        <br/><br/><br/><br/>
+                        <p style="font-weight: bold; margin: 0;">J. WAHYU SETYAWAN</p>
+                        <p style="margin: 0;">Officer 3 Service Area Kudus</p>
+                        <p style="margin: 0;">876858</p>
+                    </td>
+                </tr>
+            </table>
+        </div>
     </div>`;
 };
 
@@ -1094,7 +1114,7 @@ export default function ExportPage() {
                         const title = `Eviden Foto - Perincian Nota ${segment} - SERVICE AREA ${saTitlePart}`;
                         
                         const segmentHtml = generateEvidenReport(notasInSegment, title);
-                        pages.push({ html: segmentHtml, orientation: orientation });
+                        pages.push({ html: segmentHtml, orientation: "portrait" });
                     }
 
 
