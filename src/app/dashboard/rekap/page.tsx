@@ -139,7 +139,7 @@ export default function RekapPage() {
 
         for (const userId of sortedUserIds) {
             // Sort this user's notas by date
-            const userNotas = groupedByUser[userId].sort((a,b) => a.tanggal.toDate().getTime() - b.tanggal.toDate().getTime());
+            const userNotas = groupedByUser[userId].sort((a,b) => (a.tanggal?.toDate ? a.tanggal.toDate().getTime() : 0) - (b.tanggal?.toDate ? b.tanggal.toDate().getTime() : 0));
             const user = userMap.get(userId);
             let userSubtotal = 0;
             const userName = (user?.displayName || 'Unknown').replace(/\s/g, '');
@@ -151,7 +151,7 @@ export default function RekapPage() {
                     phone: user?.phone || 'No-Pembayaran',
                     name: userName,
                     segmen: nota.segmen,
-                    tanggal: format(nota.tanggal.toDate(), 'dd/MM/yy'),
+                    tanggal: nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd/MM/yy') : '??/??/??',
                     nominal: nota.nominal,
                     userId: userId,
                 });

@@ -104,14 +104,24 @@ export default function NotaDetailPage() {
   };
   
   const handleConfirmReject = () => {
-    if (!isAdmin || !notaRef || !rejectionReason.trim() || !nota) {
+    if (!isAdmin || !notaRef || !rejectionReason.trim()) {
         toast({
             variant: 'destructive',
-            title: 'Alasan Diperlukan atau Data Tidak Lengkap',
-            description: 'Silakan isi alasan penolakan dan pastikan data laporan ada.',
+            title: 'Alasan Diperlukan',
+            description: 'Silakan isi alasan penolakan.',
         });
         return;
     }
+
+    if (!nota || !nota.tanggal?.toDate) {
+      toast({
+        variant: "destructive",
+        title: "Data Laporan Tidak Lengkap",
+        description: "Tidak dapat mengirim notifikasi karena data tanggal tidak valid.",
+      });
+      return;
+    }
+
     const reason = rejectionReason.trim();
     updateDocumentNonBlocking(notaRef, {
         status: 'rejected',

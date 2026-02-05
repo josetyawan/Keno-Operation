@@ -85,7 +85,7 @@ const getStatusVariant = (status: Nota['status']): VariantProps<typeof badgeVari
 
 const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectType: ProjectType, pids: ProjectID[]): string => {
     const today = new Date();
-    const reportDate = notas.length > 0 ? notas[0].tanggal.toDate() : today;
+    const reportDate = (notas.length > 0 && notas[0].tanggal?.toDate) ? notas[0].tanggal.toDate() : today;
     const monthName = format(reportDate, 'MMM', { locale: idLocale });
     const formattedDate = format(reportDate, 'dd/MM/yyyy');
     
@@ -100,7 +100,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
         return `
             <tr style="font-size: 8pt;">
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${index + 1}</td>
-                <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${format(nota.tanggal.toDate(), 'dd/MM/yyyy')}</td>
+                <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd/MM/yyyy') : '-'}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${index + 1}</td>
                 <td style="border: 1px solid black; padding: 2px 4px;">${nota.segmen}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${idProject}</td>
@@ -385,7 +385,7 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
 const generateJasaReport = (notas: Nota[], title: string): string => {
     // Group notas by date
     const groupedByDate = notas.reduce((acc, nota) => {
-        const dateKey = format(nota.tanggal.toDate(), 'yyyy-MM-dd');
+        const dateKey = nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'yyyy-MM-dd') : 'invalid-date';
         if (!acc[dateKey]) {
             acc[dateKey] = [];
         }
@@ -399,6 +399,7 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
     let tableRows = '';
 
     for (const dateKey of sortedDates) {
+        if(dateKey === 'invalid-date') continue;
         const notasOnDate = groupedByDate[dateKey];
         let dateSubtotal = 0;
 
@@ -408,7 +409,7 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
             dateSubtotal += nota.nominal;
             tableRows += `
             <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
-                <td style="padding: 4px; border: 1px solid black;">${format(nota.tanggal.toDate(), 'dd/MM/yyyy')}</td>
+                <td style="padding: 4px; border: 1px solid black;">${nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd/MM/yyyy') : '-'}</td>
                 <td style="padding: 4px; border: 1px solid black; white-space: normal; word-break: break-all;">${nota.keterangan || nota.namaBarang || '-'}</td>
                 <td style="padding: 4px; border: 1px solid black; text-align: right;">${dpp.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 <td style="padding: 4px; border: 1px solid black; text-align: right;">${pph.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
@@ -479,7 +480,7 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
 const generateBBMReport = (notas: Nota[], title: string): string => {
     // Group notas by date
     const groupedByDate = notas.reduce((acc, nota) => {
-        const dateKey = format(nota.tanggal.toDate(), 'yyyy-MM-dd');
+        const dateKey = nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'yyyy-MM-dd') : 'invalid-date';
         if (!acc[dateKey]) {
             acc[dateKey] = [];
         }
@@ -493,6 +494,7 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
     let tableRows = '';
 
     for (const dateKey of sortedDates) {
+        if(dateKey === 'invalid-date') continue;
         const notasOnDate = groupedByDate[dateKey];
         let dateSubtotal = 0;
 
@@ -503,7 +505,7 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
 
             tableRows += `
                 <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
-                    <td style="padding: 4px; border: 1px solid black;">${format(nota.tanggal.toDate(), 'dd-MMM-yy', { locale: idLocale })}</td>
+                    <td style="padding: 4px; border: 1px solid black;">${nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd-MMM-yy', { locale: idLocale }) : '-'}</td>
                     <td style="padding: 4px; border: 1px solid black;">${staticKeterangan}</td>
                     <td style="padding: 4px; border: 1px solid black;">${nota.noPlatKendaraan || '-'}</td>
                     <td style="padding: 4px; border: 1px solid black; text-align: center;">${nota.kmAwal || '-'}</td>
@@ -574,7 +576,7 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
 
 const generateMaterialReport = (notas: Nota[], title: string): string => {
     const groupedByDate = notas.reduce((acc, nota) => {
-        const dateKey = format(nota.tanggal.toDate(), 'yyyy-MM-dd');
+        const dateKey = nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'yyyy-MM-dd') : 'invalid-date';
         if (!acc[dateKey]) {
             acc[dateKey] = [];
         }
@@ -588,6 +590,7 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
     let tableRows = '';
 
     for (const dateKey of sortedDates) {
+        if(dateKey === 'invalid-date') continue;
         const notasOnDate = groupedByDate[dateKey];
         let dateSubtotal = 0;
 
@@ -595,7 +598,7 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
             dateSubtotal += nota.nominal;
             tableRows += `
             <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
-                <td style="padding: 4px; border: 1px solid black;">${format(nota.tanggal.toDate(), 'dd/MM/yyyy')}</td>
+                <td style="padding: 4px; border: 1px solid black;">${nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd/MM/yyyy') : '-'}</td>
                 <td style="padding: 4px; border: 1px solid black;">${nota.namaBarang || '-'}</td>
                 <td style="padding: 4px; border: 1px solid black; white-space: normal; word-break: break-all;">${nota.keterangan || '-'}</td>
                 <td style="padding: 4px; border: 1px solid black; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
@@ -681,7 +684,7 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
         return `
         <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
             <td style="border: 1px solid black; padding: 4px; text-align: center; vertical-align: top;">${index + 1}</td>
-            <td style="border: 1px solid black; padding: 4px; vertical-align: top; white-space: nowrap;">${format(nota.tanggal.toDate(), 'dd MMMM yyyy', { locale: idLocale })}</td>
+            <td style="border: 1px solid black; padding: 4px; vertical-align: top; white-space: nowrap;">${nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd MMMM yyyy', { locale: idLocale }) : '-'}</td>
             <td style="border: 1px solid black; padding: 4px; background-color: #FFDDDD; vertical-align: top; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${ketText}</td>
             <td style="border: 1px solid black; padding: 4px; vertical-align: top;">${nota.noPlatKendaraan || '-'}</td>
             <td style="border: 1px solid black; padding: 4px; text-align: center; vertical-align: top;">${selisih}</td>
@@ -726,7 +729,7 @@ const generateSimpleEvidenReport = (notas: Nota[], title: string): string => {
         return `
         <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
             <td style="border: 1px solid black; padding: 4px; text-align: center; vertical-align: top;">${index + 1}</td>
-            <td style="border: 1px solid black; padding: 4px; vertical-align: top; white-space: nowrap;">${format(nota.tanggal.toDate(), 'dd MMMM yyyy', { locale: idLocale })}</td>
+            <td style="border: 1px solid black; padding: 4px; vertical-align: top; white-space: nowrap;">${nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd MMMM yyyy', { locale: idLocale }) : '-'}</td>
             <td style="border: 1px solid black; padding: 4px; vertical-align: top;">${nota.namaBarang || nota.keterangan || '-'}</td>
             <td style="border: 1px solid black; padding: 4px; vertical-align: top;">${evidenCellContent}</td>
             <td style="border: 1px solid black; padding: 4px; vertical-align: top;">${nota.namaPic}</td>
@@ -1096,7 +1099,7 @@ export default function ExportPage() {
         }
 
         const selectedNotas = filteredNotas.filter(n => selectedNotaIds.includes(n.id)) || [];
-        const sortedNotas = selectedNotas.sort((a,b) => a.tanggal.toDate().getTime() - b.tanggal.toDate().getTime());
+        const sortedNotas = selectedNotas.sort((a,b) => (a.tanggal?.toDate ? a.tanggal.toDate().getTime() : 0) - (b.tanggal?.toDate ? b.tanggal.toDate().getTime() : 0));
         const pages: {html: string, orientation: 'portrait' | 'landscape'}[] = [];
 
         try {
