@@ -1,24 +1,36 @@
-# Panduan Reset Password (Alur Baru)
+# Panduan Reset Password (Alur Paling Jelas)
 
 Rekan,
 
-Berikut adalah cara menggunakan fitur reset password yang sudah disederhanakan.
+Saya mohon maaf, instruksi saya sebelumnya tidak cukup jelas. Mari kita gunakan contoh nyata dari email yang Anda terima.
 
 ---
 
-### **Langkah-langkah Reset Password**
+### **Langkah 1: Dapatkan Link dari Email Anda**
 
-1.  Buka halaman "Lupa Password" di aplikasi Anda.
-2.  Masukkan alamat email yang terdaftar.
-3.  Klik tombol "Kirim Tautan Reset".
-4.  Buka email dari `noreply@...`. Anda akan melihat sebuah link.
-5.  **Klik link tersebut**.
-6.  Anda akan diarahkan kembali ke aplikasi Anda, ke halaman untuk memasukkan password baru.
-7.  Masukkan password baru Anda dan konfirmasi.
-8.  Klik "Set Password Baru".
+Anda akan menerima email dengan link yang terlihat seperti ini (ini adalah contoh dari email terakhir Anda):
 
-Selesai! Anda akan diarahkan ke halaman login dan bisa masuk dengan password baru Anda. Tidak perlu lagi menyalin kode apapun.
+`https://studio-7759201113-b7263.firebaseapp.com/__/auth/action?mode=resetPassword&oobCode=wL0LPEBWod0L874pzEZeWKUoFYueViK9ZAnUO-z4oqgAAAGcLRK2uQ&apiKey=AIzaSyAcRFFqLjh7vVdJ5a6jy8aJ0f6QmvnlrB4&lang=en`
 
 ---
 
-Semoga panduan ini membantu!
+### **Langkah 2: Temukan dan Salin "Kode"-nya**
+
+"Kode" yang dimaksud adalah semua teks yang berada di antara `oobCode=` dan `&apiKey=`.
+
+Dari contoh link di atas, kodenya adalah:
+
+**wL0LPEBWod0L874pzEZeWKUoFYueViK9ZAnUO-z4oqgAAAGcLRK2uQ**
+
+Salin (copy) bagian teks yang dicetak tebal tersebut.
+
+---
+
+### **Langkah 3: Gunakan Kode di Aplikasi**
+
+1.  Buka aplikasi Anda dan pergi ke halaman `/reset-password`.
+2.  Tempel (paste) kode yang baru saja Anda salin ke dalam kolom **"Kode Reset"**.
+3.  Masukkan password baru Anda dan konfirmasikan.
+4.  Klik **"Set Password Baru"**.
+
+Selesai! Sekarang Anda bisa login dengan password baru Anda.
