@@ -185,9 +185,9 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
                 <td style="height: 60px;"></td>
             </tr>
             <tr>
-                <td style="font-weight: bold;">GALIH AJI KUSUMAH</td>
-                <td style="font-weight: bold;">MUHAMMAD IKSAN</td>
-                <td style="font-weight: bold;">DESSY WAHYUNINGTIAS</td>
+                <td style="font-weight: bold; text-decoration: underline;">GALIH AJI KUSUMAH</td>
+                <td style="font-weight: bold; text-decoration: underline;">MUHAMMAD IKSAN</td>
+                <td style="font-weight: bold; text-decoration: underline;">DESSY WAHYUNINGTIAS</td>
             </tr>
             <tr>
                 <td>MGR BRANCH SEMARANG</td>
@@ -208,9 +208,9 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
                 <td style="height: 60px;"></td>
             </tr>
             <tr>
-                <td style="font-weight: bold;">HENRY SOEDIDARMA</td>
+                <td style="font-weight: bold; text-decoration: underline;">HENRY SOEDIDARMA</td>
                 <td></td>
-                <td style="font-weight: bold;">ARIZA ARBAATUS SOLIHA</td>
+                <td style="font-weight: bold; text-decoration: underline;">ARIZA ARBAATUS SOLIHA</td>
             </tr>
             <tr>
                 <td>GM REGIONAL JAWA TENGAH DIY</td>
@@ -258,11 +258,11 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
                     <th rowspan="2" style="border: 1px solid black; padding: 2px; vertical-align: middle;">NILAI PERTANGGUNGAN</th>
                     <th rowspan="2" style="border: 1px solid black; padding: 2px; vertical-align: middle;">PPN (Disetor Mitra)</th>
                     <th rowspan="2" style="border: 1px solid black; padding: 2px; vertical-align: middle;">NILAI KUITANSI</th>
-                    <th style="border: 1px solid black; padding: 2px;">PPh</th>
+                    <th style="border: 1px solid black; padding: 2px; border-bottom: none;">PPh</th>
                     <th rowspan="2" style="border: 1px solid black; padding: 2px; vertical-align: middle;">BAYAR KE MITRA</th>
                 </tr>
                 <tr>
-                    <th style="border: 1px solid black; padding: 2px;">PPh 21, 23, 4(2) *)</th>
+                    <th style="border: 1px solid black; padding: 2px; border-top: none; font-weight: normal;">PPh 21, 23, 4(2) *)</th>
                 </tr>
             </thead>
             <tbody>
