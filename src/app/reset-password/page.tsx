@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,38 +9,25 @@ import AuthLayout from '@/components/auth-layout';
 import { useAuth, confirmPasswordResetWithCode } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { FirebaseError } from 'firebase/app';
-import { AlertCircle, Loader2 } from 'lucide-react';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
-
-function ResetPasswordComponent() {
-  const searchParams = useSearchParams();
+export default function ResetPasswordPage() {
   const router = useRouter();
   const auth = useAuth();
   const { toast } = useToast();
 
-  const [oobCode, setOobCode] = useState<string | null>(null);
+  const [oobCode, setOobCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isVerifying, setIsVerifying] = useState(true);
-
-  useEffect(() => {
-    const code = searchParams.get('oobCode');
-    if (code) {
-      setOobCode(code);
-      setIsVerifying(false);
-    } else {
-      setError('Kode reset password tidak ditemukan di URL. Pastikan Anda mengklik link yang benar dari email Anda.');
-      setIsVerifying(false);
-    }
-  }, [searchParams]);
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!oobCode) {
-      setError('Kode reset tidak valid. Silakan coba lagi.');
+      toast({
+          variant: 'destructive',
+          title: 'Kode Reset Diperlukan',
+          description: 'Silakan masukkan kode reset dari email Anda.',
+      });
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -89,74 +75,52 @@ function ResetPasswordComponent() {
     }
   };
 
-  if (isVerifying) {
-    return (
-        <div className="flex flex-col items-center justify-center gap-2">
-            <Loader2 className="h-8 w-8 animate-spin" />
-            <p className="text-muted-foreground">Memverifikasi link...</p>
+  return (
+    <AuthLayout>
+        <form onSubmit={handleReset}>
+        <div className="grid gap-2 text-center mb-6">
+            <h1 className="text-3xl font-bold">Buat Password Baru</h1>
+            <p className="text-balance text-muted-foreground">
+                Salin kode dari email Anda dan masukkan password baru.
+            </p>
         </div>
-    );
-  }
-
-  if (error) {
-    return (
-        <div className="text-center">
-            <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Link Tidak Valid</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
-            </Alert>
-            <Button asChild className="mt-4">
-                <Link href="/forgot-password">Minta Link Baru</Link>
+        <div className="grid gap-4">
+            <div className="grid gap-2">
+            <Label htmlFor="oobCode">Kode Reset</Label>
+            <Input
+                id="oobCode"
+                type="text"
+                placeholder="Tempel kode dari email di sini"
+                required
+                value={oobCode}
+                onChange={(e) => setOobCode(e.target.value)}
+            />
+            </div>
+            <div className="grid gap-2">
+            <Label htmlFor="new-password">Password Baru</Label>
+            <Input
+                id="new-password"
+                type="password"
+                required
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+            />
+            </div>
+            <div className="grid gap-2">
+            <Label htmlFor="confirm-password">Konfirmasi Password Baru</Label>
+            <Input
+                id="confirm-password"
+                type="password"
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+            />
+            </div>
+            <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? 'Menyimpan...' : 'Set Password Baru'}
             </Button>
         </div>
-    );
-  }
-
-
-  return (
-    <form onSubmit={handleReset}>
-      <div className="grid gap-2 text-center mb-6">
-        <h1 className="text-3xl font-bold">Buat Password Baru</h1>
-        <p className="text-balance text-muted-foreground">
-          Masukkan password baru yang aman untuk akun Anda.
-        </p>
-      </div>
-      <div className="grid gap-4">
-        <div className="grid gap-2">
-          <Label htmlFor="new-password">Password Baru</Label>
-          <Input
-            id="new-password"
-            type="password"
-            required
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-          />
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="confirm-password">Konfirmasi Password Baru</Label>
-          <Input
-            id="confirm-password"
-            type="password"
-            required
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-          />
-        </div>
-        <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading ? 'Menyimpan...' : 'Set Password Baru'}
-        </Button>
-      </div>
-    </form>
+        </form>
+    </AuthLayout>
   );
-}
-
-export default function ResetPasswordPage() {
-    return (
-        <AuthLayout>
-            <Suspense fallback={<div>Loading...</div>}>
-                <ResetPasswordComponent />
-            </Suspense>
-        </AuthLayout>
-    )
 }

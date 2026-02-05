@@ -10,7 +10,6 @@ import { useAuth, sendPasswordReset } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { FirebaseError } from 'firebase/app';
 import { MailCheck } from 'lucide-react';
-import type { ActionCodeSettings } from 'firebase/auth';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -31,13 +30,9 @@ export default function ForgotPasswordPage() {
     }
     setIsLoading(true);
     try {
-      // Direct the user back to the app's reset-password page after clicking the email link.
-      const actionCodeSettings: ActionCodeSettings = {
-        url: `${window.location.origin}/reset-password`,
-        handleCodeInApp: true,
-      };
-
-      await sendPasswordReset(auth, email, actionCodeSettings);
+      // We no longer use actionCodeSettings as the base URL is broken on the platform.
+      // We will rely on the user to copy the oobCode from the URL.
+      await sendPasswordReset(auth, email);
       setIsSuccess(true);
     } catch (error) {
       let title = 'Gagal Mengirim Email';
@@ -57,7 +52,6 @@ export default function ForgotPasswordPage() {
                 description = 'Tidak dapat terhubung ke layanan kami. Periksa koneksi internet Anda.';
                 break;
             default:
-                // Use the generic message for other Firebase errors
                 description = `Terjadi kesalahan. (${error.code})`;
                 break;
         }
@@ -79,10 +73,10 @@ export default function ForgotPasswordPage() {
             <MailCheck className="mx-auto h-12 w-12 text-green-500 mb-4" />
           <h1 className="text-2xl font-bold mb-4">Periksa Email Anda</h1>
           <p className="text-muted-foreground mb-6">
-            Kami telah mengirimkan tautan untuk mereset password Anda ke <span className="font-bold">{email}</span>. Silakan klik link di dalam email tersebut.
+            Kami telah mengirimkan email ke <span className="font-bold">{email}</span>. Silakan salin kode dari link di email tersebut dan gunakan di halaman reset password.
           </p>
           <Button asChild>
-            <Link href="/login">Kembali ke Login</Link>
+            <Link href="/reset-password">Ke Halaman Reset Password</Link>
           </Button>
         </div>
       ) : (
