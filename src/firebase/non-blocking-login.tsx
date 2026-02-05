@@ -5,6 +5,7 @@ import {
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   UserCredential,
+  confirmPasswordReset,
 } from 'firebase/auth';
 
 interface SignUpDetails {
@@ -33,4 +34,11 @@ export async function signInWithEmail(auth: Auth, email: string, password: strin
  */
 export async function sendPasswordReset(auth: Auth, email: string): Promise<void> {
   return sendPasswordResetEmail(auth, email);
+}
+
+/**
+ * Completes the password reset process using the code from the email.
+ */
+export async function confirmPasswordResetWithCode(auth: Auth, code: string, newPassword: string):Promise<void> {
+    return confirmPasswordReset(auth, code, newPassword);
 }
