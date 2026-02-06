@@ -108,35 +108,32 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
         ? `IF JATENG - SS SMG - Ops IAM Semarang (${monthName})`
         : `IF JATENG - SMG OPR - Ops SA ${saShort} (${monthName})`;
     
-    // PID for the summary table at the bottom right. Uses the overall projectType for the report.
     const idProjectForSummary = pids.find(p => p.projectType.toLowerCase() === projectType.toLowerCase())?.pid || (projectType === 'BBM GENSET' ? 'Ditagihkan ke Unit Lain' : '-');
 
     const groupedBySegmen = notas.reduce((acc, nota) => {
         const key = nota.segmen;
         if (!acc[key]) {
-            acc[key] = { items: [], total: 0 };
+            acc[key] = { total: 0 };
         }
-        acc[key].items.push(nota);
         acc[key].total += nota.nominal;
         return acc;
-    }, {} as Record<string, { items: Nota[], total: number }>);
+    }, {} as Record<string, { total: number }>);
 
     let grandTotal = 0;
     const tableRows = Object.entries(groupedBySegmen).map(([segmen, data], index) => {
         grandTotal += data.total;
-
-        // Find the earliest date among the items for this segment for the 'Tanggal' column
-        const earliestDate = data.items.reduce((earliest, current) => {
+        
+        const segmenNotas = notas.filter(n => n.segmen === segmen);
+        const earliestDate = segmenNotas.reduce((earliest, current) => {
             const currentDate = safeToDate(current.tanggal);
             if (!currentDate) return earliest;
             return (earliest && earliest < currentDate) ? earliest : currentDate;
         }, null as Date | null);
         
         const nominalFormatted = data.total.toLocaleString('id-ID');
-
-        // **FIX**: Look up the Project ID for each specific segment to ensure correctness.
+        
         const segmenProjectType = getProjectType(segmen);
-        const idProjectForRow = pids.find(p => p.projectType.toLowerCase() === segmenProjectType.toLowerCase())?.pid || (segmenProjectType === 'BBM GENSET' ? 'Ditagihkan ke Unit Lain' : '-');
+        const idProjectForRow = pids.find(p => p.projectType.toLowerCase() === segmenProjectType.toLowerCase())?.pid || '-';
         
 
         return `
@@ -370,7 +367,9 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
         saShort = '';
     }
     
-    const areaTitle = saShort ? `SERVICE AREA ${saShort.toUpperCase()}` : 'SEMUA';
+    const areaTitle = projectType === 'WAREHOUSE'
+        ? 'SS SMG'
+        : (saShort ? `SERVICE AREA ${saShort.toUpperCase()}` : 'SEMUA');
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; background-color: white; page-break-inside: avoid;">
@@ -594,7 +593,8 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
             <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr>
-                    ${['NO', 'TANGGAL', 'KETERANGAN', 'NO PLAT', 'KM AWAL', 'KM AKHIR', 'URAIAN PEKERJAAN', 'JUMLAH', 'NAMA'].map(h => `<th style="padding: 4px; border: 1px solid black;">${h}</th>`).join('')}
+                    <th style="padding: 4px; border: 1px solid black; width: 5%;">NO</th>
+                    ${['TANGGAL', 'KETERANGAN', 'NO PLAT', 'KM AWAL', 'KM AKHIR', 'URAIAN PEKERJAAN', 'JUMLAH', 'NAMA'].map(h => `<th style="padding: 4px; border: 1px solid black;">${h}</th>`).join('')}
                 </tr>
             </thead>
             <tbody>${tableRows}</tbody>
@@ -1109,7 +1109,7 @@ export default function ExportPage() {
                             'Perincian Nota Pengiriman B2B IOAN', 'Perincian Nota Pengiriman PROVISIONING'
                         ];
 
-                        if (jasaSegments.includes(segment)) {
+                        if (jasaSegments.includes(segment) || (segment === 'BBM R4 Pengiriman Warehouse' && getProjectType(segment) !== 'WAREHOUSE')) {
                             segmentHtml = generateJasaReport(notasInSegment, title);
                         } else if (bbmR2R4Segments.includes(segment)) {
                             segmentHtml = generateBBMReport(notasInSegment, title);
