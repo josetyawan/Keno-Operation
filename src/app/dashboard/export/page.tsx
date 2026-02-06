@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -724,8 +725,6 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
 const generateEvidenReport = (notas: Nota[], title: string): string => {
     const tableRows = notas.map((nota, index) => {
         const notaDate = safeToDate(nota.tanggal);
-        // Form supports 4 images for Keperluan, 3 for KM readings.
-        // Filter out nulls/undefined before mapping
         const keperluanImageUrls = (nota.fotoEvidenUrls || []).slice(0, 4).filter((url): url is string => !!url);
         const evidenKmUrl = nota.fotoEvidenUrls?.[4] || undefined;
         const evidenKmAwalUrl = nota.fotoEvidenUrls?.[5] || undefined;
@@ -1093,8 +1092,15 @@ export default function ExportPage() {
                         if (notasInSegment.length === 0) continue;
 
                         let segmentHtml = '';
-                        const saTitlePart = reportSA.replace(/^SA /, '') === 'SEMUA SA' ? 'SEMUA' : reportSA.replace(/^SA /, '');
-                        const title = `Perincian Nota ${segment} - SERVICE AREA ${saTitlePart}`;
+                        let title: string;
+                        const segmenProjectType = getProjectType(segment);
+
+                        if (segmenProjectType === 'WAREHOUSE') {
+                            title = `Perincian Nota ${segment} - SS SMG`;
+                        } else {
+                            const saTitlePart = reportSA.replace(/^SA /, '') === 'SEMUA SA' ? 'SEMUA' : reportSA.replace(/^SA /, '');
+                            title = `Perincian Nota ${segment} - SERVICE AREA ${saTitlePart}`;
+                        }
                         
                          const bbmR2R4Segments = [
                             'BBM R2 Harian B2B IOAN', 'BBM R2 Harian PROVISIONING',
@@ -1109,13 +1115,13 @@ export default function ExportPage() {
                             'Perincian Nota Pengiriman B2B IOAN', 'Perincian Nota Pengiriman PROVISIONING'
                         ];
 
-                        if (jasaSegments.includes(segment) || (segment === 'BBM R4 Pengiriman Warehouse' && getProjectType(segment) !== 'WAREHOUSE')) {
+                        if (jasaSegments.includes(segment)) {
                             segmentHtml = generateJasaReport(notasInSegment, title);
                         } else if (bbmR2R4Segments.includes(segment)) {
                             segmentHtml = generateBBMReport(notasInSegment, title);
                         } else {
                              const modifiedNotas = notasInSegment.map(nota => {
-                                 if (segment === 'BBM Genset' || segment === 'BBM R4 Pengiriman Warehouse') return { ...nota, keterangan: '' };
+                                 if (segment === 'BBM Genset') return { ...nota, keterangan: '' };
                                  return nota;
                              });
                             segmentHtml = generateMaterialReport(modifiedNotas, title);
@@ -1143,8 +1149,14 @@ export default function ExportPage() {
                         const notasInSegment = evidenGroupedBySegmentBBM[segment];
                         if (notasInSegment.length === 0) continue;
                         
-                        const saTitlePart = reportSA.replace(/^SA /, '') === 'SEMUA SA' ? 'SEMUA' : reportSA.replace(/^SA /, '');
-                        const title = `Eviden Foto - Perincian Nota ${segment} - SERVICE AREA ${saTitlePart}`;
+                        let title: string;
+                        const segmenProjectType = getProjectType(segment);
+                        if (segmenProjectType === 'WAREHOUSE') {
+                            title = `Eviden Foto - Perincian Nota ${segment} - SS SMG`;
+                        } else {
+                            const saTitlePart = reportSA.replace(/^SA /, '') === 'SEMUA SA' ? 'SEMUA' : reportSA.replace(/^SA /, '');
+                            title = `Eviden Foto - Perincian Nota ${segment} - SERVICE AREA ${saTitlePart}`;
+                        }
                         
                         const segmentHtml = generateEvidenReport(notasInSegment, title);
                         pages.push({ html: segmentHtml, orientation: 'portrait' });
@@ -1164,8 +1176,15 @@ export default function ExportPage() {
                         const notasInSegment = evidenGroupedBySegment[segment];
                         if (notasInSegment.length === 0) continue;
                         
-                        const saTitlePart = reportSA.replace(/^SA /, '') === 'SEMUA SA' ? 'SEMUA' : reportSA.replace(/^SA /, '');
-                        const title = `Eviden Foto - Perincian Nota ${segment} - SERVICE AREA ${saTitlePart}`;
+                        let title: string;
+                        const segmenProjectType = getProjectType(segment);
+
+                        if (segmenProjectType === 'WAREHOUSE') {
+                            title = `Eviden Foto - Perincian Nota ${segment} - SS SMG`;
+                        } else {
+                             const saTitlePart = reportSA.replace(/^SA /, '') === 'SEMUA SA' ? 'SEMUA' : reportSA.replace(/^SA /, '');
+                             title = `Eviden Foto - Perincian Nota ${segment} - SERVICE AREA ${saTitlePart}`;
+                        }
                         
                         const segmentHtml = generateSimpleEvidenReport(notasInSegment, title);
                         pages.push({ html: segmentHtml, orientation: 'portrait' });
