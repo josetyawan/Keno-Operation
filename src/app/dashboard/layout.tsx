@@ -104,20 +104,19 @@ export default function DashboardLayout({
   }, [auth, router, toast]);
 
   // Combined effect for user state management (redirection, self-healing, promotion)
-   useEffect(() => {
-    // Don't do anything until both auth and profile loading are complete
+  useEffect(() => {
+    // Wait for all data to be loaded before making any decisions.
     if (isUserLoading || isProfileLoading) {
       return;
     }
 
-    // Case 1: No authenticated user found after loading
+    // Case 1: No user, redirect to login.
     if (!user) {
       router.push('/login');
       return;
     }
 
-    // Case 2: User is authenticated, but their profile document doesn't exist.
-    // This is a self-healing mechanism for accounts created in a broken state.
+    // Case 2: User exists, but no profile. Self-heal.
     if (!userProfile) {
         console.warn(`User profile for ${user.uid} is missing. Creating a new default profile.`);
         
@@ -134,7 +133,6 @@ export default function DashboardLayout({
             phone: '',
         };
 
-        // We don't await this. We create the doc and immediately sign out the user.
         setDoc(newUserDocRef, newUserProfileData, { merge: true }).catch(err => {
             console.error("CRITICAL: Failed to create missing user profile document.", err);
             handleSignOutAndRedirect(
@@ -143,43 +141,46 @@ export default function DashboardLayout({
             );
         });
 
-        // Sign the user out with a friendly message explaining what happened.
         handleSignOutAndRedirect(
             'Profil Baru Dibuat',
             'Profil Anda telah dibuat. Akun Anda kini menunggu persetujuan admin. Silakan coba masuk lagi nanti.'
         );
         return;
     }
-    
-    // Case 3 & 4: Role and Status checks
-    const isSuperAdminEmail = user.email === 'jokowahyusisnaker123@gmail.com';
 
-    // Handle Super Admin separately to prevent race conditions
-    if (isSuperAdminEmail) {
-      const needsUpgrade = userProfile.role !== 'admin' || userProfile.registrationStatus !== 'approved';
-      if (needsUpgrade) {
-        console.log("Super admin detected with incorrect role/status. Upgrading...");
-        const userToUpgradeRef = doc(firestore, 'users', user.uid);
-        updateDocumentNonBlocking(userToUpgradeRef, {
-          role: 'admin',
-          registrationStatus: 'approved'
-        });
-        toast({
-          title: "Admin Privileges Granted",
-          description: "Your account has been automatically upgraded to Admin.",
-        });
-        // Return to wait for the profile to update, but do not sign the user out.
-      }
-      // For a super admin, we never sign them out for being 'pending'.
-    } else {
-      // This logic now ONLY applies to non-super-admins.
-      if (userProfile.registrationStatus === 'pending') {
-        handleSignOutAndRedirect(
-          'Akun Menunggu Persetujuan',
-          'Akun Anda telah didaftarkan dan sedang menunggu persetujuan dari admin.'
-        );
-      }
+    // From this point, we know we have a user and a profile.
+    const isSuperAdmin = user.email === 'jokowahyusisnaker123@gmail.com';
+    const profileNeedsUpgrade = userProfile.role !== 'admin' || userProfile.registrationStatus !== 'approved';
+
+    // Case 3: Super admin promotion.
+    if (isSuperAdmin && profileNeedsUpgrade) {
+      console.log("Super admin detected. Upgrading account privileges...");
+      const userToUpgradeRef = doc(firestore, 'users', user.uid);
+      updateDocumentNonBlocking(userToUpgradeRef, {
+        role: 'admin',
+        registrationStatus: 'approved'
+      });
+      toast({
+        title: "Admin Privileges Granted",
+        description: "Your account has been automatically upgraded to Admin.",
+      });
+      // Important: Stop execution here. Do not proceed to other checks.
+      // The effect will re-run when the profile is updated.
+      return; 
     }
+
+    // Case 4: Regular user is pending.
+    // This check will not run for a super admin because of the explicit check and return above.
+    if (!isSuperAdmin && userProfile.registrationStatus === 'pending') {
+      handleSignOutAndRedirect(
+        'Akun Menunggu Persetujuan',
+        'Akun Anda telah didaftarkan dan sedang menunggu persetujuan dari admin.'
+      );
+      return;
+    }
+
+    // If we reach here, user is either a fully promoted super admin,
+    // or an approved regular user. No action needed.
 
   }, [user, isUserLoading, userProfile, isProfileLoading, router, firestore, handleSignOutAndRedirect, toast]);
 
