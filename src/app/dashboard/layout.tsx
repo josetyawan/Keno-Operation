@@ -13,11 +13,11 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { UserNav } from '@/components/user-nav';
 import { Logo } from '@/components/logo';
-import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -105,82 +105,92 @@ export default function DashboardLayout({
 
   // Combined effect for user state management (redirection, self-healing, promotion)
   useEffect(() => {
-    // Wait for all data to be loaded before making any decisions.
-    if (isUserLoading || isProfileLoading) {
-      return;
-    }
+    // This function now contains the logic and can be handled asynchronously
+    const checkUserStatus = async () => {
+        // Wait for all data to be loaded before making any decisions.
+        if (isUserLoading || isProfileLoading) {
+            return;
+        }
 
-    // Case 1: No user, redirect to login.
-    if (!user) {
-      router.push('/login');
-      return;
-    }
+        // Case 1: No user, redirect to login.
+        if (!user) {
+            router.push('/login');
+            return;
+        }
 
-    // Case 2: User exists, but no profile. Self-heal.
-    if (!userProfile) {
-        console.warn(`User profile for ${user.uid} is missing. Creating a new default profile.`);
-        
-        const newUserDocRef = doc(firestore, 'users', user.uid);
-        const newUserProfileData: UserProfile = {
-            id: user.uid,
-            email: user.email!,
-            role: 'user',
-            registrationStatus: 'pending',
-            displayName: user.email?.split('@')[0] || 'New User',
-            firstName: '',
-            lastName: '',
-            nik: '',
-            phone: '',
-        };
+        // Case 2: User exists, but no profile. Self-heal.
+        if (!userProfile) {
+            console.warn(`User profile for ${user.uid} is missing. Creating a new default profile.`);
+            
+            const newUserDocRef = doc(firestore, 'users', user.uid);
+            const newUserProfileData: UserProfile = {
+                id: user.uid,
+                email: user.email!,
+                role: 'user',
+                registrationStatus: 'pending',
+                displayName: user.email?.split('@')[0] || 'New User',
+                firstName: '',
+                lastName: '',
+                nik: '',
+                phone: '',
+            };
 
-        setDoc(newUserDocRef, newUserProfileData, { merge: true }).catch(err => {
-            console.error("CRITICAL: Failed to create missing user profile document.", err);
+            try {
+                await setDoc(newUserDocRef, newUserProfileData, { merge: true });
+                handleSignOutAndRedirect(
+                    'Profil Baru Dibuat',
+                    'Profil Anda telah dibuat. Akun Anda kini menunggu persetujuan admin. Silakan coba masuk lagi nanti.'
+                );
+            } catch (err) {
+                 console.error("CRITICAL: Failed to create missing user profile document.", err);
+                 handleSignOutAndRedirect(
+                     'Gagal Membuat Profil',
+                     'Terjadi kesalahan kritis saat mencoba memperbaiki akun Anda. Hubungi admin.'
+                 );
+            }
+            return;
+        }
+
+        // From this point, we know we have a user and a profile.
+        const isSuperAdmin = user.email === 'jokowahyusisnaker123@gmail.com';
+        const profileNeedsUpgrade = userProfile.role !== 'admin' || userProfile.registrationStatus !== 'approved';
+
+        // Case 3: Super admin promotion.
+        if (isSuperAdmin && profileNeedsUpgrade) {
+            console.log("Super admin detected. Upgrading account privileges...");
+            const userToUpgradeRef = doc(firestore, 'users', user.uid);
+            try {
+                // IMPORTANT: Await the update to ensure the database write completes.
+                await updateDoc(userToUpgradeRef, {
+                    role: 'admin',
+                    registrationStatus: 'approved'
+                });
+                toast({
+                    title: "Admin Privileges Granted",
+                    description: "Your account has been automatically upgraded.",
+                });
+                // The useDoc hook will now fetch the updated profile, triggering a re-render.
+                // We return to prevent the next checks from running with stale data.
+            } catch (err) {
+                console.error("CRITICAL: Failed to promote super admin.", err);
+                handleSignOutAndRedirect(
+                    'Gagal Promosi Akun',
+                    'Gagal meningkatkan hak akses Anda. Silakan hubungi admin.'
+                );
+            }
+            return; 
+        }
+
+        // Case 4: Regular user is pending. This won't run if the super admin logic returned.
+        if (!isSuperAdmin && userProfile.registrationStatus === 'pending') {
             handleSignOutAndRedirect(
-                'Gagal Membuat Profil',
-                'Terjadi kesalahan kritis saat mencoba memperbaiki akun Anda. Hubungi admin.'
+                'Akun Menunggu Persetujuan',
+                'Akun Anda telah didaftarkan dan sedang menunggu persetujuan dari admin.'
             );
-        });
+        }
+    };
 
-        handleSignOutAndRedirect(
-            'Profil Baru Dibuat',
-            'Profil Anda telah dibuat. Akun Anda kini menunggu persetujuan admin. Silakan coba masuk lagi nanti.'
-        );
-        return;
-    }
-
-    // From this point, we know we have a user and a profile.
-    const isSuperAdmin = user.email === 'jokowahyusisnaker123@gmail.com';
-    const profileNeedsUpgrade = userProfile.role !== 'admin' || userProfile.registrationStatus !== 'approved';
-
-    // Case 3: Super admin promotion.
-    if (isSuperAdmin && profileNeedsUpgrade) {
-      console.log("Super admin detected. Upgrading account privileges...");
-      const userToUpgradeRef = doc(firestore, 'users', user.uid);
-      updateDocumentNonBlocking(userToUpgradeRef, {
-        role: 'admin',
-        registrationStatus: 'approved'
-      });
-      toast({
-        title: "Admin Privileges Granted",
-        description: "Your account has been automatically upgraded to Admin.",
-      });
-      // Important: Stop execution here. Do not proceed to other checks.
-      // The effect will re-run when the profile is updated.
-      return; 
-    }
-
-    // Case 4: Regular user is pending.
-    // This check will not run for a super admin because of the explicit check and return above.
-    if (!isSuperAdmin && userProfile.registrationStatus === 'pending') {
-      handleSignOutAndRedirect(
-        'Akun Menunggu Persetujuan',
-        'Akun Anda telah didaftarkan dan sedang menunggu persetujuan dari admin.'
-      );
-      return;
-    }
-
-    // If we reach here, user is either a fully promoted super admin,
-    // or an approved regular user. No action needed.
+    checkUserStatus();
 
   }, [user, isUserLoading, userProfile, isProfileLoading, router, firestore, handleSignOutAndRedirect, toast]);
 
