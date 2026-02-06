@@ -121,8 +121,8 @@ service cloud.firestore {
       // An approved user can update their own nota. Admins can update any nota.
       allow update: if (isApproved() && isUpdatingOwnNota()) || isAdmin();
       
-      // An approved user can only delete a nota if they are the owner.
-      allow delete: if isApproved() && isUpdatingOwnNota();
+      // An approved user can only delete a nota if they are the owner. Admins can delete any nota.
+      allow delete: if (isApproved() && isUpdatingOwnNota()) || isAdmin();
     }
     
     /**
