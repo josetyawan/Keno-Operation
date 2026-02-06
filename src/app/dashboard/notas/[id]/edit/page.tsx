@@ -144,6 +144,7 @@ function EditNotaForm({ nota, isAdmin }: { nota: Nota, isAdmin: boolean }) {
         'jasa PROVISIONING',
         'Perincian Nota Pengiriman B2B IOAN',
         'Perincian Nota Pengiriman PROVISIONING',
+        'Perincian Nota Pengiriman Warehouse',
         'Konsumsi Turlap B2B IOAN',
         'Konsumsi Turlap PROVISIONING',
         'Konsumsi UT B2B IOAN',
@@ -151,6 +152,7 @@ function EditNotaForm({ nota, isAdmin }: { nota: Nota, isAdmin: boolean }) {
         'Konsumsi Lembur B2B IOAN',
         'Konsumsi Lembur PROVISIONING',
         'MATERIAL SPPG',
+        'ISI PANTRY',
     ];
     
     const isBBMKendaraan = segmen && bbmKendaraanSegments.includes(segmen);
@@ -332,6 +334,7 @@ function EditNotaForm({ nota, isAdmin }: { nota: Nota, isAdmin: boolean }) {
                                         <SelectItem value="jasa PROVISIONING">jasa PROVISIONING</SelectItem>
                                         <SelectItem value="Perincian Nota Pengiriman B2B IOAN">Perincian Nota Pengiriman B2B IOAN</SelectItem>
                                         <SelectItem value="Perincian Nota Pengiriman PROVISIONING">Perincian Nota Pengiriman PROVISIONING</SelectItem>
+                                        <SelectItem value="Perincian Nota Pengiriman Warehouse">Perincian Nota Pengiriman Warehouse</SelectItem>
                                         <SelectItem value="Konsumsi Turlap B2B IOAN">Konsumsi Turlap B2B IOAN</SelectItem>
                                         <SelectItem value="Konsumsi Turlap PROVISIONING">Konsumsi Turlap PROVISIONING</SelectItem>
                                         <SelectItem value="Konsumsi UT B2B IOAN">Konsumsi UT B2B IOAN</SelectItem>
@@ -339,6 +342,7 @@ function EditNotaForm({ nota, isAdmin }: { nota: Nota, isAdmin: boolean }) {
                                         <SelectItem value="Konsumsi Lembur B2B IOAN">Konsumsi Lembur B2B IOAN</SelectItem>
                                         <SelectItem value="Konsumsi Lembur PROVISIONING">Konsumsi Lembur PROVISIONING</SelectItem>
                                         <SelectItem value="MATERIAL SPPG">MATERIAL SPPG</SelectItem>
+                                        <SelectItem value="ISI PANTRY">ISI PANTRY</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>

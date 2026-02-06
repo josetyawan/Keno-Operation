@@ -147,6 +147,7 @@ export default function AdminPIDsPage() {
         { projectType: 'PROVISIONING', pid: '-' },
         { projectType: 'SPPG', pid: '-' },
         { projectType: 'BBM GENSET', pid: 'Ditagihkan ke Unit Lain' },
+        { projectType: 'WAREHOUSE', pid: 'TIF-215/2026' },
         { projectType: 'Lainnya', pid: '-' },
       ];
 

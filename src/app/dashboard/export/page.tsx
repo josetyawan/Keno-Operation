@@ -58,7 +58,7 @@ import { useRouter } from 'next/navigation';
 import { AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 
-type ProjectType = 'B2B IOAN' | 'PROVISIONING' | 'SPPG' | 'BBM GENSET' | 'Lainnya';
+type ProjectType = 'B2B IOAN' | 'PROVISIONING' | 'SPPG' | 'BBM GENSET' | 'Lainnya' | 'WAREHOUSE';
 
 const safeToDate = (timestamp: any): Date | null => {
     if (!timestamp) return null;
@@ -70,6 +70,7 @@ const safeToDate = (timestamp: any): Date | null => {
 
 
 const getProjectType = (segmen: string): ProjectType => {
+    if (segmen === 'Perincian Nota Pengiriman Warehouse') return 'WAREHOUSE';
     if (segmen === 'BBM Genset') return 'BBM GENSET';
     if (segmen.includes('SPPG')) return 'SPPG';
     if (segmen.includes('B2B IOAN') || segmen === 'ISI PANTRY') return 'B2B IOAN';
@@ -102,7 +103,9 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
     const formattedDate = format(reportDate, 'dd/MM/yyyy');
     
     const saShort = serviceArea.replace('SA ', '');
-    const projectName = `IF JATENG - SMG OPR - Ops SA ${saShort} (${monthName})`;
+    const projectName = projectType === 'WAREHOUSE'
+        ? `IF JATENG - SS SMG - Ops IAM Semarang (${monthName})`
+        : `IF JATENG - SMG OPR - Ops SA ${saShort} (${monthName})`;
     
     const idProject = pids.find(p => p.projectType === projectType)?.pid || (projectType === 'BBM GENSET' ? 'Ditagihkan ke Unit Lain' : '-');
 
@@ -325,7 +328,10 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
     
     const idProject = pids.find(p => p.projectType === projectType)?.pid || (projectType === 'BBM GENSET' ? 'Ditagihkan ke Unit Lain' : '-');
 
-    if (projectType === 'B2B IOAN') {
+    if (projectType === 'WAREHOUSE') {
+        saShort = 'SS SMG';
+        pekerjaan = 'SS SMG';
+    } else if (projectType === 'B2B IOAN') {
         pekerjaan = `B2B IOAN ${saShort}`;
     } else if (projectType === 'PROVISIONING') {
         pekerjaan = `PROVISIONING ${saShort}`;
