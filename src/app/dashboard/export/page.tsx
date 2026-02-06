@@ -134,7 +134,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
         const nominalFormatted = data.total.toLocaleString('id-ID');
         
         const segmenProjectType = getProjectType(segmen);
-        const idProjectForRow = pids.find(p => p.projectType.toLowerCase() === segmenProjectType.toLowerCase())?.pid || '-';
+        const idProjectForRow = pids.find(p => p.projectType.toLowerCase() === segmenProjectType.toLowerCase())?.pid || (projectType === 'BBM R4 Pengiriman Warehouse' ? 'TIF-215/2026' : '-');
         
 
         return `
@@ -762,7 +762,7 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
         </tr>`;
     }).join('');
 
-    const headers = ['No', 'TANGGAL', 'KET', 'NO PLAT', 'SELISIH', 'KM AWAL', 'KM AKHIR', 'KEPERLUAN', 'Eviden KM', 'Eviden KM Awal', 'Eviden KM Akhir', 'PIC', 'Nilai'];
+    const headers = ['NO', 'TANGGAL', 'KET', 'NO PLAT', 'SELISIH', 'KM AWAL', 'KM AKHIR', 'KEPERLUAN', 'Eviden KM', 'Eviden KM Awal', 'Eviden KM Akhir', 'PIC', 'Nilai'];
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 9pt; background-color: white; page-break-inside: avoid;">
@@ -802,7 +802,7 @@ const generateSimpleEvidenReport = (notas: Nota[], title: string): string => {
         </tr>`;
     }).join('');
 
-    const headers = ['No', 'Tanggal', 'Keterangan', 'Eviden', 'PIC', 'Nilai'];
+    const headers = ['NO', 'Tanggal', 'Keterangan', 'Eviden', 'PIC', 'Nilai'];
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; background-color: white; page-break-inside: avoid;">
@@ -1093,14 +1093,6 @@ export default function ExportPage() {
 
                         let segmentHtml = '';
                         let title: string;
-                        const segmenProjectType = getProjectType(segment);
-
-                        if (segmenProjectType === 'WAREHOUSE') {
-                            title = `Perincian Nota ${segment} - SS SMG`;
-                        } else {
-                            const saTitlePart = reportSA.replace(/^SA /, '') === 'SEMUA SA' ? 'SEMUA' : reportSA.replace(/^SA /, '');
-                            title = `Perincian Nota ${segment} - SERVICE AREA ${saTitlePart}`;
-                        }
                         
                          const bbmR2R4Segments = [
                             'BBM R2 Harian B2B IOAN', 'BBM R2 Harian PROVISIONING',
@@ -1116,10 +1108,29 @@ export default function ExportPage() {
                         ];
 
                         if (jasaSegments.includes(segment)) {
+                            const saTitlePart = reportSA.replace(/^SA /, '') === 'SEMUA SA' ? 'SEMUA' : reportSA.replace(/^SA /, '');
+                            title = `Perincian Nota ${segment} - SERVICE AREA ${saTitlePart}`;
                             segmentHtml = generateJasaReport(notasInSegment, title);
                         } else if (bbmR2R4Segments.includes(segment)) {
+                            let saPart: string;
+                            if (segment === 'BBM R4 Pengiriman Warehouse') {
+                                saPart = 'SS SMG';
+                            } else {
+                                const saTitlePart = reportSA.replace(/^SA /, '') === 'SEMUA SA' ? 'SEMUA' : reportSA.replace(/^SA /, '');
+                                saPart = `SERVICE AREA ${saTitlePart}`;
+                            }
+                            title = `Perincian Nota ${segment} - ${saPart}`;
                             segmentHtml = generateBBMReport(notasInSegment, title);
                         } else {
+                             let saPart: string;
+                             const segmenProjectType = getProjectType(segment);
+                             if (segmenProjectType === 'WAREHOUSE') {
+                                saPart = 'SS SMG';
+                             } else {
+                                const saTitlePart = reportSA.replace(/^SA /, '') === 'SEMUA SA' ? 'SEMUA' : reportSA.replace(/^SA /, '');
+                                saPart = `SERVICE AREA ${saTitlePart}`;
+                             }
+                             title = `Perincian Nota ${segment} - ${saPart}`;
                              const modifiedNotas = notasInSegment.map(nota => {
                                  if (segment === 'BBM Genset') return { ...nota, keterangan: '' };
                                  return nota;
@@ -1150,14 +1161,15 @@ export default function ExportPage() {
                         if (notasInSegment.length === 0) continue;
                         
                         let title: string;
-                        const segmenProjectType = getProjectType(segment);
-                        if (segmenProjectType === 'WAREHOUSE') {
-                            title = `Eviden Foto - Perincian Nota ${segment} - SS SMG`;
+                        let saPart: string;
+                        if (segment === 'BBM R4 Pengiriman Warehouse') {
+                            saPart = 'SS SMG';
                         } else {
                             const saTitlePart = reportSA.replace(/^SA /, '') === 'SEMUA SA' ? 'SEMUA' : reportSA.replace(/^SA /, '');
-                            title = `Eviden Foto - Perincian Nota ${segment} - SERVICE AREA ${saTitlePart}`;
+                            saPart = `SERVICE AREA ${saTitlePart}`;
                         }
                         
+                        title = `Eviden Foto - Perincian Nota ${segment} - ${saPart}`;
                         const segmentHtml = generateEvidenReport(notasInSegment, title);
                         pages.push({ html: segmentHtml, orientation: 'portrait' });
                     }
