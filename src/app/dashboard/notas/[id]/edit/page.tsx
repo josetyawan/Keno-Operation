@@ -239,11 +239,14 @@ function EditNotaForm({ nota, isAdmin }: { nota: Nota, isAdmin: boolean }) {
                     await uploadBytes(storageRef, file);
                     return getDownloadURL(storageRef);
                 }
-                return imageUrls[index];
+                return imageUrls[index]; // Return existing URL (which can be null)
             });
             
             const allPossibleUrls = await Promise.all(uploadPromises);
-            const finalUrls = allPossibleUrls.filter((url): url is string => !!url);
+            
+            const finalUrls = isBBMKendaraan
+                ? allPossibleUrls
+                : allPossibleUrls.slice(0, 4).filter((url): url is string => !!url);
 
             const updatedData: Partial<Nota> = {
                 tanggal, segmen, serviceArea, keterangan, nominal: Number(nominal), namaPic,

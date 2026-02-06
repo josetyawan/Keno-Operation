@@ -689,10 +689,11 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
     const tableRows = notas.map((nota, index) => {
         const notaDate = safeToDate(nota.tanggal);
         // Form supports 4 images for Keperluan, 3 for KM readings.
-        const keperluanImageUrls = (nota.fotoEvidenUrls || []).slice(0, 4);
-        const evidenKmUrl = nota.fotoEvidenUrls?.[4]; // Corresponds to KM Awal Bulan
-        const evidenKmAwalUrl = nota.fotoEvidenUrls?.[5];
-        const evidenKmAkhirUrl = nota.fotoEvidenUrls?.[6];
+        // Filter out nulls/undefined before mapping
+        const keperluanImageUrls = (nota.fotoEvidenUrls || []).slice(0, 4).filter((url): url is string => !!url);
+        const evidenKmUrl = nota.fotoEvidenUrls?.[4] || undefined;
+        const evidenKmAwalUrl = nota.fotoEvidenUrls?.[5] || undefined;
+        const evidenKmAkhirUrl = nota.fotoEvidenUrls?.[6] || undefined;
 
         const keperluanImagesHtml = keperluanImageUrls.map(url =>
             `<img src="${url}" style="width: 60px; height: auto; object-fit: contain; border: 1px solid #eee;"/>`
@@ -706,7 +707,7 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
         const selisih = (nota.kmAkhir != null && nota.kmAwal != null && nota.kmAkhir > nota.kmAwal) ? (nota.kmAkhir - nota.kmAwal) : '';
 
         // Split by space and join with <br/> for multiline effect as in the image.
-        const ketText = nota.segmen.replace(' ', '<br/>');
+        const ketText = nota.segmen.replace(/ /g, '<br/>');
 
         return `
         <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
@@ -746,7 +747,8 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
 const generateSimpleEvidenReport = (notas: Nota[], title: string): string => {
     const tableRows = notas.map((nota, index) => {
         const notaDate = safeToDate(nota.tanggal);
-        const evidenImagesHtml = (nota.fotoEvidenUrls || []).map(url => 
+        // Filter out nulls before creating img tags
+        const evidenImagesHtml = (nota.fotoEvidenUrls || []).filter((url): url is string => !!url).map(url => 
             `<img src="${url}" style="width: 60px; height: auto; object-fit: contain; border: 1px solid #eee;"/>`
         ).join('');
         

@@ -210,20 +210,24 @@ export default function NewNotaPage() {
     }
 
     try {
-      const uploadPromises = files
-        .filter((file): file is File => file !== null)
-        .map(async (file) => {
-          const fileExtension = file.name.split('.').pop();
-          const fileName = `${user.uid}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExtension}`;
-          const filePath = `notas/${user.uid}/${fileName}`;
-          const storageRef = ref(storage, filePath);
-          
-          await uploadBytes(storageRef, file);
-          const downloadURL = await getDownloadURL(storageRef);
-          return downloadURL;
-        });
+      const uploadPromises = files.map(async (file) => {
+        if (!file) return null; // Return null for empty slots
+        const fileExtension = file.name.split('.').pop();
+        const fileName = `${user.uid}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExtension}`;
+        const filePath = `notas/${user.uid}/${fileName}`;
+        const storageRef = ref(storage, filePath);
+        
+        await uploadBytes(storageRef, file);
+        return getDownloadURL(storageRef);
+      });
 
-      const uploadedUrls = await Promise.all(uploadPromises);
+      const uploadedUrlsWithNulls = await Promise.all(uploadPromises);
+
+      // For BBM segments, keep the array with nulls to preserve indices.
+      // For non-BBM segments, filter out nulls as we just want a list of URLs.
+      const finalUrls = isBBMKendaraan
+        ? uploadedUrlsWithNulls
+        : uploadedUrlsWithNulls.slice(0, 4).filter((url): url is string => !!url);
 
       const notasCollection = collection(firestore, 'notas');
 
@@ -236,7 +240,7 @@ export default function NewNotaPage() {
         keterangan,
         nominal: Number(nominal),
         namaPic,
-        fotoEvidenUrls: uploadedUrls,
+        fotoEvidenUrls: finalUrls,
         dateCreated: serverTimestamp(),
         status: 'pending',
       };
