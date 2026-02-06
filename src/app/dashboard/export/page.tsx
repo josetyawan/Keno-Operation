@@ -110,23 +110,42 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
     
     const idProject = pids.find(p => p.projectType === projectType)?.pid || (projectType === 'BBM GENSET' ? 'Ditagihkan ke Unit Lain' : '-');
 
+    const groupedBySegmen = notas.reduce((acc, nota) => {
+        const key = nota.segmen;
+        if (!acc[key]) {
+            acc[key] = { items: [], total: 0 };
+        }
+        acc[key].items.push(nota);
+        acc[key].total += nota.nominal;
+        return acc;
+    }, {} as Record<string, { items: Nota[], total: number }>);
+
     let grandTotal = 0;
-    const tableRows = notas.map((nota, index) => {
-        grandTotal += nota.nominal;
-        const notaDate = safeToDate(nota.tanggal);
+    const tableRows = Object.entries(groupedBySegmen).map(([segmen, data], index) => {
+        grandTotal += data.total;
+
+        // Find the earliest date among the items for this segment for the 'Tanggal' column
+        const earliestDate = data.items.reduce((earliest, current) => {
+            const currentDate = safeToDate(current.tanggal);
+            if (!currentDate) return earliest;
+            return (earliest && earliest < currentDate) ? earliest : currentDate;
+        }, null as Date | null);
+        
+        const nominalFormatted = data.total.toLocaleString('id-ID');
+
         return `
             <tr style="font-size: 8pt;">
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${index + 1}</td>
-                <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${notaDate ? format(notaDate, 'dd/MM/yyyy') : '-'}</td>
+                <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${earliestDate ? format(earliestDate, 'dd/MM/yyyy') : '-'}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${index + 1}</td>
-                <td style="border: 1px solid black; padding: 2px 4px;">${nota.segmen}</td>
+                <td style="border: 1px solid black; padding: 2px 4px;">${segmen}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${idProject}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
-                <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
+                <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${nominalFormatted}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
-                <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
+                <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${nominalFormatted}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
-                <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
+                <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${nominalFormatted}</td>
             </tr>
         `;
     }).join('');
@@ -1067,8 +1086,13 @@ export default function ExportPage() {
                             'BBM R4 UT B2B IOAN', 'BBM R4 UT PROVISIONING',
                             'BBM R4 Pengiriman Warehouse',
                         ];
+                        
+                        const jasaSegments = [
+                            'Jasa B2B IOAN', 'Jasa PROVISIONING',
+                            'Perincian Nota Pengiriman B2B IOAN', 'Perincian Nota Pengiriman PROVISIONING'
+                        ];
 
-                        if (segment.startsWith('Jasa') || segment.startsWith('Perincian Nota Pengiriman')) {
+                        if (jasaSegments.includes(segment)) {
                             segmentHtml = generateJasaReport(notasInSegment, title);
                         } else if (bbmR2R4Segments.includes(segment)) {
                             segmentHtml = generateBBMReport(notasInSegment, title);
@@ -1325,7 +1349,7 @@ export default function ExportPage() {
                                                             {format(verifiedDateRange.to, "dd LLL, yy", {locale: idLocale})}
                                                         </>
                                                     ) : (
-                                                        format(verifiedDateRange.from, "dd LLL, yy")
+                                                        format(verifiedDateRange.from, "dd LLL, yy", {locale: idLocale})
                                                     )
                                                 ) : (
                                                     <span>Pilih rentang tanggal verifikasi</span>
