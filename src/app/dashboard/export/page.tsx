@@ -108,7 +108,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
         ? `IF JATENG - SS SMG - Ops IAM Semarang (${monthName})`
         : `IF JATENG - SMG OPR - Ops SA ${saShort} (${monthName})`;
     
-    const idProject = pids.find(p => p.projectType === projectType)?.pid || (projectType === 'BBM GENSET' ? 'Ditagihkan ke Unit Lain' : '-');
+    const idProject = pids.find(p => p.projectType.toLowerCase() === projectType.toLowerCase())?.pid || (projectType === 'BBM GENSET' ? 'Ditagihkan ke Unit Lain' : '-');
 
     const groupedBySegmen = notas.reduce((acc, nota) => {
         const key = nota.segmen;
@@ -346,7 +346,7 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
     let saShort = serviceArea.replace('SA ', '');
     let pekerjaan = saShort;
     
-    const idProject = pids.find(p => p.projectType === projectType)?.pid || (projectType === 'BBM GENSET' ? 'Ditagihkan ke Unit Lain' : '-');
+    const idProject = pids.find(p => p.projectType.toLowerCase() === projectType.toLowerCase())?.pid || (projectType === 'BBM GENSET' ? 'Ditagihkan ke Unit Lain' : '-');
 
     if (projectType === 'WAREHOUSE') {
         saShort = 'SS SMG';
