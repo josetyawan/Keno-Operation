@@ -151,35 +151,34 @@ export default function DashboardLayout({
         return;
     }
     
-    // Case 3: Super Admin Check & Auto-Promotion
-    // This runs before the 'pending' check to allow promotion.
+    // Case 3 & 4: Role and Status checks
     const isSuperAdminEmail = user.email === 'jokowahyusisnaker123@gmail.com';
-    const isNotAdminRole = userProfile.role !== 'admin';
-    const isNotApproved = userProfile.registrationStatus !== 'approved';
 
-    if (isSuperAdminEmail && (isNotAdminRole || isNotApproved)) {
+    // Handle Super Admin separately to prevent race conditions
+    if (isSuperAdminEmail) {
+      const needsUpgrade = userProfile.role !== 'admin' || userProfile.registrationStatus !== 'approved';
+      if (needsUpgrade) {
         console.log("Super admin detected with incorrect role/status. Upgrading...");
         const userToUpgradeRef = doc(firestore, 'users', user.uid);
-        updateDocumentNonBlocking(userToUpgradeRef, { 
-            role: 'admin', 
-            registrationStatus: 'approved' 
+        updateDocumentNonBlocking(userToUpgradeRef, {
+          role: 'admin',
+          registrationStatus: 'approved'
         });
         toast({
-            title: "Admin Privileges Granted",
-            description: "Your account has been automatically upgraded to Admin.",
+          title: "Admin Privileges Granted",
+          description: "Your account has been automatically upgraded to Admin.",
         });
-        // Return here to prevent the pending check from running on this render.
-        // The component will re-render with the updated profile.
-        return;
-    }
-    
-    // Case 4: User has a profile, but it's not approved yet (and they are not the super admin)
-    if (userProfile.registrationStatus === 'pending') {
-      handleSignOutAndRedirect(
-        'Akun Menunggu Persetujuan',
-        'Akun Anda telah didaftarkan dan sedang menunggu persetujuan dari admin.'
-      );
-      return;
+        // Return to wait for the profile to update, but do not sign the user out.
+      }
+      // For a super admin, we never sign them out for being 'pending'.
+    } else {
+      // This logic now ONLY applies to non-super-admins.
+      if (userProfile.registrationStatus === 'pending') {
+        handleSignOutAndRedirect(
+          'Akun Menunggu Persetujuan',
+          'Akun Anda telah didaftarkan dan sedang menunggu persetujuan dari admin.'
+        );
+      }
     }
 
   }, [user, isUserLoading, userProfile, isProfileLoading, router, firestore, handleSignOutAndRedirect, toast]);
@@ -192,7 +191,7 @@ export default function DashboardLayout({
 
   // Do not render the dashboard if the user is not approved or doesn't exist
   // The useEffect above will handle the redirection or profile creation.
-  if (!user || !userProfile || userProfile.registrationStatus !== 'approved') {
+  if (!user || !userProfile || (userProfile.role !== 'admin' && userProfile.registrationStatus !== 'approved')) {
       return <DashboardSkeleton />;
   }
 
