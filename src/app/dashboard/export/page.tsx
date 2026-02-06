@@ -108,7 +108,8 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
         ? `IF JATENG - SS SMG - Ops IAM Semarang (${monthName})`
         : `IF JATENG - SMG OPR - Ops SA ${saShort} (${monthName})`;
     
-    const idProject = pids.find(p => p.projectType.toLowerCase() === projectType.toLowerCase())?.pid || (projectType === 'BBM GENSET' ? 'Ditagihkan ke Unit Lain' : '-');
+    // PID for the summary table at the bottom right. Uses the overall projectType for the report.
+    const idProjectForSummary = pids.find(p => p.projectType.toLowerCase() === projectType.toLowerCase())?.pid || (projectType === 'BBM GENSET' ? 'Ditagihkan ke Unit Lain' : '-');
 
     const groupedBySegmen = notas.reduce((acc, nota) => {
         const key = nota.segmen;
@@ -133,13 +134,18 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
         
         const nominalFormatted = data.total.toLocaleString('id-ID');
 
+        // **FIX**: Look up the Project ID for each specific segment to ensure correctness.
+        const segmenProjectType = getProjectType(segmen);
+        const idProjectForRow = pids.find(p => p.projectType.toLowerCase() === segmenProjectType.toLowerCase())?.pid || (segmenProjectType === 'BBM GENSET' ? 'Ditagihkan ke Unit Lain' : '-');
+        
+
         return `
             <tr style="font-size: 8pt;">
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${index + 1}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${earliestDate ? format(earliestDate, 'dd/MM/yyyy') : '-'}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${index + 1}</td>
                 <td style="border: 1px solid black; padding: 2px 4px;">${segmen}</td>
-                <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${idProject}</td>
+                <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${idProjectForRow}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${nominalFormatted}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
@@ -177,7 +183,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
                     <tbody>
                         <tr>
                             <td style="border: 1px solid black; padding: 2px; text-align: center;">1</td>
-                            <td style="border: 1px solid black; padding: 2px; text-align: center;">${idProject}</td>
+                            <td style="border: 1px solid black; padding: 2px; text-align: center;">${idProjectForSummary}</td>
                             <td style="border: 1px solid black; padding: 2px; text-align: center;">-</td>
                             <td style="border: 1px solid black; padding: 2px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
                             <td style="border: 1px solid black; padding: 2px; text-align: center;">-</td>
@@ -678,7 +684,8 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
             <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr>
-                    ${['NO', 'TANGGAL', 'Nama Barang', 'Keterangan', 'Jumlah'].map(h => `<th style="padding: 4px; border: 1px solid black;">${h}</th>`).join('')}
+                    <th style="padding: 4px; border: 1px solid black; width: 5%;">NO</th>
+                    ${['TANGGAL', 'Nama Barang', 'Keterangan', 'Jumlah'].map(h => `<th style="padding: 4px; border: 1px solid black;">${h}</th>`).join('')}
                 </tr>
             </thead>
             <tbody>${tableRows}</tbody>
@@ -1108,7 +1115,7 @@ export default function ExportPage() {
                             segmentHtml = generateBBMReport(notasInSegment, title);
                         } else {
                              const modifiedNotas = notasInSegment.map(nota => {
-                                 if (segment === 'BBM Genset') return { ...nota, keterangan: '' };
+                                 if (segment === 'BBM Genset' || segment === 'BBM R4 Pengiriman Warehouse') return { ...nota, keterangan: '' };
                                  return nota;
                              });
                             segmentHtml = generateMaterialReport(modifiedNotas, title);
