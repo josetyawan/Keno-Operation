@@ -437,6 +437,7 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
     
     let grandTotal = 0;
     let tableRows = '';
+    let itemNumber = 1;
 
     for (const dateKey of sortedDates) {
         if(dateKey === 'invalid-date') continue;
@@ -450,6 +451,7 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
             dateSubtotal += nota.nominal;
             tableRows += `
             <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                <td style="padding: 4px; border: 1px solid black; text-align: center;">${itemNumber}</td>
                 <td style="padding: 4px; border: 1px solid black;">${notaDate ? format(notaDate, 'dd/MM/yyyy') : '-'}</td>
                 <td style="padding: 4px; border: 1px solid black; white-space: normal; word-break: break-all;">${nota.keterangan || nota.namaBarang || '-'}</td>
                 <td style="padding: 4px; border: 1px solid black; text-align: right;">${dpp.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
@@ -457,11 +459,12 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
                 <td style="padding: 4px; border: 1px solid black; text-align: right;">${nota.nominal.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
             </tr>
             `;
+            itemNumber++;
         }
         grandTotal += dateSubtotal;
          tableRows += `
             <tr style="font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
-                <td colspan="4" style="padding: 4px; border: 1px solid black; text-align: right;">JUMLAH</td>
+                <td colspan="5" style="padding: 4px; border: 1px solid black; text-align: right;">JUMLAH</td>
                 <td style="padding: 4px; border: 1px solid black; text-align: right;">${dateSubtotal.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
             </tr>
         `;
@@ -477,6 +480,7 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
             <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr>
+                    <th style="padding: 4px; border: 1px solid black; width: 5%;">NO</th>
                     <th style="padding: 4px; border: 1px solid black; width: 10%;">TANGGAL</th>
                     <th style="padding: 4px; border: 1px solid black;">KETERANGAN</th>
                     <th style="padding: 4px; border: 1px solid black; width: 15%;">DPP</th>
@@ -487,7 +491,7 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
             <tbody>${tableRows}</tbody>
             <tfoot style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
-                    <td colspan="4" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">TOTAL</td>
+                    <td colspan="5" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">TOTAL</td>
                     <td style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">Rp${grandTotal.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 </tr>
             </tfoot>
@@ -534,6 +538,7 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
     
     let grandTotal = 0;
     let tableRows = '';
+    let itemNumber = 1;
 
     for (const dateKey of sortedDates) {
         if(dateKey === 'invalid-date') continue;
@@ -548,6 +553,7 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
 
             tableRows += `
                 <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                    <td style="padding: 4px; border: 1px solid black; text-align: center;">${itemNumber}</td>
                     <td style="padding: 4px; border: 1px solid black;">${notaDate ? format(notaDate, 'dd-MMM-yy', { locale: idLocale }) : '-'}</td>
                     <td style="padding: 4px; border: 1px solid black;">${staticKeterangan}</td>
                     <td style="padding: 4px; border: 1px solid black;">${nota.noPlatKendaraan || '-'}</td>
@@ -558,12 +564,13 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
                     <td style="padding: 4px; border: 1px solid black;">${nota.namaPic}</td>
                 </tr>
             `;
+            itemNumber++;
         }
 
         // Render subtotal row for the date
         tableRows += `
             <tr style="font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
-                <td colspan="6" style="padding: 4px; border: 1px solid black; text-align: right;">JUMLAH</td>
+                <td colspan="7" style="padding: 4px; border: 1px solid black; text-align: right;">JUMLAH</td>
                 <td style="padding: 4px; border: 1px solid black; text-align: right;">Rp${dateSubtotal.toLocaleString('id-ID')}</td>
                 <td style="padding: 4px; border: 1px solid black;"></td>
             </tr>
@@ -581,13 +588,13 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
             <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr>
-                    ${['TANGGAL', 'KETERANGAN', 'NO PLAT', 'KM AWAL', 'KM AKHIR', 'URAIAN PEKERJAAN', 'JUMLAH', 'NAMA'].map(h => `<th style="padding: 4px; border: 1px solid black;">${h}</th>`).join('')}
+                    ${['NO', 'TANGGAL', 'KETERANGAN', 'NO PLAT', 'KM AWAL', 'KM AKHIR', 'URAIAN PEKERJAAN', 'JUMLAH', 'NAMA'].map(h => `<th style="padding: 4px; border: 1px solid black;">${h}</th>`).join('')}
                 </tr>
             </thead>
             <tbody>${tableRows}</tbody>
             <tfoot style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
-                    <td colspan="7" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">TOTAL</td>
+                    <td colspan="8" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">TOTAL</td>
                     <td style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">Rp${grandTotal.toLocaleString('id-ID')}</td>
                 </tr>
             </tfoot>
@@ -632,6 +639,7 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
 
     let grandTotal = 0;
     let tableRows = '';
+    let itemNumber = 1;
 
     for (const dateKey of sortedDates) {
         if(dateKey === 'invalid-date') continue;
@@ -643,16 +651,18 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
             dateSubtotal += nota.nominal;
             tableRows += `
             <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                <td style="padding: 4px; border: 1px solid black; text-align: center;">${itemNumber}</td>
                 <td style="padding: 4px; border: 1px solid black;">${notaDate ? format(notaDate, 'dd/MM/yyyy') : '-'}</td>
                 <td style="padding: 4px; border: 1px solid black;">${nota.namaBarang || '-'}</td>
                 <td style="padding: 4px; border: 1px solid black; white-space: normal; word-break: break-all;">${nota.keterangan || '-'}</td>
                 <td style="padding: 4px; border: 1px solid black; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
             </tr>`;
+            itemNumber++;
         }
         grandTotal += dateSubtotal;
         tableRows += `
             <tr style="font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
-                <td colspan="3" style="padding: 4px; border: 1px solid black; text-align: right;">JUMLAH</td>
+                <td colspan="4" style="padding: 4px; border: 1px solid black; text-align: right;">JUMLAH</td>
                 <td style="padding: 4px; border: 1px solid black; text-align: right;">${dateSubtotal.toLocaleString('id-ID')}</td>
             </tr>
         `;
@@ -668,13 +678,13 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
             <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr>
-                    ${['TANGGAL', 'Nama Barang', 'Keterangan', 'Jumlah'].map(h => `<th style="padding: 4px; border: 1px solid black;">${h}</th>`).join('')}
+                    ${['NO', 'TANGGAL', 'Nama Barang', 'Keterangan', 'Jumlah'].map(h => `<th style="padding: 4px; border: 1px solid black;">${h}</th>`).join('')}
                 </tr>
             </thead>
             <tbody>${tableRows}</tbody>
             <tfoot style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
-                    <td colspan="3" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">TOTAL</td>
+                    <td colspan="4" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">TOTAL</td>
                     <td style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">Rp${grandTotal.toLocaleString('id-ID')}</td>
                 </tr>
             </tfoot>
