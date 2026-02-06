@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -70,7 +71,7 @@ const safeToDate = (timestamp: any): Date | null => {
 
 
 const getProjectType = (segmen: string): ProjectType => {
-    if (segmen === 'Perincian Nota Pengiriman Warehouse') return 'WAREHOUSE';
+    if (segmen === 'BBM R4 Pengiriman Warehouse') return 'WAREHOUSE';
     if (segmen === 'BBM Genset') return 'BBM GENSET';
     if (segmen.includes('SPPG')) return 'SPPG';
     if (segmen.includes('B2B IOAN') || segmen === 'ISI PANTRY') return 'B2B IOAN';
@@ -1062,9 +1063,10 @@ export default function ExportPage() {
                             'BBM R4 Harian B2B IOAN', 'BBM R4 Harian PROVISIONING',
                             'BBM R4 Turlap B2B IOAN', 'BBM R4 Turlap PROVISIONING',
                             'BBM R4 UT B2B IOAN', 'BBM R4 UT PROVISIONING',
+                            'BBM R4 Pengiriman Warehouse',
                         ];
 
-                        if (segment.startsWith('jasa') || segment.startsWith('Perincian Nota Pengiriman')) {
+                        if (segment.startsWith('Jasa') || segment.startsWith('Perincian Nota Pengiriman')) {
                             segmentHtml = generateJasaReport(notasInSegment, title);
                         } else if (bbmR2R4Segments.includes(segment)) {
                             segmentHtml = generateBBMReport(notasInSegment, title);
@@ -1079,13 +1081,14 @@ export default function ExportPage() {
                     }
 
                     // Eviden Foto BBM
-                    const bbmR2R4Segments = [
+                    const bbmR2R4SegmentsWithWarehouse = [
                         'BBM R2 Harian B2B IOAN', 'BBM R2 Harian PROVISIONING',
                         'BBM R4 Harian B2B IOAN', 'BBM R4 Harian PROVISIONING',
                         'BBM R4 Turlap B2B IOAN', 'BBM R4 Turlap PROVISIONING',
                         'BBM R4 UT B2B IOAN', 'BBM R4 UT PROVISIONING',
+                        'BBM R4 Pengiriman Warehouse',
                     ];
-                    const bbmNotas = notasForProject.filter(n => bbmR2R4Segments.includes(n.segmen));
+                    const bbmNotas = notasForProject.filter(n => bbmR2R4SegmentsWithWarehouse.includes(n.segmen));
                     const evidenGroupedBySegmentBBM = bbmNotas.reduce((acc, nota) => {
                         const seg = nota.segmen;
                         if (!acc[seg]) acc[seg] = [];
@@ -1106,7 +1109,7 @@ export default function ExportPage() {
 
 
                     // Eviden (non-BBM)
-                    const nonBbmNotas = notasForProject.filter(n => !bbmR2R4Segments.includes(n.segmen));
+                    const nonBbmNotas = notasForProject.filter(n => !bbmR2R4SegmentsWithWarehouse.includes(n.segmen));
                      const evidenGroupedBySegment = nonBbmNotas.reduce((acc, nota) => {
                         const seg = nota.segmen;
                         if (!acc[seg]) acc[seg] = [];
@@ -1475,5 +1478,3 @@ export default function ExportPage() {
         </>
     );
 }
-
-    

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useRouter, useParams } from 'next/navigation';
@@ -134,17 +135,17 @@ function EditNotaForm({ nota, isAdmin }: { nota: Nota, isAdmin: boolean }) {
         'BBM R4 Turlap PROVISIONING',
         'BBM R4 UT B2B IOAN',
         'BBM R4 UT PROVISIONING',
+        'BBM R4 Pengiriman Warehouse',
     ];
     const nonBbmKendaraanSegments = [
         'Pembelian Material Non stok B2B IOAN',
         'Pembelian Material Non stok PROVISIONING',
         'Perincian Nota ATK',
         'BBM Genset',
-        'jasa B2B IOAN',
-        'jasa PROVISIONING',
+        'Jasa B2B IOAN',
+        'Jasa PROVISIONING',
         'Perincian Nota Pengiriman B2B IOAN',
         'Perincian Nota Pengiriman PROVISIONING',
-        'Perincian Nota Pengiriman Warehouse',
         'Konsumsi Turlap B2B IOAN',
         'Konsumsi Turlap PROVISIONING',
         'Konsumsi UT B2B IOAN',
@@ -326,15 +327,15 @@ function EditNotaForm({ nota, isAdmin }: { nota: Nota, isAdmin: boolean }) {
                                         <SelectItem value="BBM R4 Turlap PROVISIONING">BBM R4 Turlap PROVISIONING</SelectItem>
                                         <SelectItem value="BBM R4 UT B2B IOAN">BBM R4 UT B2B IOAN</SelectItem>
                                         <SelectItem value="BBM R4 UT PROVISIONING">BBM R4 UT PROVISIONING</SelectItem>
+                                        <SelectItem value="BBM R4 Pengiriman Warehouse">BBM R4 Pengiriman Warehouse</SelectItem>
                                         <SelectItem value="Pembelian Material Non stok B2B IOAN">Pembelian Material Non stok B2B IOAN</SelectItem>
                                         <SelectItem value="Pembelian Material Non stok PROVISIONING">Pembelian Material Non stok PROVISIONING</SelectItem>
                                         <SelectItem value="Perincian Nota ATK">Perincian Nota ATK</SelectItem>
                                         <SelectItem value="BBM Genset">BBM Genset</SelectItem>
-                                        <SelectItem value="jasa B2B IOAN">jasa B2B IOAN</SelectItem>
-                                        <SelectItem value="jasa PROVISIONING">jasa PROVISIONING</SelectItem>
+                                        <SelectItem value="Jasa B2B IOAN">Jasa B2B IOAN</SelectItem>
+                                        <SelectItem value="Jasa PROVISIONING">Jasa PROVISIONING</SelectItem>
                                         <SelectItem value="Perincian Nota Pengiriman B2B IOAN">Perincian Nota Pengiriman B2B IOAN</SelectItem>
                                         <SelectItem value="Perincian Nota Pengiriman PROVISIONING">Perincian Nota Pengiriman PROVISIONING</SelectItem>
-                                        <SelectItem value="Perincian Nota Pengiriman Warehouse">Perincian Nota Pengiriman Warehouse</SelectItem>
                                         <SelectItem value="Konsumsi Turlap B2B IOAN">Konsumsi Turlap B2B IOAN</SelectItem>
                                         <SelectItem value="Konsumsi Turlap PROVISIONING">Konsumsi Turlap PROVISIONING</SelectItem>
                                         <SelectItem value="Konsumsi UT B2B IOAN">Konsumsi UT B2B IOAN</SelectItem>
@@ -360,8 +361,8 @@ function EditNotaForm({ nota, isAdmin }: { nota: Nota, isAdmin: boolean }) {
                             )}
 
                             {isNonBBMKendaraan && (
-                                <div className="grid gap-3"><Label htmlFor="namaBarang">{segmen.startsWith('jasa') || segmen.startsWith('Perincian Nota Pengiriman') ? 'Nama Jasa / Pengiriman' : 'Nama Barang'}</Label>
-                                    <Input id="namaBarang" type="text" placeholder={segmen.startsWith('jasa') || segmen.startsWith('Perincian Nota Pengiriman') ? 'Contoh: Jasa perbaikan / Pengiriman barang' : 'Nama barang yang dibeli...'} value={namaBarang} onChange={(e) => setNamaBarang(e.target.value)} />
+                                <div className="grid gap-3"><Label htmlFor="namaBarang">{segmen.startsWith('Jasa') || segmen.startsWith('Perincian Nota Pengiriman') ? 'Nama Jasa / Pengiriman' : 'Nama Barang'}</Label>
+                                    <Input id="namaBarang" type="text" placeholder={segmen.startsWith('Jasa') || segmen.startsWith('Perincian Nota Pengiriman') ? 'Contoh: Jasa perbaikan / Pengiriman barang' : 'Nama barang yang dibeli...'} value={namaBarang} onChange={(e) => setNamaBarang(e.target.value)} />
                                 </div>
                             )}
 
