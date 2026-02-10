@@ -42,7 +42,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { ArrowLeft, Edit, Trash2, Filter, FileArchive, Printer, Calendar as CalendarIcon, Loader2, Files } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Filter, FileArchive, Printer, Calendar as CalendarIcon, Loader2, Files, FileSpreadsheet } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { format, getMonth, getYear, startOfDay, endOfDay, isValid } from 'date-fns';
@@ -58,6 +58,7 @@ import Image from 'next/image';
 import type { VariantProps } from 'class-variance-authority';
 import { useRouter } from 'next/navigation';
 import { AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import * as XLSX from 'xlsx';
 
 
 type ProjectType = 'B2B IOAN' | 'PROVISIONING' | 'SPPG' | 'BBM GENSET' | 'Lainnya' | 'WAREHOUSE';
@@ -134,7 +135,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
         const nominalFormatted = data.total.toLocaleString('id-ID');
         
         const segmenProjectType = getProjectType(segmen);
-        const idProjectForRow = pids.find(p => p.projectType.toLowerCase() === segmenProjectType.toLowerCase())?.pid || (projectType === 'BBM R4 Pengiriman Warehouse' ? 'TIF-215/2026' : '-');
+        const idProjectForRow = pids.find(p => p.projectType.toLowerCase() === segmenProjectType.toLowerCase())?.pid || (segmen === 'BBM R4 Pengiriman Warehouse' ? pids.find(p => p.projectType.toLowerCase() === 'warehouse')?.pid : '-');
         
 
         return `
@@ -916,6 +917,7 @@ export default function ExportPage() {
 
     const [reportPages, setReportPages] = useState<{html: string, orientation: 'portrait' | 'landscape'}[]>([]);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
     
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -1024,6 +1026,139 @@ export default function ExportPage() {
         setSelectedNotaIds([]);
         setIsDeleting(false);
         setIsDeleteDialogOpen(false);
+    };
+
+    const handleExcelExport = () => {
+        if (selectedNotaIds.length === 0) {
+            toast({
+                variant: "destructive",
+                title: "Tidak ada laporan dipilih",
+                description: "Silakan pilih setidaknya satu laporan untuk diekspor.",
+            });
+            return;
+        }
+        
+        if (isLoadingPids) {
+            toast({
+                variant: "destructive",
+                title: "Data PID belum termuat",
+                description: "Silakan tunggu sebentar dan coba lagi.",
+            });
+            return;
+        }
+    
+        setIsExporting(true);
+        toast({
+            title: "Memulai Ekspor",
+            description: "Mempersiapkan data Anda untuk file Excel...",
+        });
+    
+        try {
+            const selectedNotas = filteredNotas.filter(n => selectedNotaIds.includes(n.id)) || [];
+            const sortedNotas = selectedNotas.sort((a,b) => (safeToDate(a.tanggal)?.getTime() ?? 0) - (safeToDate(b.tanggal)?.getTime() ?? 0));
+    
+            // --- Sheet 1: Rekap Per Jenis Proyek ---
+            const rekapData: { 'Jenis Proyek': string; Segmen: string; 'Total Nominal': number }[] = [];
+            const groupedByProject = sortedNotas.reduce((acc, nota) => {
+                const pType = getProjectType(nota.segmen);
+                if (!acc[pType]) acc[pType] = {};
+                if (!acc[pType][nota.segmen]) acc[pType][nota.segmen] = 0;
+                acc[pType][nota.segmen] += nota.nominal;
+                return acc;
+            }, {} as Record<ProjectType, Record<string, number>>);
+    
+            for (const projectType in groupedByProject) {
+                for (const segmen in groupedByProject[projectType as ProjectType]) {
+                    rekapData.push({
+                        'Jenis Proyek': projectType,
+                        'Segmen': segmen,
+                        'Total Nominal': groupedByProject[projectType as ProjectType][segmen],
+                    });
+                }
+            }
+            
+            // --- Sheet 2: Semua Data Laporan ---
+            const allData = sortedNotas.map(nota => {
+                const pType = getProjectType(nota.segmen);
+                const pid = pids?.find(p => p.projectType.toLowerCase() === pType.toLowerCase())?.pid || '-';
+                const fotoUrls = nota.fotoEvidenUrls || [];
+    
+                return {
+                    'ID Laporan': nota.id,
+                    'Tanggal Laporan': safeToDate(nota.tanggal) ? format(safeToDate(nota.tanggal)!, 'yyyy-MM-dd') : '-',
+                    'Service Area': nota.serviceArea,
+                    'Segmen': nota.segmen,
+                    'Jenis Proyek': pType,
+                    'Project ID': pid,
+                    'Nama PIC': nota.namaPic,
+                    'Email PIC': nota.userEmail,
+                    'Nominal (Rp)': nota.nominal,
+                    'Status': nota.status,
+                    'Tanggal Verifikasi': safeToDate(nota.tanggalVerifikasi) ? format(safeToDate(nota.tanggalVerifikasi)!, 'yyyy-MM-dd HH:mm') : '-',
+                    'Tanggal Pembayaran': safeToDate(nota.tanggalPembayaran) ? format(safeToDate(nota.tanggalPembayaran)!, 'yyyy-MM-dd HH:mm') : '-',
+                    'Alasan Penolakan': nota.rejectionReason || '-',
+                    'No Plat Kendaraan': nota.noPlatKendaraan || '-',
+                    'KM Awal': nota.kmAwal || '-',
+                    'KM Akhir': nota.kmAkhir || '-',
+                    'Nama Barang/Jasa': nota.namaBarang || '-',
+                    'Keterangan': nota.keterangan || '-',
+                    'Foto 1': fotoUrls[0] || '-',
+                    'Foto 2': fotoUrls[1] || '-',
+                    'Foto 3': fotoUrls[2] || '-',
+                    'Foto 4': fotoUrls[3] || '-',
+                    'Foto KM Awal Bulan': fotoUrls[4] || '-',
+                    'Foto KM Awal': fotoUrls[5] || '-',
+                    'Foto KM Akhir': fotoUrls[6] || '-',
+                };
+            });
+    
+            const wb = XLSX.utils.book_new();
+            
+            const wsRekap = XLSX.utils.json_to_sheet(rekapData);
+            XLSX.utils.book_append_sheet(wb, wsRekap, 'Rekap per Proyek');
+            
+            const wsAllData = XLSX.utils.json_to_sheet(allData);
+            XLSX.utils.book_append_sheet(wb, wsAllData, 'Semua Data Laporan');
+            
+            const fitCols = (ws: XLSX.WorkSheet) => {
+                const objectMaxLength: any[] = [];
+                const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
+                data.forEach((row: any) => {
+                    Object.keys(row).forEach((key) => {
+                        const value = row[key as any];
+                        if (typeof value === 'undefined' || value === null) return;
+                        const len = typeof value === 'number' ? (value.toString().length + 2) : String(value).length;
+                        objectMaxLength[key] = Math.max(objectMaxLength[key] || 0, len);
+                    });
+                });
+                const headers = Object.keys(data[0] as any);
+                headers.forEach((h, i) => {
+                    objectMaxLength[i] = Math.max(objectMaxLength[i], h.length);
+                });
+
+                ws['!cols'] = objectMaxLength.map((w: number) => ({ width: w + 2 }));
+            };
+    
+            fitCols(wsRekap);
+            fitCols(wsAllData);
+    
+            XLSX.writeFile(wb, `Laporan Nota - ${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+    
+            toast({
+                title: 'Ekspor Berhasil!',
+                description: 'File Excel Anda telah diunduh.',
+            });
+    
+        } catch (error) {
+            console.error("Failed to export Excel:", error);
+            toast({
+                variant: "destructive",
+                title: 'Ekspor Gagal',
+                description: 'Terjadi kesalahan saat membuat file Excel.',
+            });
+        } finally {
+            setIsExporting(false);
+        }
     };
 
 
@@ -1540,7 +1675,11 @@ export default function ExportPage() {
 
                     <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm py-3 mt-auto border-t -mx-6 px-6">
                         <div className="max-w-4xl mx-auto flex justify-around items-center gap-4">
-                            <Button variant="default" size="lg" onClick={() => handleGenerateReport('all')} disabled={isGenerating || selectedNotaIds.length === 0}>
+                             <Button variant="outline" size="lg" onClick={handleExcelExport} disabled={isGenerating || isExporting || selectedNotaIds.length === 0}>
+                                {isExporting ? <Loader2 className="mr-2 animate-spin"/> : <FileSpreadsheet className="mr-2" />}
+                                Export Excel
+                            </Button>
+                            <Button variant="default" size="lg" onClick={() => handleGenerateReport('all')} disabled={isGenerating || isExporting || selectedNotaIds.length === 0}>
                                 {isGenerating ? <Loader2 className="mr-2 animate-spin"/> : <Files className="mr-2" />}
                                 Cetak Semua
                             </Button>
