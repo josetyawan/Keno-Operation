@@ -135,8 +135,10 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
         const nominalFormatted = data.total.toLocaleString('id-ID');
         
         const segmenProjectType = getProjectType(segmen);
-        const idProjectForRow = pids.find(p => p.projectType.toLowerCase() === segmenProjectType.toLowerCase())?.pid || (segmen === 'BBM R4 Pengiriman Warehouse' ? pids.find(p => p.projectType.toLowerCase() === 'warehouse')?.pid : '-');
         
+        const idProjectForRow = segmen === 'BBM R4 Pengiriman Warehouse'
+            ? pids?.find(p => p.projectType.toLowerCase() === 'warehouse')?.pid
+            : pids.find(p => p.projectType.toLowerCase() === segmenProjectType.toLowerCase())?.pid || '-';
 
         return `
             <tr style="font-size: 8pt;">
@@ -1057,30 +1059,158 @@ export default function ExportPage() {
             const selectedNotas = filteredNotas.filter(n => selectedNotaIds.includes(n.id)) || [];
             const sortedNotas = selectedNotas.sort((a,b) => (safeToDate(a.tanggal)?.getTime() ?? 0) - (safeToDate(b.tanggal)?.getTime() ?? 0));
     
-            // --- Sheet 1: Rekap Per Jenis Proyek ---
-            const rekapData: { 'Jenis Proyek': string; Segmen: string; 'Total Nominal': number }[] = [];
-            const groupedByProject = sortedNotas.reduce((acc, nota) => {
+            const wb = XLSX.utils.book_new();
+
+            const fitCols = (ws: XLSX.WorkSheet) => {
+                const objectMaxLength: any[] = [];
+                const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
+                data.forEach((row: any) => {
+                    Object.keys(row).forEach((key) => {
+                        const value = row[key as any];
+                        if (typeof value === 'undefined' || value === null) return;
+                        const len = typeof value === 'number' ? (value.toString().length + 2) : String(value).length;
+                        objectMaxLength[key] = Math.max(objectMaxLength[key] || 0, len);
+                    });
+                });
+                const headers = Object.keys(data[0] as any);
+                headers.forEach((h, i) => {
+                    objectMaxLength[i] = Math.max(objectMaxLength[i], h.length);
+                });
+
+                ws['!cols'] = objectMaxLength.map((w: number) => ({ width: w + 2 }));
+            };
+            
+            // --- Helper data and groupings ---
+            const bbmR2R4Segments = [
+                'BBM R2 Harian B2B IOAN', 'BBM R2 Harian PROVISIONING',
+                'BBM R4 Harian B2B IOAN', 'BBM R4 Harian PROVISIONING',
+                'BBM R4 Turlap B2B IOAN', 'BBM R4 Turlap PROVISIONING',
+                'BBM R4 UT B2B IOAN', 'BBM R4 UT PROVISIONING',
+                'BBM R4 Pengiriman Warehouse',
+            ];
+            const jasaSegments = [
+                'Jasa B2B IOAN', 'Jasa PROVISIONING',
+                'Perincian Nota Pengiriman B2B IOAN', 'Perincian Nota Pengiriman PROVISIONING'
+            ];
+             const groupedByProject = sortedNotas.reduce((acc, nota) => {
                 const pType = getProjectType(nota.segmen);
-                if (!acc[pType]) acc[pType] = {};
-                if (!acc[pType][nota.segmen]) acc[pType][nota.segmen] = 0;
-                acc[pType][nota.segmen] += nota.nominal;
+                if (!acc[pType]) acc[pType] = [];
+                acc[pType].push(nota);
                 return acc;
-            }, {} as Record<ProjectType, Record<string, number>>);
-    
+            }, {} as Record<ProjectType, Nota[]>);
+
+
+            // --- Sheet 1: Imprest Fund Cover ---
+            const coverData: any[] = [];
             for (const projectType in groupedByProject) {
-                for (const segmen in groupedByProject[projectType as ProjectType]) {
-                    rekapData.push({
-                        'Jenis Proyek': projectType,
-                        'Segmen': segmen,
-                        'Total Nominal': groupedByProject[projectType as ProjectType][segmen],
+                const notasInProject = groupedByProject[projectType as ProjectType];
+                const groupedBySegmen = notasInProject.reduce((acc, nota) => {
+                    if (!acc[nota.segmen]) acc[nota.segmen] = 0;
+                    acc[nota.segmen] += nota.nominal;
+                    return acc;
+                }, {} as Record<string, number>);
+
+                let segmenIndex = 1;
+                for (const segmen in groupedBySegmen) {
+                    const total = groupedBySegmen[segmen];
+                    const earliestNota = notasInProject.find(n => n.segmen === segmen);
+                    const segmenProjectType = getProjectType(segmen);
+                    const idProjectForRow = pids?.find(p => p.projectType.toLowerCase() === segmenProjectType.toLowerCase())?.pid || '-';
+                    
+                    coverData.push({
+                        'Project': projectType,
+                        'No. Urut': segmenIndex++,
+                        'Tanggal': earliestNota?.tanggal?.toDate ? format(earliestNota.tanggal.toDate(), 'dd/MM/yyyy') : '-',
+                        'No. Kuitansi': segmenIndex - 1, // Replicating logic from PDF
+                        'Uraian': segmen,
+                        'ID Project': idProjectForRow,
+                        'Nilai Pertanggungan': total,
+                        'Bayar Ke Mitra': total
                     });
                 }
             }
-            
-            // --- Sheet 2: Semua Data Laporan ---
+            if (coverData.length > 0) {
+                const wsCover = XLSX.utils.json_to_sheet(coverData);
+                XLSX.utils.book_append_sheet(wb, wsCover, '1. Rekap Cover');
+                fitCols(wsCover);
+            }
+
+            // --- Sheet 2: Rekapitulasi Perincian ---
+            const rekapData: any[] = [];
+            const groupedBySegmenForRekap = sortedNotas.reduce((acc, nota) => {
+                if (!acc[nota.segmen]) acc[nota.segmen] = 0;
+                acc[nota.segmen] += nota.nominal;
+                return acc;
+            }, {} as Record<string, number>);
+
+            let rekapIndex = 1;
+            for (const segmen in groupedBySegmenForRekap) {
+                rekapData.push({
+                    'No': rekapIndex++,
+                    'Keterangan': segmen,
+                    'Jumlah': groupedBySegmenForRekap[segmen]
+                });
+            }
+            if (rekapData.length > 0) {
+                const wsRekap = XLSX.utils.json_to_sheet(rekapData);
+                XLSX.utils.book_append_sheet(wb, wsRekap, '2. Rekap Rincian');
+                fitCols(wsRekap);
+            }
+
+            // --- Sheet 3: Detail BBM ---
+            const bbmNotas = sortedNotas.filter(n => bbmR2R4Segments.includes(n.segmen));
+            if (bbmNotas.length > 0) {
+                const bbmData = bbmNotas.map((nota, index) => ({
+                    'No': index + 1,
+                    'Tanggal': safeToDate(nota.tanggal) ? format(safeToDate(nota.tanggal)!, 'dd-MMM-yy', { locale: idLocale }) : '-',
+                    'Keterangan Segmen': nota.segmen,
+                    'No Plat': nota.noPlatKendaraan || '-',
+                    'KM Awal': nota.kmAwal || '-',
+                    'KM Akhir': nota.kmAkhir || '-',
+                    'Uraian Pekerjaan': nota.keterangan || '-',
+                    'Jumlah': nota.nominal,
+                    'Nama PIC': nota.namaPic,
+                }));
+                const wsBBM = XLSX.utils.json_to_sheet(bbmData);
+                XLSX.utils.book_append_sheet(wb, wsBBM, '3. Detail BBM');
+                fitCols(wsBBM);
+            }
+
+            // --- Sheet 4: Detail Jasa ---
+            const jasaNotas = sortedNotas.filter(n => jasaSegments.includes(n.segmen));
+            if (jasaNotas.length > 0) {
+                const jasaData = jasaNotas.map((nota, index) => ({
+                    'No': index + 1,
+                    'Tanggal': safeToDate(nota.tanggal) ? format(safeToDate(nota.tanggal)!, 'dd/MM/yyyy') : '-',
+                    'Keterangan': nota.keterangan || nota.namaBarang || '-',
+                    'DPP': nota.nominal / 1.02,
+                    'PPH 2%': nota.nominal - (nota.nominal / 1.02),
+                    'Jumlah': nota.nominal,
+                }));
+                 const wsJasa = XLSX.utils.json_to_sheet(jasaData);
+                XLSX.utils.book_append_sheet(wb, wsJasa, '4. Detail Jasa');
+                fitCols(wsJasa);
+            }
+
+            // --- Sheet 5: Detail Material & Lainnya ---
+            const materialNotas = sortedNotas.filter(n => !bbmR2R4Segments.includes(n.segmen) && !jasaSegments.includes(n.segmen));
+            if (materialNotas.length > 0) {
+                const materialData = materialNotas.map((nota, index) => ({
+                     'No': index + 1,
+                    'Tanggal': safeToDate(nota.tanggal) ? format(safeToDate(nota.tanggal)!, 'dd/MM/yyyy') : '-',
+                    'Nama Barang': nota.namaBarang || '-',
+                    'Keterangan': nota.keterangan || '-',
+                    'Jumlah': nota.nominal,
+                }));
+                const wsMaterial = XLSX.utils.json_to_sheet(materialData);
+                XLSX.utils.book_append_sheet(wb, wsMaterial, '5. Detail Material');
+                fitCols(wsMaterial);
+            }
+
+            // --- Sheet 6: Data Lengkap (Raw) ---
             const allData = sortedNotas.map(nota => {
                 const pType = getProjectType(nota.segmen);
-                const pid = pids?.find(p => p.projectType.toLowerCase() === pType.toLowerCase())?.pid || '-';
+                const pidValue = pids?.find(p => p.projectType.toLowerCase() === pType.toLowerCase())?.pid || '-';
                 const fotoUrls = nota.fotoEvidenUrls || [];
     
                 return {
@@ -1089,7 +1219,7 @@ export default function ExportPage() {
                     'Service Area': nota.serviceArea,
                     'Segmen': nota.segmen,
                     'Jenis Proyek': pType,
-                    'Project ID': pid,
+                    'Project ID': pidValue,
                     'Nama PIC': nota.namaPic,
                     'Email PIC': nota.userEmail,
                     'Nominal (Rp)': nota.nominal,
@@ -1111,35 +1241,8 @@ export default function ExportPage() {
                     'Foto KM Akhir': fotoUrls[6] || '-',
                 };
             });
-    
-            const wb = XLSX.utils.book_new();
-            
-            const wsRekap = XLSX.utils.json_to_sheet(rekapData);
-            XLSX.utils.book_append_sheet(wb, wsRekap, 'Rekap per Proyek');
-            
             const wsAllData = XLSX.utils.json_to_sheet(allData);
-            XLSX.utils.book_append_sheet(wb, wsAllData, 'Semua Data Laporan');
-            
-            const fitCols = (ws: XLSX.WorkSheet) => {
-                const objectMaxLength: any[] = [];
-                const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
-                data.forEach((row: any) => {
-                    Object.keys(row).forEach((key) => {
-                        const value = row[key as any];
-                        if (typeof value === 'undefined' || value === null) return;
-                        const len = typeof value === 'number' ? (value.toString().length + 2) : String(value).length;
-                        objectMaxLength[key] = Math.max(objectMaxLength[key] || 0, len);
-                    });
-                });
-                const headers = Object.keys(data[0] as any);
-                headers.forEach((h, i) => {
-                    objectMaxLength[i] = Math.max(objectMaxLength[i], h.length);
-                });
-
-                ws['!cols'] = objectMaxLength.map((w: number) => ({ width: w + 2 }));
-            };
-    
-            fitCols(wsRekap);
+            XLSX.utils.book_append_sheet(wb, wsAllData, '6. Semua Data Mentah');
             fitCols(wsAllData);
     
             XLSX.writeFile(wb, `Laporan Nota - ${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
@@ -1247,7 +1350,7 @@ export default function ExportPage() {
                             title = `Perincian Nota ${segment} - SERVICE AREA ${saTitlePart}`;
                             segmentHtml = generateJasaReport(notasInSegment, title);
                         } else if (bbmR2R4Segments.includes(segment)) {
-                            let saPart: string;
+                             let saPart: string;
                             if (segment === 'BBM R4 Pengiriman Warehouse') {
                                 saPart = 'SS SMG';
                             } else {
@@ -1296,15 +1399,13 @@ export default function ExportPage() {
                         if (notasInSegment.length === 0) continue;
                         
                         let title: string;
-                        let saPart: string;
                         if (segment === 'BBM R4 Pengiriman Warehouse') {
-                            saPart = 'SS SMG';
+                            title = `Eviden Foto - Perincian Nota ${segment} - SS SMG`;
                         } else {
                             const saTitlePart = reportSA.replace(/^SA /, '') === 'SEMUA SA' ? 'SEMUA' : reportSA.replace(/^SA /, '');
-                            saPart = `SERVICE AREA ${saTitlePart}`;
+                            title = `Eviden Foto - Perincian Nota ${segment} - SERVICE AREA ${saTitlePart}`;
                         }
                         
-                        title = `Eviden Foto - Perincian Nota ${segment} - ${saPart}`;
                         const segmentHtml = generateEvidenReport(notasInSegment, title);
                         pages.push({ html: segmentHtml, orientation: 'portrait' });
                     }
