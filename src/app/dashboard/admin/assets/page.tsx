@@ -45,7 +45,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Edit, PlusCircle, Trash2 } from 'lucide-react';
+import { Edit, PlusCircle, Trash2, Upload } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from '@/firebase';
 import { collection, query, doc, serverTimestamp } from 'firebase/firestore';
 import type { UserProfile, NetworkAsset } from '@/lib/types';
@@ -53,6 +53,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import * as XLSX from 'xlsx';
+
 
 const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
 const assetTypes = ['OLT', 'ODC', 'ODP', 'FTM'];
@@ -157,6 +159,8 @@ export default function AdminAssetsPage() {
   const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
   const [assetToEdit, setAssetToEdit] = useState<NetworkAsset | null>(null);
   const [assetToDelete, setAssetToDelete] = useState<NetworkAsset | null>(null);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
 
   // Redirect if user is not an admin
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
@@ -227,6 +231,98 @@ export default function AdminAssetsPage() {
     setIsFormDialogOpen(false);
     setAssetToEdit(null);
   }
+  
+  const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || event.target.files.length === 0) {
+        toast({ variant: "destructive", title: "No file selected." });
+        return;
+    }
+    
+    setIsImporting(true);
+    const file = event.target.files[0];
+    const reader = new FileReader();
+
+    reader.onload = async (e) => {
+        try {
+            const data = e.target?.result;
+            const workbook = XLSX.read(data, { type: 'binary' });
+
+            const assetsCollection = collection(firestore, 'network-assets');
+            let totalImported = 0;
+            const sheetToAssetType: { [key: string]: NetworkAsset['assetType'] } = {
+                'olt': 'OLT',
+                'odc': 'ODC',
+                'odp': 'ODP',
+                'ftm': 'FTM'
+            };
+
+            for (const sheetName of workbook.SheetNames) {
+                const assetType = sheetToAssetType[sheetName.toLowerCase()];
+                if (!assetType) continue;
+
+                const worksheet = workbook.Sheets[sheetName];
+                const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
+
+                for (const row of jsonData) {
+                    const serviceArea = row['Service Ar'] || row['Service Area'];
+                    const assetName = row[assetType]; // Assumes column name matches asset type e.g., 'OLT'
+
+                    if (!serviceArea || !assetName) {
+                        continue; // Skip rows without essential data
+                    }
+
+                    let subType: NetworkAsset['subType'] = 'N/A';
+                    const keterangan = (row['Keterangan'] || '').toLowerCase();
+
+                    if (assetType === 'OLT') {
+                        if (keterangan === 'olt') subType = 'OLT';
+                        else if (keterangan === 'mini olt') subType = 'Mini OLT';
+                    } else if (assetType === 'FTM') {
+                        if (keterangan === 'ea') subType = 'EA';
+                        else if (keterangan === 'oa') subType = 'OA';
+                    }
+
+                    const newAsset: Omit<NetworkAsset, 'id'> = {
+                        name: assetName.toString(),
+                        assetType: assetType,
+                        subType: subType,
+                        serviceArea: serviceArea.toString(),
+                        dateAdded: serverTimestamp(),
+                    };
+                    
+                    addDocumentNonBlocking(assetsCollection, newAsset);
+                    totalImported++;
+                }
+            }
+
+            if (totalImported > 0) {
+                toast({
+                    title: 'Import Successful',
+                    description: `Successfully processed ${totalImported} assets. The data will appear shortly.`,
+                });
+            } else {
+                 toast({
+                    variant: "destructive",
+                    title: 'Import Failed',
+                    description: 'No assets could be imported. Please check the file format and sheet names (e.g., olt, odc).',
+                });
+            }
+
+        } catch (error) {
+            console.error("Failed to import Excel file:", error);
+            toast({
+                variant: "destructive",
+                title: 'Import Failed',
+                description: 'There was an error reading the file. Ensure it is a valid Excel file.',
+            });
+        } finally {
+            setIsImporting(false);
+            setIsImportDialogOpen(false);
+        }
+    };
+    reader.readAsBinaryString(file);
+};
+
 
   const isLoading = isUserLoading || isProfileLoading || areAssetsLoading;
 
@@ -235,7 +331,10 @@ export default function AdminAssetsPage() {
           <div>
               <div className="flex items-center justify-between mb-8">
                   <Skeleton className="h-8 w-64 mb-2" />
-                  <Skeleton className="h-10 w-32" />
+                  <div className="flex gap-2">
+                    <Skeleton className="h-10 w-32" />
+                    <Skeleton className="h-10 w-32" />
+                  </div>
               </div>
               <Card>
                   <CardHeader>
@@ -259,23 +358,29 @@ export default function AdminAssetsPage() {
             Tambah, edit, atau hapus data aset jaringan di sini.
           </p>
         </div>
-        <Dialog open={isFormDialogOpen} onOpenChange={setIsFormDialogOpen}>
-            <DialogTrigger asChild>
-                <Button onClick={handleCreate}>
-                    <PlusCircle className="mr-2 h-4 w-4"/>
-                    Tambah Aset Baru
-                </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[480px]">
-                <DialogHeader>
-                    <DialogTitle>{assetToEdit ? 'Edit Aset' : 'Buat Aset Baru'}</DialogTitle>
-                    <DialogDescription>
-                        {assetToEdit ? 'Perbarui detail untuk aset ini.' : 'Tambahkan aset jaringan baru ke dalam sistem.'}
-                    </DialogDescription>
-                </DialogHeader>
-                <AssetForm asset={assetToEdit} onFormSubmit={handleFormSubmit} />
-            </DialogContent>
-        </Dialog>
+        <div className="flex gap-2">
+            <Button onClick={() => setIsImportDialogOpen(true)} variant="outline">
+                <Upload className="mr-2 h-4 w-4"/>
+                Import dari Excel
+            </Button>
+            <Dialog open={isFormDialogOpen} onOpenChange={setIsFormDialogOpen}>
+                <DialogTrigger asChild>
+                    <Button onClick={handleCreate}>
+                        <PlusCircle className="mr-2 h-4 w-4"/>
+                        Tambah Aset Baru
+                    </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[480px]">
+                    <DialogHeader>
+                        <DialogTitle>{assetToEdit ? 'Edit Aset' : 'Buat Aset Baru'}</DialogTitle>
+                        <DialogDescription>
+                            {assetToEdit ? 'Perbarui detail untuk aset ini.' : 'Tambahkan aset jaringan baru ke dalam sistem.'}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <AssetForm asset={assetToEdit} onFormSubmit={handleFormSubmit} />
+                </DialogContent>
+            </Dialog>
+        </div>
       </div>
       <Card>
         <CardHeader>
@@ -339,6 +444,28 @@ export default function AdminAssetsPage() {
             </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Import Aset dari Excel</DialogTitle>
+                <DialogDescription>
+                    Pilih file Excel (.xlsx, .xls) dengan sheet bernama 'olt', 'odc', 'odp', 'ftm'. Data akan ditambahkan ke aset yang sudah ada.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 grid gap-4">
+                <div className="grid gap-2">
+                    <Label htmlFor="excel-file">Pilih File</Label>
+                    <Input id="excel-file" type="file" accept=".xlsx, .xls, .csv" onChange={handleFileImport} disabled={isImporting} />
+                </div>
+                {isImporting && (
+                    <div className="flex items-center text-sm text-muted-foreground">
+                        <p>Mengimpor... Ini mungkin memakan waktu sejenak.</p>
+                    </div>
+                )}
+            </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
