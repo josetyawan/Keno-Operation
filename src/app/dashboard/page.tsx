@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { BookCopy, Briefcase } from 'lucide-react';
+import { BookCopy, Briefcase, BarChart3 } from 'lucide-react';
 
 export default function DashboardSelectorPage() {
   return (
@@ -44,16 +44,16 @@ export default function DashboardSelectorPage() {
           <Card className="hover:border-primary hover:shadow-lg transition-all duration-200 h-full">
              <CardHeader className="flex flex-row items-center gap-4">
                <div className="p-3 rounded-full bg-primary/10 text-primary">
-                <Briefcase className="h-8 w-8" />
+                <BarChart3 className="h-8 w-8" />
               </div>
               <div>
                 <CardTitle>Aplikasi ALLPRO</CardTitle>
-                <CardDescription>Aplikasi untuk manajemen ALLPRO.</CardDescription>
+                <CardDescription>Rekapitulasi data jaringan.</CardDescription>
               </div>
             </CardHeader>
              <CardContent>
                <p className="text-sm text-muted-foreground">
-                Fitur ini sedang dalam pengembangan. Klik untuk melihat placeholder.
+                Lihat ringkasan data OLT, ODC, ODP, dan FTM untuk semua Service Area dalam satu dashboard terpusat.
               </p>
             </CardContent>
           </Card>

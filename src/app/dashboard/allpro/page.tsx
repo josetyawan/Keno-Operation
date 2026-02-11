@@ -9,10 +9,22 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { ArrowLeft, Wrench } from 'lucide-react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableFooter,
+} from '@/components/ui/table';
+import { ArrowLeft } from 'lucide-react';
+import { rekapData } from '@/lib/rekap-data';
 
 export default function AllproPage() {
   const router = useRouter();
+
+  const { olt, odc, odp, ftm } = rekapData;
 
   return (
     <div className="mx-auto grid w-full flex-1 auto-rows-max gap-6">
@@ -23,26 +35,141 @@ export default function AllproPage() {
         </Button>
         <div>
           <h1 className="flex-1 shrink-0 whitespace-nowrap text-xl font-bold tracking-tight sm:grow-0">
-            Aplikasi ALLPRO
+            Rekapitulasi Data Jaringan
           </h1>
+          <p className="text-muted-foreground text-sm">Ringkasan data OLT, ODC, ODP, dan FTM per Service Area.</p>
         </div>
       </div>
-      <Card className="text-center py-20">
-        <CardHeader>
-          <div className="mx-auto mb-4 bg-primary/10 text-primary p-4 rounded-full w-fit">
-            <Wrench className="h-12 w-12" />
-          </div>
-          <CardTitle>Segera Hadir</CardTitle>
-          <CardDescription className="max-w-md mx-auto">
-            Fitur dan fungsionalitas untuk Aplikasi ALLPRO sedang dalam tahap pengembangan. Terima kasih atas kesabaran Anda.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button onClick={() => router.push('/dashboard')}>
-            Kembali ke Home
-          </Button>
-        </CardContent>
-      </Card>
+      
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* OLT Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{olt.title}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  {olt.headers.map(h => <TableHead key={h}>{h}</TableHead>)}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {olt.rows.map(row => (
+                  <TableRow key={row.serviceArea}>
+                    <TableCell className="font-medium">{row.serviceArea}</TableCell>
+                    <TableCell>{row.miniOlt}</TableCell>
+                    <TableCell>{row.olt}</TableCell>
+                    <TableCell className="font-bold">{row.grandTotal}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+              <TableFooter>
+                <TableRow>
+                    <TableCell className="font-bold">Grand Total</TableCell>
+                    <TableCell className="font-bold">{olt.totals.miniOlt}</TableCell>
+                    <TableCell className="font-bold">{olt.totals.olt}</TableCell>
+                    <TableCell className="font-bold">{olt.totals.grandTotal}</TableCell>
+                </TableRow>
+              </TableFooter>
+            </Table>
+          </CardContent>
+        </Card>
+
+        {/* FTM Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{ftm.title}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                   {ftm.headers.map(h => <TableHead key={h}>{h}</TableHead>)}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {ftm.rows.map(row => (
+                  <TableRow key={row.serviceArea}>
+                    <TableCell className="font-medium">{row.serviceArea}</TableCell>
+                    <TableCell>{row.ea}</TableCell>
+                    <TableCell>{row.oa}</TableCell>
+                    <TableCell className="font-bold">{row.grandTotal}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+               <TableFooter>
+                <TableRow>
+                    <TableCell className="font-bold">Grand Total</TableCell>
+                    <TableCell className="font-bold">{ftm.totals.ea}</TableCell>
+                    <TableCell className="font-bold">{ftm.totals.oa}</TableCell>
+                    <TableCell className="font-bold">{ftm.totals.grandTotal}</TableCell>
+                </TableRow>
+              </TableFooter>
+            </Table>
+          </CardContent>
+        </Card>
+
+        {/* ODC Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{odc.title}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  {odc.headers.map(h => <TableHead key={h}>{h}</TableHead>)}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {odc.rows.map(row => (
+                  <TableRow key={row.serviceArea}>
+                    <TableCell className="font-medium">{row.serviceArea}</TableCell>
+                    <TableCell className="font-bold">{row.jumlah}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+               <TableFooter>
+                <TableRow>
+                    <TableCell className="font-bold">Grand Total</TableCell>
+                    <TableCell className="font-bold">{odc.totals.jumlah}</TableCell>
+                </TableRow>
+              </TableFooter>
+            </Table>
+          </CardContent>
+        </Card>
+        
+        {/* ODP Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{odp.title}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                   {odp.headers.map(h => <TableHead key={h}>{h}</TableHead>)}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {odp.rows.map(row => (
+                  <TableRow key={row.serviceArea}>
+                    <TableCell className="font-medium">{row.serviceArea}</TableCell>
+                    <TableCell className="font-bold">{row.jumlah}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+              <TableFooter>
+                <TableRow>
+                    <TableCell className="font-bold">Grand Total</TableCell>
+                    <TableCell className="font-bold">{odp.totals.jumlah}</TableCell>
+                </TableRow>
+              </TableFooter>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
