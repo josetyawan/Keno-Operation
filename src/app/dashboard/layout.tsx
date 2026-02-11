@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { LayoutGrid, Menu, LogOut, Users, Bot, Tags } from 'lucide-react';
+import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -23,7 +23,8 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 const navLinks = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutGrid, adminOnly: false },
+  { href: '/dashboard', label: 'Home', icon: Home, adminOnly: false },
+  { href: '/dashboard/nota', label: 'Laporan Nota', icon: LayoutGrid, adminOnly: false },
   { href: '/dashboard/admin/users', label: 'Manajemen User', icon: Users, adminOnly: true },
   { href: '/dashboard/admin/pids', label: 'Manajemen PID', icon: Tags, adminOnly: true },
   { href: '/dashboard/rekap', label: 'Rekap Telegram', icon: Bot, adminOnly: true },
@@ -206,7 +207,7 @@ export default function DashboardLayout({
             <nav className="grid items-start px-4 py-4 text-sm font-medium">
               {navLinks.map(link => {
                 if (link.adminOnly && userProfile?.role !== 'admin') return null;
-                const isActive = pathname.startsWith(link.href) && (link.href === '/dashboard' ? pathname === link.href : true);
+                const isActive = link.href === '/dashboard' ? pathname === link.href : pathname.startsWith(link.href);
 
                 return (
                   <Link
@@ -249,7 +250,7 @@ export default function DashboardLayout({
                 </Link>
                 {navLinks.map(link => {
                   if (link.adminOnly && userProfile?.role !== 'admin') return null;
-                  const isActive = pathname.startsWith(link.href);
+                  const isActive = link.href === '/dashboard' ? pathname === link.href : pathname.startsWith(link.href);
                   return (
                       <Link
                       key={link.href}

@@ -13,7 +13,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
              <div className="flex justify-center">
                <Logo className="items-center" />
             </div>
-            <h1 className="text-3xl font-bold font-headline mt-4">Aplikasi Pelaporan Nota</h1>
+            <h1 className="text-3xl font-bold font-headline mt-4">Aplikasi Service Area Kudus</h1>
             <p className="text-balance text-muted-foreground">
               Silakan masuk atau daftar untuk melanjutkan.
             </p>
