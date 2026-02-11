@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home } from 'lucide-react';
+import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home, Network } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -27,6 +27,7 @@ const navLinks = [
   { href: '/dashboard/nota', label: 'Laporan Nota', icon: LayoutGrid, adminOnly: false },
   { href: '/dashboard/admin/users', label: 'Manajemen User', icon: Users, adminOnly: true },
   { href: '/dashboard/admin/pids', label: 'Manajemen PID', icon: Tags, adminOnly: true },
+  { href: '/dashboard/admin/assets', label: 'Manajemen Aset', icon: Network, adminOnly: true },
   { href: '/dashboard/rekap', label: 'Rekap Telegram', icon: Bot, adminOnly: true },
 ];
 

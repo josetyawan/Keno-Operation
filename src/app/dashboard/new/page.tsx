@@ -109,7 +109,7 @@ export default function NewNotaPage() {
       }
   }, [userProfile]);
 
-  const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA'];
+  const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
   const bbmKendaraanSegments = [
     'BBM R2 Harian B2B IOAN',
     'BBM R2 Harian PROVISIONING',

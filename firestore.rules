@@ -136,5 +136,17 @@ service cloud.firestore {
       // WRITE: Only admins can create, update, or delete Project IDs.
       allow create, update, delete: if isAdmin();
     }
+    
+    /**
+     * @description Stores all individual network assets.
+     * @path /network-assets/{assetId}
+     */
+    match /network-assets/{assetId} {
+      // READ: Any approved user can read asset data.
+      allow get, list: if isApproved();
+
+      // WRITE: Only admins can create, update, or delete network assets.
+      allow create, update, delete: if isAdmin();
+    }
   }
 }

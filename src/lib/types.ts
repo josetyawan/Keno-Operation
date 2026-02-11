@@ -5,7 +5,7 @@ export type Nota = {
   userEmail: string;
   tanggal: any; // Using `any` to accommodate Firestore's serverTimestamp
   segmen: string;
-  serviceArea: string;
+  serviceArea: 'SA KUDUS' | 'SA PATI' | 'SA JEPARA' | 'SA PURWODADI' | 'SA BLORA' | 'SA REMBANG';
   noPlatKendaraan?: string;
   kmAwal?: number;
   kmAkhir?: number;
@@ -37,4 +37,13 @@ export type ProjectID = {
   id: string;
   projectType: string;
   pid: string;
+};
+
+export type NetworkAsset = {
+  id: string;
+  name: string;
+  assetType: 'OLT' | 'ODC' | 'ODP' | 'FTM';
+  subType: 'Mini OLT' | 'OLT' | 'EA' | 'OA' | 'N/A';
+  serviceArea: 'SA KUDUS' | 'SA PATI' | 'SA JEPARA' | 'SA PURWODADI' | 'SA BLORA' | 'SA REMBANG';
+  dateAdded: any;
 };

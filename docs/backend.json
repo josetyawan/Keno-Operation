@@ -94,7 +94,8 @@
             "SA PATI",
             "SA JEPARA",
             "SA PURWODADI",
-            "SA BLORA"
+            "SA BLORA",
+            "SA REMBANG"
           ]
         },
         "noPlatKendaraan": {
@@ -200,6 +201,43 @@
         "projectType",
         "pid"
       ]
+    },
+    "NetworkAsset": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Network Asset",
+      "type": "object",
+      "description": "Represents a single piece of network equipment in a service area.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Network Asset."
+        },
+        "name": {
+          "type": "string",
+          "description": "A unique name or identifier for the asset (e.g., OLT-KDS-01)."
+        },
+        "assetType": {
+          "type": "string",
+          "description": "The main type of the asset.",
+          "enum": ["OLT", "ODC", "ODP", "FTM"]
+        },
+        "subType": {
+          "type": "string",
+          "description": "A subtype for assets like OLT (Mini OLT/OLT) or FTM (EA/OA).",
+          "enum": ["Mini OLT", "OLT", "EA", "OA", "N/A"]
+        },
+        "serviceArea": {
+          "type": "string",
+          "description": "The service area the asset belongs to.",
+          "enum": ["SA KUDUS", "SA PATI", "SA JEPARA", "SA PURWODADI", "SA BLORA", "SA REMBANG"]
+        },
+        "dateAdded": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The date the asset was added."
+        }
+      },
+      "required": ["id", "name", "assetType", "serviceArea", "dateAdded"]
     }
   },
   "auth": {
@@ -257,8 +295,22 @@
             }
           ]
         }
+      },
+      {
+        "path": "/network-assets/{assetId}",
+        "definition": {
+          "entityName": "NetworkAsset",
+          "schema": { "$ref": "#/backend/entities/NetworkAsset" },
+          "description": "Stores all individual network assets across all service areas.",
+          "params": [
+            {
+              "name": "assetId",
+              "description": "The unique identifier for the network asset."
+            }
+          ]
+        }
       }
     ],
-    "reasoning": "The data is structured with a top-level `users` collection for profiles and a top-level `notas` collection for all user-generated notes. This flat structure for `notas` simplifies querying, allowing all users to view all notes easily, which aligns with the application's requirements. Security is enforced within the rules: while reads are permissive, writes (create, update, delete) are strictly controlled. A user can only create a nota with their own `userId`, and can only update or delete notas they own. Admins are granted special privileges to update any nota for verification purposes. This design is efficient and secure for the specified use case."
+    "reasoning": "The data is structured with a top-level `users` collection for profiles and a top-level `notas` collection for all user-generated notes. This flat structure for `notas` simplifies querying, allowing all users to view all notes easily, which aligns with the application's requirements. Security is enforced within the rules: while reads are permissive, writes (create, update, delete) are strictly controlled. A user can only create a nota with their own `userId`, and can only update or delete notas they own. Admins are granted special privileges to update any nota for verification purposes. A `network-assets` collection is added for managing network equipment, with admin-only write access. This design is efficient and secure for the specified use case."
   }
 }
