@@ -23,6 +23,7 @@ import { collection, doc } from 'firebase/firestore';
 import type { NetworkAsset, UserProfile } from '@/lib/types';
 import { useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import Link from 'next/link';
 
 
 const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
@@ -197,18 +198,42 @@ export default function AllproPage() {
                 {olt.rows.map(row => (
                   <TableRow key={row.serviceArea}>
                     <TableCell className="font-medium">{row.serviceArea}</TableCell>
-                    <TableCell>{row.miniOlt}</TableCell>
-                    <TableCell>{row.olt}</TableCell>
-                    <TableCell className="font-bold">{row.grandTotal}</TableCell>
+                    <TableCell>
+                      <Link href={`/dashboard/assets/list?assetType=OLT&subType=Mini%20OLT&serviceArea=${encodeURIComponent(row.serviceArea)}`} className="hover:underline">
+                        {row.miniOlt}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      <Link href={`/dashboard/assets/list?assetType=OLT&subType=OLT&serviceArea=${encodeURIComponent(row.serviceArea)}`} className="hover:underline">
+                        {row.olt}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="font-bold">
+                      <Link href={`/dashboard/assets/list?assetType=OLT&serviceArea=${encodeURIComponent(row.serviceArea)}`} className="hover:underline">
+                        {row.grandTotal}
+                      </Link>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
               <TableFooter>
                 <TableRow>
                     <TableCell className="font-bold">Grand Total</TableCell>
-                    <TableCell className="font-bold">{olt.totals.miniOlt}</TableCell>
-                    <TableCell className="font-bold">{olt.totals.olt}</TableCell>
-                    <TableCell className="font-bold">{olt.totals.grandTotal}</TableCell>
+                    <TableCell className="font-bold">
+                       <Link href={`/dashboard/assets/list?assetType=OLT&subType=Mini%20OLT`} className="hover:underline">
+                        {olt.totals.miniOlt}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="font-bold">
+                      <Link href={`/dashboard/assets/list?assetType=OLT&subType=OLT`} className="hover:underline">
+                        {olt.totals.olt}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="font-bold">
+                      <Link href={`/dashboard/assets/list?assetType=OLT`} className="hover:underline">
+                        {olt.totals.grandTotal}
+                      </Link>
+                    </TableCell>
                 </TableRow>
               </TableFooter>
             </Table>
@@ -231,18 +256,42 @@ export default function AllproPage() {
                 {ftm.rows.map(row => (
                   <TableRow key={row.serviceArea}>
                     <TableCell className="font-medium">{row.serviceArea}</TableCell>
-                    <TableCell>{row.ea}</TableCell>
-                    <TableCell>{row.oa}</TableCell>
-                    <TableCell className="font-bold">{row.grandTotal}</TableCell>
+                    <TableCell>
+                      <Link href={`/dashboard/assets/list?assetType=FTM&subType=EA&serviceArea=${encodeURIComponent(row.serviceArea)}`} className="hover:underline">
+                        {row.ea}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      <Link href={`/dashboard/assets/list?assetType=FTM&subType=OA&serviceArea=${encodeURIComponent(row.serviceArea)}`} className="hover:underline">
+                        {row.oa}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="font-bold">
+                      <Link href={`/dashboard/assets/list?assetType=FTM&serviceArea=${encodeURIComponent(row.serviceArea)}`} className="hover:underline">
+                        {row.grandTotal}
+                      </Link>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
                <TableFooter>
                 <TableRow>
                     <TableCell className="font-bold">Grand Total</TableCell>
-                    <TableCell className="font-bold">{ftm.totals.ea}</TableCell>
-                    <TableCell className="font-bold">{ftm.totals.oa}</TableCell>
-                    <TableCell className="font-bold">{ftm.totals.grandTotal}</TableCell>
+                    <TableCell className="font-bold">
+                      <Link href={`/dashboard/assets/list?assetType=FTM&subType=EA`} className="hover:underline">
+                        {ftm.totals.ea}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="font-bold">
+                      <Link href={`/dashboard/assets/list?assetType=FTM&subType=OA`} className="hover:underline">
+                        {ftm.totals.oa}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="font-bold">
+                      <Link href={`/dashboard/assets/list?assetType=FTM`} className="hover:underline">
+                        {ftm.totals.grandTotal}
+                      </Link>
+                    </TableCell>
                 </TableRow>
               </TableFooter>
             </Table>
@@ -265,14 +314,22 @@ export default function AllproPage() {
                 {odc.rows.map(row => (
                   <TableRow key={row.serviceArea}>
                     <TableCell className="font-medium">{row.serviceArea}</TableCell>
-                    <TableCell className="font-bold">{row.jumlah}</TableCell>
+                    <TableCell className="font-bold">
+                      <Link href={`/dashboard/assets/list?assetType=ODC&serviceArea=${encodeURIComponent(row.serviceArea)}`} className="hover:underline">
+                        {row.jumlah}
+                      </Link>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
                <TableFooter>
                 <TableRow>
                     <TableCell className="font-bold">Grand Total</TableCell>
-                    <TableCell className="font-bold">{odc.totals.jumlah}</TableCell>
+                    <TableCell className="font-bold">
+                      <Link href={`/dashboard/assets/list?assetType=ODC`} className="hover:underline">
+                        {odc.totals.jumlah}
+                      </Link>
+                    </TableCell>
                 </TableRow>
               </TableFooter>
             </Table>
@@ -295,14 +352,22 @@ export default function AllproPage() {
                 {odp.rows.map(row => (
                   <TableRow key={row.serviceArea}>
                     <TableCell className="font-medium">{row.serviceArea}</TableCell>
-                    <TableCell className="font-bold">{row.jumlah}</TableCell>
+                    <TableCell className="font-bold">
+                      <Link href={`/dashboard/assets/list?assetType=ODP&serviceArea=${encodeURIComponent(row.serviceArea)}`} className="hover:underline">
+                        {row.jumlah}
+                      </Link>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
               <TableFooter>
                 <TableRow>
                     <TableCell className="font-bold">Grand Total</TableCell>
-                    <TableCell className="font-bold">{odp.totals.jumlah}</TableCell>
+                    <TableCell className="font-bold">
+                      <Link href={`/dashboard/assets/list?assetType=ODP`} className="hover:underline">
+                        {odp.totals.jumlah}
+                      </Link>
+                    </TableCell>
                 </TableRow>
               </TableFooter>
             </Table>
