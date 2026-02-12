@@ -249,60 +249,110 @@ export default function AdminAssetsPage() {
 
             const assetsCollection = collection(firestore, 'network-assets');
             let totalImported = 0;
-            const sheetToAssetType: { [key: string]: NetworkAsset['assetType'] } = {
-                'olt': 'OLT',
-                'odc': 'ODC',
-                'odp': 'ODP',
-                'ftm': 'FTM'
+            let skippedSheets: string[] = [];
+
+            // Helper to find a column name from a list of aliases
+            const findColumn = (keys: string[], aliases: string[]): string | undefined => {
+                const lowerCaseAliases = aliases.map(a => a.toLowerCase());
+                for (const key of keys) {
+                    if (lowerCaseAliases.includes(key.toLowerCase())) {
+                        return key;
+                    }
+                }
+                return undefined;
+            };
+            
+            // Helper to normalize Service Area names
+            const normalizeServiceArea = (input: string): string | null => {
+                if (!input) return null;
+                const upperInput = input.toUpperCase().trim();
+                const serviceAreasList = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
+                
+                if (serviceAreasList.includes(upperInput)) return upperInput;
+
+                const mapping: { [key: string]: string } = {
+                    'KUDUS': 'SA KUDUS', 'KUD': 'SA KUDUS',
+                    'PATI': 'SA PATI', 'PTI': 'SA PATI',
+                    'JEPARA': 'SA JEPARA', 'JPR': 'SA JEPARA',
+                    'PURWODADI': 'SA PURWODADI', 'PWD': 'SA PURWODADI',
+                    'BLORA': 'SA BLORA', 'BLA': 'SA BLORA',
+                    'REMBANG': 'SA REMBANG', 'RBG': 'SA REMBANG',
+                };
+                
+                for (const key in mapping) {
+                   if (upperInput.includes(key)) return mapping[key];
+                }
+                
+                return null;
             };
 
             for (const sheetName of workbook.SheetNames) {
-                const assetType = sheetToAssetType[sheetName.toLowerCase()];
-                if (!assetType) continue;
-
+                const lowerSheetName = sheetName.toLowerCase();
                 const worksheet = workbook.Sheets[sheetName];
                 const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
 
-                // Find the name of the asset column from the first row of data
-                let assetNameColumn: string | undefined;
-                if (jsonData.length > 0) {
-                    const firstRowKeys = Object.keys(jsonData[0]);
-                    // Find the first column that is not 'Service Area' or 'Keterangan'
-                    assetNameColumn = firstRowKeys.find(key => 
-                        !key.toLowerCase().includes('service') && 
-                        !key.toLowerCase().includes('keterangan')
-                    );
+                if (jsonData.length === 0) continue;
+
+                // Determine assetType and potentially subType from sheet name
+                let assetType: NetworkAsset['assetType'] | null = null;
+                let subTypeFromSheet: NetworkAsset['subType'] | null = null;
+                
+                if (lowerSheetName.includes('olt')) assetType = 'OLT';
+                if (lowerSheetName.includes('odc')) assetType = 'ODC';
+                if (lowerSheetName.includes('odp')) assetType = 'ODP';
+                if (lowerSheetName.includes('ftm')) assetType = 'FTM';
+                
+                if (lowerSheetName === 'olt') subTypeFromSheet = 'OLT';
+                if (lowerSheetName === 'mini-olt') {
+                    assetType = 'OLT'; // Ensure assetType is correct
+                    subTypeFromSheet = 'Mini OLT';
                 }
 
-                if (!assetNameColumn) {
-                    console.warn(`Could not determine asset name column for sheet: ${sheetName}. Skipping sheet.`);
-                    continue; // Skip sheet if we can't find the asset column
+                if (!assetType) {
+                    skippedSheets.push(sheetName);
+                    continue;
+                }
+
+                const firstRowKeys = Object.keys(jsonData[0]);
+                
+                // Flexible column identification
+                const assetNameCol = findColumn(firstRowKeys, [assetType, 'gpon', 'nama', `nama ${assetType}`]);
+                const serviceAreaCol = findColumn(firstRowKeys, ['service area', 'service ar', 'witel', 'sto']);
+                const keteranganCol = findColumn(firstRowKeys, ['keterangan', 'jenis', 'type', 'sub type']);
+                
+                if (!assetNameCol || !serviceAreaCol) {
+                    skippedSheets.push(sheetName);
+                    continue; // Skip if essential columns are missing
                 }
 
                 for (const row of jsonData) {
-                    const serviceArea = row['Service Ar'] || row['Service Area'];
-                    const assetName = row[assetNameColumn];
+                    const assetName = row[assetNameCol];
+                    const serviceAreaValue = row[serviceAreaCol];
 
-                    if (!serviceArea || !assetName) {
-                        continue; // Skip rows without essential data
-                    }
+                    if (!assetName || !serviceAreaValue) continue;
 
-                    let subType: NetworkAsset['subType'] = 'N/A';
-                    const keterangan = (row['Keterangan'] || '').toLowerCase();
+                    const serviceArea = normalizeServiceArea(serviceAreaValue.toString());
+                    if (!serviceArea) continue; 
 
-                    if (assetType === 'OLT') {
-                        if (keterangan === 'olt') subType = 'OLT';
-                        else if (keterangan === 'mini olt') subType = 'Mini OLT';
-                    } else if (assetType === 'FTM') {
-                        if (keterangan === 'ea') subType = 'EA';
-                        else if (keterangan === 'oa') subType = 'OA';
+                    let subType: NetworkAsset['subType'] = subTypeFromSheet || 'N/A';
+                    
+                    if (keteranganCol && row[keteranganCol]) {
+                        const keterangan = row[keteranganCol].toString().toLowerCase();
+                        if (assetType === 'FTM') {
+                            if (keterangan.includes('ea')) subType = 'EA';
+                            else if (keterangan.includes('oa')) subType = 'OA';
+                        }
+                         if (assetType === 'OLT') {
+                            if (keterangan.includes('mini')) subType = 'Mini OLT';
+                            else if (keterangan.includes('olt')) subType = 'OLT';
+                        }
                     }
 
                     const newAsset: Omit<NetworkAsset, 'id'> = {
                         name: assetName.toString(),
                         assetType: assetType,
                         subType: subType,
-                        serviceArea: serviceArea.toString(),
+                        serviceArea: serviceArea,
                         dateAdded: serverTimestamp(),
                     };
                     
@@ -316,11 +366,19 @@ export default function AdminAssetsPage() {
                     title: 'Import Successful',
                     description: `Successfully processed ${totalImported} assets. The data will appear shortly.`,
                 });
+                if (skippedSheets.length > 0) {
+                    toast({
+                        variant: 'default',
+                        title: 'Some sheets were skipped',
+                        description: `Skipped: ${skippedSheets.join(', ')}. Check names (olt, odc, etc.) and format.`,
+                        duration: 8000
+                    });
+                }
             } else {
                  toast({
                     variant: "destructive",
                     title: 'Import Failed',
-                    description: 'No assets could be imported. Please check the file format and sheet names (e.g., olt, odc).',
+                    description: 'No assets could be imported. Please check file format, column headers, and sheet names.',
                 });
             }
 
@@ -466,7 +524,7 @@ export default function AdminAssetsPage() {
             <DialogHeader>
                 <DialogTitle>Import Aset dari Excel</DialogTitle>
                 <DialogDescription>
-                    Pilih file Excel (.xlsx, .xls) dengan sheet bernama 'olt', 'odc', 'odp', 'ftm'. Data akan ditambahkan ke aset yang sudah ada.
+                    Pilih file Excel (.xlsx, .xls) dengan sheet bernama 'olt', 'mini-olt', 'odc', 'odp', 'ftm'. Data akan ditambahkan ke aset yang sudah ada.
                 </DialogDescription>
             </DialogHeader>
             <div className="py-4 grid gap-4">
