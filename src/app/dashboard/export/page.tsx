@@ -43,11 +43,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { ArrowLeft, Edit, Trash2, Filter, FileArchive, Printer, Calendar as CalendarIcon, Loader2, Files, FileSpreadsheet } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
+import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { format, getMonth, getYear, startOfDay, endOfDay, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
-import type { Nota, ProjectID } from '@/lib/types';
+import type { Nota, ProjectID, UserProfile } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge, badgeVariants } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -925,17 +925,24 @@ const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BL
 
 export default function ExportPage() {
     const firestore = useFirestore();
+    const { user, isUserLoading } = useUser();
     const router = useRouter();
     const { toast } = useToast();
+
+    const userDocRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
+    const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
+
     const notasQuery = useMemoFirebase(() => {
+        if (isUserLoading || isProfileLoading || !userProfile?.id) return null;
         return query(collection(firestore, 'notas'), orderBy('dateCreated', 'desc'));
-    }, [firestore]);
+    }, [firestore, isUserLoading, isProfileLoading, userProfile]);
 
     const { data: notas, isLoading: isLoadingNotas } = useCollection<Nota>(notasQuery);
     
     const pidsQuery = useMemoFirebase(() => {
+        if (isUserLoading || isProfileLoading || !userProfile?.id) return null;
         return query(collection(firestore, 'project-ids'));
-    }, [firestore]);
+    }, [firestore, isUserLoading, isProfileLoading, userProfile]);
     const { data: pids, isLoading: isLoadingPids } = useCollection<ProjectID>(pidsQuery);
 
     const [filterType, setFilterType] = useState('monthly');
@@ -954,7 +961,7 @@ export default function ExportPage() {
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
-    const isLoading = isLoadingNotas || isLoadingPids;
+    const isLoading = isUserLoading || isProfileLoading || isLoadingNotas || isLoadingPids;
 
     const monthOptions = useMemo(() => getMonthYearOptions(notas || []), [notas]);
 
@@ -1822,5 +1829,7 @@ export default function ExportPage() {
         </>
     );
 }
+
+    
 
     
