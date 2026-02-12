@@ -631,8 +631,9 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
             <tbody>${tableRows}</tbody>
             <tfoot style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
-                    <td colspan="8" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">TOTAL</td>
+                    <td colspan="7" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">TOTAL</td>
                     <td style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">Rp${grandTotal.toLocaleString('id-ID')}</td>
+                    <td style="padding: 4px; border: 1px solid black;"></td>
                 </tr>
             </tfoot>
         </table>
@@ -1732,7 +1733,7 @@ export default function ExportPage() {
                                     <AlertDialogHeader>
                                     <AlertDialogTitle>Anda benar-benar yakin?</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                        Tindakan ini akan menghapus {selectedNotaIds.length} laporan yang dipilih secara permanen. Tindakan ini tidak dapat dibatalkan.
+                                        Tindakan ini akan menghapus ${selectedNotaIds.length} laporan yang dipilih secara permanen. Tindakan ini tidak dapat dibatalkan.
                                     </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
@@ -1819,3 +1820,5 @@ export default function ExportPage() {
         </>
     );
 }
+
+    
