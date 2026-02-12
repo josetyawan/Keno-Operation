@@ -263,9 +263,25 @@ export default function AdminAssetsPage() {
                 const worksheet = workbook.Sheets[sheetName];
                 const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
 
+                // Find the name of the asset column from the first row of data
+                let assetNameColumn: string | undefined;
+                if (jsonData.length > 0) {
+                    const firstRowKeys = Object.keys(jsonData[0]);
+                    // Find the first column that is not 'Service Area' or 'Keterangan'
+                    assetNameColumn = firstRowKeys.find(key => 
+                        !key.toLowerCase().includes('service') && 
+                        !key.toLowerCase().includes('keterangan')
+                    );
+                }
+
+                if (!assetNameColumn) {
+                    console.warn(`Could not determine asset name column for sheet: ${sheetName}. Skipping sheet.`);
+                    continue; // Skip sheet if we can't find the asset column
+                }
+
                 for (const row of jsonData) {
                     const serviceArea = row['Service Ar'] || row['Service Area'];
-                    const assetName = row[assetType]; // Assumes column name matches asset type e.g., 'OLT'
+                    const assetName = row[assetNameColumn];
 
                     if (!serviceArea || !assetName) {
                         continue; // Skip rows without essential data
