@@ -48,7 +48,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Edit, PlusCircle, Trash2, Upload, AlertTriangle } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from '@/firebase';
-import { collection, query, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, doc, serverTimestamp, where } from 'firebase/firestore';
 import type { UserProfile, NetworkAsset } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -72,6 +72,7 @@ function AssetForm({ asset, onFormSubmit }: { asset?: NetworkAsset | null, onFor
   const [coordinates, setCoordinates] = useState('');
   const [kapasitas, setKapasitas] = useState('');
   const [spec, setSpec] = useState('');
+  const { toast } = useToast();
 
 
   useEffect(() => {
@@ -307,8 +308,8 @@ export default function AdminAssetsPage() {
     setAssetToEdit(null);
   }
 
-  const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>, assetType: NetworkAsset['assetType'] | '') => {
-    if (!assetType) {
+  const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!importAssetType) {
         toast({ variant: "destructive", title: "Pilih Jenis Aset", description: "Anda harus memilih jenis aset sebelum mengunggah file." });
         return;
     }
@@ -353,10 +354,9 @@ export default function AdminAssetsPage() {
                 return undefined;
             };
 
-            const firstRowKeys = Object.keys(jsonData[0]);
+            const firstRowKeys = Object.keys(jsonData[0] || {});
 
-            // Define common columns
-            const assetNameCol = findColumn(firstRowKeys, ['olt', 'odc', 'odp', 'ftm', 'gpon', 'nama', 'name', `nama ${assetType.toLowerCase()}`, 'device name', 'asset name']);
+            const assetNameCol = findColumn(firstRowKeys, ['olt', 'odc', 'odp', 'ftm', 'gpon', 'nama', 'name', `nama ${importAssetType.toLowerCase()}`, 'device name', 'asset name']);
             const serviceAreaCol = findColumn(firstRowKeys, ['service area', 'service ar', 'witel', 'sa']);
             const stoCol = findColumn(firstRowKeys, ['sto']);
             const coordinatesCol = findColumn(firstRowKeys, ['koordinat', 'coordinate', 'location', 'lokasi']);
@@ -382,38 +382,41 @@ export default function AdminAssetsPage() {
 
                 const assetData: Partial<NetworkAsset> = {
                     name: assetName.toString(),
-                    assetType: assetType,
+                    assetType: importAssetType as NetworkAsset['assetType'],
                     serviceArea: serviceAreaValue.toString().toUpperCase(),
                     sto: stoValue.toString(),
                     coordinates: coordinates,
                 };
                 
-                // Asset-specific logic
-                if (assetType === 'OLT' || assetType === 'FTM') {
+                if (importAssetType === 'OLT' || importAssetType === 'FTM') {
                     const keteranganCol = findColumn(firstRowKeys, ['keterangan', 'jenis', 'type', 'sub type', 'description', 'keterangan_sto']);
                     let subType: NetworkAsset['subType'] = 'N/A';
                      if (keteranganCol && row[keteranganCol]) {
                         const keterangan = row[keteranganCol].toString().toLowerCase();
-                        if (assetType === 'FTM') {
+                        if (importAssetType === 'FTM') {
                             if (keterangan.includes('ea')) subType = 'EA';
                             else if (keterangan.includes('oa')) subType = 'OA';
                         }
-                         if (assetType === 'OLT') {
+                         if (importAssetType === 'OLT') {
                             if (keterangan.includes('mini')) subType = 'Mini OLT';
                             else if (keterangan.includes('olt')) subType = 'OLT';
                         }
                     }
                     assetData.subType = subType;
-                } else if (assetType === 'ODP') {
+                } else if (importAssetType === 'ODP') {
                     const kapasitasCol = findColumn(firstRowKeys, ['kapasitas', 'capacity', 'port', 'core', 'kap']);
                     if (kapasitasCol && row[kapasitasCol] != null) {
                         assetData.kapasitas = row[kapasitasCol].toString();
+                    } else {
+                        delete assetData.kapasitas;
                     }
                     assetData.subType = 'N/A';
-                } else if (assetType === 'ODC') {
+                } else if (importAssetType === 'ODC') {
                     const specCol = findColumn(firstRowKeys, ['spec', 'spesifikasi', 'spec odc', 'jenis odc', 'tipe', 'spec_odc']);
                     if (specCol && row[specCol] != null) {
                         assetData.spec = row[specCol].toString();
+                    } else {
+                        delete assetData.spec;
                     }
                     assetData.subType = 'N/A';
                 }
@@ -447,7 +450,6 @@ export default function AdminAssetsPage() {
             setIsImporting(false);
             setIsImportDialogOpen(false);
             setImportAssetType('');
-            // Reset file input
             const fileInput = document.getElementById('excel-file') as HTMLInputElement;
             if (fileInput) fileInput.value = '';
         }
@@ -519,7 +521,7 @@ export default function AdminAssetsPage() {
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="excel-file">Pilih File</Label>
-                            <Input id="excel-file" type="file" accept=".xlsx, .xls, .csv" onChange={(e) => handleFileImport(e, importAssetType as any)} disabled={isImporting || !importAssetType} />
+                            <Input id="excel-file" type="file" accept=".xlsx, .xls, .csv" onChange={(e) => handleFileImport(e)} disabled={isImporting || !importAssetType} />
                         </div>
                         {isImporting && (
                             <div className="flex items-center text-sm text-muted-foreground">
@@ -608,11 +610,9 @@ export default function AdminAssetsPage() {
                        <Button variant="ghost" size="icon" onClick={() => handleEdit(a)}>
                            <Edit className="h-4 w-4" />
                        </Button>
-                       <AlertDialogTrigger asChild>
-                         <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDelete(a)}>
-                           <Trash2 className="h-4 w-4" />
-                         </Button>
-                       </AlertDialogTrigger>
+                       <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDelete(a)}>
+                         <Trash2 className="h-4 w-4" />
+                       </Button>
                     </TableCell>
                   </TableRow>
                 ))
