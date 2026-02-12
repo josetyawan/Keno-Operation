@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -73,6 +74,10 @@ function AssetForm({ asset, onFormSubmit }: { asset?: NetworkAsset | null, onFor
   const [coordinates, setCoordinates] = useState('');
   const [kapasitas, setKapasitas] = useState('');
   const [spec, setSpec] = useState('');
+  const [portAvai, setPortAvai] = useState('');
+  const [portUsed, setPortUsed] = useState('');
+  const [portRsv, setPortRsv] = useState('');
+  const [portRsk, setPortRsk] = useState('');
   const { toast } = useToast();
 
 
@@ -86,6 +91,10 @@ function AssetForm({ asset, onFormSubmit }: { asset?: NetworkAsset | null, onFor
       setCoordinates(asset.coordinates || '');
       setKapasitas(asset.kapasitas || '');
       setSpec(asset.spec || '');
+      setPortAvai(asset.portAvai || '');
+      setPortUsed(asset.portUsed || '');
+      setPortRsv(asset.portRsv || '');
+      setPortRsk(asset.portRsk || '');
     } else {
       setName('');
       setAssetType('');
@@ -95,6 +104,10 @@ function AssetForm({ asset, onFormSubmit }: { asset?: NetworkAsset | null, onFor
       setCoordinates('');
       setKapasitas('');
       setSpec('');
+      setPortAvai('');
+      setPortUsed('');
+      setPortRsv('');
+      setPortRsk('');
     }
   }, [asset]);
 
@@ -108,6 +121,10 @@ function AssetForm({ asset, onFormSubmit }: { asset?: NetworkAsset | null, onFor
       setSubType(''); // Reset sub-type when main type changes
       setKapasitas('');
       setSpec('');
+      setPortAvai('');
+      setPortUsed('');
+      setPortRsv('');
+      setPortRsk('');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -137,11 +154,13 @@ function AssetForm({ asset, onFormSubmit }: { asset?: NetworkAsset | null, onFor
 
     if (isOdp) {
       if (kapasitas) assetData.kapasitas = kapasitas;
-      else delete assetData.kapasitas;
+      if (portAvai) assetData.portAvai = portAvai;
+      if (portUsed) assetData.portUsed = portUsed;
+      if (portRsv) assetData.portRsv = portRsv;
+      if (portRsk) assetData.portRsk = portRsk;
     }
     if (isOdc) {
       if (spec) assetData.spec = spec;
-      else delete assetData.spec;
     }
     
     onFormSubmit(assetData);
@@ -175,10 +194,28 @@ function AssetForm({ asset, onFormSubmit }: { asset?: NetworkAsset | null, onFor
         </div>
       )}
       {isOdp && (
-        <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="kapasitas" className="text-right">Kapasitas</Label>
-            <Input id="kapasitas" value={kapasitas} onChange={(e) => setKapasitas(e.target.value)} className="col-span-3" placeholder="e.g. 8, 16" />
-        </div>
+        <>
+            <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="kapasitas" className="text-right">Kapasitas</Label>
+                <Input id="kapasitas" value={kapasitas} onChange={(e) => setKapasitas(e.target.value)} className="col-span-3" placeholder="e.g. 8, 16" />
+            </div>
+             <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="portAvai" className="text-right">Port Avail</Label>
+                <Input id="portAvai" value={portAvai} onChange={(e) => setPortAvai(e.target.value)} className="col-span-3" placeholder="e.g. 8" />
+            </div>
+             <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="portUsed" className="text-right">Port Used</Label>
+                <Input id="portUsed" value={portUsed} onChange={(e) => setPortUsed(e.target.value)} className="col-span-3" placeholder="e.g. 0" />
+            </div>
+             <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="portRsv" className="text-right">Port RSV</Label>
+                <Input id="portRsv" value={portRsv} onChange={(e) => setPortRsv(e.target.value)} className="col-span-3" placeholder="e.g. 0" />
+            </div>
+             <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="portRsk" className="text-right">Port RSK</Label>
+                <Input id="portRsk" value={portRsk} onChange={(e) => setPortRsk(e.target.value)} className="col-span-3" placeholder="e.g. 0" />
+            </div>
+        </>
       )}
       {isOdc && (
         <div className="grid grid-cols-4 items-center gap-4">
@@ -375,12 +412,16 @@ export default function AdminAssetsPage() {
 
             const assetNameCol = findColumn(firstRowKeys, ['olt', 'odc', 'odp', 'ftm', 'gpon', 'nama', 'name', `nama ${importAssetType.toLowerCase()}`, 'device name', 'asset name', 'nama aset', 'nama perangkat', 'odp name']);
             const serviceAreaCol = findColumn(firstRowKeys, ['service area', 'service ar', 'witel', 'sa', 'area']);
-            const stoCol = findColumn(firstRowKeys, ['sto', 'lokasi sto', 'telkom sto']);
+            const stoCol = findColumn(firstRowKeys, ['sto', 'lokasi sto', 'telkom sto', 'telkom sto odc 2']);
             const coordinatesCol = findColumn(firstRowKeys, ['koordinat', 'coordinate', 'location', 'lokasi', 'gps']);
             const latCol = findColumn(firstRowKeys, ['lat', 'latitude']);
-            const longCol = findColumn(firstRowKeys, ['long', 'longitude']);
+            const longCol = findColumn(firstRowKeys, ['long', 'longitude', 'longitud']);
             const kapasitasCol = findColumn(firstRowKeys, ['kapasitas', 'capacity', 'port', 'core', 'kap', 'is total']);
             const specCol = findColumn(firstRowKeys, ['spec', 'spesifikasi', 'spec odc', 'jenis odc', 'tipe', 'spec_odc']);
+            const avaiCol = findColumn(firstRowKeys, ['avai', 'availability']);
+            const usedCol = findColumn(firstRowKeys, ['used']);
+            const rsvCol = findColumn(firstRowKeys, ['rsv']);
+            const rskCol = findColumn(firstRowKeys, ['rsk']);
             
             if (!assetNameCol) {
                 throw new Error(`Kolom nama aset (misalnya 'ODP NAME', 'Nama', 'Device Name') tidak ditemukan di sheet '${sheetName}'. Mohon periksa nama kolom di file Excel Anda.`);
@@ -472,10 +513,14 @@ export default function AdminAssetsPage() {
                         }
                         assetData.subType = subType;
                     } else if (importAssetType === 'ODP') {
-                        if (parsedKapasitas) assetData.kapasitas = parsedKapasitas; else delete assetData.kapasitas;
+                        if (parsedKapasitas) assetData.kapasitas = parsedKapasitas;
+                        if (avaiCol && row[avaiCol] != null) assetData.portAvai = row[avaiCol].toString();
+                        if (usedCol && row[usedCol] != null) assetData.portUsed = row[usedCol].toString();
+                        if (rsvCol && row[rsvCol] != null) assetData.portRsv = row[rsvCol].toString();
+                        if (rskCol && row[rskCol] != null) assetData.portRsk = row[rskCol].toString();
                         assetData.subType = 'N/A';
                     } else if (importAssetType === 'ODC') {
-                        if (specCol && row[specCol] != null) assetData.spec = row[specCol].toString(); else delete assetData.spec;
+                        if (specCol && row[specCol] != null) assetData.spec = row[specCol].toString();
                         assetData.subType = 'N/A';
                     }
                     
@@ -664,6 +709,10 @@ export default function AdminAssetsPage() {
                 <TableHead>Coordinates</TableHead>
                 <TableHead>Kapasitas</TableHead>
                 <TableHead>Spesifikasi</TableHead>
+                <TableHead>Avail</TableHead>
+                <TableHead>Used</TableHead>
+                <TableHead>Rsv</TableHead>
+                <TableHead>Rsk</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -679,6 +728,10 @@ export default function AdminAssetsPage() {
                     <TableCell>{a.coordinates || '-'}</TableCell>
                     <TableCell>{a.kapasitas || '-'}</TableCell>
                     <TableCell>{a.spec || '-'}</TableCell>
+                    <TableCell>{a.portAvai || '-'}</TableCell>
+                    <TableCell>{a.portUsed || '-'}</TableCell>
+                    <TableCell>{a.portRsv || '-'}</TableCell>
+                    <TableCell>{a.portRsk || '-'}</TableCell>
                     <TableCell className="text-right">
                        <Button variant="ghost" size="icon" onClick={() => handleEdit(a)}>
                            <Edit className="h-4 w-4" />
@@ -709,7 +762,7 @@ export default function AdminAssetsPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={9} className="h-24 text-center">
+                  <TableCell colSpan={13} className="h-24 text-center">
                     Tidak ada aset jaringan ditemukan.
                   </TableCell>
                 </TableRow>

@@ -50,4 +50,9 @@ export type NetworkAsset = {
   dateAdded: any;
   kapasitas?: string;
   spec?: string;
+  // New fields for ODP
+  portAvai?: string; // AVAI
+  portUsed?: string; // USED
+  portRsv?: string; // RSV
+  portRsk?: string; // RSK
 };

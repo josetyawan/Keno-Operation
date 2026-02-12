@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -269,6 +270,22 @@
         "spec": {
           "type": "string",
           "description": "The specification or model of an asset, typically for ODC."
+        },
+        "portAvai": {
+          "type": "string",
+          "description": "Available ports, typically for ODP."
+        },
+        "portUsed": {
+          "type": "string",
+          "description": "Used ports, typically for ODP."
+        },
+        "portRsv": {
+          "type": "string",
+          "description": "Reserved ports, typically for ODP."
+        },
+        "portRsk": {
+          "type": "string",
+          "description": "Damaged/Rusak ports, typically for ODP."
         }
       },
       "required": [
