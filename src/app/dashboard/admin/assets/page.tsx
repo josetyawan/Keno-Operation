@@ -288,7 +288,11 @@ export default function AdminAssetsPage() {
 
             const assetsCollection = collection(firestore, 'network-assets');
             let totalImported = 0;
+            let totalUpdated = 0;
             let skippedSheets: string[] = [];
+            
+            // Create a map of existing assets for quick lookup by name
+            const existingAssetsMap = new Map(assets?.map(asset => [asset.name, asset.id]));
 
             // Helper to find a column name from a list of aliases
             const findColumn = (keys: string[], aliases: string[]): string | undefined => {
@@ -360,6 +364,8 @@ export default function AdminAssetsPage() {
                 const stoCol = findColumn(firstRowKeys, ['sto']);
                 const keteranganCol = findColumn(firstRowKeys, ['keterangan', 'jenis', 'type', 'sub type', 'description']);
                 const coordinatesCol = findColumn(firstRowKeys, ['koordinat', 'coordinate', 'location', 'lokasi']);
+                const latCol = findColumn(firstRowKeys, ['lat', 'latitude']);
+                const longCol = findColumn(firstRowKeys, ['long', 'longitude']);
 
 
                 if (!assetNameCol || !serviceAreaCol || !stoCol) {
@@ -371,6 +377,8 @@ export default function AdminAssetsPage() {
                     const assetName = row[assetNameCol];
                     const serviceAreaValue = row[serviceAreaCol];
                     const stoValue = row[stoCol];
+                    const latValue = latCol ? row[latCol] : null;
+                    const longValue = longCol ? row[longCol] : null;
 
                     if (!assetName || !serviceAreaValue || !stoValue) continue;
 
@@ -390,26 +398,40 @@ export default function AdminAssetsPage() {
                             else if (keterangan.includes('olt')) subType = 'OLT';
                         }
                     }
+                    
+                    const coordinates = (latValue && longValue) 
+                        ? `${latValue.toString().replace(',', '.')}, ${longValue.toString().replace(',', '.')}` 
+                        : (coordinatesCol && row[coordinatesCol] ? row[coordinatesCol].toString() : '');
 
-                    const newAsset: Omit<NetworkAsset, 'id'> = {
+                    const assetData: Partial<NetworkAsset> = {
                         name: assetName.toString(),
                         assetType: assetType,
                         subType: subType,
                         serviceArea: serviceArea,
                         sto: stoValue.toString(),
-                        coordinates: coordinatesCol && row[coordinatesCol] ? row[coordinatesCol].toString() : '',
-                        dateAdded: serverTimestamp(),
+                        coordinates: coordinates,
                     };
+                    
+                    const existingAssetId = existingAssetsMap.get(assetData.name!);
 
-                    addDocumentNonBlocking(assetsCollection, newAsset);
-                    totalImported++;
+                    if (existingAssetId) {
+                        // Asset exists, update it
+                        const assetDocRef = doc(firestore, 'network-assets', existingAssetId);
+                        updateDocumentNonBlocking(assetDocRef, assetData);
+                        totalUpdated++;
+                    } else {
+                        // Asset doesn't exist, create it
+                        const newAsset = { ...assetData, dateAdded: serverTimestamp() };
+                        addDocumentNonBlocking(assetsCollection, newAsset);
+                        totalImported++;
+                    }
                 }
             }
 
-            if (totalImported > 0) {
+            if (totalImported > 0 || totalUpdated > 0) {
                 toast({
-                    title: 'Import Successful',
-                    description: `Successfully processed ${totalImported} assets. The data will appear shortly.`,
+                    title: 'Import Processed',
+                    description: `Created ${totalImported} new assets and updated ${totalUpdated} existing assets. The data will appear shortly.`,
                 });
                 if (skippedSheets.length > 0) {
                     toast({
@@ -423,7 +445,7 @@ export default function AdminAssetsPage() {
                  toast({
                     variant: "destructive",
                     title: 'Import Failed',
-                    description: 'No assets could be imported. Please check file format, column headers, and sheet names.',
+                    description: 'No assets could be imported or updated. Please check file format, column headers, and sheet names.',
                 });
             }
 
@@ -478,10 +500,33 @@ export default function AdminAssetsPage() {
           </p>
         </div>
         <div className="flex gap-2">
-            <Button onClick={() => setIsImportDialogOpen(true)} variant="outline">
-                <Upload className="mr-2 h-4 w-4"/>
-                Import
-            </Button>
+            <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+                <DialogTrigger asChild>
+                    <Button variant="outline">
+                        <Upload className="mr-2 h-4 w-4"/>
+                        Import
+                    </Button>
+                </DialogTrigger>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Import Aset dari Excel</DialogTitle>
+                        <DialogDescription>
+                            Pilih file Excel (.xlsx, .xls) dengan sheet bernama 'olt', 'mini-olt', 'odc', 'odp', 'ftm'. Data akan ditambahkan atau diperbarui jika sudah ada.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4 grid gap-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="excel-file">Pilih File</Label>
+                            <Input id="excel-file" type="file" accept=".xlsx, .xls, .csv" onChange={handleFileImport} disabled={isImporting} />
+                        </div>
+                        {isImporting && (
+                            <div className="flex items-center text-sm text-muted-foreground">
+                                <p>Mengimpor... Ini mungkin memakan waktu sejenak.</p>
+                            </div>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
             <Dialog open={isFormDialogOpen} onOpenChange={setIsFormDialogOpen}>
                 <DialogTrigger asChild>
                     <Button onClick={handleCreate}>
@@ -589,28 +634,6 @@ export default function AdminAssetsPage() {
             </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Import Aset dari Excel</DialogTitle>
-                <DialogDescription>
-                    Pilih file Excel (.xlsx, .xls) dengan sheet bernama 'olt', 'mini-olt', 'odc', 'odp', 'ftm'. Data akan ditambahkan ke aset yang sudah ada.
-                </DialogDescription>
-            </DialogHeader>
-            <div className="py-4 grid gap-4">
-                <div className="grid gap-2">
-                    <Label htmlFor="excel-file">Pilih File</Label>
-                    <Input id="excel-file" type="file" accept=".xlsx, .xls, .csv" onChange={handleFileImport} disabled={isImporting} />
-                </div>
-                {isImporting && (
-                    <div className="flex items-center text-sm text-muted-foreground">
-                        <p>Mengimpor... Ini mungkin memakan waktu sejenak.</p>
-                    </div>
-                )}
-            </div>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
