@@ -42,7 +42,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { ArrowLeft, Edit, Trash2, Filter, FileArchive, Printer, Calendar as CalendarIcon, Loader2, Files, FileSpreadsheet, Download } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Filter, FileArchive, Printer, Calendar as CalendarIcon, Loader2, Files, FileSpreadsheet } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { format, getMonth, getYear, startOfDay, endOfDay, isValid } from 'date-fns';
@@ -833,45 +833,6 @@ function ReportPreview({
   onPrint: (orientation: 'portrait' | 'landscape' | 'all') => void;
 }) {
 
-  const handleDownloadHtml = () => {
-    if (pages.length === 0) {
-      return;
-    }
-
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html lang="id">
-      <head>
-        <meta charset="UTF-8">
-        <title>Laporan Editable</title>
-        <style>
-          body { font-family: Arial, sans-serif; font-size: 10pt; }
-          .page-container {
-             page-break-after: always;
-             -webkit-print-color-adjust: exact; 
-             print-color-adjust: exact;
-          }
-        </style>
-      </head>
-      <body>
-        ${pages.map(page => `
-          <div class="page-container" style="width: ${page.orientation === 'landscape' ? '297mm' : '210mm'}; min-height: ${page.orientation === 'landscape' ? '200mm' : '287mm'}; padding: 1cm; box-sizing: border-box;">
-            ${page.html}
-          </div>
-        `).join('')}
-      </body>
-      </html>
-    `;
-    
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `laporan-editable-${format(new Date(), 'yyyy-MM-dd')}.html`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   return (
     <div id="print-section-container" className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4">
       <Card className="w-full max-w-7xl h-[90vh] flex flex-col">
@@ -879,10 +840,6 @@ function ReportPreview({
           <CardTitle>Pratinjau Laporan</CardTitle>
           <div className="flex gap-2 flex-wrap justify-end">
             <Button variant="outline" onClick={onClose}>Tutup</Button>
-            <Button onClick={handleDownloadHtml} variant="secondary">
-              <Download className="mr-2" />
-              Download Halaman
-            </Button>
             <Button onClick={() => onPrint('all')}>
               <Files className="mr-2" />
               Cetak Semua
