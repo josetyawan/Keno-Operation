@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -370,15 +371,15 @@ export default function AdminAssetsPage() {
 
             const firstRowKeys = Object.keys(jsonData[0] || {});
 
-            const assetNameCol = findColumn(firstRowKeys, ['olt', 'odc', 'odp', 'ftm', 'gpon', 'nama', 'name', `nama ${importAssetType.toLowerCase()}`, 'device name', 'asset name']);
-            const serviceAreaCol = findColumn(firstRowKeys, ['service area', 'service ar', 'witel', 'sa']);
-            const stoCol = findColumn(firstRowKeys, ['sto']);
-            const coordinatesCol = findColumn(firstRowKeys, ['koordinat', 'coordinate', 'location', 'lokasi']);
+            const assetNameCol = findColumn(firstRowKeys, ['olt', 'odc', 'odp', 'ftm', 'gpon', 'nama', 'name', `nama ${importAssetType.toLowerCase()}`, 'device name', 'asset name', 'nama aset', 'nama perangkat']);
+            const serviceAreaCol = findColumn(firstRowKeys, ['service area', 'service ar', 'witel', 'sa', 'area']);
+            const stoCol = findColumn(firstRowKeys, ['sto', 'lokasi sto']);
+            const coordinatesCol = findColumn(firstRowKeys, ['koordinat', 'coordinate', 'location', 'lokasi', 'gps']);
             const latCol = findColumn(firstRowKeys, ['lat', 'latitude']);
             const longCol = findColumn(firstRowKeys, ['long', 'longitude']);
             
             if (!assetNameCol || !serviceAreaCol || !stoCol) {
-                throw new Error(`Kolom wajib (nama aset, service area, STO) tidak ditemukan di sheet '${sheetName}'.`);
+                throw new Error(`Kolom wajib (nama aset, service area, STO) tidak ditemukan di sheet '${sheetName}'. Mohon periksa nama kolom di file Excel Anda.`);
             }
             
             for (const row of jsonData) {
@@ -403,7 +404,7 @@ export default function AdminAssetsPage() {
                 };
                 
                 if (importAssetType === 'OLT' || importAssetType === 'FTM') {
-                    const keteranganCol = findColumn(firstRowKeys, ['keterangan', 'jenis', 'type', 'sub type', 'description', 'keterangan_sto']);
+                    const keteranganCol = findColumn(firstRowKeys, ['keterangan', 'jenis', 'type', 'sub type', 'description', 'keterangan_sto', 'subtype']);
                     let subType: NetworkAsset['subType'] = 'N/A';
                      if (keteranganCol && row[keteranganCol]) {
                         const keterangan = row[keteranganCol].toString().toLowerCase();
@@ -659,5 +660,4 @@ export default function AdminAssetsPage() {
     </>
   );
 }
-
     
