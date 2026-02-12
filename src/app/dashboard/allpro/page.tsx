@@ -18,14 +18,14 @@ import {
   TableFooter,
 } from '@/components/ui/table';
 import { ArrowLeft } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
-import type { NetworkAsset } from '@/lib/types';
+import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
+import type { NetworkAsset, UserProfile } from '@/lib/types';
 import { useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 
-const serviceAreas = ["BLORA", "JEPARA", "KUDUS", "PATI", "PURWODADI", "REMBANG"];
+const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
 
 const skeletonCard = (
   <Card>
@@ -45,9 +45,20 @@ const skeletonCard = (
 export default function AllproPage() {
   const router = useRouter();
   const firestore = useFirestore();
+  const { user, isUserLoading } = useUser();
 
-  const assetsQuery = useMemoFirebase(() => collection(firestore, 'network-assets'), [firestore]);
-  const { data: assets, isLoading } = useCollection<NetworkAsset>(assetsQuery);
+  const userProfileRef = useMemoFirebase(
+    () => (user ? doc(firestore, 'users', user.uid) : null),
+    [user, firestore]
+  );
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+
+  const assetsQuery = useMemoFirebase(() => {
+    if (!userProfile || userProfile.registrationStatus !== 'approved') return null;
+    return collection(firestore, 'network-assets');
+  }, [firestore, userProfile]);
+
+  const { data: assets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(assetsQuery);
 
   const rekapData = useMemo(() => {
     const emptyRekap = {
@@ -131,6 +142,8 @@ export default function AllproPage() {
   }, [assets]);
   
   const { olt, odc, odp, ftm } = rekapData;
+
+  const isLoading = isUserLoading || isProfileLoading || areAssetsLoading;
 
   if (isLoading) {
     return (
