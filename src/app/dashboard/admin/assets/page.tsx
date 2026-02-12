@@ -71,9 +71,9 @@ function AssetForm({ asset, onFormSubmit }: { asset?: NetworkAsset | null, onFor
   const [serviceArea, setServiceArea] = useState('');
   const [sto, setSto] = useState('');
   const [coordinates, setCoordinates] = useState('');
+  const [kapasitas, setKapasitas] = useState('');
+  const [spec, setSpec] = useState('');
 
-  const isOlt = assetType === 'OLT';
-  const isFtm = assetType === 'FTM';
 
   useEffect(() => {
     if (asset) {
@@ -83,6 +83,8 @@ function AssetForm({ asset, onFormSubmit }: { asset?: NetworkAsset | null, onFor
       setServiceArea(asset.serviceArea);
       setSto(asset.sto || '');
       setCoordinates(asset.coordinates || '');
+      setKapasitas(asset.kapasitas || '');
+      setSpec(asset.spec || '');
     } else {
       setName('');
       setAssetType('');
@@ -90,8 +92,15 @@ function AssetForm({ asset, onFormSubmit }: { asset?: NetworkAsset | null, onFor
       setServiceArea('');
       setSto('');
       setCoordinates('');
+      setKapasitas('');
+      setSpec('');
     }
   }, [asset]);
+
+  const isOlt = assetType === 'OLT';
+  const isFtm = assetType === 'FTM';
+  const isOdp = assetType === 'ODP';
+  const isOdc = assetType === 'ODC';
 
   const handleAssetTypeChange = (value: string) => {
       setAssetType(value);
@@ -110,7 +119,7 @@ function AssetForm({ asset, onFormSubmit }: { asset?: NetworkAsset | null, onFor
         finalSubType = subType;
     }
 
-    onFormSubmit({ name, assetType, subType: finalSubType, serviceArea, sto, coordinates });
+    onFormSubmit({ name, assetType, subType: finalSubType, serviceArea, sto, coordinates, kapasitas, spec });
   };
 
   return (
@@ -138,6 +147,18 @@ function AssetForm({ asset, onFormSubmit }: { asset?: NetworkAsset | null, onFor
                     { isFtm && ftmSubTypes.map(st => <SelectItem key={st} value={st}>{st}</SelectItem>) }
                 </SelectContent>
             </Select>
+        </div>
+      )}
+      {isOdp && (
+        <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="kapasitas" className="text-right">Kapasitas</Label>
+            <Input id="kapasitas" value={kapasitas} onChange={(e) => setKapasitas(e.target.value)} className="col-span-3" placeholder="e.g. 8, 16" />
+        </div>
+      )}
+      {isOdc && (
+        <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="spec" className="text-right">Spesifikasi</Label>
+            <Input id="spec" value={spec} onChange={(e) => setSpec(e.target.value)} className="col-span-3" placeholder="e.g. ODC-K-288" />
         </div>
       )}
       <div className="grid grid-cols-4 items-center gap-4">
@@ -359,13 +380,15 @@ export default function AdminAssetsPage() {
                 const firstRowKeys = Object.keys(jsonData[0]);
 
                 // Flexible column identification
-                const assetNameCol = findColumn(firstRowKeys, [assetType, 'gpon', 'nama', `nama ${assetType}`, 'device name']);
+                const assetNameCol = findColumn(firstRowKeys, ['olt', 'odc', 'odp', 'ftm', 'gpon', 'nama', 'name', `nama ${assetType}`, 'device name', 'asset name']);
                 const serviceAreaCol = findColumn(firstRowKeys, ['service area', 'service ar', 'witel', 'sa']);
                 const stoCol = findColumn(firstRowKeys, ['sto']);
-                const keteranganCol = findColumn(firstRowKeys, ['keterangan', 'jenis', 'type', 'sub type', 'description']);
+                const keteranganCol = findColumn(firstRowKeys, ['keterangan', 'jenis', 'type', 'sub type', 'description', 'keterangan_sto']);
                 const coordinatesCol = findColumn(firstRowKeys, ['koordinat', 'coordinate', 'location', 'lokasi']);
                 const latCol = findColumn(firstRowKeys, ['lat', 'latitude']);
                 const longCol = findColumn(firstRowKeys, ['long', 'longitude']);
+                const kapasitasCol = findColumn(firstRowKeys, ['kapasitas', 'capacity', 'port', 'core', 'kap']);
+                const specCol = findColumn(firstRowKeys, ['spec', 'spesifikasi', 'spec odc', 'jenis odc', 'tipe', 'spec_odc']);
 
 
                 if (!assetNameCol || !serviceAreaCol || !stoCol) {
@@ -410,6 +433,8 @@ export default function AdminAssetsPage() {
                         serviceArea: serviceArea,
                         sto: stoValue.toString(),
                         coordinates: coordinates,
+                        kapasitas: kapasitasCol && row[kapasitasCol] ? row[kapasitasCol].toString() : undefined,
+                        spec: specCol && row[specCol] ? row[specCol].toString() : undefined,
                     };
                     
                     const existingAssetId = existingAssetsMap.get(assetData.name!);
@@ -585,6 +610,8 @@ export default function AdminAssetsPage() {
                 <TableHead>Service Area</TableHead>
                 <TableHead>STO</TableHead>
                 <TableHead>Coordinates</TableHead>
+                <TableHead>Kapasitas</TableHead>
+                <TableHead>Spesifikasi</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -598,6 +625,8 @@ export default function AdminAssetsPage() {
                     <TableCell>{a.serviceArea}</TableCell>
                     <TableCell>{a.sto}</TableCell>
                     <TableCell>{a.coordinates || '-'}</TableCell>
+                    <TableCell>{a.kapasitas || '-'}</TableCell>
+                    <TableCell>{a.spec || '-'}</TableCell>
                     <TableCell className="text-right">
                        <Button variant="ghost" size="icon" onClick={() => handleEdit(a)}>
                            <Edit className="h-4 w-4" />
@@ -610,7 +639,7 @@ export default function AdminAssetsPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center">
+                  <TableCell colSpan={9} className="h-24 text-center">
                     Tidak ada aset jaringan ditemukan.
                   </TableCell>
                 </TableRow>

@@ -48,4 +48,6 @@ export type NetworkAsset = {
   sto: string;
   coordinates?: string;
   dateAdded: any;
+  kapasitas?: string;
+  spec?: string;
 };

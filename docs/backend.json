@@ -261,6 +261,14 @@
           "type": "string",
           "format": "date-time",
           "description": "The date the asset was added."
+        },
+        "kapasitas": {
+          "type": "string",
+          "description": "The capacity of an asset, typically for ODP (e.g., '8', '16')."
+        },
+        "spec": {
+          "type": "string",
+          "description": "The specification or model of an asset, typically for ODC."
         }
       },
       "required": [
