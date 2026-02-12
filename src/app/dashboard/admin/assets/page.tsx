@@ -135,8 +135,14 @@ function AssetForm({ asset, onFormSubmit }: { asset?: NetworkAsset | null, onFor
         assetData.subType = 'N/A';
     }
 
-    if (isOdp && kapasitas) assetData.kapasitas = kapasitas;
-    if (isOdc && spec) assetData.spec = spec;
+    if (isOdp) {
+      if (kapasitas) assetData.kapasitas = kapasitas;
+      else delete assetData.kapasitas;
+    }
+    if (isOdc) {
+      if (spec) assetData.spec = spec;
+      else delete assetData.spec;
+    }
     
     onFormSubmit(assetData);
   };
@@ -256,7 +262,7 @@ export default function AdminAssetsPage() {
   };
 
   const confirmDelete = () => {
-    if (!assetToDelete) return;
+    if (!assetToDelete || !firestore) return;
     const assetDocRef = doc(firestore, 'network-assets', assetToDelete.id);
     deleteDocumentNonBlocking(assetDocRef);
     toast({
@@ -267,7 +273,7 @@ export default function AdminAssetsPage() {
   }
 
   const confirmDeleteAll = () => {
-      if (!assets) {
+      if (!assets || !firestore) {
         toast({ variant: 'destructive', title: 'No assets to delete.' });
         return;
       }
@@ -288,6 +294,7 @@ export default function AdminAssetsPage() {
 
 
   const handleFormSubmit = (data: Partial<NetworkAsset>) => {
+    if (!firestore) return;
     if (assetToEdit) {
       // Update existing asset
       const assetDocRef = doc(firestore, 'network-assets', assetToEdit.id);
@@ -316,6 +323,10 @@ export default function AdminAssetsPage() {
     }
     if (!event.target.files || event.target.files.length === 0) {
         toast({ variant: "destructive", title: "Tidak ada file dipilih." });
+        return;
+    }
+    if (!firestore) {
+        toast({ variant: "destructive", title: "Database Error", description: "Koneksi database tidak tersedia." });
         return;
     }
 
@@ -371,37 +382,78 @@ export default function AdminAssetsPage() {
 
             const firstRowKeys = Object.keys(jsonData[0] || {});
 
-            const assetNameCol = findColumn(firstRowKeys, ['olt', 'odc', 'odp', 'ftm', 'gpon', 'nama', 'name', `nama ${importAssetType.toLowerCase()}`, 'device name', 'asset name', 'nama aset', 'nama perangkat']);
+            const assetNameCol = findColumn(firstRowKeys, ['olt', 'odc', 'odp', 'ftm', 'gpon', 'nama', 'name', `nama ${importAssetType.toLowerCase()}`, 'device name', 'asset name', 'nama aset', 'nama perangkat', 'odp name']);
             const serviceAreaCol = findColumn(firstRowKeys, ['service area', 'service ar', 'witel', 'sa', 'area']);
-            const stoCol = findColumn(firstRowKeys, ['sto', 'lokasi sto']);
+            const stoCol = findColumn(firstRowKeys, ['sto', 'lokasi sto', 'telkom sto']);
             const coordinatesCol = findColumn(firstRowKeys, ['koordinat', 'coordinate', 'location', 'lokasi', 'gps']);
             const latCol = findColumn(firstRowKeys, ['lat', 'latitude']);
             const longCol = findColumn(firstRowKeys, ['long', 'longitude']);
+            const kapasitasCol = findColumn(firstRowKeys, ['kapasitas', 'capacity', 'port', 'core', 'kap', 'is total']);
+            const specCol = findColumn(firstRowKeys, ['spec', 'spesifikasi', 'spec odc', 'jenis odc', 'tipe', 'spec_odc']);
             
-            if (!assetNameCol || !serviceAreaCol || !stoCol) {
-                throw new Error(`Kolom wajib (nama aset, service area, STO) tidak ditemukan di sheet '${sheetName}'. Mohon periksa nama kolom di file Excel Anda.`);
+            if (!assetNameCol) {
+                throw new Error(`Kolom nama aset (misalnya 'ODP NAME', 'Nama', 'Device Name') tidak ditemukan di sheet '${sheetName}'. Mohon periksa nama kolom di file Excel Anda.`);
             }
             
+            const mapStoToServiceArea = (sto: string): NetworkAsset['serviceArea'] => {
+                const upperSto = sto.toUpperCase().trim();
+                if (upperSto.includes('KUDUS') || upperSto === 'KDS' || upperSto === 'KUD') return 'SA KUDUS';
+                if (upperSto.includes('PATI') || upperSto === 'PT' || upperSto === 'PAT') return 'SA PATI';
+                if (upperSto.includes('JEPARA') || upperSto === 'JPR' || upperSto === 'JEP') return 'SA JEPARA';
+                if (upperSto.includes('PURWODADI') || upperSto === 'PWD' || upperSto === 'PWO') return 'SA PURWODADI';
+                if (upperSto.includes('BLORA') || upperSto === 'BLA' || upperSto === 'BLO') return 'SA BLORA';
+                if (upperSto.includes('REMBANG') || upperSto === 'RBG' || upperSto === 'REM') return 'SA REMBANG';
+                return 'SA KUDUS'; // Fallback
+            };
+
             for (const row of jsonData) {
                 const assetName = row[assetNameCol];
-                const serviceAreaValue = row[serviceAreaCol];
-                const stoValue = row[stoCol];
-                const latValue = latCol ? row[latCol] : null;
-                const longValue = longCol ? row[longCol] : null;
+                if (!assetName) continue;
 
-                if (!assetName || !serviceAreaValue || !stoValue) continue;
+                let stoValue = stoCol ? row[stoCol]?.toString() : '';
+                let serviceAreaValue = serviceAreaCol ? row[serviceAreaCol]?.toString() : '';
+                let kapasitasRawValue = kapasitasCol ? row[kapasitasCol]?.toString() : '';
+                let parsedKapasitas: string | undefined = undefined;
 
-                const coordinates = (latValue && longValue) 
-                    ? `${latValue.toString().replace(',', '.')}, ${longValue.toString().replace(',', '.')}` 
-                    : (coordinatesCol && row[coordinatesCol] ? row[coordinatesCol].toString() : '');
+                if (kapasitasRawValue && isNaN(Number(kapasitasRawValue))) {
+                    const parts = kapasitasRawValue.split(' ').filter(Boolean);
+                    const potentialKapasitas = parseInt(parts[0], 10);
+                    if (!isNaN(potentialKapasitas)) {
+                        parsedKapasitas = String(potentialKapasitas);
+                        if (!stoValue && parts.length > 1) {
+                            stoValue = parts.slice(1).join(' ');
+                        }
+                    }
+                } else if (kapasitasRawValue) {
+                    parsedKapasitas = kapasitasRawValue;
+                }
+
+                if (!stoValue) {
+                    console.warn(`Skipping asset "${assetName}" due to missing STO.`);
+                    continue;
+                }
+                
+                if (!serviceAreaValue) {
+                    serviceAreaValue = mapStoToServiceArea(stoValue);
+                }
 
                 const assetData: Partial<NetworkAsset> = {
                     name: assetName.toString(),
                     assetType: importAssetType as NetworkAsset['assetType'],
-                    serviceArea: serviceAreaValue.toString().toUpperCase(),
-                    sto: stoValue.toString(),
-                    coordinates: coordinates,
+                    serviceArea: serviceAreaValue.toUpperCase() as NetworkAsset['serviceArea'],
+                    sto: stoValue,
                 };
+                
+                const latValue = latCol ? row[latCol] : null;
+                const longValue = longCol ? row[longCol] : null;
+
+                if (latValue && longValue) {
+                     assetData.coordinates = `${latValue.toString().replace(',', '.')}, ${longValue.toString().replace(',', '.')}`;
+                } else if (coordinatesCol && row[coordinatesCol]) {
+                     assetData.coordinates = row[coordinatesCol].toString();
+                } else {
+                    assetData.coordinates = '';
+                }
                 
                 if (importAssetType === 'OLT' || importAssetType === 'FTM') {
                     const keteranganCol = findColumn(firstRowKeys, ['keterangan', 'jenis', 'type', 'sub type', 'description', 'keterangan_sto', 'subtype']);
@@ -419,20 +471,10 @@ export default function AdminAssetsPage() {
                     }
                     assetData.subType = subType;
                 } else if (importAssetType === 'ODP') {
-                    const kapasitasCol = findColumn(firstRowKeys, ['kapasitas', 'capacity', 'port', 'core', 'kap']);
-                    if (kapasitasCol && row[kapasitasCol] != null) {
-                        assetData.kapasitas = row[kapasitasCol].toString();
-                    } else {
-                        delete assetData.kapasitas;
-                    }
+                    if (parsedKapasitas) assetData.kapasitas = parsedKapasitas; else delete assetData.kapasitas;
                     assetData.subType = 'N/A';
                 } else if (importAssetType === 'ODC') {
-                    const specCol = findColumn(firstRowKeys, ['spec', 'spesifikasi', 'spec odc', 'jenis odc', 'tipe', 'spec_odc']);
-                    if (specCol && row[specCol] != null) {
-                        assetData.spec = row[specCol].toString();
-                    } else {
-                        delete assetData.spec;
-                    }
+                    if (specCol && row[specCol] != null) assetData.spec = row[specCol].toString(); else delete assetData.spec;
                     assetData.subType = 'N/A';
                 }
                 
@@ -625,9 +667,27 @@ export default function AdminAssetsPage() {
                        <Button variant="ghost" size="icon" onClick={() => handleEdit(a)}>
                            <Edit className="h-4 w-4" />
                        </Button>
-                       <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDelete(a)}>
-                         <Trash2 className="h-4 w-4" />
-                       </Button>
+                       <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will permanently delete the asset "{a.name}".
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDelete(a)} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                     </TableCell>
                   </TableRow>
                 ))
@@ -642,21 +702,6 @@ export default function AdminAssetsPage() {
           </Table>
         </CardContent>
       </Card>
-
-       <AlertDialog open={!!assetToDelete} onOpenChange={(open) => !open && setAssetToDelete(null)}>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete the asset.
-            </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Delete</AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }
