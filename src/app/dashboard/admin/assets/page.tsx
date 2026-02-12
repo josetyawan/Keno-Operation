@@ -433,9 +433,14 @@ export default function AdminAssetsPage() {
                         serviceArea: serviceArea,
                         sto: stoValue.toString(),
                         coordinates: coordinates,
-                        kapasitas: kapasitasCol && row[kapasitasCol] ? row[kapasitasCol].toString() : undefined,
-                        spec: specCol && row[specCol] ? row[specCol].toString() : undefined,
                     };
+                    
+                    if (kapasitasCol && row[kapasitasCol] != null) {
+                        assetData.kapasitas = row[kapasitasCol].toString();
+                    }
+                    if (specCol && row[specCol] != null) {
+                        assetData.spec = row[specCol].toString();
+                    }
                     
                     const existingAssetId = existingAssetsMap.get(assetData.name!);
 
