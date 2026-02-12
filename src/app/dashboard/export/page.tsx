@@ -334,21 +334,44 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
         return acc;
     }, {} as Record<string, { items: Nota[], total: number }>);
 
-    let grandTotal = 0;
+    const isJasa = (segmen: string) => {
+        const lowerSegmen = segmen.toLowerCase();
+        return lowerSegmen.includes('jasa') || lowerSegmen.includes('pengiriman') || lowerSegmen.includes('ekspedisi');
+    };
+
+    let grandTotalJumlah = 0;
+    let grandTotalDpp = 0;
+    let grandTotalPph = 0;
+
     const tableRows = Object.entries(groupedBySegmen).map(([segmen, data], index) => {
-        grandTotal += data.total;
+        const totalJumlahForSegmen = data.total;
+        let dpp = totalJumlahForSegmen;
+        let pph = 0;
+
+        if (isJasa(segmen)) {
+            // Calculation based on: JUMLAH = DPP - (DPP * 2%) => JUMLAH = DPP * 0.98
+            dpp = totalJumlahForSegmen / 0.98;
+            pph = dpp - totalJumlahForSegmen;
+        }
+        
+        grandTotalJumlah += totalJumlahForSegmen;
+        grandTotalDpp += dpp;
+        grandTotalPph += pph;
+
         return `
             <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <td style="padding: 4px 8px; border: 1px solid black; text-align: center;">${index + 1}</td>
                 <td style="padding: 4px 8px; border: 1px solid black;">${segmen}</td>
-                <td style="padding: 4px 8px; border: 1px solid black; text-align: left;">Rp ${data.total.toLocaleString('id-ID')}</td>
+                <td style="padding: 4px 8px; border: 1px solid black; text-align: right;">Rp ${Math.round(dpp).toLocaleString('id-ID')}</td>
+                <td style="padding: 4px 8px; border: 1px solid black; text-align: right;">${pph > 0 ? `Rp ${Math.round(pph).toLocaleString('id-ID')}` : '-'}</td>
+                <td style="padding: 4px 8px; border: 1px solid black; text-align: right;">Rp ${totalJumlahForSegmen.toLocaleString('id-ID')}</td>
             </tr>
         `;
     }).join('');
 
     const today = new Date();
     const formattedDate = format(today, 'dd MMMM yyyy', { locale: idLocale });
-    const terbilangText = toWords(grandTotal);
+    const terbilangText = toWords(grandTotalJumlah);
 
     let saShort = serviceArea.replace('SA ', '');
     let pekerjaan = saShort;
@@ -389,7 +412,9 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
                 <tr>
                     <th style="padding: 4px 8px; border: 1px solid black; width: 5%;">NO</th>
                     <th style="padding: 4px 8px; border: 1px solid black;">KETERANGAN</th>
-                    <th style="padding: 4px 8px; border: 1px solid black; width: 25%;">JUMLAH</th>
+                    <th style="padding: 4px 8px; border: 1px solid black; width: 20%;">DPP</th>
+                    <th style="padding: 4px 8px; border: 1px solid black; width: 15%;">PPH</th>
+                    <th style="padding: 4px 8px; border: 1px solid black; width: 20%;">JUMLAH</th>
                 </tr>
             </thead>
             <tbody>
@@ -398,7 +423,9 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
             <tfoot style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                     <td colspan="2" style="padding: 4px 8px; border: 1px solid black; text-align: center;">TOTAL</td>
-                    <td style="padding: 4px 8px; border: 1px solid black; text-align: left;">Rp ${grandTotal.toLocaleString('id-ID')}</td>
+                    <td style="padding: 4px 8px; border: 1px solid black; text-align: right;">Rp ${Math.round(grandTotalDpp).toLocaleString('id-ID')}</td>
+                    <td style="padding: 4px 8px; border: 1px solid black; text-align: right;">${grandTotalPph > 0 ? `Rp ${Math.round(grandTotalPph).toLocaleString('id-ID')}` : '-'}</td>
+                    <td style="padding: 4px 8px; border: 1px solid black; text-align: right;">Rp ${grandTotalJumlah.toLocaleString('id-ID')}</td>
                 </tr>
             </tfoot>
         </table>
