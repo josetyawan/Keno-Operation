@@ -76,10 +76,10 @@ function AssetForm({ asset, onFormSubmit }: { asset?: NetworkAsset | null, onFor
 
   useEffect(() => {
     if (asset) {
-      setName(asset.name);
-      setAssetType(asset.assetType);
-      setSubType(asset.subType);
-      setServiceArea(asset.serviceArea);
+      setName(asset.name || '');
+      setAssetType(asset.assetType || '');
+      setSubType(asset.subType || '');
+      setServiceArea(asset.serviceArea || '');
       setSto(asset.sto || '');
       setCoordinates(asset.coordinates || '');
       setKapasitas(asset.kapasitas || '');
@@ -104,21 +104,39 @@ function AssetForm({ asset, onFormSubmit }: { asset?: NetworkAsset | null, onFor
   const handleAssetTypeChange = (value: string) => {
       setAssetType(value);
       setSubType(''); // Reset sub-type when main type changes
+      setKapasitas('');
+      setSpec('');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !assetType || !serviceArea || !sto || ((isOlt || isFtm) && !subType) ) {
-        alert('Please fill all required fields.');
+    if (!name || !assetType || !serviceArea || !sto) {
+        toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Mohon isi semua kolom yang wajib diisi (Name, Asset Type, Service Area, STO).' });
         return;
     }
-
-    let finalSubType = 'N/A';
-    if(isOlt || isFtm) {
-        finalSubType = subType;
+    
+    const assetData: Partial<NetworkAsset> = {
+        name,
+        assetType,
+        serviceArea,
+        sto,
+        coordinates,
+    };
+    
+    if (isOlt || isFtm) {
+        if (!subType) {
+            toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Mohon pilih Sub-Type untuk OLT atau FTM.' });
+            return;
+        }
+        assetData.subType = subType;
+    } else {
+        assetData.subType = 'N/A';
     }
 
-    onFormSubmit({ name, assetType, subType: finalSubType, serviceArea, sto, coordinates, kapasitas, spec });
+    if (isOdp) assetData.kapasitas = kapasitas;
+    if (isOdc) assetData.spec = spec;
+    
+    onFormSubmit(assetData);
   };
 
   return (
@@ -195,31 +213,29 @@ export default function AdminAssetsPage() {
   const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
   const [assetToEdit, setAssetToEdit] = useState<NetworkAsset | null>(null);
   const [assetToDelete, setAssetToDelete] = useState<NetworkAsset | null>(null);
+  
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [importAssetType, setImportAssetType] = useState('');
+
   const [isDeleteAllDialogOpen, setIsDeleteAllDialogOpen] = useState(false);
 
-
-  // Redirect if user is not an admin
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
     useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
   );
 
   useEffect(() => {
-    if (!isUserLoading && !isProfileLoading) {
-      if (!user || currentUserProfile?.role !== 'admin') {
+    if (!isUserLoading && !isProfileLoading && (!user || currentUserProfile?.role !== 'admin')) {
         router.push('/dashboard');
-      }
     }
   }, [user, currentUserProfile, isUserLoading, isProfileLoading, router]);
 
-  // Fetch all assets
   const assetsQuery = useMemoFirebase(() => {
-      if (user && currentUserProfile?.role === 'admin') {
+      if (currentUserProfile?.role === 'admin') {
           return query(collection(firestore, 'network-assets'));
       }
       return null;
-  }, [firestore, user, currentUserProfile]);
+  }, [firestore, currentUserProfile]);
 
   const { data: assets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(assetsQuery);
 
@@ -291,9 +307,13 @@ export default function AdminAssetsPage() {
     setAssetToEdit(null);
   }
 
-  const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>, assetType: NetworkAsset['assetType'] | '') => {
+    if (!assetType) {
+        toast({ variant: "destructive", title: "Pilih Jenis Aset", description: "Anda harus memilih jenis aset sebelum mengunggah file." });
+        return;
+    }
     if (!event.target.files || event.target.files.length === 0) {
-        toast({ variant: "destructive", title: "No file selected." });
+        toast({ variant: "destructive", title: "Tidak ada file dipilih." });
         return;
     }
 
@@ -306,15 +326,23 @@ export default function AdminAssetsPage() {
             const data = e.target?.result;
             const workbook = XLSX.read(data, { type: 'binary' });
 
+            const sheetName = workbook.SheetNames[0];
+            if (!sheetName) {
+                throw new Error("File Excel tidak memiliki sheet.");
+            }
+            const worksheet = workbook.Sheets[sheetName];
+            const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
+
+            if (jsonData.length === 0) {
+                 throw new Error("Sheet pertama di file Excel kosong.");
+            }
+
             const assetsCollection = collection(firestore, 'network-assets');
             let totalImported = 0;
             let totalUpdated = 0;
-            let skippedSheets: string[] = [];
             
-            // Create a map of existing assets for quick lookup by name
             const existingAssetsMap = new Map(assets?.map(asset => [asset.name, asset.id]));
 
-            // Helper to find a column name from a list of aliases
             const findColumn = (keys: string[], aliases: string[]): string | undefined => {
                 const lowerCaseAliases = aliases.map(a => a.toLowerCase().trim());
                 for (const key of keys) {
@@ -325,91 +353,46 @@ export default function AdminAssetsPage() {
                 return undefined;
             };
 
-            // Helper to normalize Service Area names
-            const normalizeServiceArea = (input: string): string | null => {
-                if (!input) return null;
-                const upperInput = input.toUpperCase().trim();
-                const serviceAreasList = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
+            const firstRowKeys = Object.keys(jsonData[0]);
 
-                if (serviceAreasList.includes(upperInput)) return upperInput;
+            // Define common columns
+            const assetNameCol = findColumn(firstRowKeys, ['olt', 'odc', 'odp', 'ftm', 'gpon', 'nama', 'name', `nama ${assetType.toLowerCase()}`, 'device name', 'asset name']);
+            const serviceAreaCol = findColumn(firstRowKeys, ['service area', 'service ar', 'witel', 'sa']);
+            const stoCol = findColumn(firstRowKeys, ['sto']);
+            const coordinatesCol = findColumn(firstRowKeys, ['koordinat', 'coordinate', 'location', 'lokasi']);
+            const latCol = findColumn(firstRowKeys, ['lat', 'latitude']);
+            const longCol = findColumn(firstRowKeys, ['long', 'longitude']);
+            
+            if (!assetNameCol || !serviceAreaCol || !stoCol) {
+                throw new Error(`Kolom wajib (nama aset, service area, STO) tidak ditemukan di sheet '${sheetName}'.`);
+            }
+            
+            for (const row of jsonData) {
+                const assetName = row[assetNameCol];
+                const serviceAreaValue = row[serviceAreaCol];
+                const stoValue = row[stoCol];
+                const latValue = latCol ? row[latCol] : null;
+                const longValue = longCol ? row[longCol] : null;
 
-                const mapping: { [key: string]: string } = {
-                    'KUDUS': 'SA KUDUS', 'KUD': 'SA KUDUS',
-                    'PATI': 'SA PATI', 'PTI': 'SA PATI',
-                    'JEPARA': 'SA JEPARA', 'JPR': 'SA JEPARA',
-                    'PURWODADI': 'SA PURWODADI', 'PWD': 'SA PURWODADI',
-                    'BLORA': 'SA BLORA', 'BLA': 'SA BLORA',
-                    'REMBANG': 'SA REMBANG', 'RBG': 'SA REMBANG',
+                if (!assetName || !serviceAreaValue || !stoValue) continue;
+
+                const coordinates = (latValue && longValue) 
+                    ? `${latValue.toString().replace(',', '.')}, ${longValue.toString().replace(',', '.')}` 
+                    : (coordinatesCol && row[coordinatesCol] ? row[coordinatesCol].toString() : '');
+
+                const assetData: Partial<NetworkAsset> = {
+                    name: assetName.toString(),
+                    assetType: assetType,
+                    serviceArea: serviceAreaValue.toString().toUpperCase(),
+                    sto: stoValue.toString(),
+                    coordinates: coordinates,
                 };
-
-                for (const key in mapping) {
-                   if (upperInput.includes(key)) return mapping[key];
-                }
-
-                return null;
-            };
-
-            for (const sheetName of workbook.SheetNames) {
-                const lowerSheetName = sheetName.toLowerCase().trim();
-                const worksheet = workbook.Sheets[sheetName];
-                const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
-
-                if (jsonData.length === 0) continue;
-
-                // Determine assetType and potentially subType from sheet name
-                let assetType: NetworkAsset['assetType'] | null = null;
-                let subTypeFromSheet: NetworkAsset['subType'] | null = null;
-
-                if (lowerSheetName.includes('olt')) assetType = 'OLT';
-                if (lowerSheetName.includes('odc')) assetType = 'ODC';
-                if (lowerSheetName.includes('odp')) assetType = 'ODP';
-                if (lowerSheetName.includes('ftm')) assetType = 'FTM';
-
-                if (lowerSheetName === 'olt') subTypeFromSheet = 'OLT';
-                if (lowerSheetName === 'mini-olt' || lowerSheetName === 'mini olt') {
-                    assetType = 'OLT'; // Ensure assetType is correct
-                    subTypeFromSheet = 'Mini OLT';
-                }
-
-                if (!assetType) {
-                    skippedSheets.push(sheetName);
-                    continue;
-                }
-
-                const firstRowKeys = Object.keys(jsonData[0]);
-
-                // Flexible column identification
-                const assetNameCol = findColumn(firstRowKeys, ['olt', 'odc', 'odp', 'ftm', 'gpon', 'nama', 'name', `nama ${assetType}`, 'device name', 'asset name']);
-                const serviceAreaCol = findColumn(firstRowKeys, ['service area', 'service ar', 'witel', 'sa']);
-                const stoCol = findColumn(firstRowKeys, ['sto']);
-                const keteranganCol = findColumn(firstRowKeys, ['keterangan', 'jenis', 'type', 'sub type', 'description', 'keterangan_sto']);
-                const coordinatesCol = findColumn(firstRowKeys, ['koordinat', 'coordinate', 'location', 'lokasi']);
-                const latCol = findColumn(firstRowKeys, ['lat', 'latitude']);
-                const longCol = findColumn(firstRowKeys, ['long', 'longitude']);
-                const kapasitasCol = findColumn(firstRowKeys, ['kapasitas', 'capacity', 'port', 'core', 'kap']);
-                const specCol = findColumn(firstRowKeys, ['spec', 'spesifikasi', 'spec odc', 'jenis odc', 'tipe', 'spec_odc']);
-
-
-                if (!assetNameCol || !serviceAreaCol || !stoCol) {
-                    skippedSheets.push(sheetName);
-                    continue; // Skip if essential columns are missing
-                }
-
-                for (const row of jsonData) {
-                    const assetName = row[assetNameCol];
-                    const serviceAreaValue = row[serviceAreaCol];
-                    const stoValue = row[stoCol];
-                    const latValue = latCol ? row[latCol] : null;
-                    const longValue = longCol ? row[longCol] : null;
-
-                    if (!assetName || !serviceAreaValue || !stoValue) continue;
-
-                    const serviceArea = normalizeServiceArea(serviceAreaValue.toString());
-                    if (!serviceArea) continue;
-
-                    let subType: NetworkAsset['subType'] = subTypeFromSheet || 'N/A';
-
-                    if (keteranganCol && row[keteranganCol]) {
+                
+                // Asset-specific logic
+                if (assetType === 'OLT' || assetType === 'FTM') {
+                    const keteranganCol = findColumn(firstRowKeys, ['keterangan', 'jenis', 'type', 'sub type', 'description', 'keterangan_sto']);
+                    let subType: NetworkAsset['subType'] = 'N/A';
+                     if (keteranganCol && row[keteranganCol]) {
                         const keterangan = row[keteranganCol].toString().toLowerCase();
                         if (assetType === 'FTM') {
                             if (keterangan.includes('ea')) subType = 'EA';
@@ -420,74 +403,53 @@ export default function AdminAssetsPage() {
                             else if (keterangan.includes('olt')) subType = 'OLT';
                         }
                     }
-                    
-                    const coordinates = (latValue && longValue) 
-                        ? `${latValue.toString().replace(',', '.')}, ${longValue.toString().replace(',', '.')}` 
-                        : (coordinatesCol && row[coordinatesCol] ? row[coordinatesCol].toString() : '');
-
-                    const assetData: Partial<NetworkAsset> = {
-                        name: assetName.toString(),
-                        assetType: assetType,
-                        subType: subType,
-                        serviceArea: serviceArea,
-                        sto: stoValue.toString(),
-                        coordinates: coordinates,
-                    };
-                    
+                    assetData.subType = subType;
+                } else if (assetType === 'ODP') {
+                    const kapasitasCol = findColumn(firstRowKeys, ['kapasitas', 'capacity', 'port', 'core', 'kap']);
                     if (kapasitasCol && row[kapasitasCol] != null) {
                         assetData.kapasitas = row[kapasitasCol].toString();
                     }
+                    assetData.subType = 'N/A';
+                } else if (assetType === 'ODC') {
+                    const specCol = findColumn(firstRowKeys, ['spec', 'spesifikasi', 'spec odc', 'jenis odc', 'tipe', 'spec_odc']);
                     if (specCol && row[specCol] != null) {
                         assetData.spec = row[specCol].toString();
                     }
-                    
-                    const existingAssetId = existingAssetsMap.get(assetData.name!);
+                    assetData.subType = 'N/A';
+                }
+                
+                const existingAssetId = existingAssetsMap.get(assetData.name!);
 
-                    if (existingAssetId) {
-                        // Asset exists, update it
-                        const assetDocRef = doc(firestore, 'network-assets', existingAssetId);
-                        updateDocumentNonBlocking(assetDocRef, assetData);
-                        totalUpdated++;
-                    } else {
-                        // Asset doesn't exist, create it
-                        const newAsset = { ...assetData, dateAdded: serverTimestamp() };
-                        addDocumentNonBlocking(assetsCollection, newAsset);
-                        totalImported++;
-                    }
+                if (existingAssetId) {
+                    const assetDocRef = doc(firestore, 'network-assets', existingAssetId);
+                    updateDocumentNonBlocking(assetDocRef, assetData);
+                    totalUpdated++;
+                } else {
+                    const newAsset = { ...assetData, dateAdded: serverTimestamp() };
+                    addDocumentNonBlocking(assetsCollection, newAsset);
+                    totalImported++;
                 }
             }
 
-            if (totalImported > 0 || totalUpdated > 0) {
-                toast({
-                    title: 'Import Processed',
-                    description: `Created ${totalImported} new assets and updated ${totalUpdated} existing assets. The data will appear shortly.`,
-                });
-                if (skippedSheets.length > 0) {
-                    toast({
-                        variant: 'default',
-                        title: 'Some sheets were skipped',
-                        description: `Skipped: ${skippedSheets.join(', ')}. Check names (olt, odc, etc.) and format.`,
-                        duration: 8000
-                    });
-                }
-            } else {
-                 toast({
-                    variant: "destructive",
-                    title: 'Import Failed',
-                    description: 'No assets could be imported or updated. Please check file format, column headers, and sheet names.',
-                });
-            }
-
-        } catch (error) {
+            toast({
+                title: 'Import Processed',
+                description: `Created ${totalImported} new assets and updated ${totalUpdated} existing assets. The data will appear shortly.`,
+            });
+           
+        } catch (error: any) {
             console.error("Failed to import Excel file:", error);
             toast({
                 variant: "destructive",
                 title: 'Import Failed',
-                description: 'There was an error reading the file. Ensure it is a valid Excel file.',
+                description: error.message || 'There was an error reading the file. Ensure it is a valid Excel file.',
             });
         } finally {
             setIsImporting(false);
             setIsImportDialogOpen(false);
+            setImportAssetType('');
+            // Reset file input
+            const fileInput = document.getElementById('excel-file') as HTMLInputElement;
+            if (fileInput) fileInput.value = '';
         }
     };
     reader.readAsBinaryString(file);
@@ -540,13 +502,24 @@ export default function AdminAssetsPage() {
                     <DialogHeader>
                         <DialogTitle>Import Aset dari Excel</DialogTitle>
                         <DialogDescription>
-                            Pilih file Excel (.xlsx, .xls) dengan sheet bernama 'olt', 'mini-olt', 'odc', 'odp', 'ftm'. Data akan ditambahkan atau diperbarui jika sudah ada.
+                           Pilih jenis aset, lalu unggah file Excel (.xlsx, .xls). Hanya sheet pertama dari file yang akan dibaca.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="py-4 grid gap-4">
                         <div className="grid gap-2">
+                           <Label htmlFor="import-asset-type">Jenis Aset</Label>
+                           <Select value={importAssetType} onValueChange={(value) => setImportAssetType(value as any)}>
+                               <SelectTrigger id="import-asset-type">
+                                   <SelectValue placeholder="Pilih jenis aset..." />
+                               </SelectTrigger>
+                               <SelectContent>
+                                   {assetTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                               </SelectContent>
+                           </Select>
+                        </div>
+                        <div className="grid gap-2">
                             <Label htmlFor="excel-file">Pilih File</Label>
-                            <Input id="excel-file" type="file" accept=".xlsx, .xls, .csv" onChange={handleFileImport} disabled={isImporting} />
+                            <Input id="excel-file" type="file" accept=".xlsx, .xls, .csv" onChange={(e) => handleFileImport(e, importAssetType as any)} disabled={isImporting || !importAssetType} />
                         </div>
                         {isImporting && (
                             <div className="flex items-center text-sm text-muted-foreground">
@@ -635,9 +608,11 @@ export default function AdminAssetsPage() {
                        <Button variant="ghost" size="icon" onClick={() => handleEdit(a)}>
                            <Edit className="h-4 w-4" />
                        </Button>
-                       <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDelete(a)}>
+                       <AlertDialogTrigger asChild>
+                         <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDelete(a)}>
                            <Trash2 className="h-4 w-4" />
-                       </Button>
+                         </Button>
+                       </AlertDialogTrigger>
                     </TableCell>
                   </TableRow>
                 ))
