@@ -45,5 +45,7 @@ export type NetworkAsset = {
   assetType: 'OLT' | 'ODC' | 'ODP' | 'FTM';
   subType: 'Mini OLT' | 'OLT' | 'EA' | 'OA' | 'N/A';
   serviceArea: 'SA KUDUS' | 'SA PATI' | 'SA JEPARA' | 'SA PURWODADI' | 'SA BLORA' | 'SA REMBANG';
+  sto: string;
+  coordinates?: string;
   dateAdded: any;
 };

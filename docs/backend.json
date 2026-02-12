@@ -219,25 +219,58 @@
         "assetType": {
           "type": "string",
           "description": "The main type of the asset.",
-          "enum": ["OLT", "ODC", "ODP", "FTM"]
+          "enum": [
+            "OLT",
+            "ODC",
+            "ODP",
+            "FTM"
+          ]
         },
         "subType": {
           "type": "string",
           "description": "A subtype for assets like OLT (Mini OLT/OLT) or FTM (EA/OA).",
-          "enum": ["Mini OLT", "OLT", "EA", "OA", "N/A"]
+          "enum": [
+            "Mini OLT",
+            "OLT",
+            "EA",
+            "OA",
+            "N/A"
+          ]
         },
         "serviceArea": {
           "type": "string",
           "description": "The service area the asset belongs to.",
-          "enum": ["SA KUDUS", "SA PATI", "SA JEPARA", "SA PURWODADI", "SA BLORA", "SA REMBANG"]
+          "enum": [
+            "SA KUDUS",
+            "SA PATI",
+            "SA JEPARA",
+            "SA PURWODADI",
+            "SA BLORA",
+            "SA REMBANG"
+          ]
+        },
+        "sto": {
+          "type": "string",
+          "description": "STO (Sentral Telepon Otomat) location identifier."
+        },
+        "coordinates": {
+          "type": "string",
+          "description": "GPS coordinates of the asset."
         },
         "dateAdded": {
-            "type": "string",
-            "format": "date-time",
-            "description": "The date the asset was added."
+          "type": "string",
+          "format": "date-time",
+          "description": "The date the asset was added."
         }
       },
-      "required": ["id", "name", "assetType", "serviceArea", "dateAdded"]
+      "required": [
+        "id",
+        "name",
+        "assetType",
+        "serviceArea",
+        "sto",
+        "dateAdded"
+      ]
     }
   },
   "auth": {
@@ -300,7 +333,9 @@
         "path": "/network-assets/{assetId}",
         "definition": {
           "entityName": "NetworkAsset",
-          "schema": { "$ref": "#/backend/entities/NetworkAsset" },
+          "schema": {
+            "$ref": "#/backend/entities/NetworkAsset"
+          },
           "description": "Stores all individual network assets across all service areas.",
           "params": [
             {

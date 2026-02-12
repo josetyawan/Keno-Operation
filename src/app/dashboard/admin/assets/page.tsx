@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -45,7 +46,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Edit, PlusCircle, Trash2, Upload } from 'lucide-react';
+import { Edit, PlusCircle, Trash2, Upload, AlertTriangle } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from '@/firebase';
 import { collection, query, doc, serverTimestamp } from 'firebase/firestore';
 import type { UserProfile, NetworkAsset } from '@/lib/types';
@@ -67,7 +68,9 @@ function AssetForm({ asset, onFormSubmit }: { asset?: NetworkAsset | null, onFor
   const [assetType, setAssetType] = useState('');
   const [subType, setSubType] = useState('');
   const [serviceArea, setServiceArea] = useState('');
-  
+  const [sto, setSto] = useState('');
+  const [coordinates, setCoordinates] = useState('');
+
   const isOlt = assetType === 'OLT';
   const isFtm = assetType === 'FTM';
 
@@ -77,14 +80,18 @@ function AssetForm({ asset, onFormSubmit }: { asset?: NetworkAsset | null, onFor
       setAssetType(asset.assetType);
       setSubType(asset.subType);
       setServiceArea(asset.serviceArea);
+      setSto(asset.sto || '');
+      setCoordinates(asset.coordinates || '');
     } else {
       setName('');
       setAssetType('');
       setSubType('');
       setServiceArea('');
+      setSto('');
+      setCoordinates('');
     }
   }, [asset]);
-  
+
   const handleAssetTypeChange = (value: string) => {
       setAssetType(value);
       setSubType(''); // Reset sub-type when main type changes
@@ -92,17 +99,17 @@ function AssetForm({ asset, onFormSubmit }: { asset?: NetworkAsset | null, onFor
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !assetType || !serviceArea || ((isOlt || isFtm) && !subType) ) {
+    if (!name || !assetType || !serviceArea || !sto || ((isOlt || isFtm) && !subType) ) {
         alert('Please fill all required fields.');
         return;
     }
-    
+
     let finalSubType = 'N/A';
     if(isOlt || isFtm) {
         finalSubType = subType;
     }
 
-    onFormSubmit({ name, assetType, subType: finalSubType, serviceArea });
+    onFormSubmit({ name, assetType, subType: finalSubType, serviceArea, sto, coordinates });
   };
 
   return (
@@ -141,6 +148,14 @@ function AssetForm({ asset, onFormSubmit }: { asset?: NetworkAsset | null, onFor
             </SelectContent>
         </Select>
       </div>
+        <div className="grid grid-cols-4 items-center gap-4">
+        <Label htmlFor="sto" className="text-right">STO</Label>
+        <Input id="sto" value={sto} onChange={(e) => setSto(e.target.value)} className="col-span-3" placeholder="e.g. KDS, BLO" required />
+      </div>
+      <div className="grid grid-cols-4 items-center gap-4">
+        <Label htmlFor="coordinates" className="text-right">Coordinates</Label>
+        <Input id="coordinates" value={coordinates} onChange={(e) => setCoordinates(e.target.value)} className="col-span-3" placeholder="e.g. -6.80, 110.84" />
+      </div>
       <DialogFooter>
         <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
         <Button type="submit">Save changes</Button>
@@ -161,6 +176,8 @@ export default function AdminAssetsPage() {
   const [assetToDelete, setAssetToDelete] = useState<NetworkAsset | null>(null);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [isDeleteAllDialogOpen, setIsDeleteAllDialogOpen] = useState(false);
+
 
   // Redirect if user is not an admin
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
@@ -198,7 +215,7 @@ export default function AdminAssetsPage() {
   const handleDelete = (asset: NetworkAsset) => {
     setAssetToDelete(asset);
   };
-  
+
   const confirmDelete = () => {
     if (!assetToDelete) return;
     const assetDocRef = doc(firestore, 'network-assets', assetToDelete.id);
@@ -209,6 +226,27 @@ export default function AdminAssetsPage() {
     });
     setAssetToDelete(null);
   }
+
+  const confirmDeleteAll = () => {
+      if (!assets) {
+        toast({ variant: 'destructive', title: 'No assets to delete.' });
+        return;
+      }
+      toast({
+          title: 'Deletion Started',
+          description: `Starting to remove all ${assets.length} assets...`,
+      });
+      assets.forEach(asset => {
+          const assetDocRef = doc(firestore, 'network-assets', asset.id);
+          deleteDocumentNonBlocking(assetDocRef);
+      });
+      toast({
+          title: 'All Assets Deleted',
+          description: 'All network assets have been scheduled for deletion.',
+      });
+      setIsDeleteAllDialogOpen(false);
+  };
+
 
   const handleFormSubmit = (data: Partial<NetworkAsset>) => {
     if (assetToEdit) {
@@ -231,13 +269,13 @@ export default function AdminAssetsPage() {
     setIsFormDialogOpen(false);
     setAssetToEdit(null);
   }
-  
+
   const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files || event.target.files.length === 0) {
         toast({ variant: "destructive", title: "No file selected." });
         return;
     }
-    
+
     setIsImporting(true);
     const file = event.target.files[0];
     const reader = new FileReader();
@@ -253,21 +291,21 @@ export default function AdminAssetsPage() {
 
             // Helper to find a column name from a list of aliases
             const findColumn = (keys: string[], aliases: string[]): string | undefined => {
-                const lowerCaseAliases = aliases.map(a => a.toLowerCase());
+                const lowerCaseAliases = aliases.map(a => a.toLowerCase().trim());
                 for (const key of keys) {
-                    if (lowerCaseAliases.includes(key.toLowerCase())) {
+                    if (lowerCaseAliases.includes(key.toLowerCase().trim())) {
                         return key;
                     }
                 }
                 return undefined;
             };
-            
+
             // Helper to normalize Service Area names
             const normalizeServiceArea = (input: string): string | null => {
                 if (!input) return null;
                 const upperInput = input.toUpperCase().trim();
                 const serviceAreasList = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
-                
+
                 if (serviceAreasList.includes(upperInput)) return upperInput;
 
                 const mapping: { [key: string]: string } = {
@@ -278,16 +316,16 @@ export default function AdminAssetsPage() {
                     'BLORA': 'SA BLORA', 'BLA': 'SA BLORA',
                     'REMBANG': 'SA REMBANG', 'RBG': 'SA REMBANG',
                 };
-                
+
                 for (const key in mapping) {
                    if (upperInput.includes(key)) return mapping[key];
                 }
-                
+
                 return null;
             };
 
             for (const sheetName of workbook.SheetNames) {
-                const lowerSheetName = sheetName.toLowerCase();
+                const lowerSheetName = sheetName.toLowerCase().trim();
                 const worksheet = workbook.Sheets[sheetName];
                 const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
 
@@ -296,14 +334,14 @@ export default function AdminAssetsPage() {
                 // Determine assetType and potentially subType from sheet name
                 let assetType: NetworkAsset['assetType'] | null = null;
                 let subTypeFromSheet: NetworkAsset['subType'] | null = null;
-                
+
                 if (lowerSheetName.includes('olt')) assetType = 'OLT';
                 if (lowerSheetName.includes('odc')) assetType = 'ODC';
                 if (lowerSheetName.includes('odp')) assetType = 'ODP';
                 if (lowerSheetName.includes('ftm')) assetType = 'FTM';
-                
+
                 if (lowerSheetName === 'olt') subTypeFromSheet = 'OLT';
-                if (lowerSheetName === 'mini-olt') {
+                if (lowerSheetName === 'mini-olt' || lowerSheetName === 'mini olt') {
                     assetType = 'OLT'; // Ensure assetType is correct
                     subTypeFromSheet = 'Mini OLT';
                 }
@@ -314,13 +352,16 @@ export default function AdminAssetsPage() {
                 }
 
                 const firstRowKeys = Object.keys(jsonData[0]);
-                
+
                 // Flexible column identification
-                const assetNameCol = findColumn(firstRowKeys, [assetType, 'gpon', 'nama', `nama ${assetType}`]);
-                const serviceAreaCol = findColumn(firstRowKeys, ['service area', 'service ar', 'witel', 'sto']);
-                const keteranganCol = findColumn(firstRowKeys, ['keterangan', 'jenis', 'type', 'sub type']);
-                
-                if (!assetNameCol || !serviceAreaCol) {
+                const assetNameCol = findColumn(firstRowKeys, [assetType, 'gpon', 'nama', `nama ${assetType}`, 'device name']);
+                const serviceAreaCol = findColumn(firstRowKeys, ['service area', 'service ar', 'witel', 'sa']);
+                const stoCol = findColumn(firstRowKeys, ['sto']);
+                const keteranganCol = findColumn(firstRowKeys, ['keterangan', 'jenis', 'type', 'sub type', 'description']);
+                const coordinatesCol = findColumn(firstRowKeys, ['koordinat', 'coordinate', 'location', 'lokasi']);
+
+
+                if (!assetNameCol || !serviceAreaCol || !stoCol) {
                     skippedSheets.push(sheetName);
                     continue; // Skip if essential columns are missing
                 }
@@ -328,14 +369,15 @@ export default function AdminAssetsPage() {
                 for (const row of jsonData) {
                     const assetName = row[assetNameCol];
                     const serviceAreaValue = row[serviceAreaCol];
+                    const stoValue = row[stoCol];
 
-                    if (!assetName || !serviceAreaValue) continue;
+                    if (!assetName || !serviceAreaValue || !stoValue) continue;
 
                     const serviceArea = normalizeServiceArea(serviceAreaValue.toString());
-                    if (!serviceArea) continue; 
+                    if (!serviceArea) continue;
 
                     let subType: NetworkAsset['subType'] = subTypeFromSheet || 'N/A';
-                    
+
                     if (keteranganCol && row[keteranganCol]) {
                         const keterangan = row[keteranganCol].toString().toLowerCase();
                         if (assetType === 'FTM') {
@@ -353,9 +395,11 @@ export default function AdminAssetsPage() {
                         assetType: assetType,
                         subType: subType,
                         serviceArea: serviceArea,
+                        sto: stoValue.toString(),
+                        coordinates: coordinatesCol && row[coordinatesCol] ? row[coordinatesCol].toString() : '',
                         dateAdded: serverTimestamp(),
                     };
-                    
+
                     addDocumentNonBlocking(assetsCollection, newAsset);
                     totalImported++;
                 }
@@ -425,7 +469,7 @@ export default function AdminAssetsPage() {
 
   return (
     <>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Manajemen Aset Jaringan</h1>
           <p className="text-muted-foreground mt-1">
@@ -435,13 +479,13 @@ export default function AdminAssetsPage() {
         <div className="flex gap-2">
             <Button onClick={() => setIsImportDialogOpen(true)} variant="outline">
                 <Upload className="mr-2 h-4 w-4"/>
-                Import dari Excel
+                Import
             </Button>
             <Dialog open={isFormDialogOpen} onOpenChange={setIsFormDialogOpen}>
                 <DialogTrigger asChild>
                     <Button onClick={handleCreate}>
                         <PlusCircle className="mr-2 h-4 w-4"/>
-                        Tambah Aset Baru
+                        Tambah Aset
                     </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[480px]">
@@ -454,6 +498,28 @@ export default function AdminAssetsPage() {
                     <AssetForm asset={assetToEdit} onFormSubmit={handleFormSubmit} />
                 </DialogContent>
             </Dialog>
+            <AlertDialog open={isDeleteAllDialogOpen} onOpenChange={setIsDeleteAllDialogOpen}>
+                <AlertDialogTrigger asChild>
+                     <Button variant="destructive">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Hapus Semua
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will permanently delete all network assets in the database. This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDeleteAll} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                            Yes, delete all
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
       </div>
       <Card>
@@ -471,6 +537,8 @@ export default function AdminAssetsPage() {
                 <TableHead>Type</TableHead>
                 <TableHead>Sub-Type</TableHead>
                 <TableHead>Service Area</TableHead>
+                <TableHead>STO</TableHead>
+                <TableHead>Coordinates</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -482,6 +550,8 @@ export default function AdminAssetsPage() {
                     <TableCell>{a.assetType}</TableCell>
                     <TableCell>{a.subType}</TableCell>
                     <TableCell>{a.serviceArea}</TableCell>
+                    <TableCell>{a.sto}</TableCell>
+                    <TableCell>{a.coordinates || '-'}</TableCell>
                     <TableCell className="text-right">
                        <Button variant="ghost" size="icon" onClick={() => handleEdit(a)}>
                            <Edit className="h-4 w-4" />
@@ -494,7 +564,7 @@ export default function AdminAssetsPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
+                  <TableCell colSpan={7} className="h-24 text-center">
                     Tidak ada aset jaringan ditemukan.
                   </TableCell>
                 </TableRow>
@@ -503,7 +573,7 @@ export default function AdminAssetsPage() {
           </Table>
         </CardContent>
       </Card>
-      
+
        <AlertDialog open={!!assetToDelete} onOpenChange={(open) => !open && setAssetToDelete(null)}>
         <AlertDialogContent>
             <AlertDialogHeader>
