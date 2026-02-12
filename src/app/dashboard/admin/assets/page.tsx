@@ -133,8 +133,8 @@ function AssetForm({ asset, onFormSubmit }: { asset?: NetworkAsset | null, onFor
         assetData.subType = 'N/A';
     }
 
-    if (isOdp) assetData.kapasitas = kapasitas;
-    if (isOdc) assetData.spec = spec;
+    if (isOdp && kapasitas) assetData.kapasitas = kapasitas;
+    if (isOdc && spec) assetData.spec = spec;
     
     onFormSubmit(assetData);
   };
@@ -231,11 +231,11 @@ export default function AdminAssetsPage() {
   }, [user, currentUserProfile, isUserLoading, isProfileLoading, router]);
 
   const assetsQuery = useMemoFirebase(() => {
-      if (currentUserProfile?.role === 'admin') {
-          return query(collection(firestore, 'network-assets'));
+      if (isUserLoading || isProfileLoading || !user || !currentUserProfile || currentUserProfile.role !== 'admin') {
+          return null;
       }
-      return null;
-  }, [firestore, currentUserProfile]);
+      return query(collection(firestore, 'network-assets'));
+  }, [firestore, currentUserProfile, user, isUserLoading, isProfileLoading]);
 
   const { data: assets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(assetsQuery);
 
