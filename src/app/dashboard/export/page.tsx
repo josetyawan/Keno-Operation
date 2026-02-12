@@ -493,6 +493,7 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
                 <td style="padding: 4px; border: 1px solid black; text-align: right;">${dpp.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 <td style="padding: 4px; border: 1px solid black; text-align: right;">${pph.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 <td style="padding: 4px; border: 1px solid black; text-align: right;">${nota.nominal.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                <td style="padding: 4px; border: 1px solid black;">${nota.namaPic}</td>
             </tr>
             `;
             itemNumber++;
@@ -502,6 +503,7 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
             <tr style="font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <td colspan="5" style="padding: 4px; border: 1px solid black; text-align: right;">JUMLAH</td>
                 <td style="padding: 4px; border: 1px solid black; text-align: right;">${dateSubtotal.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                <td style="padding: 4px; border: 1px solid black;"></td>
             </tr>
         `;
     }
@@ -517,11 +519,7 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
             <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr>
                     <th style="padding: 4px; border: 1px solid black; width: 5%;">NO</th>
-                    <th style="padding: 4px; border: 1px solid black; width: 10%;">TANGGAL</th>
-                    <th style="padding: 4px; border: 1px solid black;">KETERANGAN</th>
-                    <th style="padding: 4px; border: 1px solid black; width: 15%;">DPP</th>
-                    <th style="padding: 4px; border: 1px solid black; width: 15%;">PPH 2%</th>
-                    <th style="padding: 4px; border: 1px solid black; width: 20%;">JUMLAH (Rp)</th>
+                    ${['TANGGAL', 'KETERANGAN', 'DPP', 'PPH 2%', 'JUMLAH (Rp)', 'PIC'].map(h => `<th style="padding: 4px; border: 1px solid black;">${h}</th>`).join('')}
                 </tr>
             </thead>
             <tbody>${tableRows}</tbody>
@@ -529,6 +527,7 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
                 <tr style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                     <td colspan="5" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">TOTAL</td>
                     <td style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">Rp${grandTotal.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td style="padding: 4px; border: 1px solid black;"></td>
                 </tr>
             </tfoot>
         </table>
@@ -694,6 +693,7 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
                 <td style="padding: 4px; border: 1px solid black;">${nota.namaBarang || '-'}</td>
                 <td style="padding: 4px; border: 1px solid black; white-space: normal; word-break: break-all;">${nota.keterangan || '-'}</td>
                 <td style="padding: 4px; border: 1px solid black; text-align: right;">${nota.nominal.toLocaleString('id-ID')}</td>
+                <td style="padding: 4px; border: 1px solid black;">${nota.namaPic}</td>
             </tr>`;
             itemNumber++;
         }
@@ -702,6 +702,7 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
             <tr style="font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <td colspan="4" style="padding: 4px; border: 1px solid black; text-align: right;">JUMLAH</td>
                 <td style="padding: 4px; border: 1px solid black; text-align: right;">${dateSubtotal.toLocaleString('id-ID')}</td>
+                <td style="padding: 4px; border: 1px solid black;"></td>
             </tr>
         `;
     }
@@ -717,7 +718,7 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
             <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr>
                     <th style="padding: 4px; border: 1px solid black; width: 5%;">NO</th>
-                    ${['TANGGAL', 'Nama Barang', 'Keterangan', 'Jumlah'].map(h => `<th style="padding: 4px; border: 1px solid black;">${h}</th>`).join('')}
+                    ${['TANGGAL', 'Nama Barang', 'Keterangan', 'Jumlah', 'PIC'].map(h => `<th style="padding: 4px; border: 1px solid black;">${h}</th>`).join('')}
                 </tr>
             </thead>
             <tbody>${tableRows}</tbody>
@@ -725,6 +726,7 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
                 <tr style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                     <td colspan="4" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">TOTAL</td>
                     <td style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">Rp${grandTotal.toLocaleString('id-ID')}</td>
+                    <td style="padding: 4px; border: 1px solid black;"></td>
                 </tr>
             </tfoot>
         </table>
