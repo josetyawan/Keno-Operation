@@ -327,7 +327,21 @@ export default function AdminAssetsPage() {
             const data = e.target?.result;
             const workbook = XLSX.read(data, { type: 'binary' });
 
-            const sheetName = workbook.SheetNames[0];
+            // Try to find a sheet that matches the selected asset type (case-insensitive)
+            let sheetName = workbook.SheetNames.find(
+                name => name.toLowerCase().trim() === importAssetType.toLowerCase().trim()
+            );
+            
+            // If no matching sheet is found, fall back to the first sheet in the workbook
+            if (!sheetName) {
+                sheetName = workbook.SheetNames[0];
+                 toast({
+                    title: "Sheet Tidak Sesuai",
+                    description: `Tidak ditemukan sheet untuk "${importAssetType}". Membaca sheet pertama: "${sheetName}".`,
+                    duration: 7000
+                });
+            }
+
             if (!sheetName) {
                 throw new Error("File Excel tidak memiliki sheet.");
             }
@@ -335,7 +349,7 @@ export default function AdminAssetsPage() {
             const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
 
             if (jsonData.length === 0) {
-                 throw new Error("Sheet pertama di file Excel kosong.");
+                 throw new Error(`Sheet "${sheetName}" di file Excel kosong.`);
             }
 
             const assetsCollection = collection(firestore, 'network-assets');
@@ -504,7 +518,7 @@ export default function AdminAssetsPage() {
                     <DialogHeader>
                         <DialogTitle>Import Aset dari Excel</DialogTitle>
                         <DialogDescription>
-                           Pilih jenis aset, lalu unggah file Excel (.xlsx, .xls). Hanya sheet pertama dari file yang akan dibaca.
+                           Pilih jenis aset, lalu unggah file Excel (.xlsx, .xls). Sistem akan mencoba membaca sheet yang sesuai atau sheet pertama.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="py-4 grid gap-4">
@@ -645,3 +659,5 @@ export default function AdminAssetsPage() {
     </>
   );
 }
+
+    
