@@ -54,9 +54,9 @@ export default function AllproPage() {
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
   const assetsQuery = useMemoFirebase(() => {
-    if (!userProfile || userProfile.registrationStatus !== 'approved') return null;
+    if (!user || !userProfile || userProfile.registrationStatus !== 'approved') return null;
     return collection(firestore, 'network-assets');
-  }, [firestore, userProfile]);
+  }, [firestore, user, userProfile]);
 
   const { data: assets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(assetsQuery);
 

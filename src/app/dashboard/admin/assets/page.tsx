@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -216,11 +215,11 @@ export default function AdminAssetsPage() {
 
   // Fetch all assets
   const assetsQuery = useMemoFirebase(() => {
-      if (currentUserProfile?.role === 'admin') {
+      if (user && currentUserProfile?.role === 'admin') {
           return query(collection(firestore, 'network-assets'));
       }
       return null;
-  }, [firestore, currentUserProfile]);
+  }, [firestore, user, currentUserProfile]);
 
   const { data: assets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(assetsQuery);
 
