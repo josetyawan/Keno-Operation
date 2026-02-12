@@ -220,7 +220,6 @@ export default function AdminAssetsPage() {
 
   const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
   const [assetToEdit, setAssetToEdit] = useState<NetworkAsset | null>(null);
-  const [assetToDelete, setAssetToDelete] = useState<NetworkAsset | null>(null);
   
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -258,20 +257,15 @@ export default function AdminAssetsPage() {
     setIsFormDialogOpen(true);
   };
 
-  const handleDelete = (asset: NetworkAsset) => {
-    setAssetToDelete(asset);
-  };
-
-  const confirmDelete = () => {
-    if (!assetToDelete || !firestore) return;
-    const assetDocRef = doc(firestore, 'network-assets', assetToDelete.id);
+  const handleDeleteAsset = (asset: NetworkAsset) => {
+    if (!firestore) return;
+    const assetDocRef = doc(firestore, 'network-assets', asset.id);
     deleteDocumentNonBlocking(assetDocRef);
     toast({
       title: 'Asset Deleted',
-      description: `The asset "${assetToDelete.name}" has been deleted.`,
+      description: `The asset "${asset.name}" has been deleted.`,
     });
-    setAssetToDelete(null);
-  }
+  };
 
   const confirmDeleteAll = () => {
       if (!assets || !firestore) {
@@ -704,7 +698,7 @@ export default function AdminAssetsPage() {
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(a)} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                              <AlertDialogAction onClick={() => handleDeleteAsset(a)} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
                                 Delete
                               </AlertDialogAction>
                             </AlertDialogFooter>
