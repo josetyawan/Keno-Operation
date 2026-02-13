@@ -336,6 +336,10 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
 
     const isJasa = (segmen: string) => {
         const lowerSegmen = segmen.toLowerCase();
+        // Add special exception for "BBM R4 Pengiriman Warehouse"
+        if (lowerSegmen === 'bbm r4 pengiriman warehouse') {
+            return false;
+        }
         return lowerSegmen.includes('jasa') || lowerSegmen.includes('pengiriman') || lowerSegmen.includes('ekspedisi');
     };
 
