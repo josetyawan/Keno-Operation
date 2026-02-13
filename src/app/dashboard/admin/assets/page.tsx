@@ -111,7 +111,7 @@ export default function AdminAssetsPage() {
 
   const filteredAssets = useMemo(() => {
     if (!queriedAssets) return [];
-    const lowercasedSearchName = searchName.toLowerCase();
+    const lowercasedSearchName = searchName.toLowerCase().trim();
     
     return queriedAssets.filter(asset => {
       return searchName ? asset.name.toLowerCase().includes(lowercasedSearchName) : true;
@@ -141,6 +141,7 @@ export default function AdminAssetsPage() {
     try {
         const assetsCollection = collection(firestore, 'network-assets');
         const batchSize = 400; // Firestore limit is 500
+        let docsDeleted = 0;
         
         // eslint-disable-next-line no-constant-condition
         while (true) {
@@ -156,14 +157,15 @@ export default function AdminAssetsPage() {
                 batch.delete(doc.ref);
             });
             await batch.commit();
+            docsDeleted += querySnapshot.size;
 
-            // Optional: brief pause to prevent overwhelming the browser's event loop
-            await new Promise(resolve => setTimeout(resolve, 250));
+            // Optional: brief pause to prevent overwhelming the browser's event loop or hitting rate limits
+            await new Promise(resolve => setTimeout(resolve, 1000));
         }
 
         toast({
             title: 'Semua Aset Dihapus',
-            description: 'Semua aset jaringan telah berhasil dihapus dari database.',
+            description: `Semua ${docsDeleted} aset jaringan telah berhasil dihapus dari database.`,
         });
         setIsDeletingAll(false);
         setIsDeleteAllDialogOpen(false);
@@ -246,10 +248,10 @@ export default function AdminAssetsPage() {
             const longCol = findColumn(firstRowKeys, ['long', 'longitude', 'longitud']);
             const kapasitasCol = findColumn(firstRowKeys, ['kapasitas', 'capacity', 'port', 'core', 'kap', 'is total']);
             const specCol = findColumn(firstRowKeys, ['spec', 'spesifikasi', 'spec odc', 'jenis odc', 'tipe', 'spec_odc']);
-            const avaiCol = findColumn(firstRowKeys, ['avai', 'availability']);
-            const usedCol = findColumn(firstRowKeys, ['used']);
-            const rsvCol = findColumn(firstRowKeys, ['rsv']);
-            const rskCol = findColumn(firstRowKeys, ['rsk']);
+            const avaiCol = findColumn(firstRowKeys, ['avai', 'availability', 'port avai']);
+            const usedCol = findColumn(firstRowKeys, ['used', 'port used']);
+            const rsvCol = findColumn(firstRowKeys, ['rsv', 'port rsv']);
+            const rskCol = findColumn(firstRowKeys, ['rsk', 'port rsk']);
 
             if (!assetNameCol) {
                 throw new Error(`Kolom nama aset (misalnya 'ODP NAME', 'Nama', 'Device Name') tidak ditemukan di sheet '${sheetName}'. Mohon periksa nama kolom di file Excel Anda.`);
@@ -306,7 +308,7 @@ export default function AdminAssetsPage() {
                         setProgress(currentProgress);
 
                         if (currentIndex < totalRows) {
-                            setTimeout(processMiniOltChunk, 1500);
+                            setTimeout(processMiniOltChunk, 3000); // Slower delay for Mini-OLT update
                         } else {
                             toast({
                                 title: 'Impor Selesai',
@@ -337,69 +339,77 @@ export default function AdminAssetsPage() {
             }
             
             const assetsCollection = collection(firestore, 'network-assets');
-            let totalImported = 0;
+            let totalCreated = 0;
+            let totalUpdated = 0;
             
             const mapStoToServiceArea = (sto: string): NetworkAsset['serviceArea'] => {
                 const upperSto = sto.toUpperCase().trim();
-                switch (upperSto) {
-                    case 'BAN': case 'BANGSRI': return 'SA JEPARA';
-                    case 'KEL': case 'KELING': return 'SA JEPARA';
-                    case 'JPR': case 'JEPARA': return 'SA JEPARA';
-                    case 'PEC': case 'PECANGAAN': return 'SA JEPARA';
-                    case 'BLO': case 'BLORA': return 'SA BLORA';
-                    case 'CEPU': return 'SA BLORA';
-                    case 'NGA': case 'NGAWEN': return 'SA BLORA';
-                    case 'RDB': case 'RANDUBLATUNG': return 'SA BLORA';
-                    case 'KUD': case 'KUDUS': return 'SA KUDUS';
-                    case 'DMA': case 'DEMAK': return 'SA KUDUS';
-                    case 'PAT': case 'PATI': return 'SA PATI';
-                    case 'TAY': return 'SA PATI';
-                    case 'JWN': return 'SA PATI';
-                    case 'LSE': case 'LASEM': return 'SA REMBANG';
-                    case 'RBN': case 'REMBANG': return 'SA REMBANG';
-                    case 'WRO': case 'WIROSARI': return 'SA PURWODADI';
-                    case 'TRO': case 'TOROH': return 'SA PURWODADI';
-                    case 'GBU': case 'GUBUNG': return 'SA PURWODADI';
-                    case 'GDO': case 'GODONG': return 'SA PURWODADI';
-                    case 'PURWODADI': return 'SA PURWODADI';
-                    default:
-                        if (upperSto.includes('KUDUS')) return 'SA KUDUS';
-                        if (upperSto.includes('PATI')) return 'SA PATI';
-                        if (upperSto.includes('JEPARA')) return 'SA JEPARA';
-                        if (upperSto.includes('PURWODADI')) return 'SA PURWODADI';
-                        if (upperSto.includes('BLORA')) return 'SA BLORA';
-                        if (upperSto.includes('REMBANG')) return 'SA REMBANG';
-                        return 'SA KUDUS';
-                }
+                if (['BAN','BANGSRI'].includes(upperSto)) return 'SA JEPARA';
+                if (['KEL','KELING'].includes(upperSto)) return 'SA JEPARA';
+                if (['JPR','JEPARA'].includes(upperSto)) return 'SA JEPARA';
+                if (['PEC','PECANGAAN'].includes(upperSto)) return 'SA JEPARA';
+                if (['BLO','BLORA'].includes(upperSto)) return 'SA BLORA';
+                if (['CEPU'].includes(upperSto)) return 'SA BLORA';
+                if (['NGA','NGAWEN'].includes(upperSto)) return 'SA BLORA';
+                if (['RDB','RANDUBLATUNG'].includes(upperSto)) return 'SA BLORA';
+                if (['KUD','KUDUS'].includes(upperSto)) return 'SA KUDUS';
+                if (['DMA','DEMAK'].includes(upperSto)) return 'SA KUDUS';
+                if (['PAT','PATI'].includes(upperSto)) return 'SA PATI';
+                if (['TAY'].includes(upperSto)) return 'SA PATI';
+                if (['JWN'].includes(upperSto)) return 'SA PATI';
+                if (['LSE','LASEM'].includes(upperSto)) return 'SA REMBANG';
+                if (['RBN','REMBANG'].includes(upperSto)) return 'SA REMBANG';
+                if (['WRO','WIROSARI'].includes(upperSto)) return 'SA PURWODADI';
+                if (['TRO','TOROH'].includes(upperSto)) return 'SA PURWODADI';
+                if (['GBU','GUBUNG'].includes(upperSto)) return 'SA PURWODADI';
+                if (['GDO','GODONG'].includes(upperSto)) return 'SA PURWODADI';
+                if (['PURWODADI'].includes(upperSto)) return 'SA PURWODADI';
+                if (upperSto.includes('KUDUS')) return 'SA KUDUS';
+                if (upperSto.includes('PATI')) return 'SA PATI';
+                if (upperSto.includes('JEPARA')) return 'SA JEPARA';
+                if (upperSto.includes('PURWODADI')) return 'SA PURWODADI';
+                if (upperSto.includes('BLORA')) return 'SA BLORA';
+                if (upperSto.includes('REMBANG')) return 'SA REMBANG';
+                return 'SA KUDUS'; // Default
             };
 
             const processChunk = async () => {
                 try {
                     const end = Math.min(currentIndex + chunkSize, totalRows);
+                    const chunkRows = jsonData.slice(currentIndex, end);
+                    const assetNamesInChunk = chunkRows.map(row => row[assetNameCol]?.toString().trim()).filter(Boolean);
+
+                    if (assetNamesInChunk.length === 0) {
+                        currentIndex = end;
+                        if (currentIndex < totalRows) { setTimeout(processChunk, 50); } else { /* finished */ }
+                        return;
+                    }
+
+                    // Find existing assets in this chunk
+                    const existingAssetsMap = new Map<string, { id: string }>();
+                    const queryChunks: string[][] = [];
+                    for (let i = 0; i < assetNamesInChunk.length; i += 30) {
+                        queryChunks.push(assetNamesInChunk.slice(i, i + 30));
+                    }
+
+                    for (const nameChunk of queryChunks) {
+                        if (nameChunk.length > 0) {
+                            const q = query(assetsCollection, where('name', 'in', nameChunk));
+                            const querySnapshot = await getDocs(q);
+                            querySnapshot.forEach(doc => {
+                                existingAssetsMap.set(doc.data().name.trim(), { id: doc.id });
+                            });
+                        }
+                    }
+
                     const batch = writeBatch(firestore);
 
-                    for (let i = currentIndex; i < end; i++) {
-                        const row = jsonData[i];
+                    for (const row of chunkRows) {
                         const assetName = row[assetNameCol]?.toString().trim();
                         if (!assetName) continue;
 
                         let stoValue = stoCol ? row[stoCol]?.toString() : '';
                         let serviceAreaValue = serviceAreaCol ? row[serviceAreaCol]?.toString() : '';
-                        let kapasitasRawValue = kapasitasCol ? row[kapasitasCol]?.toString() : '';
-                        let parsedKapasitas: string | undefined = undefined;
-
-                        if (kapasitasRawValue && isNaN(Number(kapasitasRawValue))) {
-                            const parts = kapasitasRawValue.split(' ').filter(Boolean);
-                            const potentialKapasitas = parseInt(parts[0], 10);
-                            if (!isNaN(potentialKapasitas)) {
-                                parsedKapasitas = String(potentialKapasitas);
-                                if (!stoValue && parts.length > 1) {
-                                    stoValue = parts.slice(1).join(' ');
-                                }
-                            }
-                        } else if (kapasitasRawValue) {
-                            parsedKapasitas = kapasitasRawValue;
-                        }
                         
                         if (!serviceAreaValue && stoValue) {
                             serviceAreaValue = mapStoToServiceArea(stoValue);
@@ -419,8 +429,6 @@ export default function AdminAssetsPage() {
                              assetData.coordinates = `${latValue.toString().replace(',', '.')}, ${longValue.toString().replace(',', '.')}`;
                         } else if (coordinatesCol && row[coordinatesCol]) {
                              assetData.coordinates = row[coordinatesCol].toString();
-                        } else {
-                            assetData.coordinates = '';
                         }
                         
                         if (importAssetType === 'OLT' || importAssetType === 'FTM') {
@@ -439,7 +447,8 @@ export default function AdminAssetsPage() {
                             }
                             assetData.subType = subType;
                         } else if (importAssetType === 'ODP') {
-                            if (parsedKapasitas) assetData.kapasitas = parsedKapasitas;
+                            let kapasitasRawValue = kapasitasCol ? row[kapasitasCol]?.toString() : '';
+                            if (kapasitasRawValue) assetData.kapasitas = kapasitasRawValue;
                             if (avaiCol && row[avaiCol] != null) assetData.portAvai = row[avaiCol].toString();
                             if (usedCol && row[usedCol] != null) assetData.portUsed = row[usedCol].toString();
                             if (rsvCol && row[rsvCol] != null) assetData.portRsv = row[rsvCol].toString();
@@ -449,11 +458,18 @@ export default function AdminAssetsPage() {
                             if (specCol && row[specCol] != null) assetData.spec = row[specCol].toString();
                             assetData.subType = 'N/A';
                         }
-                        
-                        const newAssetDocRef = doc(assetsCollection);
-                        const newAsset = { ...assetData, id: newAssetDocRef.id, dateAdded: serverTimestamp() };
-                        batch.set(newAssetDocRef, newAsset);
-                        totalImported++;
+
+                        const existingAsset = existingAssetsMap.get(assetName);
+                        if (existingAsset) {
+                            const assetDocRef = doc(assetsCollection, existingAsset.id);
+                            batch.update(assetDocRef, assetData);
+                            totalUpdated++;
+                        } else {
+                            const newAssetDocRef = doc(assetsCollection);
+                            const newAsset = { ...assetData, id: newAssetDocRef.id, dateAdded: serverTimestamp() };
+                            batch.set(newAssetDocRef, newAsset);
+                            totalCreated++;
+                        }
                     }
                     
                     await batch.commit();
@@ -463,12 +479,13 @@ export default function AdminAssetsPage() {
                     setProgress(currentProgress);
 
                     if (currentIndex < totalRows) {
-                        setTimeout(processChunk, 1500); 
+                        const delay = importAssetType === 'ODP' ? 3000 : 1500;
+                        setTimeout(processChunk, delay); 
                     } else {
                         toast({
                             title: 'Import Selesai',
-                            description: `Berhasil membuat ${totalImported} aset baru. Halaman akan dimuat ulang untuk menampilkan data baru.`,
-                            duration: 7000
+                            description: `Berhasil membuat ${totalCreated} aset baru dan memperbarui ${totalUpdated} aset.`,
+                            duration: 9000
                         });
                         setIsImporting(false);
                         setIsImportDialogOpen(false);
@@ -553,7 +570,7 @@ export default function AdminAssetsPage() {
                     <DialogHeader>
                         <DialogTitle>Import Aset dari Excel</DialogTitle>
                         <DialogDescription>
-                           <span className="font-bold text-destructive">PENTING:</span> Alur kerja impor adalah HAPUS-LALU-IMPOR. Hapus semua aset yang ada terlebih dahulu, lalu impor daftar lengkap yang baru. Sistem ini TIDAK akan memperbarui data yang ada, hanya membuat yang baru.
+                           Sistem ini akan memperbarui aset yang ada jika nama asetnya cocok, dan membuat aset baru jika tidak ditemukan. Ini tidak akan menghapus aset yang ada di database tetapi tidak ada di file Excel Anda.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="py-4 grid gap-4">
@@ -735,5 +752,7 @@ export default function AdminAssetsPage() {
     </>
   );
 }
+
+    
 
     
