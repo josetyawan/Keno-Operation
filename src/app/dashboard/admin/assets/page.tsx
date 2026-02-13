@@ -47,7 +47,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Trash2, Upload, Search, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
-import { useUser, useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking, useDoc } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking, useDoc, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
 import { collection, query, doc, serverTimestamp, writeBatch, where, getDocs, limit } from 'firebase/firestore';
 import type { UserProfile, NetworkAsset } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -447,15 +447,21 @@ export default function AdminAssetsPage() {
                         if (importAssetType === 'OLT' || importAssetType === 'FTM') {
                             const keteranganCol = findColumn(firstRowKeys, ['keterangan', 'jenis', 'type', 'sub type', 'description', 'keterangan_sto', 'subtype']);
                             let subType: NetworkAsset['subType'] = 'N/A';
-                             if (keteranganCol && row[keteranganCol]) {
+
+                            if (importAssetType === 'OLT') {
+                                subType = 'OLT';
+                            }
+                            
+                            if (keteranganCol && row[keteranganCol]) {
                                 const keterangan = row[keteranganCol].toString().toLowerCase();
                                 if (importAssetType === 'FTM') {
                                     if (keterangan.includes('ea')) subType = 'EA';
                                     else if (keterangan.includes('oa')) subType = 'OA';
                                 }
-                                 if (importAssetType === 'OLT') {
-                                    if (keterangan.includes('mini')) subType = 'Mini OLT';
-                                    else if (keterangan.includes('olt')) subType = 'OLT';
+                                if (importAssetType === 'OLT') {
+                                    if (keterangan.includes('mini')) {
+                                        subType = 'Mini OLT';
+                                    }
                                 }
                             }
                             assetData.subType = subType;
@@ -790,5 +796,3 @@ export default function AdminAssetsPage() {
     </>
   );
 }
-
-    
