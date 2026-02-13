@@ -92,13 +92,13 @@ export default function AdminAssetsPage() {
 
   const { data: assets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(assetsQuery);
 
-  const handleDeleteAsset = (asset: NetworkAsset) => {
+  const handleDeleteAsset = (assetId: string, assetName: string) => {
     if (!firestore) return;
-    const assetDocRef = doc(firestore, 'network-assets', asset.id);
+    const assetDocRef = doc(firestore, 'network-assets', assetId);
     deleteDocumentNonBlocking(assetDocRef);
     toast({
       title: 'Aset Dihapus',
-      description: `Aset "${asset.name}" telah dihapus.`,
+      description: `Aset "${assetName}" telah dihapus.`,
     });
   };
 
@@ -252,7 +252,7 @@ export default function AdminAssetsPage() {
                         setProgress(currentProgress);
 
                         if (currentIndex < totalRows) {
-                            setTimeout(processMiniOltChunk, 50);
+                            setTimeout(processMiniOltChunk, 100);
                         } else {
                             toast({
                                 title: 'Impor Selesai',
@@ -423,7 +423,7 @@ export default function AdminAssetsPage() {
                     setProgress(currentProgress);
 
                     if (currentIndex < totalRows) {
-                        setTimeout(processChunk, 50); // Process next chunk with a small delay
+                        setTimeout(processChunk, 100); // Process next chunk with a small delay
                     } else {
                         toast({
                             title: 'Import Selesai',
@@ -623,7 +623,7 @@ export default function AdminAssetsPage() {
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Batal</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDeleteAsset(a)} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                              <AlertDialogAction onClick={() => handleDeleteAsset(a.id, a.name)} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
                                 Hapus
                               </AlertDialogAction>
                             </AlertDialogFooter>
