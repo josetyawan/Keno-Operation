@@ -1,11 +1,15 @@
 
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useMemo, useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardFooter,
 } from '@/components/ui/card';
 import {
   Table,
@@ -16,7 +20,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { ArrowLeft, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, doc, type QueryConstraint } from 'firebase/firestore';
 import type { UserProfile, NetworkAsset } from '@/lib/types';
@@ -33,9 +39,15 @@ function AssetListSkeleton() {
                 </div>
             </div>
             <Card>
+                <CardHeader>
+                    <Skeleton className="h-7 w-48" />
+                     <div className="pt-2">
+                        <Skeleton className="h-10 w-full" />
+                    </div>
+                </CardHeader>
                 <CardContent className="p-0">
                     <div className="p-6">
-                        <Skeleton className="h-12 w-full mb-4" />
+                        <Skeleton className="h-10 w-full mb-2" />
                         <Skeleton className="h-10 w-full mb-2" />
                         <Skeleton className="h-10 w-full" />
                     </div>
@@ -56,6 +68,10 @@ function AssetList() {
   const serviceArea = searchParams.get('serviceArea');
   const subType = searchParams.get('subType');
   
+  const [searchName, setSearchName] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
+
   const userProfileRef = useMemoFirebase(
     () => (user ? doc(firestore, 'users', user.uid) : null),
     [user, firestore]
@@ -83,11 +99,33 @@ function AssetList() {
   }, [firestore, isUserLoading, isProfileLoading, user, userProfile, assetType, serviceArea, subType]);
 
   const { data: assets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(assetsQuery);
+  
+  const filteredAssetsByName = useMemo(() => {
+    if (!assets) return [];
+    const lowercasedSearchName = searchName.toLowerCase().trim();
+    
+    return assets.filter(asset => {
+      return searchName ? asset.name.toLowerCase().includes(lowercasedSearchName) : true;
+    });
+  }, [assets, searchName]);
+
+  const totalPages = Math.ceil(filteredAssetsByName.length / ITEMS_PER_PAGE);
+
+  const paginatedAssets = useMemo(() => {
+      const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+      const endIndex = startIndex + ITEMS_PER_PAGE;
+      return filteredAssetsByName.slice(startIndex, endIndex);
+  }, [filteredAssetsByName, currentPage]);
+
+  useEffect(() => {
+      setCurrentPage(1);
+  }, [searchName]);
+
 
   const isLoading = isUserLoading || isProfileLoading || areAssetsLoading;
   
   const title = `Detail Aset: ${assetType || ''}${serviceArea ? ` di ${serviceArea}` : ''}${subType ? ` (${subType})` : ''}`;
-  const description = `Menampilkan daftar semua aset yang cocok dengan filter yang dipilih. Total: ${assets?.length || 0} aset.`;
+  const description = `Menampilkan ${paginatedAssets.length} dari ${filteredAssetsByName.length} aset yang cocok.`;
 
   return (
     <div className="mx-auto grid w-full flex-1 auto-rows-max gap-6">
@@ -104,14 +142,24 @@ function AssetList() {
         </div>
       </div>
       <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Search className="h-5 w-5" />
+            Filter Nama
+          </CardTitle>
+           <div className="pt-2">
+            <Label htmlFor="search-name" className="sr-only">Nama Aset</Label>
+            <Input id="search-name" placeholder={`Cari nama ${assetType || 'aset'}...`} value={searchName} onChange={(e) => setSearchName(e.target.value)} />
+          </div>
+        </CardHeader>
         <CardContent className="p-0">
-          {isLoading ? (
+          {isLoading && paginatedAssets.length === 0 ? (
             <div className="p-6">
-              <Skeleton className="h-12 w-full mb-4" />
-              <Skeleton className="h-10 w-full mb-2" />
-              <Skeleton className="h-10 w-full" />
+               <Skeleton className="h-10 w-full mb-2" />
+               <Skeleton className="h-10 w-full mb-2" />
+               <Skeleton className="h-10 w-full" />
             </div>
-          ) : assets && assets.length > 0 ? (
+          ) : paginatedAssets.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -130,7 +178,7 @@ function AssetList() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {assets.map(a => (
+                {paginatedAssets.map(a => (
                   <TableRow key={a.id}>
                     <TableCell className="font-medium">{a.name}</TableCell>
                     <TableCell>{a.assetType}</TableCell>
@@ -152,7 +200,7 @@ function AssetList() {
             <div className="text-center py-16 px-6">
                 <h2 className="text-xl font-semibold">Tidak Ada Aset Ditemukan</h2>
                 <p className="text-muted-foreground mt-2">
-                    Tidak ada aset yang cocok dengan filter yang Anda pilih.
+                    {searchName ? "Tidak ada aset yang cocok dengan pencarian Anda." : "Tidak ada aset yang cocok dengan filter yang Anda pilih."}
                 </p>
                  <Button onClick={() => router.back()} variant="outline" className="mt-4">
                     Kembali ke Rekap
@@ -160,6 +208,31 @@ function AssetList() {
             </div>
           )}
         </CardContent>
+         <CardFooter>
+            <div className="text-xs text-muted-foreground">
+                Halaman <strong>{totalPages > 0 ? currentPage : 0}</strong> dari <strong>{totalPages}</strong>
+            </div>
+            <div className="flex items-center gap-2 ml-auto">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1 || totalPages === 0}
+                >
+                    <ChevronLeft className="h-4 w-4" />
+                    Sebelumnya
+                </Button>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages || totalPages === 0}
+                >
+                    Berikutnya
+                    <ChevronRight className="h-4 w-4" />
+                </Button>
+            </div>
+        </CardFooter>
       </Card>
     </div>
   );

@@ -259,7 +259,7 @@ export default function AdminAssetsPage() {
             
             const assetNameCol = findColumn(firstRowKeys, ['olt', 'odc', 'odp', 'ftm', 'gpon', 'nama', 'name', `nama ${importAssetType.toLowerCase()}`, 'device name', 'asset name', 'nama aset', 'nama perangkat', 'odp name']);
             const serviceAreaCol = findColumn(firstRowKeys, ['service area', 'service ar', 'witel', 'sa', 'area']);
-            const stoCol = findColumn(firstRowKeys, ['sto', 'lokasi sto', 'telkom sto', 'telkom sto odc 2']);
+            const stoCol = findColumn(firstRowKeys, ['sto', 'lokasi sto', 'telkom sto', 'telkom sto odc 2', 'lokasi']);
             const coordinatesCol = findColumn(firstRowKeys, ['koordinat', 'coordinate', 'location', 'lokasi', 'gps']);
             const latCol = findColumn(firstRowKeys, ['lat', 'latitude']);
             const longCol = findColumn(firstRowKeys, ['long', 'longitude', 'longitud']);
@@ -437,6 +437,7 @@ export default function AdminAssetsPage() {
                         let stoValue = stoCol ? row[stoCol]?.toString() : '';
                         let serviceAreaValue = serviceAreaCol ? row[serviceAreaCol]?.toString() : '';
                         
+                        // Explicitly map STO to Service Area if Service Area is not provided in the file
                         if (!serviceAreaValue && stoValue) {
                             serviceAreaValue = mapStoToServiceArea(stoValue);
                         }
@@ -444,7 +445,8 @@ export default function AdminAssetsPage() {
                         const assetData: Partial<NetworkAsset> = {
                             name: assetName,
                             assetType: importAssetType as NetworkAsset['assetType'],
-                            serviceArea: (serviceAreaValue?.toUpperCase() || mapStoToServiceArea(stoValue || '')) as NetworkAsset['serviceArea'],
+                            // Use the determined service area or a default fallback
+                            serviceArea: (serviceAreaValue?.toUpperCase() || 'SA KUDUS') as NetworkAsset['serviceArea'],
                             sto: stoValue || 'N/A',
                         };
                         
