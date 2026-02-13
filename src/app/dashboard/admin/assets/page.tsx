@@ -31,11 +31,9 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogClose,
 } from '@/components/ui/dialog';
 import {
   Select,
@@ -47,7 +45,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Edit, PlusCircle, Trash2, Upload } from 'lucide-react';
+import { Trash2, Upload } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from '@/firebase';
 import { collection, query, doc, serverTimestamp } from 'firebase/firestore';
@@ -59,194 +57,7 @@ import { useEffect, useState } from 'react';
 import * as XLSX from 'xlsx';
 
 
-const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
 const assetTypes = ['OLT', 'ODC', 'ODP', 'FTM'];
-const oltSubTypes = ['Mini OLT', 'OLT'];
-const ftmSubTypes = ['EA', 'OA'];
-
-
-function AssetForm({ asset, onFormSubmit }: { asset?: NetworkAsset | null, onFormSubmit: (data: Partial<NetworkAsset>) => void }) {
-  const [name, setName] = useState('');
-  const [assetType, setAssetType] = useState('');
-  const [subType, setSubType] = useState('');
-  const [serviceArea, setServiceArea] = useState('');
-  const [sto, setSto] = useState('');
-  const [coordinates, setCoordinates] = useState('');
-  const [kapasitas, setKapasitas] = useState('');
-  const [spec, setSpec] = useState('');
-  const [portAvai, setPortAvai] = useState('');
-  const [portUsed, setPortUsed] = useState('');
-  const [portRsv, setPortRsv] = useState('');
-  const [portRsk, setPortRsk] = useState('');
-  const { toast } = useToast();
-
-
-  useEffect(() => {
-    if (asset) {
-      setName(asset.name || '');
-      setAssetType(asset.assetType || '');
-      setSubType(asset.subType || '');
-      setServiceArea(asset.serviceArea || '');
-      setSto(asset.sto || '');
-      setCoordinates(asset.coordinates || '');
-      setKapasitas(asset.kapasitas || '');
-      setSpec(asset.spec || '');
-      setPortAvai(asset.portAvai || '');
-      setPortUsed(asset.portUsed || '');
-      setPortRsv(asset.portRsv || '');
-      setPortRsk(asset.portRsk || '');
-    } else {
-      setName('');
-      setAssetType('');
-      setSubType('');
-      setServiceArea('');
-      setSto('');
-      setCoordinates('');
-      setKapasitas('');
-      setSpec('');
-      setPortAvai('');
-      setPortUsed('');
-      setPortRsv('');
-      setPortRsk('');
-    }
-  }, [asset]);
-
-  const isOlt = assetType === 'OLT';
-  const isFtm = assetType === 'FTM';
-  const isOdp = assetType === 'ODP';
-  const isOdc = assetType === 'ODC';
-
-  const handleAssetTypeChange = (value: string) => {
-      setAssetType(value);
-      setSubType(''); // Reset sub-type when main type changes
-      setKapasitas('');
-      setSpec('');
-      setPortAvai('');
-      setPortUsed('');
-      setPortRsv('');
-      setPortRsk('');
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name || !assetType || !serviceArea || !sto) {
-        toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Mohon isi semua kolom yang wajib diisi (Name, Asset Type, Service Area, STO).' });
-        return;
-    }
-    
-    const assetData: Partial<NetworkAsset> = {
-        name,
-        assetType,
-        serviceArea,
-        sto,
-        coordinates,
-    };
-    
-    if (isOlt || isFtm) {
-        if (!subType) {
-            toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Mohon pilih Sub-Type untuk OLT atau FTM.' });
-            return;
-        }
-        assetData.subType = subType;
-    } else {
-        assetData.subType = 'N/A';
-    }
-
-    if (isOdp) {
-      if (kapasitas) assetData.kapasitas = kapasitas;
-      if (portAvai) assetData.portAvai = portAvai;
-      if (portUsed) assetData.portUsed = portUsed;
-      if (portRsv) assetData.portRsv = portRsv;
-      if (portRsk) assetData.portRsk = portRsk;
-    }
-    if (isOdc) {
-      if (spec) assetData.spec = spec;
-    }
-    
-    onFormSubmit(assetData);
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="grid gap-4 py-4">
-      <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="name" className="text-right">Name</Label>
-        <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="col-span-3" placeholder="e.g. OLT-KDS-01" required />
-      </div>
-      <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="assetType" className="text-right">Asset Type</Label>
-        <Select onValueChange={handleAssetTypeChange} value={assetType}>
-            <SelectTrigger className="col-span-3"><SelectValue placeholder="Select asset type" /></SelectTrigger>
-            <SelectContent>
-                {assetTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-            </SelectContent>
-        </Select>
-      </div>
-       {(isOlt || isFtm) && (
-        <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="subType" className="text-right">Sub-Type</Label>
-            <Select onValueChange={setSubType} value={subType}>
-                <SelectTrigger className="col-span-3"><SelectValue placeholder="Select sub-type" /></SelectTrigger>
-                <SelectContent>
-                    { isOlt && oltSubTypes.map(st => <SelectItem key={st} value={st}>{st}</SelectItem>) }
-                    { isFtm && ftmSubTypes.map(st => <SelectItem key={st} value={st}>{st}</SelectItem>) }
-                </SelectContent>
-            </Select>
-        </div>
-      )}
-      {isOdp && (
-        <>
-            <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="kapasitas" className="text-right">Kapasitas</Label>
-                <Input id="kapasitas" value={kapasitas} onChange={(e) => setKapasitas(e.target.value)} className="col-span-3" placeholder="e.g. 8, 16" />
-            </div>
-             <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="portAvai" className="text-right">Port Avail</Label>
-                <Input id="portAvai" value={portAvai} onChange={(e) => setPortAvai(e.target.value)} className="col-span-3" placeholder="e.g. 8" />
-            </div>
-             <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="portUsed" className="text-right">Port Used</Label>
-                <Input id="portUsed" value={portUsed} onChange={(e) => setPortUsed(e.target.value)} className="col-span-3" placeholder="e.g. 0" />
-            </div>
-             <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="portRsv" className="text-right">Port RSV</Label>
-                <Input id="portRsv" value={portRsv} onChange={(e) => setPortRsv(e.target.value)} className="col-span-3" placeholder="e.g. 0" />
-            </div>
-             <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="portRsk" className="text-right">Port RSK</Label>
-                <Input id="portRsk" value={portRsk} onChange={(e) => setPortRsk(e.target.value)} className="col-span-3" placeholder="e.g. 0" />
-            </div>
-        </>
-      )}
-      {isOdc && (
-        <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="spec" className="text-right">Spesifikasi</Label>
-            <Input id="spec" value={spec} onChange={(e) => setSpec(e.target.value)} className="col-span-3" placeholder="e.g. ODC-K-288" />
-        </div>
-      )}
-      <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="serviceArea" className="text-right">Service Area</Label>
-         <Select onValueChange={setServiceArea} value={serviceArea}>
-            <SelectTrigger className="col-span-3"><SelectValue placeholder="Select service area" /></SelectTrigger>
-            <SelectContent>
-                {serviceAreas.map(sa => <SelectItem key={sa} value={sa}>{sa}</SelectItem>)}
-            </SelectContent>
-        </Select>
-      </div>
-        <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="sto" className="text-right">STO</Label>
-        <Input id="sto" value={sto} onChange={(e) => setSto(e.target.value)} className="col-span-3" placeholder="e.g. KDS, BLO" required />
-      </div>
-      <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="coordinates" className="text-right">Coordinates</Label>
-        <Input id="coordinates" value={coordinates} onChange={(e) => setCoordinates(e.target.value)} className="col-span-3" placeholder="e.g. -6.80, 110.84" />
-      </div>
-      <DialogFooter>
-        <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
-        <Button type="submit">Save changes</Button>
-      </DialogFooter>
-    </form>
-  );
-}
 
 
 export default function AdminAssetsPage() {
@@ -254,9 +65,6 @@ export default function AdminAssetsPage() {
   const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
-
-  const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
-  const [assetToEdit, setAssetToEdit] = useState<NetworkAsset | null>(null);
   
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -284,69 +92,36 @@ export default function AdminAssetsPage() {
 
   const { data: assets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(assetsQuery);
 
-  const handleCreate = () => {
-    setAssetToEdit(null);
-    setIsFormDialogOpen(true);
-  };
-
-  const handleEdit = (asset: NetworkAsset) => {
-    setAssetToEdit(asset);
-    setIsFormDialogOpen(true);
-  };
-
   const handleDeleteAsset = (asset: NetworkAsset) => {
     if (!firestore) return;
     const assetDocRef = doc(firestore, 'network-assets', asset.id);
     deleteDocumentNonBlocking(assetDocRef);
     toast({
-      title: 'Asset Deleted',
-      description: `The asset "${asset.name}" has been deleted.`,
+      title: 'Aset Dihapus',
+      description: `Aset "${asset.name}" telah dihapus.`,
     });
   };
 
   const confirmDeleteAll = () => {
       if (!assets || !firestore) {
-        toast({ variant: 'destructive', title: 'No assets to delete.' });
+        toast({ variant: 'destructive', title: 'Tidak ada aset untuk dihapus.' });
         return;
       }
       toast({
-          title: 'Deletion Started',
-          description: `Starting to remove all ${assets.length} assets...`,
+          title: 'Penghapusan Dimulai',
+          description: `Mulai menghapus semua ${assets.length} aset...`,
       });
       assets.forEach(asset => {
           const assetDocRef = doc(firestore, 'network-assets', asset.id);
           deleteDocumentNonBlocking(assetDocRef);
       });
       toast({
-          title: 'All Assets Deleted',
-          description: 'All network assets have been scheduled for deletion.',
+          title: 'Semua Aset Dihapus',
+          description: 'Semua aset jaringan telah dijadwalkan untuk dihapus.',
       });
       setIsDeleteAllDialogOpen(false);
   };
 
-
-  const handleFormSubmit = (data: Partial<NetworkAsset>) => {
-    if (!firestore) return;
-    if (assetToEdit) {
-      // Update existing asset
-      const assetDocRef = doc(firestore, 'network-assets', assetToEdit.id);
-      updateDocumentNonBlocking(assetDocRef, data);
-      toast({
-        title: 'Asset Updated',
-        description: `Asset "${data.name}" has been updated.`,
-      });
-    } else {
-      // Create new asset
-      const assetsCollection = collection(firestore, 'network-assets');
-      addDocumentNonBlocking(assetsCollection, { ...data, dateAdded: serverTimestamp() });
-      toast({
-        title: 'Asset Created',
-        description: `New asset "${data.name}" has been created.`,
-      });
-    }
-    setIsFormDialogOpen(false);
-    setAssetToEdit(null);
-  }
 
   const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!importAssetType) {
@@ -604,17 +379,17 @@ export default function AdminAssetsPage() {
     <>
       <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Manajemen Aset Jaringan</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Manajemen Aset via Spreadsheet</h1>
           <p className="text-muted-foreground mt-1">
-            Tambah, edit, atau hapus data aset jaringan di sini.
+            Kelola semua aset dengan mengimpor dari file spreadsheet.
           </p>
         </div>
         <div className="flex gap-2">
             <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
                 <DialogTrigger asChild>
-                    <Button variant="outline">
+                    <Button>
                         <Upload className="mr-2 h-4 w-4"/>
-                        Import
+                        Import dari Excel
                     </Button>
                 </DialogTrigger>
                 <DialogContent>
@@ -649,23 +424,6 @@ export default function AdminAssetsPage() {
                     </div>
                 </DialogContent>
             </Dialog>
-            <Dialog open={isFormDialogOpen} onOpenChange={setIsFormDialogOpen}>
-                <DialogTrigger asChild>
-                    <Button onClick={handleCreate}>
-                        <PlusCircle className="mr-2 h-4 w-4"/>
-                        Tambah Aset
-                    </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[480px]">
-                    <DialogHeader>
-                        <DialogTitle>{assetToEdit ? 'Edit Aset' : 'Buat Aset Baru'}</DialogTitle>
-                        <DialogDescription>
-                            {assetToEdit ? 'Perbarui detail untuk aset ini.' : 'Tambahkan aset jaringan baru ke dalam sistem.'}
-                        </DialogDescription>
-                    </DialogHeader>
-                    <AssetForm asset={assetToEdit} onFormSubmit={handleFormSubmit} />
-                </DialogContent>
-            </Dialog>
             <AlertDialog open={isDeleteAllDialogOpen} onOpenChange={setIsDeleteAllDialogOpen}>
                 <AlertDialogTrigger asChild>
                      <Button variant="destructive">
@@ -675,15 +433,15 @@ export default function AdminAssetsPage() {
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This will permanently delete all network assets in the database. This action cannot be undone.
+                            Tindakan ini akan menghapus semua aset jaringan secara permanen dari database. Tindakan ini tidak dapat dibatalkan.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogCancel>Batal</AlertDialogCancel>
                         <AlertDialogAction onClick={confirmDeleteAll} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-                            Yes, delete all
+                            Ya, hapus semua
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
@@ -694,7 +452,7 @@ export default function AdminAssetsPage() {
         <CardHeader>
           <CardTitle>Semua Aset Jaringan</CardTitle>
           <CardDescription>
-            Daftar semua aset yang tersimpan di sistem.
+            Daftar semua aset yang tersimpan di sistem. Gunakan tombol import untuk menambah atau memperbarui data.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -733,9 +491,6 @@ export default function AdminAssetsPage() {
                     <TableCell>{a.portRsv || '-'}</TableCell>
                     <TableCell>{a.portRsk || '-'}</TableCell>
                     <TableCell className="text-right">
-                       <Button variant="ghost" size="icon" onClick={() => handleEdit(a)}>
-                           <Edit className="h-4 w-4" />
-                       </Button>
                        <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
@@ -744,15 +499,15 @@ export default function AdminAssetsPage() {
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                              <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
                               <AlertDialogDescription>
-                                This will permanently delete the asset "{a.name}".
+                                Ini akan menghapus aset "{a.name}" secara permanen.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogCancel>Batal</AlertDialogCancel>
                               <AlertDialogAction onClick={() => handleDeleteAsset(a)} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-                                Delete
+                                Hapus
                               </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
@@ -763,7 +518,7 @@ export default function AdminAssetsPage() {
               ) : (
                 <TableRow>
                   <TableCell colSpan={13} className="h-24 text-center">
-                    Tidak ada aset jaringan ditemukan.
+                    Tidak ada aset jaringan ditemukan. Silakan import dari file Excel.
                   </TableCell>
                 </TableRow>
               )}
