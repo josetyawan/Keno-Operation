@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -47,7 +48,7 @@ import { Label } from '@/components/ui/label';
 import { Trash2, Upload } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from '@/firebase';
-import { collection, query, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import type { UserProfile, NetworkAsset } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -320,9 +321,11 @@ export default function AdminAssetsPage() {
                 }
             };
 
-            const processChunk = () => {
+            const processChunk = async () => {
                 try {
                     const end = Math.min(currentIndex + chunkSize, totalRows);
+                    const batch = writeBatch(firestore);
+
                     for (let i = currentIndex; i < end; i++) {
                         const row = jsonData[i];
                         const assetName = row[assetNameCol]?.toString().trim();
@@ -353,7 +356,7 @@ export default function AdminAssetsPage() {
                         const assetData: Partial<NetworkAsset> = {
                             name: assetName,
                             assetType: importAssetType as NetworkAsset['assetType'],
-                            serviceArea: (serviceAreaValue?.toUpperCase() || mapStoToServiceArea(stoValue)) as NetworkAsset['serviceArea'],
+                            serviceArea: (serviceAreaValue?.toUpperCase() || mapStoToServiceArea(stoValue || '')) as NetworkAsset['serviceArea'],
                             sto: stoValue || 'N/A',
                         };
                         
@@ -399,21 +402,24 @@ export default function AdminAssetsPage() {
 
                         if (existingAssetId) {
                             const assetDocRef = doc(firestore, 'network-assets', existingAssetId);
-                            updateDocumentNonBlocking(assetDocRef, assetData);
+                            batch.update(assetDocRef, assetData);
                             totalUpdated++;
                         } else {
+                            const newAssetDocRef = doc(assetsCollection);
                             const newAsset = { ...assetData, dateAdded: serverTimestamp() };
-                            addDocumentNonBlocking(assetsCollection, newAsset);
+                            batch.set(newAssetDocRef, newAsset);
                             totalImported++;
                         }
                     }
+                    
+                    await batch.commit();
                     
                     currentIndex = end;
                     const currentProgress = (currentIndex / totalRows) * 100;
                     setProgress(currentProgress);
 
                     if (currentIndex < totalRows) {
-                        setTimeout(processChunk, 50); // Process next chunk
+                        setTimeout(processChunk, 20); // Process next chunk
                     } else {
                         toast({
                             title: 'Import Selesai',
@@ -638,3 +644,4 @@ export default function AdminAssetsPage() {
 }
 
     
+ 
