@@ -279,13 +279,58 @@ export default function AdminAssetsPage() {
             
             const mapStoToServiceArea = (sto: string): NetworkAsset['serviceArea'] => {
                 const upperSto = sto.toUpperCase().trim();
-                if (upperSto.includes('KUDUS') || upperSto === 'KDS' || upperSto === 'KUD') return 'SA KUDUS';
-                if (upperSto.includes('PATI') || upperSto === 'PT' || upperSto === 'PAT') return 'SA PATI';
-                if (upperSto.includes('JEPARA') || upperSto === 'JPR' || upperSto === 'JEP') return 'SA JEPARA';
-                if (upperSto.includes('PURWODADI') || upperSto === 'PWD' || upperSto === 'PWO') return 'SA PURWODADI';
-                if (upperSto.includes('BLORA') || upperSto === 'BLA' || upperSto === 'BLO') return 'SA BLORA';
-                if (upperSto.includes('REMBANG') || upperSto === 'RBG' || upperSto === 'REM') return 'SA REMBANG';
-                return 'SA KUDUS'; // Fallback
+                switch (upperSto) {
+                    case 'BAN':
+                    case 'KEL':
+                    case 'JPR':
+                    case 'PEC':
+                    case 'BANGSRI':
+                    case 'KELING':
+                    case 'JEPARA':
+                        return 'SA JEPARA';
+                    case 'BLO':
+                    case 'CEPU':
+                    case 'NGA':
+                    case 'RDB':
+                    case 'BLORA':
+                    case 'NGAWEN':
+                    case 'RANDUBLATUNG':
+                        return 'SA BLORA';
+                    case 'KUD':
+                    case 'DMA':
+                    case 'KUDUS':
+                    case 'DEMAK':
+                        return 'SA KUDUS';
+                    case 'PAT':
+                    case 'TAY':
+                    case 'JWN':
+                    case 'PATI':
+                        return 'SA PATI';
+                    case 'LSE':
+                    case 'RBN':
+                    case 'LASEM':
+                    case 'REMBANG':
+                        return 'SA REMBANG';
+                    case 'WRO':
+                    case 'TRO':
+                    case 'GBU':
+                    case 'GDO':
+                    case 'WIROSARI':
+                    case 'TOROH':
+                    case 'GUBUNG':
+                    case 'GODONG':
+                    case 'PURWODADI':
+                        return 'SA PURWODADI';
+                    default:
+                        // Fallback logic for cases not in the map
+                        if (upperSto.includes('KUDUS')) return 'SA KUDUS';
+                        if (upperSto.includes('PATI')) return 'SA PATI';
+                        if (upperSto.includes('JEPARA')) return 'SA JEPARA';
+                        if (upperSto.includes('PURWODADI')) return 'SA PURWODADI';
+                        if (upperSto.includes('BLORA')) return 'SA BLORA';
+                        if (upperSto.includes('REMBANG')) return 'SA REMBANG';
+                        return 'SA KUDUS'; // Default fallback
+                }
             };
 
             const processChunk = () => {
