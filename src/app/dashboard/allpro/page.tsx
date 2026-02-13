@@ -71,36 +71,56 @@ export default function AllproPage() {
 
     if (!assets) return emptyRekap;
 
-    const dataBySA = serviceAreas.reduce((acc, sa) => {
-      acc[sa] = { miniOlt: 0, olt: 0, odc: 0, odp: 0, ea: 0, oa: 0 };
+    // Dynamically build the data object based on assets from Firestore
+    const dataBySA = assets.reduce((acc, asset) => {
+      const sa = asset.serviceArea;
+      if (!sa) return acc; // Skip assets with no service area
+
+      // Initialize the service area if it doesn't exist yet
+      if (!acc[sa]) {
+        acc[sa] = { miniOlt: 0, olt: 0, odc: 0, odp: 0, ea: 0, oa: 0 };
+      }
+
+      // Count the asset based on its type and subtype
+      switch (asset.assetType) {
+        case 'OLT':
+          if (asset.subType === 'Mini OLT') acc[sa].miniOlt++;
+          else if (asset.subType === 'OLT') acc[sa].olt++;
+          break;
+        case 'ODC':
+          acc[sa].odc++;
+          break;
+        case 'ODP':
+          acc[sa].odp++;
+          break;
+        case 'FTM':
+          if (asset.subType === 'EA') acc[sa].ea++;
+          else if (asset.subType === 'OA') acc[sa].oa++;
+          break;
+      }
       return acc;
     }, {} as Record<string, { miniOlt: number, olt: number, odc: number, odp: number, ea: number, oa: number }>);
-
-    for (const asset of assets) {
-      if (dataBySA[asset.serviceArea]) {
-        switch (asset.assetType) {
-          case 'OLT':
-            if (asset.subType === 'Mini OLT') dataBySA[asset.serviceArea].miniOlt++;
-            if (asset.subType === 'OLT') dataBySA[asset.serviceArea].olt++;
-            break;
-          case 'ODC':
-            dataBySA[asset.serviceArea].odc++;
-            break;
-          case 'ODP':
-            dataBySA[asset.serviceArea].odp++;
-            break;
-          case 'FTM':
-            if (asset.subType === 'EA') dataBySA[asset.serviceArea].ea++;
-            if (asset.subType === 'OA') dataBySA[asset.serviceArea].oa++;
-            break;
-        }
-      }
-    }
     
-    const oltRows = serviceAreas.map(sa => ({ serviceArea: sa, miniOlt: dataBySA[sa].miniOlt, olt: dataBySA[sa].olt, grandTotal: dataBySA[sa].miniOlt + dataBySA[sa].olt }));
-    const ftmRows = serviceAreas.map(sa => ({ serviceArea: sa, ea: dataBySA[sa].ea, oa: dataBySA[sa].oa, grandTotal: dataBySA[sa].ea + dataBySA[sa].oa }));
-    const odcRows = serviceAreas.map(sa => ({ serviceArea: sa, jumlah: dataBySA[sa].odc }));
-    const odpRows = serviceAreas.map(sa => ({ serviceArea: sa, jumlah: dataBySA[sa].odp }));
+    // Now, build the table rows using the predefined serviceAreas to ensure order
+    // and that all SAs are shown, even if they have 0 assets.
+    const oltRows = serviceAreas.map(sa => ({
+      serviceArea: sa,
+      miniOlt: dataBySA[sa]?.miniOlt || 0,
+      olt: dataBySA[sa]?.olt || 0,
+      grandTotal: (dataBySA[sa]?.miniOlt || 0) + (dataBySA[sa]?.olt || 0)
+    }));
+
+    const ftmRows = serviceAreas.map(sa => ({
+      serviceArea: sa,
+      ea: dataBySA[sa]?.ea || 0,
+      oa: dataBySA[sa]?.oa || 0,
+      grandTotal: (dataBySA[sa]?.ea || 0) + (dataBySA[sa]?.oa || 0)
+    }));
+    
+    const odcRows = serviceAreas.map(sa => ({ serviceArea: sa, jumlah: dataBySA[sa]?.odc || 0 }));
+    
+    const odpRows = serviceAreas.map(sa => ({ serviceArea: sa, jumlah: dataBySA[sa]?.odp || 0 }));
+
 
     return {
       olt: {
