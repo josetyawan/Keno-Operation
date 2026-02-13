@@ -45,10 +45,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Trash2, Upload, Search } from 'lucide-react';
+import { Trash2, Upload, Search, Loader2 } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
-import { useUser, useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking, useDoc, updateDocumentNonBlocking } from '@/firebase';
-import { collection, query, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking, useDoc } from '@/firebase';
+import { collection, query, doc, serverTimestamp, writeBatch, where, getDocs, limit } from 'firebase/firestore';
 import type { UserProfile, NetworkAsset } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -67,16 +67,14 @@ export default function AdminAssetsPage() {
   const router = useRouter();
   const { toast } = useToast();
   
-  // State for import dialog
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [importAssetType, setImportAssetType] = useState('');
   const [progress, setProgress] = useState(0);
 
-  // State for delete dialog
   const [isDeleteAllDialogOpen, setIsDeleteAllDialogOpen] = useState(false);
+  const [isDeletingAll, setIsDeletingAll] = useState(false);
 
-  // State for filters
   const [searchName, setSearchName] = useState('');
   const [searchAssetType, setSearchAssetType] = useState('all');
   const [searchServiceArea, setSearchServiceArea] = useState('all');
@@ -92,29 +90,33 @@ export default function AdminAssetsPage() {
     }
   }, [user, currentUserProfile, isUserLoading, isProfileLoading, router]);
 
-  // Fetch ALL assets in the background for import/delete logic, but do not render them directly.
-  const assetsQuery = useMemoFirebase(() => {
-      if (isUserLoading || isProfileLoading || !user || currentUserProfile?.role !== 'admin') {
-          return null;
-      }
-      return query(collection(firestore, 'network-assets'));
-  }, [firestore, currentUserProfile, user, isUserLoading, isProfileLoading]);
-
-  const { data: allAssets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(assetsQuery);
-
-  // Memoized and paginated list of assets to be rendered in the table
-  const filteredAssets = useMemo(() => {
-    if (!allAssets) return [];
+  // Fetch a limited & filtered set of assets for display. This is much more performant.
+  const filteredAssetsQuery = useMemoFirebase(() => {
+    if (isUserLoading || isProfileLoading || !user || currentUserProfile?.role !== 'admin') {
+      return null;
+    }
+    const constraints: any[] = [];
+    if (searchAssetType !== 'all' && searchAssetType !== 'Mini OLT') { // Mini OLT is not a real assetType
+      constraints.push(where('assetType', '==', searchAssetType));
+    }
+    if (searchServiceArea !== 'all') {
+      constraints.push(where('serviceArea', '==', searchServiceArea));
+    }
+    constraints.push(limit(500)); // Fetch a reasonable number to filter by name on the client.
     
-    const lowercasedSearchName = searchName.toLowerCase();
+    return query(collection(firestore, 'network-assets'), ...constraints);
+  }, [firestore, currentUserProfile, user, isUserLoading, isProfileLoading, searchAssetType, searchServiceArea]);
 
-    return allAssets.filter(asset => {
-        const nameMatch = searchName ? asset.name.toLowerCase().includes(lowercasedSearchName) : true;
-        const typeMatch = searchAssetType !== 'all' ? asset.assetType === searchAssetType : true;
-        const areaMatch = searchServiceArea !== 'all' ? asset.serviceArea === searchServiceArea : true;
-        return nameMatch && typeMatch && areaMatch;
-    }).slice(0, 200); // IMPORTANT: Limit rendered results to prevent browser freeze
-  }, [allAssets, searchName, searchAssetType, searchServiceArea]);
+  const { data: queriedAssets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(filteredAssetsQuery);
+
+  const filteredAssets = useMemo(() => {
+    if (!queriedAssets) return [];
+    const lowercasedSearchName = searchName.toLowerCase();
+    
+    return queriedAssets.filter(asset => {
+      return searchName ? asset.name.toLowerCase().includes(lowercasedSearchName) : true;
+    }).slice(0, 200); // Final slice to prevent rendering too many rows.
+  }, [queriedAssets, searchName]);
 
 
   const handleDeleteAsset = (assetId: string, assetName: string) => {
@@ -127,42 +129,64 @@ export default function AdminAssetsPage() {
     });
   };
 
-  const confirmDeleteAll = () => {
-      if (!allAssets || !firestore) {
-        toast({ variant: 'destructive', title: 'Tidak ada aset untuk dihapus.' });
-        return;
-      }
-      toast({
-          title: 'Penghapusan Dimulai',
-          description: `Mulai menghapus semua ${allAssets.length} aset... Ini mungkin butuh waktu.`,
-      });
-      
-      const batchSize = 400;
-      let i = 0;
-      const processBatch = () => {
-          const batch = writeBatch(firestore);
-          const end = Math.min(i + batchSize, allAssets.length);
-          for (; i < end; i++) {
-              const asset = allAssets[i];
-              batch.delete(doc(firestore, "network-assets", asset.id));
-          }
-          batch.commit().then(() => {
-              if (i < allAssets.length) {
-                  setTimeout(processBatch, 500); // Delay between batches
-              } else {
-                  toast({
-                      title: 'Semua Aset Dihapus',
-                      description: 'Semua aset jaringan telah dihapus dari database.',
-                  });
-              }
-          }).catch(error => {
-              console.error("Batch delete failed: ", error);
-              toast({ variant: "destructive", title: "Gagal Menghapus Sebagian Aset", description: "Terjadi kesalahan saat proses penghapusan massal."});
-          });
-      };
-      
-      processBatch();
-      setIsDeleteAllDialogOpen(false);
+  const confirmDeleteAll = async () => {
+    if (!firestore) return;
+    
+    setIsDeletingAll(true);
+    toast({
+        title: 'Memulai Proses Penghapusan',
+        description: `Mengambil daftar semua aset untuk dihapus...`,
+    });
+
+    try {
+        const assetsCollection = collection(firestore, 'network-assets');
+        const allAssetsSnapshot = await getDocs(assetsCollection);
+        const allAssetDocs = allAssetsSnapshot.docs;
+
+        if (allAssetDocs.length === 0) {
+            toast({ variant: 'destructive', title: 'Tidak ada aset untuk dihapus.' });
+            setIsDeletingAll(false);
+            setIsDeleteAllDialogOpen(false);
+            return;
+        }
+
+        toast({
+            title: 'Penghapusan Dimulai',
+            description: `Mulai menghapus ${allAssetDocs.length} aset... Ini mungkin butuh waktu.`,
+        });
+
+        const batchSize = 400;
+        let i = 0;
+        const processBatch = () => {
+            const batch = writeBatch(firestore);
+            const end = Math.min(i + batchSize, allAssetDocs.length);
+            for (; i < end; i++) {
+                batch.delete(allAssetDocs[i].ref);
+            }
+            batch.commit().then(() => {
+                if (i < allAssetDocs.length) {
+                    setTimeout(processBatch, 500);
+                } else {
+                    toast({
+                        title: 'Semua Aset Dihapus',
+                        description: 'Semua aset jaringan telah berhasil dihapus dari database.',
+                    });
+                    setIsDeletingAll(false);
+                    setIsDeleteAllDialogOpen(false);
+                }
+            }).catch(error => {
+                console.error("Batch delete failed: ", error);
+                toast({ variant: "destructive", title: "Gagal Menghapus Sebagian Aset", description: "Terjadi kesalahan saat proses penghapusan massal."});
+                setIsDeletingAll(false);
+            });
+        };
+        processBatch();
+
+    } catch (error) {
+        console.error("Failed to fetch assets for deletion: ", error);
+        toast({ variant: "destructive", title: "Gagal Mengambil Daftar Aset", description: "Tidak dapat memulai proses penghapusan."});
+        setIsDeletingAll(false);
+    }
   };
 
 
@@ -175,8 +199,8 @@ export default function AdminAssetsPage() {
         toast({ variant: "destructive", title: "Tidak ada file dipilih." });
         return;
     }
-    if (!firestore || !allAssets) {
-        toast({ variant: "destructive", title: "Database Error", description: "Koneksi database atau data aset belum siap." });
+    if (!firestore) {
+        toast({ variant: "destructive", title: "Database Error", description: "Koneksi database belum siap." });
         return;
     }
 
@@ -185,7 +209,7 @@ export default function AdminAssetsPage() {
     const file = event.target.files[0];
     const reader = new FileReader();
 
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
         try {
             const data = e.target?.result;
             const workbook = XLSX.read(data, { type: 'binary' });
@@ -245,9 +269,6 @@ export default function AdminAssetsPage() {
                 throw new Error(`Kolom nama aset (misalnya 'ODP NAME', 'Nama', 'Device Name') tidak ditemukan di sheet '${sheetName}'. Mohon periksa nama kolom di file Excel Anda.`);
             }
             
-            // ============================================
-            // SPECIAL LOGIC FOR MINI OLT ENRICHMENT
-            // ============================================
             if (importAssetType === 'Mini OLT') {
                 const gponCol = findColumn(firstRowKeys, ['gpon', 'nama', 'name', 'device name', 'asset name']);
 
@@ -255,7 +276,11 @@ export default function AdminAssetsPage() {
                     throw new Error(`Kolom wajib (GPON, LAT, LONG) tidak ditemukan di sheet '${sheetName}'. Mohon periksa file Excel.`);
                 }
                 
-                const existingOltAssetsMap = new Map(allAssets?.filter(a => a.assetType === 'OLT').map(asset => [asset.name.trim(), asset.id]));
+                toast({ title: "Memuat data OLT...", description: "Mempersiapkan data OLT yang ada untuk diperbarui." });
+                const oltQuery = query(collection(firestore, "network-assets"), where("assetType", "==", "OLT"));
+                const oltSnapshot = await getDocs(oltQuery);
+                const existingOltAssetsMap = new Map(oltSnapshot.docs.map(doc => [doc.data().name.trim(), doc.id]));
+                
                 let totalUpdated = 0;
                 let notFoundCount = 0;
 
@@ -295,7 +320,7 @@ export default function AdminAssetsPage() {
                         setProgress(currentProgress);
 
                         if (currentIndex < totalRows) {
-                            setTimeout(processMiniOltChunk, 1000); // Longer delay
+                            setTimeout(processMiniOltChunk, 1200);
                         } else {
                             toast({
                                 title: 'Impor Selesai',
@@ -324,15 +349,9 @@ export default function AdminAssetsPage() {
                 processMiniOltChunk();
                 return;
             }
-
-            // ============================================
-            // GENERIC ASSET IMPORT LOGIC
-            // ============================================
             
             const assetsCollection = collection(firestore, 'network-assets');
-            const existingAssetsMap = new Map(allAssets?.map(asset => [asset.name.trim().toLowerCase(), asset.id]));
             let totalImported = 0;
-            let totalUpdated = 0;
             
             const mapStoToServiceArea = (sto: string): NetworkAsset['serviceArea'] => {
                 const upperSto = sto.toUpperCase().trim();
@@ -364,7 +383,7 @@ export default function AdminAssetsPage() {
                         if (upperSto.includes('PURWODADI')) return 'SA PURWODADI';
                         if (upperSto.includes('BLORA')) return 'SA BLORA';
                         if (upperSto.includes('REMBANG')) return 'SA REMBANG';
-                        return 'SA KUDUS'; // Default fallback
+                        return 'SA KUDUS';
                 }
             };
 
@@ -445,18 +464,10 @@ export default function AdminAssetsPage() {
                             assetData.subType = 'N/A';
                         }
                         
-                        const existingAssetId = existingAssetsMap.get(assetData.name!.toLowerCase());
-
-                        if (existingAssetId) {
-                            const assetDocRef = doc(firestore, 'network-assets', existingAssetId);
-                            batch.update(assetDocRef, assetData);
-                            totalUpdated++;
-                        } else {
-                            const newAssetDocRef = doc(assetsCollection);
-                            const newAsset = { ...assetData, id: newAssetDocRef.id, dateAdded: serverTimestamp() };
-                            batch.set(newAssetDocRef, newAsset);
-                            totalImported++;
-                        }
+                        const newAssetDocRef = doc(assetsCollection);
+                        const newAsset = { ...assetData, id: newAssetDocRef.id, dateAdded: serverTimestamp() };
+                        batch.set(newAssetDocRef, newAsset);
+                        totalImported++;
                     }
                     
                     await batch.commit();
@@ -466,11 +477,11 @@ export default function AdminAssetsPage() {
                     setProgress(currentProgress);
 
                     if (currentIndex < totalRows) {
-                        setTimeout(processChunk, 1000); // Process next chunk with a longer delay
+                        setTimeout(processChunk, 1200); 
                     } else {
                         toast({
                             title: 'Import Selesai',
-                            description: `Membuat ${totalImported} aset baru dan memperbarui ${totalUpdated} aset yang sudah ada. Data akan segera muncul.`,
+                            description: `Berhasil membuat ${totalImported} aset baru. Halaman akan dimuat ulang untuk menampilkan data baru.`,
                             duration: 7000
                         });
                         setIsImporting(false);
@@ -493,7 +504,7 @@ export default function AdminAssetsPage() {
                 }
             }
 
-            processChunk(); // Start the first chunk
+            processChunk();
            
         } catch (error: any) {
             console.error("Failed to import Excel file:", error);
@@ -512,8 +523,7 @@ export default function AdminAssetsPage() {
 
   const isLoading = isUserLoading || isProfileLoading || areAssetsLoading;
 
-  // This skeleton shows only on the very first load while allAssets is being fetched.
-  if (isLoading && !allAssets) {
+  if (isLoading && !queriedAssets) {
       return (
           <div>
               <div className="flex items-center justify-between mb-8">
@@ -542,7 +552,7 @@ export default function AdminAssetsPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Manajemen Aset Jaringan</h1>
           <p className="text-muted-foreground mt-1">
-            Impor, cari, dan kelola semua aset dari file spreadsheet.
+            Impor massal dari Excel, cari, dan kelola aset jaringan.
           </p>
         </div>
         <div className="flex gap-2">
@@ -557,7 +567,7 @@ export default function AdminAssetsPage() {
                     <DialogHeader>
                         <DialogTitle>Import Aset dari Excel</DialogTitle>
                         <DialogDescription>
-                           Pilih jenis aset, lalu unggah file Excel (.xlsx, .xls). Sistem akan memproses data secara bertahap.
+                           <span className="font-bold text-destructive">PENTING:</span> Alur kerja impor adalah HAPUS-LALU-IMPOR. Hapus semua aset yang ada terlebih dahulu, lalu impor daftar lengkap yang baru. Sistem ini TIDAK akan memperbarui data yang ada, hanya membuat yang baru.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="py-4 grid gap-4">
@@ -596,13 +606,14 @@ export default function AdminAssetsPage() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Tindakan ini akan menghapus **SEMUA** ({allAssets?.length || 0}) aset jaringan secara permanen dari database. Tindakan ini tidak dapat dibatalkan.
+                            Tindakan ini akan menghapus **SEMUA** aset jaringan secara permanen dari database. Tindakan ini tidak dapat dibatalkan. Pastikan Anda memiliki cadangan data di file Excel.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Batal</AlertDialogCancel>
-                        <AlertDialogAction onClick={confirmDeleteAll} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-                            Ya, hapus semua
+                        <AlertDialogAction onClick={confirmDeleteAll} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isDeletingAll}>
+                            {isDeletingAll ? <Loader2 className="mr-2 animate-spin" /> : null}
+                            {isDeletingAll ? 'Menghapus...' : 'Ya, hapus semua'}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
@@ -617,7 +628,7 @@ export default function AdminAssetsPage() {
             Cari & Filter Aset
           </CardTitle>
           <CardDescription>
-            Gunakan filter untuk menemukan aset. Hasil akan ditampilkan di bawah (dibatasi 200 baris untuk kecepatan).
+            Untuk performa terbaik, halaman ini hanya menampilkan sebagian data. Gunakan filter untuk menemukan aset spesifik.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -652,7 +663,7 @@ export default function AdminAssetsPage() {
         <CardHeader>
           <CardTitle>Daftar Aset</CardTitle>
           <CardDescription>
-            Menampilkan {filteredAssets.length} dari {allAssets?.length || 0} total aset.
+            Menampilkan {filteredAssets.length} aset yang cocok.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -726,7 +737,7 @@ export default function AdminAssetsPage() {
                   <TableCell colSpan={13} className="h-24 text-center">
                     {(searchName || searchAssetType !== 'all' || searchServiceArea !== 'all') 
                         ? "Tidak ada aset yang cocok dengan filter Anda." 
-                        : "Gunakan filter di atas untuk mencari aset."
+                        : "Gunakan filter di atas untuk mencari atau impor data baru."
                     }
                   </TableCell>
                 </TableRow>
@@ -738,8 +749,3 @@ export default function AdminAssetsPage() {
     </>
   );
 }
-
-
-    
-
-    
