@@ -5,6 +5,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -45,7 +46,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Trash2, Upload, Search, Loader2 } from 'lucide-react';
+import { Trash2, Upload, Search, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
 import { useUser, useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking, useDoc } from '@/firebase';
 import { collection, query, doc, serverTimestamp, writeBatch, where, getDocs, limit } from 'firebase/firestore';
@@ -78,6 +79,9 @@ export default function AdminAssetsPage() {
   const [searchName, setSearchName] = useState('');
   const [searchAssetType, setSearchAssetType] = useState('all');
   const [searchServiceArea, setSearchServiceArea] = useState('all');
+  
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
 
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
@@ -109,14 +113,27 @@ export default function AdminAssetsPage() {
 
   const { data: queriedAssets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(filteredAssetsQuery);
 
-  const filteredAssets = useMemo(() => {
+  const filteredAssetsByName = useMemo(() => {
     if (!queriedAssets) return [];
     const lowercasedSearchName = searchName.toLowerCase().trim();
     
     return queriedAssets.filter(asset => {
       return searchName ? asset.name.toLowerCase().includes(lowercasedSearchName) : true;
-    }).slice(0, 200); // Final slice to prevent rendering too many rows.
+    });
   }, [queriedAssets, searchName]);
+
+  const totalPages = Math.ceil(filteredAssetsByName.length / ITEMS_PER_PAGE);
+
+  const paginatedAssets = useMemo(() => {
+      const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+      const endIndex = startIndex + ITEMS_PER_PAGE;
+      return filteredAssetsByName.slice(startIndex, endIndex);
+  }, [filteredAssetsByName, currentPage]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+      setCurrentPage(1);
+  }, [searchName, searchAssetType, searchServiceArea]);
 
 
   const handleDeleteAsset = (assetId: string, assetName: string) => {
@@ -344,33 +361,42 @@ export default function AdminAssetsPage() {
             
             const mapStoToServiceArea = (sto: string): NetworkAsset['serviceArea'] => {
                 const upperSto = sto.toUpperCase().trim();
+                // Based on user provided image and previous logic
                 if (['BAN','BANGSRI'].includes(upperSto)) return 'SA JEPARA';
                 if (['KEL','KELING'].includes(upperSto)) return 'SA JEPARA';
                 if (['JPR','JEPARA'].includes(upperSto)) return 'SA JEPARA';
                 if (['PEC','PECANGAAN'].includes(upperSto)) return 'SA JEPARA';
+                
                 if (['BLO','BLORA'].includes(upperSto)) return 'SA BLORA';
                 if (['CEPU'].includes(upperSto)) return 'SA BLORA';
                 if (['NGA','NGAWEN'].includes(upperSto)) return 'SA BLORA';
                 if (['RDB','RANDUBLATUNG'].includes(upperSto)) return 'SA BLORA';
+
                 if (['KUD','KUDUS'].includes(upperSto)) return 'SA KUDUS';
                 if (['DMA','DEMAK'].includes(upperSto)) return 'SA KUDUS';
+
                 if (['PAT','PATI'].includes(upperSto)) return 'SA PATI';
                 if (['TAY'].includes(upperSto)) return 'SA PATI';
                 if (['JWN'].includes(upperSto)) return 'SA PATI';
+
                 if (['LSE','LASEM'].includes(upperSto)) return 'SA REMBANG';
                 if (['RBN','REMBANG'].includes(upperSto)) return 'SA REMBANG';
+
                 if (['WRO','WIROSARI'].includes(upperSto)) return 'SA PURWODADI';
                 if (['TRO','TOROH'].includes(upperSto)) return 'SA PURWODADI';
                 if (['GBU','GUBUNG'].includes(upperSto)) return 'SA PURWODADI';
                 if (['GDO','GODONG'].includes(upperSto)) return 'SA PURWODADI';
                 if (['PURWODADI'].includes(upperSto)) return 'SA PURWODADI';
+
+                // Fallback for partial matches
                 if (upperSto.includes('KUDUS')) return 'SA KUDUS';
                 if (upperSto.includes('PATI')) return 'SA PATI';
                 if (upperSto.includes('JEPARA')) return 'SA JEPARA';
                 if (upperSto.includes('PURWODADI')) return 'SA PURWODADI';
                 if (upperSto.includes('BLORA')) return 'SA BLORA';
                 if (upperSto.includes('REMBANG')) return 'SA REMBANG';
-                return 'SA KUDUS'; // Default
+                
+                return 'SA KUDUS'; // Default fallback
             };
 
             const processChunk = async () => {
@@ -666,7 +692,7 @@ export default function AdminAssetsPage() {
         <CardHeader>
           <CardTitle>Daftar Aset</CardTitle>
           <CardDescription>
-            Menampilkan {filteredAssets.length} aset yang cocok.
+            Menampilkan {paginatedAssets.length} dari {filteredAssetsByName.length} aset yang cocok.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -689,14 +715,14 @@ export default function AdminAssetsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {areAssetsLoading && filteredAssets.length === 0 ? (
+              {areAssetsLoading && paginatedAssets.length === 0 ? (
                  Array.from({ length: 5 }).map((_, index) => (
                     <TableRow key={index}>
                         <TableCell colSpan={13}><Skeleton className="h-6 w-full" /></TableCell>
                     </TableRow>
                 ))
-              ) : filteredAssets.length > 0 ? (
-                filteredAssets.map(a => (
+              ) : paginatedAssets.length > 0 ? (
+                paginatedAssets.map(a => (
                   <TableRow key={a.id}>
                     <TableCell className="font-medium">{a.name}</TableCell>
                     <TableCell>{a.assetType}</TableCell>
@@ -748,11 +774,32 @@ export default function AdminAssetsPage() {
             </TableBody>
           </Table>
         </CardContent>
+         <CardFooter>
+            <div className="text-xs text-muted-foreground">
+                Halaman <strong>{currentPage}</strong> dari <strong>{totalPages}</strong>
+            </div>
+            <div className="flex items-center gap-2 ml-auto">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1 || totalPages === 0}
+                >
+                    <ChevronLeft className="h-4 w-4" />
+                    Sebelumnya
+                </Button>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages || totalPages === 0}
+                >
+                    Berikutnya
+                    <ChevronRight className="h-4 w-4" />
+                </Button>
+            </div>
+        </CardFooter>
       </Card>
     </>
   );
 }
-
-    
-
-    
