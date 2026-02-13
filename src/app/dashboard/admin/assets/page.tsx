@@ -135,56 +135,42 @@ export default function AdminAssetsPage() {
     setIsDeletingAll(true);
     toast({
         title: 'Memulai Proses Penghapusan',
-        description: `Mengambil daftar semua aset untuk dihapus...`,
+        description: `Mulai menghapus semua aset jaringan... Ini mungkin butuh waktu.`,
     });
 
     try {
         const assetsCollection = collection(firestore, 'network-assets');
-        const allAssetsSnapshot = await getDocs(assetsCollection);
-        const allAssetDocs = allAssetsSnapshot.docs;
+        const batchSize = 400; // Firestore limit is 500
+        
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+            const q = query(assetsCollection, limit(batchSize));
+            const querySnapshot = await getDocs(q);
 
-        if (allAssetDocs.length === 0) {
-            toast({ variant: 'destructive', title: 'Tidak ada aset untuk dihapus.' });
-            setIsDeletingAll(false);
-            setIsDeleteAllDialogOpen(false);
-            return;
+            if (querySnapshot.size === 0) {
+                break; // No more documents to delete
+            }
+
+            const batch = writeBatch(firestore);
+            querySnapshot.docs.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+            await batch.commit();
+
+            // Optional: brief pause to prevent overwhelming the browser's event loop
+            await new Promise(resolve => setTimeout(resolve, 250));
         }
 
         toast({
-            title: 'Penghapusan Dimulai',
-            description: `Mulai menghapus ${allAssetDocs.length} aset... Ini mungkin butuh waktu.`,
+            title: 'Semua Aset Dihapus',
+            description: 'Semua aset jaringan telah berhasil dihapus dari database.',
         });
-
-        const batchSize = 400;
-        let i = 0;
-        const processBatch = () => {
-            const batch = writeBatch(firestore);
-            const end = Math.min(i + batchSize, allAssetDocs.length);
-            for (; i < end; i++) {
-                batch.delete(allAssetDocs[i].ref);
-            }
-            batch.commit().then(() => {
-                if (i < allAssetDocs.length) {
-                    setTimeout(processBatch, 500);
-                } else {
-                    toast({
-                        title: 'Semua Aset Dihapus',
-                        description: 'Semua aset jaringan telah berhasil dihapus dari database.',
-                    });
-                    setIsDeletingAll(false);
-                    setIsDeleteAllDialogOpen(false);
-                }
-            }).catch(error => {
-                console.error("Batch delete failed: ", error);
-                toast({ variant: "destructive", title: "Gagal Menghapus Sebagian Aset", description: "Terjadi kesalahan saat proses penghapusan massal."});
-                setIsDeletingAll(false);
-            });
-        };
-        processBatch();
+        setIsDeletingAll(false);
+        setIsDeleteAllDialogOpen(false);
 
     } catch (error) {
-        console.error("Failed to fetch assets for deletion: ", error);
-        toast({ variant: "destructive", title: "Gagal Mengambil Daftar Aset", description: "Tidak dapat memulai proses penghapusan."});
+        console.error("Failed to delete all assets: ", error);
+        toast({ variant: "destructive", title: "Gagal Menghapus Aset", description: "Terjadi kesalahan saat proses penghapusan massal. Silakan coba lagi."});
         setIsDeletingAll(false);
     }
   };
@@ -320,7 +306,7 @@ export default function AdminAssetsPage() {
                         setProgress(currentProgress);
 
                         if (currentIndex < totalRows) {
-                            setTimeout(processMiniOltChunk, 1200);
+                            setTimeout(processMiniOltChunk, 1500);
                         } else {
                             toast({
                                 title: 'Impor Selesai',
@@ -477,7 +463,7 @@ export default function AdminAssetsPage() {
                     setProgress(currentProgress);
 
                     if (currentIndex < totalRows) {
-                        setTimeout(processChunk, 1200); 
+                        setTimeout(processChunk, 1500); 
                     } else {
                         toast({
                             title: 'Import Selesai',
@@ -749,3 +735,5 @@ export default function AdminAssetsPage() {
     </>
   );
 }
+
+    
