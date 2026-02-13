@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -258,7 +257,6 @@ export default function AdminAssetsPage() {
             let currentIndex = 0;
             
             const assetNameCol = findColumn(firstRowKeys, ['olt', 'odc', 'odp', 'ftm', 'gpon', 'nama', 'name', `nama ${importAssetType.toLowerCase()}`, 'device name', 'asset name', 'nama aset', 'nama perangkat', 'odp name']);
-            const serviceAreaCol = findColumn(firstRowKeys, ['service area', 'service ar', 'witel', 'sa', 'area']);
             const stoCol = findColumn(firstRowKeys, ['sto', 'lokasi sto', 'telkom sto', 'telkom sto odc 2', 'lokasi']);
             const coordinatesCol = findColumn(firstRowKeys, ['koordinat', 'coordinate', 'location', 'lokasi', 'gps']);
             const latCol = findColumn(firstRowKeys, ['lat', 'latitude']);
@@ -361,40 +359,32 @@ export default function AdminAssetsPage() {
             
             const mapStoToServiceArea = (sto: string): NetworkAsset['serviceArea'] => {
                 const upperSto = sto.toUpperCase().trim();
-                // Based on user provided image and previous logic
-                if (['BAN','BANGSRI'].includes(upperSto)) return 'SA JEPARA';
-                if (['KEL','KELING'].includes(upperSto)) return 'SA JEPARA';
-                if (['JPR','JEPARA'].includes(upperSto)) return 'SA JEPARA';
-                if (['PEC','PECANGAAN'].includes(upperSto)) return 'SA JEPARA';
                 
-                if (['BLO','BLORA'].includes(upperSto)) return 'SA BLORA';
-                if (['CEPU'].includes(upperSto)) return 'SA BLORA';
-                if (['NGA','NGAWEN'].includes(upperSto)) return 'SA BLORA';
-                if (['RDB','RANDUBLATUNG'].includes(upperSto)) return 'SA BLORA';
+                // SA JEPARA
+                if (['BAN', 'BANGSRI', 'KMJ', 'KEL', 'KELING', 'JPR', 'JEPARA', 'PEC', 'PECANGAAN'].includes(upperSto)) return 'SA JEPARA';
+                
+                // SA BLORA
+                if (['BLO', 'BLORA', 'CEPU', 'CEP', 'NGA', 'NGAWEN', 'RDB', 'RANDUBLATUNG'].includes(upperSto)) return 'SA BLORA';
 
-                if (['KUD','KUDUS'].includes(upperSto)) return 'SA KUDUS';
-                if (['DMA','DEMAK'].includes(upperSto)) return 'SA KUDUS';
+                // SA KUDUS
+                if (['KUD', 'KUDUS', 'DMA', 'DEMAK'].includes(upperSto)) return 'SA KUDUS';
 
-                if (['PAT','PATI'].includes(upperSto)) return 'SA PATI';
-                if (['TAY'].includes(upperSto)) return 'SA PATI';
-                if (['JWN'].includes(upperSto)) return 'SA PATI';
+                // SA PATI
+                if (['PAT', 'PATI', 'TAY', 'JWN'].includes(upperSto)) return 'SA PATI';
+                
+                // SA REMBANG
+                if (['LSE', 'LASEM', 'RBN', 'REMBANG'].includes(upperSto)) return 'SA REMBANG';
 
-                if (['LSE','LASEM'].includes(upperSto)) return 'SA REMBANG';
-                if (['RBN','REMBANG'].includes(upperSto)) return 'SA REMBANG';
+                // SA PURWODADI
+                if (['WRO', 'WIROSARI', 'TRO', 'TOROH', 'GBU', 'GUBUNG', 'GDO', 'GODONG', 'PURWODADI', 'PWB'].includes(upperSto)) return 'SA PURWODADI';
 
-                if (['WRO','WIROSARI'].includes(upperSto)) return 'SA PURWODADI';
-                if (['TRO','TOROH'].includes(upperSto)) return 'SA PURWODADI';
-                if (['GBU','GUBUNG'].includes(upperSto)) return 'SA PURWODADI';
-                if (['GDO','GODONG'].includes(upperSto)) return 'SA PURWODADI';
-                if (['PURWODADI'].includes(upperSto)) return 'SA PURWODADI';
-
-                // Fallback for partial matches
+                // Fallback for partial matches for safety, in case of slight misspellings in the data
+                if (upperSto.includes('JEPARA')) return 'SA JEPARA';
+                if (upperSto.includes('BLORA')) return 'SA BLORA';
                 if (upperSto.includes('KUDUS')) return 'SA KUDUS';
                 if (upperSto.includes('PATI')) return 'SA PATI';
-                if (upperSto.includes('JEPARA')) return 'SA JEPARA';
-                if (upperSto.includes('PURWODADI')) return 'SA PURWODADI';
-                if (upperSto.includes('BLORA')) return 'SA BLORA';
                 if (upperSto.includes('REMBANG')) return 'SA REMBANG';
+                if (upperSto.includes('PURWODADI')) return 'SA PURWODADI';
                 
                 return 'SA KUDUS'; // Default fallback
             };
@@ -434,19 +424,14 @@ export default function AdminAssetsPage() {
                         const assetName = row[assetNameCol]?.toString().trim();
                         if (!assetName) continue;
 
-                        let stoValue = stoCol ? row[stoCol]?.toString() : '';
-                        let serviceAreaValue = serviceAreaCol ? row[serviceAreaCol]?.toString() : '';
-                        
-                        // Explicitly map STO to Service Area if Service Area is not provided in the file
-                        if (!serviceAreaValue && stoValue) {
-                            serviceAreaValue = mapStoToServiceArea(stoValue);
-                        }
+                        const stoValue = stoCol ? row[stoCol]?.toString().trim() : '';
+                        // Always derive Service Area from STO if STO is present, making it the source of truth.
+                        const finalServiceArea = stoValue ? mapStoToServiceArea(stoValue) : 'SA KUDUS';
 
                         const assetData: Partial<NetworkAsset> = {
                             name: assetName,
                             assetType: importAssetType as NetworkAsset['assetType'],
-                            // Use the determined service area or a default fallback
-                            serviceArea: (serviceAreaValue?.toUpperCase() || 'SA KUDUS') as NetworkAsset['serviceArea'],
+                            serviceArea: finalServiceArea,
                             sto: stoValue || 'N/A',
                         };
                         
@@ -805,3 +790,5 @@ export default function AdminAssetsPage() {
     </>
   );
 }
+
+    
