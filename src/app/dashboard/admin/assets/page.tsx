@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -57,7 +56,7 @@ import { useEffect, useState } from 'react';
 import * as XLSX from 'xlsx';
 
 
-const assetTypes = ['OLT', 'ODC', 'ODP', 'FTM'];
+const assetTypes = ['OLT', 'ODC', 'ODP', 'FTM', 'Mini OLT'];
 
 
 export default function AdminAssetsPage() {
@@ -170,9 +169,6 @@ export default function AdminAssetsPage() {
                  throw new Error(`Sheet "${sheetName}" di file Excel kosong.`);
             }
 
-            const assetsCollection = collection(firestore, 'network-assets');
-            const existingAssetsMap = new Map(assets?.map(asset => [asset.name, asset.id]));
-
             const findColumn = (keys: string[], aliases: string[]): string | undefined => {
                 const lowerCaseAliases = aliases.map(a => a.toLowerCase().trim());
                 for (const key of keys) {
@@ -184,6 +180,85 @@ export default function AdminAssetsPage() {
             };
 
             const firstRowKeys = Object.keys(jsonData[0] || {});
+            const totalRows = jsonData.length;
+            const chunkSize = 200;
+            let currentIndex = 0;
+            
+            // ============================================
+            // SPECIAL LOGIC FOR MINI OLT ENRICHMENT
+            // ============================================
+            if (importAssetType === 'Mini OLT') {
+                const gponCol = findColumn(firstRowKeys, ['gpon', 'nama', 'name', 'device name', 'asset name']);
+                const latCol = findColumn(firstRowKeys, ['lat', 'latitude']);
+                const longCol = findColumn(firstRowKeys, ['long', 'longitude']);
+
+                if (!gponCol || !latCol || !longCol) {
+                    throw new Error(`Kolom wajib (GPON, LAT, LONG) tidak ditemukan di sheet '${sheetName}'. Mohon periksa file Excel.`);
+                }
+                
+                const existingOltAssetsMap = new Map(assets?.filter(a => a.assetType === 'OLT').map(asset => [asset.name.trim(), asset.id]));
+                let totalUpdated = 0;
+                let notFoundCount = 0;
+
+                const processMiniOltChunk = () => {
+                    const end = Math.min(currentIndex + chunkSize, totalRows);
+                    for (let i = currentIndex; i < end; i++) {
+                        const row = jsonData[i];
+                        const gponName = row[gponCol]?.toString().trim();
+                        if (!gponName) continue;
+
+                        const existingAssetId = existingOltAssetsMap.get(gponName);
+
+                        if (existingAssetId) {
+                            const latValue = row[latCol]?.toString().replace(',', '.');
+                            const longValue = row[longCol]?.toString().replace(',', '.');
+                            
+                            const assetDataToUpdate: Partial<NetworkAsset> = {
+                                subType: 'Mini OLT',
+                                coordinates: `${latValue}, ${longValue}`,
+                            };
+
+                            const assetDocRef = doc(firestore, 'network-assets', existingAssetId);
+                            updateDocumentNonBlocking(assetDocRef, assetDataToUpdate);
+                            totalUpdated++;
+                        } else {
+                            notFoundCount++;
+                        }
+                    }
+
+                    currentIndex = end;
+                    const currentProgress = (currentIndex / totalRows) * 100;
+                    setProgress(currentProgress);
+
+                    if (currentIndex < totalRows) {
+                        setTimeout(processMiniOltChunk, 50);
+                    } else {
+                        toast({
+                            title: 'Impor Selesai',
+                            description: `Berhasil memperbarui ${totalUpdated} Mini OLT dengan koordinat. ${notFoundCount > 0 ? `${notFoundCount} nama GPON tidak ditemukan.` : ''}`,
+                            duration: 9000
+                        });
+                        setIsImporting(false);
+                        setIsImportDialogOpen(false);
+                        setImportAssetType('');
+                        setProgress(0);
+                        const fileInput = document.getElementById('excel-file') as HTMLInputElement;
+                        if (fileInput) fileInput.value = '';
+                    }
+                };
+                
+                processMiniOltChunk();
+                return;
+            }
+
+            // ============================================
+            // GENERIC ASSET IMPORT LOGIC
+            // ============================================
+            
+            const assetsCollection = collection(firestore, 'network-assets');
+            const existingAssetsMap = new Map(assets?.map(asset => [asset.name.trim(), asset.id]));
+            let totalImported = 0;
+            let totalUpdated = 0;
 
             const assetNameCol = findColumn(firstRowKeys, ['olt', 'odc', 'odp', 'ftm', 'gpon', 'nama', 'name', `nama ${importAssetType.toLowerCase()}`, 'device name', 'asset name', 'nama aset', 'nama perangkat', 'odp name']);
             const serviceAreaCol = findColumn(firstRowKeys, ['service area', 'service ar', 'witel', 'sa', 'area']);
@@ -213,18 +288,11 @@ export default function AdminAssetsPage() {
                 return 'SA KUDUS'; // Fallback
             };
 
-            // ---- Chunk processing logic ----
-            const totalRows = jsonData.length;
-            const chunkSize = 200;
-            let currentIndex = 0;
-            let totalImported = 0;
-            let totalUpdated = 0;
-
             const processChunk = () => {
                 const end = Math.min(currentIndex + chunkSize, totalRows);
                 for (let i = currentIndex; i < end; i++) {
                     const row = jsonData[i];
-                    const assetName = row[assetNameCol];
+                    const assetName = row[assetNameCol]?.toString().trim();
                     if (!assetName) continue;
 
                     let stoValue = stoCol ? row[stoCol]?.toString() : '';
@@ -255,7 +323,7 @@ export default function AdminAssetsPage() {
                     }
 
                     const assetData: Partial<NetworkAsset> = {
-                        name: assetName.toString(),
+                        name: assetName,
                         assetType: importAssetType as NetworkAsset['assetType'],
                         serviceArea: (serviceAreaValue?.toUpperCase() || mapStoToServiceArea(stoValue)) as NetworkAsset['serviceArea'],
                         sto: stoValue || 'N/A',
