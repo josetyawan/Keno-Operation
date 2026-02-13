@@ -78,8 +78,8 @@ export default function AdminAssetsPage() {
 
   // State for filters
   const [searchName, setSearchName] = useState('');
-  const [searchAssetType, setSearchAssetType] = useState('');
-  const [searchServiceArea, setSearchServiceArea] = useState('');
+  const [searchAssetType, setSearchAssetType] = useState('all');
+  const [searchServiceArea, setSearchServiceArea] = useState('all');
 
 
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
@@ -110,8 +110,8 @@ export default function AdminAssetsPage() {
 
     return allAssets.filter(asset => {
         const nameMatch = searchName ? asset.name.toLowerCase().includes(lowercasedSearchName) : true;
-        const typeMatch = searchAssetType ? asset.assetType === searchAssetType : true;
-        const areaMatch = searchServiceArea ? asset.serviceArea === searchServiceArea : true;
+        const typeMatch = searchAssetType !== 'all' ? asset.assetType === searchAssetType : true;
+        const areaMatch = searchServiceArea !== 'all' ? asset.serviceArea === searchServiceArea : true;
         return nameMatch && typeMatch && areaMatch;
     }).slice(0, 200); // IMPORTANT: Limit rendered results to prevent browser freeze
   }, [allAssets, searchName, searchAssetType, searchServiceArea]);
@@ -295,7 +295,7 @@ export default function AdminAssetsPage() {
                         setProgress(currentProgress);
 
                         if (currentIndex < totalRows) {
-                            setTimeout(processMiniOltChunk, 500); // Longer delay
+                            setTimeout(processMiniOltChunk, 1000); // Longer delay
                         } else {
                             toast({
                                 title: 'Impor Selesai',
@@ -466,7 +466,7 @@ export default function AdminAssetsPage() {
                     setProgress(currentProgress);
 
                     if (currentIndex < totalRows) {
-                        setTimeout(processChunk, 500); // Process next chunk with a longer delay
+                        setTimeout(processChunk, 1000); // Process next chunk with a longer delay
                     } else {
                         toast({
                             title: 'Import Selesai',
@@ -630,7 +630,7 @@ export default function AdminAssetsPage() {
             <Select value={searchAssetType} onValueChange={setSearchAssetType}>
               <SelectTrigger id="search-type"><SelectValue placeholder="Semua Jenis" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Semua Jenis</SelectItem>
+                <SelectItem value="all">Semua Jenis</SelectItem>
                 {assetTypes.filter(t => t !== 'Mini OLT').map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -640,7 +640,7 @@ export default function AdminAssetsPage() {
             <Select value={searchServiceArea} onValueChange={setSearchServiceArea}>
               <SelectTrigger id="search-area"><SelectValue placeholder="Semua Area" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Semua Area</SelectItem>
+                <SelectItem value="all">Semua Area</SelectItem>
                 {serviceAreas.map(sa => <SelectItem key={sa} value={sa}>{sa}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -724,7 +724,7 @@ export default function AdminAssetsPage() {
               ) : (
                 <TableRow>
                   <TableCell colSpan={13} className="h-24 text-center">
-                    {(searchName || searchAssetType || searchServiceArea) 
+                    {(searchName || searchAssetType !== 'all' || searchServiceArea !== 'all') 
                         ? "Tidak ada aset yang cocok dengan filter Anda." 
                         : "Gunakan filter di atas untuk mencari aset."
                     }
@@ -739,5 +739,7 @@ export default function AdminAssetsPage() {
   );
 }
 
+
+    
 
     
