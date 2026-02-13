@@ -130,8 +130,8 @@ service cloud.firestore {
      * @path /project-ids/{projectId}
      */
     match /project-ids/{projectId} {
-      // READ: Any approved user can read the project IDs for report generation.
-      allow get, list: if isApproved();
+      // READ: Any approved user or admin can read the project IDs for report generation.
+      allow get, list: if isApproved() || isAdmin();
 
       // WRITE: Only admins can create, update, or delete Project IDs.
       allow create, update, delete: if isAdmin();
@@ -142,8 +142,8 @@ service cloud.firestore {
      * @path /network-assets/{assetId}
      */
     match /network-assets/{assetId} {
-      // READ: Any approved user can read asset data.
-      allow get, list: if isApproved();
+      // READ: Any approved user or admin can read asset data.
+      allow get, list: if isApproved() || isAdmin();
 
       // WRITE: Only admins can create, update, or delete network assets.
       allow create, update, delete: if isAdmin();
