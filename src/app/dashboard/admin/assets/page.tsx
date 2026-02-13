@@ -216,9 +216,11 @@ export default function AdminAssetsPage() {
                 let totalUpdated = 0;
                 let notFoundCount = 0;
 
-                const processMiniOltChunk = () => {
+                const processMiniOltChunk = async () => {
                     try {
                         const end = Math.min(currentIndex + chunkSize, totalRows);
+                        const batch = writeBatch(firestore);
+
                         for (let i = currentIndex; i < end; i++) {
                             const row = jsonData[i];
                             const gponName = row[gponCol]?.toString().trim();
@@ -236,12 +238,14 @@ export default function AdminAssetsPage() {
                                 };
 
                                 const assetDocRef = doc(firestore, 'network-assets', existingAssetId);
-                                updateDocumentNonBlocking(assetDocRef, assetDataToUpdate);
+                                batch.update(assetDocRef, assetDataToUpdate);
                                 totalUpdated++;
                             } else {
                                 notFoundCount++;
                             }
                         }
+                        
+                        await batch.commit();
 
                         currentIndex = end;
                         const currentProgress = (currentIndex / totalRows) * 100;
@@ -419,7 +423,7 @@ export default function AdminAssetsPage() {
                     setProgress(currentProgress);
 
                     if (currentIndex < totalRows) {
-                        setTimeout(processChunk, 20); // Process next chunk
+                        setTimeout(processChunk, 50); // Process next chunk with a small delay
                     } else {
                         toast({
                             title: 'Import Selesai',
@@ -642,6 +646,3 @@ export default function AdminAssetsPage() {
     </>
   );
 }
-
-    
- 
