@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -233,24 +234,26 @@ export default function SearchAssetsPage() {
              {(currentMancoreLinks.length > 0 || currentMapUrl) && (
                 <div className="mt-4 border-t pt-4">
                      <h4 className="text-sm font-medium mb-2">Tautan Eksternal untuk {searchServiceArea}</h4>
-                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {currentMapUrl && (
-                             <Button asChild key={currentMapUrl} variant="outline">
-                                <Link href={currentMapUrl} target="_blank" rel="noopener noreferrer">
-                                    <MapPin className="mr-2 h-4 w-4" />
-                                    {`Buka Peta ALLPRO ${searchServiceArea}`}
-                                </Link>
-                            </Button>
-                        )}
-                        {currentMancoreLinks.map(link => (
-                            <Button asChild key={link.id} variant="secondary">
-                                <Link href={link.url} target="_blank" rel="noopener noreferrer">
-                                    <FolderGit2 className="mr-2 h-4 w-4" />
-                                    {`Mancore & KML ${link.label}`}
-                                </Link>
-                            </Button>
-                        ))}
-                    </div>
+                     <div className="max-w-2xl">
+                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {currentMapUrl && (
+                                 <Button asChild key={currentMapUrl} variant="outline">
+                                    <Link href={currentMapUrl} target="_blank" rel="noopener noreferrer">
+                                        <MapPin className="mr-2 h-4 w-4" />
+                                        {`Buka Peta ALLPRO ${searchServiceArea}`}
+                                    </Link>
+                                </Button>
+                            )}
+                            {currentMancoreLinks.map(link => (
+                                <Button asChild key={link.id} variant="secondary">
+                                    <Link href={link.url} target="_blank" rel="noopener noreferrer">
+                                        <FolderGit2 className="mr-2 h-4 w-4" />
+                                        {`Mancore & KML ${link.label}`}
+                                    </Link>
+                                </Button>
+                            ))}
+                        </div>
+                     </div>
                 </div>
             )}
         </CardContent>
