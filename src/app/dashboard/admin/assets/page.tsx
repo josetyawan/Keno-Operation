@@ -108,7 +108,7 @@ export default function AdminAssetsPage() {
     constraints.push(limit(500)); // Fetch a reasonable number to filter by name on the client.
     
     return query(collection(firestore, 'network-assets'), ...constraints);
-  }, [firestore, currentUserProfile, user, isUserLoading, isProfileLoading, searchAssetType, searchServiceArea]);
+  }, [firestore, currentUserProfile?.role, user, isUserLoading, isProfileLoading, searchAssetType, searchServiceArea]);
 
   const { data: queriedAssets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(filteredAssetsQuery);
 
@@ -819,5 +819,3 @@ export default function AdminAssetsPage() {
     </>
   );
 }
-
-    

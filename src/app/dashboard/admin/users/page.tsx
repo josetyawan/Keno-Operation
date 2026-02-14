@@ -157,7 +157,7 @@ export default function AdminUsersPage() {
           return query(collection(firestore, 'users'));
       }
       return null;
-  }, [firestore, currentUserProfile]);
+  }, [firestore, currentUserProfile?.role]);
 
   const { data: users, isLoading: areUsersLoading } = useCollection<UserProfile>(usersQuery);
   

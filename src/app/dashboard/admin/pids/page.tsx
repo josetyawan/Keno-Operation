@@ -135,7 +135,7 @@ export default function AdminPIDsPage() {
           return query(collection(firestore, 'project-ids'));
       }
       return null;
-  }, [firestore, currentUserProfile]);
+  }, [firestore, currentUserProfile?.role]);
 
   const { data: pids, isLoading: arePidsLoading } = useCollection<ProjectID>(pidsQuery);
 
@@ -164,7 +164,7 @@ export default function AdminPIDsPage() {
           duration: 5000,
       });
     }
-  }, [pids, arePidsLoading, firestore, hasBeenSeeded, currentUserProfile, toast]);
+  }, [pids, arePidsLoading, firestore, hasBeenSeeded, currentUserProfile?.role, toast]);
 
 
   const handleCreate = () => {

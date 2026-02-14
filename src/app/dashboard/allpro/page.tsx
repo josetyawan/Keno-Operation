@@ -52,9 +52,9 @@ export default function AllproPage() {
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
   const assetsQuery = useMemoFirebase(() => {
-    if (isUserLoading || isProfileLoading || !user || !userProfile || userProfile.registrationStatus !== 'approved') return null;
+    if (isUserLoading || isProfileLoading || !user || userProfile?.registrationStatus !== 'approved') return null;
     return collection(firestore, 'network-assets');
-  }, [firestore, user, userProfile, isUserLoading, isProfileLoading]);
+  }, [firestore, user, userProfile?.registrationStatus, isUserLoading, isProfileLoading]);
 
   const { data: assets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(assetsQuery);
 
@@ -64,32 +64,29 @@ export default function AllproPage() {
     const mapStoToServiceArea = (sto: string, assetName: string): NetworkAsset['serviceArea'] => {
         const nameParts = (assetName || '').toUpperCase().split('-');
 
-        const saCodeMapping: Record<NetworkAsset['serviceArea'], string[]> = {
-            'SA PURWODADI': ['PWB', 'PURWODADI', 'WRO', 'WIROSARI', 'TRO', 'TOROH', 'GBU', 'GUBUNG', 'GDO', 'GODONG'],
-            'SA BLORA': ['CEP', 'CEPU', 'BLO', 'BLORA', 'NGA', 'NGAWEN', 'RDB', 'RANDUBLATUNG'],
-            'SA JEPARA': ['KMJ', 'JEPARA', 'JPR', 'BAN', 'BANGSRI', 'KEL', 'KELING', 'PEC', 'PECANGAAN'],
-            'SA KUDUS': ['KUD', 'KUDUS', 'DMA', 'DEMAK'],
-            'SA PATI': ['PAT', 'PATI', 'TAY', 'JWN'],
-            'SA REMBANG': ['LSE', 'LASEM', 'RBN', 'REMBANG']
+        const saCodeMapping: Record<string, NetworkAsset['serviceArea']> = {
+            'PWB': 'SA PURWODADI', 'PURWODADI': 'SA PURWODADI', 'WRO': 'SA PURWODADI', 'WIROSARI': 'SA PURWODADI', 'TRO': 'SA PURWODADI', 'TOROH': 'SA PURWODADI', 'GBU': 'SA PURWODADI', 'GUBUNG': 'SA PURWODADI', 'GDO': 'SA PURWODADI', 'GODONG': 'SA PURWODADI',
+            'CEP': 'SA BLORA', 'CEPU': 'SA BLORA', 'BLO': 'SA BLORA', 'BLORA': 'SA BLORA', 'NGA': 'SA BLORA', 'NGAWEN': 'SA BLORA', 'RDB': 'SA BLORA', 'RANDUBLATUNG': 'SA BLORA',
+            'KMJ': 'SA JEPARA', 'JEPARA': 'SA JEPARA', 'JPR': 'SA JEPARA', 'BAN': 'SA JEPARA', 'BANGSRI': 'SA JEPARA', 'KEL': 'SA JEPARA', 'KELING': 'SA JEPARA', 'PEC': 'SA JEPARA', 'PECANGAAN': 'SA JEPARA',
+            'KUD': 'SA KUDUS', 'KUDUS': 'SA KUDUS', 'DMA': 'SA KUDUS', 'DEMAK': 'SA KUDUS',
+            'PAT': 'SA PATI', 'PATI': 'SA PATI', 'TAY': 'SA PATI', 'JWN': 'SA PATI',
+            'LSE': 'SA REMBANG', 'LASEM': 'SA REMBANG', 'RBN': 'SA REMBANG', 'REMBANG': 'SA REMBANG'
         };
 
         // 1. Try to find a matching STO code from the asset name parts
         for (const part of nameParts) {
             const trimmedPart = part.trim();
-            for (const [sa, codes] of Object.entries(saCodeMapping)) {
-                if (codes.includes(trimmedPart)) {
-                    return sa as NetworkAsset['serviceArea'];
-                }
+            if (saCodeMapping[trimmedPart]) {
+                return saCodeMapping[trimmedPart];
             }
         }
 
         // 2. If not found in name, try the dedicated 'sto' column from the database
         const stoFromColumn = (sto || '').toUpperCase().trim();
         if (stoFromColumn) {
-            for (const [sa, codes] of Object.entries(saCodeMapping)) {
-                // Use .some() to check if any of the codes are included in the stoFromColumn string
-                if (codes.some(c => stoFromColumn.includes(c))) {
-                    return sa as NetworkAsset['serviceArea'];
+           for (const code in saCodeMapping) {
+                if (stoFromColumn.includes(code)) {
+                    return saCodeMapping[code];
                 }
             }
         }
@@ -116,7 +113,7 @@ export default function AllproPage() {
             
             if (serviceAreaMap[correctAssetSA]) {
                 const assetTypeUpper = (asset.assetType || '').toUpperCase();
-                const subTypeUpper = (asset.subType || '').toUpperCase();
+                const subTypeUpper = (asset.subType || '').toUpperCase().trim();
 
                 switch (assetTypeUpper) {
                     case 'OLT':
@@ -130,6 +127,7 @@ export default function AllproPage() {
                         if (subTypeUpper === 'EA') {
                             serviceAreaMap[correctAssetSA].ftm.ea++;
                         } else {
+                            // Count anything not 'EA' as 'OA' to ensure all FTMs are counted
                             serviceAreaMap[correctAssetSA].ftm.oa++;
                         }
                         break;
