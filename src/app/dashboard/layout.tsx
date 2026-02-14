@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home, Network, Search, BarChart3, Map } from 'lucide-react';
+import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home, Network, Search, BarChart3, Map, FolderGit2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils';
 const navLinks = [
   { href: '/dashboard', label: 'Home', icon: Home, access: 'public' },
   { href: '/dashboard/nota', label: 'Laporan Nota', icon: LayoutGrid, access: 'nota' },
+  { href: 'https://drive.google.com/drive/folders/1wAUjR_zv4Xwz8CyMvYamjE7tuv7DH7T4', label: 'Mancore', icon: FolderGit2, access: 'allpro', external: true },
   { href: '/dashboard/search-assets', label: 'Network Cek', icon: Search, access: 'allpro' },
   { href: '/dashboard/allpro', label: 'Network Service Area', icon: BarChart3, access: 'allpro' },
   { href: '/dashboard/admin/users', label: 'Manajemen User', icon: Users, access: 'admin' },
@@ -249,9 +250,11 @@ export default function DashboardLayout({
                   <Link
                     key={link.href}
                     href={link.href}
+                    target={link.external ? '_blank' : '_self'}
+                    rel={link.external ? 'noopener noreferrer' : ''}
                     className={cn(
                       "flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:text-primary",
-                      isActive ? "bg-primary/10 text-primary" : "text-muted-foreground"
+                      isActive && !link.external ? "bg-primary/10 text-primary" : "text-muted-foreground"
                     )}
                   >
                     <link.icon className="h-4 w-4" />
@@ -310,9 +313,11 @@ export default function DashboardLayout({
                       <Link
                       key={link.href}
                       href={link.href}
+                      target={link.external ? '_blank' : '_self'}
+                      rel={link.external ? 'noopener noreferrer' : ''}
                       className={cn(
                         "mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground",
-                        isActive && "bg-muted"
+                        isActive && !link.external && "bg-muted"
                       )}
                     >
                       <link.icon className="h-5 w-5" />
