@@ -72,36 +72,50 @@ export default function AllproPage() {
     if (assets) {
       // 2. Loop through every asset from the database.
       for (const asset of assets) {
-        // Normalize the service area from the asset data to make matching robust.
-        const sa = asset.serviceArea?.trim().toUpperCase();
-        // Find the index in our predefined order.
-        const saIndex = PREFERRED_ORDER.indexOf(sa);
+        const assetSA = (asset.serviceArea || '').trim().toUpperCase();
+        if (!assetSA) continue;
+
+        let foundIndex = -1;
+
+        // Try exact match first for performance
+        foundIndex = PREFERRED_ORDER.indexOf(assetSA);
+        
+        // If not found, try partial keyword match
+        if (foundIndex === -1) {
+            for (let i = 0; i < PREFERRED_ORDER.length; i++) {
+                const areaKeyword = PREFERRED_ORDER[i].replace('SA ', ''); // e.g., "KUDUS"
+                if (assetSA.includes(areaKeyword)) {
+                    foundIndex = i;
+                    break;
+                }
+            }
+        }
         
         // 3. Only count assets that belong to a known service area.
-        if (saIndex !== -1) {
-          const assetTypeUpper = asset.assetType?.toUpperCase();
-          const subTypeUpper = asset.subType?.toUpperCase() || '';
+        if (foundIndex !== -1) {
+          const assetTypeUpper = (asset.assetType || '').toUpperCase();
+          const subTypeUpper = (asset.subType || '').toUpperCase();
 
           switch (assetTypeUpper) {
             case 'OLT':
               if (subTypeUpper === 'MINI OLT') {
-                results.olt.rows[saIndex].miniOlt++;
+                results.olt.rows[foundIndex].miniOlt++;
               } else { // Anything else (OLT, N/A, undefined) is counted as a regular OLT.
-                results.olt.rows[saIndex].olt++;
+                results.olt.rows[foundIndex].olt++;
               }
               break;
             case 'FTM':
               if (subTypeUpper === 'EA') {
-                results.ftm.rows[saIndex].ea++;
+                results.ftm.rows[foundIndex].ea++;
               } else if (subTypeUpper === 'OA') {
-                results.ftm.rows[saIndex].oa++;
+                results.ftm.rows[foundIndex].oa++;
               }
               break;
             case 'ODC':
-              results.odc.rows[saIndex].jumlah++;
+              results.odc.rows[foundIndex].jumlah++;
               break;
             case 'ODP':
-              results.odp.rows[saIndex].jumlah++;
+              results.odp.rows[foundIndex].jumlah++;
               break;
           }
         }
