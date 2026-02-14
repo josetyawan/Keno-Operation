@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -238,7 +239,7 @@ export default function SearchAssetsPage() {
                              <Button asChild key={currentMapUrl} variant="outline">
                                 <Link href={currentMapUrl} target="_blank" rel="noopener noreferrer">
                                     <MapPin className="mr-2 h-4 w-4" />
-                                    Buka Peta Kustom
+                                    {`Buka Peta ALLPRO ${searchServiceArea}`}
                                 </Link>
                             </Button>
                         )}
@@ -246,7 +247,7 @@ export default function SearchAssetsPage() {
                             <Button asChild key={link.id} variant="secondary">
                                 <Link href={link.url} target="_blank" rel="noopener noreferrer">
                                     <FolderGit2 className="mr-2 h-4 w-4" />
-                                    {link.label}
+                                    {`Mancore & KML ${link.label}`}
                                 </Link>
                             </Button>
                         ))}
