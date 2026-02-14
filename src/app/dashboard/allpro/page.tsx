@@ -40,6 +40,48 @@ const skeletonCard = (
   </Card>
 );
 
+// This mapping defines which STO codes belong to which Service Area.
+const SA_CODE_MAPPING: Record<string, NetworkAsset['serviceArea']> = {
+    'PWB': 'SA PURWODADI', 'PURWODADI': 'SA PURWODADI', 'WRO': 'SA PURWODADI', 'WIROSARI': 'SA PURWODADI', 'TRO': 'SA PURWODADI', 'TOROH': 'SA PURWODADI', 'GBU': 'SA PURWODADI', 'GUBUNG': 'SA PURWODADI', 'GDO': 'SA PURWODADI', 'GODONG': 'SA PURWODADI',
+    'CEP': 'SA BLORA', 'CEPU': 'SA BLORA', 'BLO': 'SA BLORA', 'BLORA': 'SA BLORA', 'NGA': 'SA BLORA', 'NGAWEN': 'SA BLORA', 'RDB': 'SA BLORA', 'RANDUBLATUNG': 'SA BLORA',
+    'KMJ': 'SA JEPARA', 'JEPARA': 'SA JEPARA', 'JPR': 'SA JEPARA', 'BAN': 'SA JEPARA', 'BANGSRI': 'SA JEPARA', 'KEL': 'SA JEPARA', 'KELING': 'SA JEPARA', 'PEC': 'SA JEPARA', 'PECANGAAN': 'SA JEPARA',
+    'KUD': 'SA KUDUS', 'KUDUS': 'SA KUDUS', 'DMA': 'SA KUDUS', 'DEMAK': 'SA KUDUS',
+    'PAT': 'SA PATI', 'PATI': 'SA PATI', 'TAY': 'SA PATI', 'JWN': 'SA PATI',
+    'LSE': 'SA REMBANG', 'LASEM': 'SA REMBANG', 'RBN': 'SA REMBANG', 'REMBANG': 'SA REMBANG'
+};
+
+/**
+ * Determines the correct Service Area for an asset by intelligently checking its name and STO property.
+ * This function is robust and handles various naming conventions.
+ */
+const getAssetServiceArea = (asset: NetworkAsset): NetworkAsset['serviceArea'] => {
+    const upperAssetName = (asset.name || '').toUpperCase();
+    const upperSto = (asset.sto || '').toUpperCase().trim();
+
+    // Priority 1: Check if asset name contains any known STO code.
+    // This is more reliable as asset names often contain the STO.
+    for (const code in SA_CODE_MAPPING) {
+        // Use a regex to find the code as a whole word or surrounded by common delimiters.
+        const regex = new RegExp(`[\\s-_]${code}[\\s-_]|^${code}[\\s-_]|[\\s-_]${code}$|^${code}$`);
+        if (regex.test(upperAssetName)) {
+            return SA_CODE_MAPPING[code];
+        }
+    }
+
+    // Priority 2: Check the dedicated 'sto' column from the database if name check fails.
+    if (upperSto) {
+       for (const code in SA_CODE_MAPPING) {
+            if (upperSto.includes(code)) {
+                return SA_CODE_MAPPING[code];
+            }
+        }
+    }
+
+    // Default fallback if no match is found anywhere.
+    return 'SA KUDUS';
+};
+
+
 export default function AllproPage() {
   const router = useRouter();
   const firestore = useFirestore();
@@ -61,40 +103,6 @@ export default function AllproPage() {
   const rekapData = useMemo(() => {
     const PREFERRED_ORDER: NetworkAsset['serviceArea'][] = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
     
-    const mapStoToServiceArea = (sto: string, assetName: string): NetworkAsset['serviceArea'] => {
-        const nameParts = (assetName || '').toUpperCase().split('-');
-
-        const saCodeMapping: Record<string, NetworkAsset['serviceArea']> = {
-            'PWB': 'SA PURWODADI', 'PURWODADI': 'SA PURWODADI', 'WRO': 'SA PURWODADI', 'WIROSARI': 'SA PURWODADI', 'TRO': 'SA PURWODADI', 'TOROH': 'SA PURWODADI', 'GBU': 'SA PURWODADI', 'GUBUNG': 'SA PURWODADI', 'GDO': 'SA PURWODADI', 'GODONG': 'SA PURWODADI',
-            'CEP': 'SA BLORA', 'CEPU': 'SA BLORA', 'BLO': 'SA BLORA', 'BLORA': 'SA BLORA', 'NGA': 'SA BLORA', 'NGAWEN': 'SA BLORA', 'RDB': 'SA BLORA', 'RANDUBLATUNG': 'SA BLORA',
-            'KMJ': 'SA JEPARA', 'JEPARA': 'SA JEPARA', 'JPR': 'SA JEPARA', 'BAN': 'SA JEPARA', 'BANGSRI': 'SA JEPARA', 'KEL': 'SA JEPARA', 'KELING': 'SA JEPARA', 'PEC': 'SA JEPARA', 'PECANGAAN': 'SA JEPARA',
-            'KUD': 'SA KUDUS', 'KUDUS': 'SA KUDUS', 'DMA': 'SA KUDUS', 'DEMAK': 'SA KUDUS',
-            'PAT': 'SA PATI', 'PATI': 'SA PATI', 'TAY': 'SA PATI', 'JWN': 'SA PATI',
-            'LSE': 'SA REMBANG', 'LASEM': 'SA REMBANG', 'RBN': 'SA REMBANG', 'REMBANG': 'SA REMBANG'
-        };
-
-        // 1. Try to find a matching STO code from the asset name parts
-        for (const part of nameParts) {
-            const trimmedPart = part.trim();
-            if (saCodeMapping[trimmedPart]) {
-                return saCodeMapping[trimmedPart];
-            }
-        }
-
-        // 2. If not found in name, try the dedicated 'sto' column from the database
-        const stoFromColumn = (sto || '').toUpperCase().trim();
-        if (stoFromColumn) {
-           for (const code in saCodeMapping) {
-                if (stoFromColumn.includes(code)) {
-                    return saCodeMapping[code];
-                }
-            }
-        }
-
-        // 3. Default fallback if no match is found anywhere
-        return 'SA KUDUS';
-    };
-    
     // 1. Initialize a stable structure for the dashboard
     const serviceAreaMap = PREFERRED_ORDER.reduce((acc, sa) => {
         acc[sa] = {
@@ -109,7 +117,7 @@ export default function AllproPage() {
     if (assets) {
         // 2. Iterate through all assets and count them directly into the structure
         for (const asset of assets) {
-            const correctAssetSA = mapStoToServiceArea(asset.sto, asset.name);
+            const correctAssetSA = getAssetServiceArea(asset);
             
             if (serviceAreaMap[correctAssetSA]) {
                 const assetTypeUpper = (asset.assetType || '').toUpperCase();
