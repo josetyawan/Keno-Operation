@@ -77,14 +77,14 @@ export default function SearchAssetsPage() {
   const { data: mapLinks, isLoading: areMapLinksLoading } = useCollection<MapLink>(mapLinksQuery);
   
   const dynamicServiceAreas = useMemo(() => {
-    const allSAs = new Set<string>(baseServiceAreas); // Start with the base list
+    const allSAs = new Set<string>(baseServiceAreas);
     if (mancoreLinks) {
         mancoreLinks.forEach(link => allSAs.add(link.serviceArea));
     }
     if (mapLinks) {
         mapLinks.forEach(link => allSAs.add(link.serviceArea));
     }
-    return Array.from(allSAs).sort();
+    return Array.from(allSAs).filter(sa => !sa.toLowerCase().includes('mitratel')).sort();
   }, [mancoreLinks, mapLinks]);
 
   const mancoreLinksBySA = useMemo(() => {
@@ -372,7 +372,3 @@ export default function SearchAssetsPage() {
     </>
   );
 }
-
-    
-
-    
