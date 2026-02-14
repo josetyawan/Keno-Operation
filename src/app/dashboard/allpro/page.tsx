@@ -62,107 +62,77 @@ export default function AllproPage() {
   const { data: assets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(assetsQuery);
 
   const rekapData = useMemo(() => {
-    const emptyRekap = {
-      olt: { title: "OLT All", headers: ["Service Area", "Mini OLT", "OLT", "Grand Total"], rows: [], totals: { miniOlt: 0, olt: 0, grandTotal: 0 }},
-      ftm: { title: "FTM All", headers: ["Service Area", "EA", "OA", "Grand Total"], rows: [], totals: { ea: 0, oa: 0, grandTotal: 0 }},
-      odc: { title: "ODC All", headers: ["Service Area", "Jumlah ODC"], rows: [], totals: { jumlah: 0 }},
-      odp: { title: "ODP All", headers: ["Service Area", "Jumlah ODP"], rows: [], totals: { jumlah: 0 }},
+    // 1. Initialize the final structure with all SAs and zero counts.
+    const results = {
+      olt: { title: "OLT All", headers: ["Service Area", "Mini OLT", "OLT", "Grand Total"], rows: serviceAreas.map(sa => ({ serviceArea: sa, miniOlt: 0, olt: 0, grandTotal: 0 })), totals: { miniOlt: 0, olt: 0, grandTotal: 0 }},
+      ftm: { title: "FTM All", headers: ["Service Area", "EA", "OA", "Grand Total"], rows: serviceAreas.map(sa => ({ serviceArea: sa, ea: 0, oa: 0, grandTotal: 0 })), totals: { ea: 0, oa: 0, grandTotal: 0 }},
+      odc: { title: "ODC All", headers: ["Service Area", "Jumlah ODC"], rows: serviceAreas.map(sa => ({ serviceArea: sa, jumlah: 0 })), totals: { jumlah: 0 }},
+      odp: { title: "ODP All", headers: ["Service Area", "Jumlah ODP"], rows: serviceAreas.map(sa => ({ serviceArea: sa, jumlah: 0 })), totals: { jumlah: 0 }},
     };
 
-    if (!assets) return emptyRekap;
+    if (!assets) return results;
 
-    // Dynamically build the data object based on assets from Firestore
-    const dataBySA = assets.reduce((acc, asset) => {
-      const sa = asset.serviceArea;
-      if (!sa) return acc; // Skip assets with no service area
+    // 2. Create a fast lookup map for SA index.
+    const saIndexMap = new Map(serviceAreas.map((sa, index) => [sa, index]));
 
-      // Initialize the service area if it doesn't exist yet
-      if (!acc[sa]) {
-        acc[sa] = { miniOlt: 0, olt: 0, odc: 0, odp: 0, ea: 0, oa: 0 };
+    // 3. Loop through assets ONCE and directly increment counters.
+    for (const asset of assets) {
+      const saIndex = saIndexMap.get(asset.serviceArea);
+
+      // If the asset's service area is not one of our standard SAs, skip it.
+      if (saIndex === undefined) {
+        continue;
       }
 
-      // Count the asset based on its type and subtype
       switch (asset.assetType) {
         case 'OLT':
           if (asset.subType === 'Mini OLT') {
-            acc[sa].miniOlt++;
+            results.olt.rows[saIndex].miniOlt++;
           } else {
-            acc[sa].olt++;
+            results.olt.rows[saIndex].olt++;
+          }
+          break;
+        case 'FTM':
+          if (asset.subType === 'EA') {
+            results.ftm.rows[saIndex].ea++;
+          } else if (asset.subType === 'OA') {
+            results.ftm.rows[saIndex].oa++;
           }
           break;
         case 'ODC':
-          acc[sa].odc++;
+          results.odc.rows[saIndex].jumlah++;
           break;
         case 'ODP':
-          acc[sa].odp++;
-          break;
-        case 'FTM':
-          if (asset.subType === 'EA') acc[sa].ea++;
-          else if (asset.subType === 'OA') acc[sa].oa++;
+          results.odp.rows[saIndex].jumlah++;
           break;
       }
-      return acc;
-    }, {} as Record<string, { miniOlt: number, olt: number, odc: number, odp: number, ea: number, oa: number }>);
-    
-    // Now, build the table rows using the predefined serviceAreas to ensure order
-    // and that all SAs are shown, even if they have 0 assets.
-    const oltRows = serviceAreas.map(sa => ({
-      serviceArea: sa,
-      miniOlt: dataBySA[sa]?.miniOlt || 0,
-      olt: dataBySA[sa]?.olt || 0,
-      grandTotal: (dataBySA[sa]?.miniOlt || 0) + (dataBySA[sa]?.olt || 0)
-    }));
+    }
 
-    const ftmRows = serviceAreas.map(sa => ({
-      serviceArea: sa,
-      ea: dataBySA[sa]?.ea || 0,
-      oa: dataBySA[sa]?.oa || 0,
-      grandTotal: (dataBySA[sa]?.ea || 0) + (dataBySA[sa]?.oa || 0)
-    }));
-    
-    const odcRows = serviceAreas.map(sa => ({ serviceArea: sa, jumlah: dataBySA[sa]?.odc || 0 }));
-    
-    const odpRows = serviceAreas.map(sa => ({ serviceArea: sa, jumlah: dataBySA[sa]?.odp || 0 }));
+    // 4. Calculate all totals after counting is complete.
+    results.olt.rows.forEach(row => {
+      row.grandTotal = row.miniOlt + row.olt;
+      results.olt.totals.miniOlt += row.miniOlt;
+      results.olt.totals.olt += row.olt;
+      results.olt.totals.grandTotal += row.grandTotal;
+    });
 
+    results.ftm.rows.forEach(row => {
+      row.grandTotal = row.ea + row.oa;
+      results.ftm.totals.ea += row.ea;
+      results.ftm.totals.oa += row.oa;
+      results.ftm.totals.grandTotal += row.grandTotal;
+    });
+    
+    results.odc.rows.forEach(row => {
+      results.odc.totals.jumlah += row.jumlah;
+    });
 
-    return {
-      olt: {
-        title: "OLT All",
-        headers: ["Service Area", "Mini OLT", "OLT", "Grand Total"],
-        rows: oltRows,
-        totals: {
-          miniOlt: oltRows.reduce((sum, row) => sum + row.miniOlt, 0),
-          olt: oltRows.reduce((sum, row) => sum + row.olt, 0),
-          grandTotal: oltRows.reduce((sum, row) => sum + row.grandTotal, 0),
-        }
-      },
-      ftm: {
-        title: "FTM All",
-        headers: ["Service Area", "EA", "OA", "Grand Total"],
-        rows: ftmRows,
-        totals: {
-          ea: ftmRows.reduce((sum, row) => sum + row.ea, 0),
-          oa: ftmRows.reduce((sum, row) => sum + row.oa, 0),
-          grandTotal: ftmRows.reduce((sum, row) => sum + row.grandTotal, 0),
-        }
-      },
-      odc: {
-        title: "ODC All",
-        headers: ["Service Area", "Jumlah ODC"],
-        rows: odcRows,
-        totals: {
-          jumlah: odcRows.reduce((sum, row) => sum + row.jumlah, 0)
-        }
-      },
-      odp: {
-        title: "ODP All",
-        headers: ["Service Area", "Jumlah ODP"],
-        rows: odpRows,
-        totals: {
-          jumlah: odpRows.reduce((sum, row) => sum + row.jumlah, 0)
-        }
-      }
-    };
+    results.odp.rows.forEach(row => {
+      results.odp.totals.jumlah += row.jumlah;
+    });
+
+    return results;
+
   }, [assets]);
   
   const { olt, odc, odp, ftm } = rekapData;
