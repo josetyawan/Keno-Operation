@@ -36,13 +36,6 @@ import {
   DialogTrigger,
   DialogClose,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -55,8 +48,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-
-const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
 
 function MancoreLinkForm({ link, onFormSubmit }: { link?: MancoreLink | null, onFormSubmit: (data: { serviceArea: string, label: string, url: string }) => void }) {
   const [serviceArea, setServiceArea] = useState('');
@@ -87,14 +78,14 @@ function MancoreLinkForm({ link, onFormSubmit }: { link?: MancoreLink | null, on
         <Label htmlFor="serviceArea" className="text-right">
           Service Area
         </Label>
-        <Select value={serviceArea} onValueChange={setServiceArea} required>
-            <SelectTrigger id="serviceArea" className="col-span-3">
-                <SelectValue placeholder="Pilih Service Area..." />
-            </SelectTrigger>
-            <SelectContent>
-                {serviceAreas.map(sa => <SelectItem key={sa} value={sa}>{sa}</SelectItem>)}
-            </SelectContent>
-        </Select>
+        <Input
+          id="serviceArea"
+          value={serviceArea}
+          onChange={(e) => setServiceArea(e.target.value)}
+          className="col-span-3"
+          placeholder="e.g., SA KUDUS atau Proyek Fiber Solo"
+          required
+        />
       </div>
       <div className="grid grid-cols-4 items-center gap-4">
         <Label htmlFor="label" className="text-right">
@@ -337,3 +328,5 @@ export default function AdminMancorePage() {
     </>
   );
 }
+
+    

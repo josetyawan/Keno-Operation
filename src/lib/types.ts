@@ -5,7 +5,7 @@ export type Nota = {
   userEmail: string;
   tanggal: any; // Using `any` to accommodate Firestore's serverTimestamp
   segmen: string;
-  serviceArea: 'SA KUDUS' | 'SA PATI' | 'SA JEPARA' | 'SA PURWODADI' | 'SA BLORA' | 'SA REMBANG';
+  serviceArea: string;
   noPlatKendaraan?: string;
   kmAwal?: number;
   kmAkhir?: number;
@@ -45,7 +45,7 @@ export type NetworkAsset = {
   name: string;
   assetType: 'OLT' | 'ODC' | 'ODP' | 'FTM';
   subType: 'Mini OLT' | 'OLT' | 'EA' | 'OA' | 'N/A';
-  serviceArea: 'SA KUDUS' | 'SA PATI' | 'SA JEPARA' | 'SA PURWODADI' | 'SA BLORA' | 'SA REMBANG';
+  serviceArea: string;
   sto: string;
   coordinates?: string;
   dateAdded: any;
@@ -70,3 +70,5 @@ export type MancoreLink = {
   label: string;
   url: string;
 };
+
+    

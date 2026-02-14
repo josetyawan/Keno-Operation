@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -35,13 +36,6 @@ import {
   DialogTrigger,
   DialogClose,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -55,23 +49,9 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 
-
-const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
-
-function MapLinkForm({ mapLink, onFormSubmit, existingLinks }: { mapLink?: MapLink | null, onFormSubmit: (data: { serviceArea: string, url: string }) => void, existingLinks: MapLink[] }) {
+function MapLinkForm({ mapLink, onFormSubmit }: { mapLink?: MapLink | null, onFormSubmit: (data: { serviceArea: string, url: string }) => void }) {
   const [serviceArea, setServiceArea] = useState('');
   const [url, setUrl] = useState('');
-
-  const isEditing = !!mapLink;
-
-  const availableServiceAreas = useMemo(() => {
-    if (isEditing) {
-      return serviceAreas; // Allow selecting the same SA when editing
-    }
-    const usedServiceAreas = new Set(existingLinks.map(link => link.serviceArea));
-    return serviceAreas.filter(sa => !usedServiceAreas.has(sa));
-  }, [isEditing, existingLinks]);
-
 
   useEffect(() => {
     if (mapLink) {
@@ -95,15 +75,14 @@ function MapLinkForm({ mapLink, onFormSubmit, existingLinks }: { mapLink?: MapLi
         <Label htmlFor="serviceArea" className="text-right">
           Service Area
         </Label>
-        <Select value={serviceArea} onValueChange={setServiceArea} required disabled={isEditing}>
-            <SelectTrigger id="serviceArea" className="col-span-3">
-                <SelectValue placeholder="Pilih Service Area..." />
-            </SelectTrigger>
-            <SelectContent>
-                {isEditing && <SelectItem value={serviceArea}>{serviceArea}</SelectItem>}
-                {availableServiceAreas.map(sa => <SelectItem key={sa} value={sa}>{sa}</SelectItem>)}
-            </SelectContent>
-        </Select>
+        <Input
+          id="serviceArea"
+          value={serviceArea}
+          onChange={(e) => setServiceArea(e.target.value)}
+          className="col-span-3"
+          placeholder="e.g., SA KUDUS atau Proyek Fiber Solo"
+          required
+        />
       </div>
       <div className="grid grid-cols-4 items-center gap-4">
         <Label htmlFor="url" className="text-right">
@@ -238,7 +217,7 @@ export default function AdminMapLinksPage() {
             Manajemen Link Peta
           </h1>
           <p className="text-muted-foreground mt-1">
-            Kelola link Google My Maps untuk setiap Service Area.
+            Kelola link Google My Maps untuk setiap Service Area atau unit bisnis.
           </p>
         </div>
         <Dialog open={isFormDialogOpen} onOpenChange={setIsFormDialogOpen}>
@@ -255,7 +234,7 @@ export default function AdminMapLinksPage() {
                         {mapLinkToEdit ? 'Perbarui URL untuk Service Area ini.' : 'Tambahkan link Google My Maps untuk sebuah Service Area.'}
                     </DialogDescription>
                 </DialogHeader>
-                <MapLinkForm mapLink={mapLinkToEdit} onFormSubmit={handleFormSubmit} existingLinks={mapLinks || []}/>
+                <MapLinkForm mapLink={mapLinkToEdit} onFormSubmit={handleFormSubmit} />
             </DialogContent>
         </Dialog>
       </div>
@@ -332,3 +311,5 @@ export default function AdminMapLinksPage() {
     </>
   );
 }
+
+    

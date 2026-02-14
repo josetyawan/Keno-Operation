@@ -38,7 +38,7 @@ import Link from 'next/link';
 
 
 const assetTypes = ['OLT', 'ODC', 'ODP', 'FTM'];
-const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
+const baseServiceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
 
 
 export default function SearchAssetsPage() {
@@ -73,6 +73,17 @@ export default function SearchAssetsPage() {
   }, [firestore]);
 
   const { data: mapLinks, isLoading: areMapLinksLoading } = useCollection<MapLink>(mapLinksQuery);
+  
+  const dynamicServiceAreas = useMemo(() => {
+    const allSAs = new Set<string>(baseServiceAreas); // Start with the base list
+    if (mancoreLinks) {
+        mancoreLinks.forEach(link => allSAs.add(link.serviceArea));
+    }
+    if (mapLinks) {
+        mapLinks.forEach(link => allSAs.add(link.serviceArea));
+    }
+    return Array.from(allSAs).sort();
+  }, [mancoreLinks, mapLinks]);
 
   const mancoreLinksBySA = useMemo(() => {
     if (!mancoreLinks) return new Map<string, MancoreLink[]>();
@@ -226,7 +237,7 @@ export default function SearchAssetsPage() {
                     <SelectTrigger id="search-area"><SelectValue placeholder="Semua Area" /></SelectTrigger>
                     <SelectContent>
                         <SelectItem value="all">Semua Area</SelectItem>
-                        {serviceAreas.map(sa => <SelectItem key={sa} value={sa}>{sa}</SelectItem>)}
+                        {dynamicServiceAreas.map(sa => <SelectItem key={sa} value={sa}>{sa}</SelectItem>)}
                     </SelectContent>
                     </Select>
                 </div>
@@ -363,3 +374,5 @@ export default function SearchAssetsPage() {
     </>
   );
 }
+
+    
