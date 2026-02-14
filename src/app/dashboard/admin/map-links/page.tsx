@@ -231,7 +231,7 @@ export default function AdminMapLinksPage() {
                 <DialogHeader>
                     <DialogTitle>{mapLinkToEdit ? 'Edit Link Peta' : 'Buat Link Peta Baru'}</DialogTitle>
                     <DialogDescription>
-                        {mapLinkToEdit ? 'Perbarui URL untuk Service Area ini.' : 'Tambahkan link Google My Maps untuk sebuah Service Area.'}
+                        {mapLinkToEdit ? 'Perbarui URL untuk Service Area ini.' : 'Tambahkan link Google My Maps untuk sebuah Service Area. Untuk menambahkan peta khusus Mitratel, gunakan "MITRATEL" sebagai nama Service Area.'}
                     </DialogDescription>
                 </DialogHeader>
                 <MapLinkForm mapLink={mapLinkToEdit} onFormSubmit={handleFormSubmit} />
@@ -311,5 +311,3 @@ export default function AdminMapLinksPage() {
     </>
   );
 }
-
-    

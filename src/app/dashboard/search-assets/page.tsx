@@ -29,7 +29,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Search, ChevronLeft, ChevronRight, MapPin, FolderGit2 } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, doc, where, limit } from 'firebase/firestore';
+import { collection, query, doc } from 'firebase/firestore';
 import type { UserProfile, NetworkAsset, MancoreLink, MapLink } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
@@ -75,6 +75,13 @@ export default function SearchAssetsPage() {
   }, [firestore]);
 
   const { data: mapLinks, isLoading: areMapLinksLoading } = useCollection<MapLink>(mapLinksQuery);
+
+  const mitratelMapUrl = useMemo(() => {
+    if (!mapLinks) return null;
+    // Find a map link specifically for Mitratel
+    const mitratelLink = mapLinks.find(link => link.serviceArea.toUpperCase() === 'MITRATEL');
+    return mitratelLink?.url || null;
+  }, [mapLinks]);
   
   const dynamicServiceAreas = useMemo(() => {
     const allSAs = new Set<string>(baseServiceAreas);
@@ -84,7 +91,8 @@ export default function SearchAssetsPage() {
     if (mapLinks) {
         mapLinks.forEach(link => allSAs.add(link.serviceArea));
     }
-    return Array.from(allSAs).filter(sa => !sa.toLowerCase().includes('mitratel')).sort();
+    // Filter out the special MITRATEL service area from the dropdown
+    return Array.from(allSAs).filter(sa => sa.toUpperCase() !== 'MITRATEL').sort();
   }, [mancoreLinks, mapLinks]);
 
   const mancoreLinksBySA = useMemo(() => {
@@ -244,9 +252,9 @@ export default function SearchAssetsPage() {
                     </Select>
                 </div>
             </div>
-             {(currentMancoreLinks.length > 0 || currentMapUrl) && (
+             {(currentMancoreLinks.length > 0 || currentMapUrl || (isMitratelView && mitratelMapUrl)) && (
                 <div className="mt-4 border-t pt-4">
-                     <h4 className="text-sm font-medium mb-2">Tautan Eksternal untuk {searchServiceArea}</h4>
+                     <h4 className="text-sm font-medium mb-2">Tautan Eksternal {searchServiceArea !== 'all' && `untuk ${searchServiceArea}`}</h4>
                      <div className="max-w-2xl">
                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             {currentMapUrl && (
@@ -254,6 +262,14 @@ export default function SearchAssetsPage() {
                                     <Link href={currentMapUrl} target="_blank" rel="noopener noreferrer">
                                         <MapPin className="mr-2 h-4 w-4" />
                                         {`Buka Peta ALLPRO ${searchServiceArea}`}
+                                    </Link>
+                                </Button>
+                            )}
+                            {isMitratelView && mitratelMapUrl && (
+                                <Button asChild key="mitratel-map" variant="outline">
+                                    <Link href={mitratelMapUrl} target="_blank" rel="noopener noreferrer">
+                                        <MapPin className="mr-2 h-4 w-4" />
+                                        Buka Peta Mitratel
                                     </Link>
                                 </Button>
                             )}
