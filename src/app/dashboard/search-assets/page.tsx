@@ -53,6 +53,8 @@ export default function SearchAssetsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
 
+  const isMitratelView = searchAssetType === 'MITRATEL';
+
 
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
     useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
@@ -283,14 +285,14 @@ export default function SearchAssetsPage() {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Type</TableHead>
-                <TableHead>Sub-Type</TableHead>
+                {!isMitratelView && <TableHead>Sub-Type</TableHead>}
                 <TableHead>Service Area</TableHead>
-                <TableHead>STO</TableHead>
+                {!isMitratelView && <TableHead>STO</TableHead>}
                 <TableHead>Coordinates</TableHead>
-                <TableHead>Mitratel ID</TableHead>
-                <TableHead>Tenant ID</TableHead>
-                <TableHead>Avail</TableHead>
-                <TableHead>Used</TableHead>
+                {isMitratelView && <TableHead>Mitratel ID</TableHead>}
+                {isMitratelView && <TableHead>Tenant ID</TableHead>}
+                {!isMitratelView && <TableHead>Avail</TableHead>}
+                {!isMitratelView && <TableHead>Used</TableHead>}
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -309,14 +311,14 @@ export default function SearchAssetsPage() {
                   <TableRow key={a.id}>
                     <TableCell className="font-medium">{a.name}</TableCell>
                     <TableCell>{a.assetType}</TableCell>
-                    <TableCell>{a.subType}</TableCell>
+                    {!isMitratelView && <TableCell>{a.subType}</TableCell>}
                     <TableCell>{a.serviceArea}</TableCell>
-                    <TableCell>{a.sto}</TableCell>
+                    {!isMitratelView && <TableCell>{a.sto}</TableCell>}
                     <TableCell>{a.coordinates || '-'}</TableCell>
-                    <TableCell>{a.mitratelSiteId || '-'}</TableCell>
-                    <TableCell>{a.tenantSiteId || '-'}</TableCell>
-                    <TableCell>{a.portAvai || '-'}</TableCell>
-                    <TableCell>{a.portUsed || '-'}</TableCell>
+                    {isMitratelView && <TableCell>{a.mitratelSiteId || '-'}</TableCell>}
+                    {isMitratelView && <TableCell>{a.tenantSiteId || '-'}</TableCell>}
+                    {!isMitratelView && <TableCell>{a.portAvai || '-'}</TableCell>}
+                    {!isMitratelView && <TableCell>{a.portUsed || '-'}</TableCell>}
                     <TableCell className="text-right">
                        {googleMapsUrl && (
                         <Button asChild variant="ghost" size="icon" title="Lihat di Google Maps">
@@ -370,5 +372,7 @@ export default function SearchAssetsPage() {
     </>
   );
 }
+
+    
 
     
