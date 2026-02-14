@@ -79,18 +79,21 @@ export default function AllproPage() {
         
         // 3. Only count assets that belong to a known service area.
         if (saIndex !== -1) {
-          switch (asset.assetType) {
+          const assetTypeUpper = asset.assetType?.toUpperCase();
+          const subTypeUpper = asset.subType?.toUpperCase() || '';
+
+          switch (assetTypeUpper) {
             case 'OLT':
-              if (asset.subType === 'Mini OLT') {
+              if (subTypeUpper === 'MINI OLT') {
                 results.olt.rows[saIndex].miniOlt++;
               } else { // Anything else (OLT, N/A, undefined) is counted as a regular OLT.
                 results.olt.rows[saIndex].olt++;
               }
               break;
             case 'FTM':
-              if (asset.subType === 'EA') {
+              if (subTypeUpper === 'EA') {
                 results.ftm.rows[saIndex].ea++;
-              } else if (asset.subType === 'OA') {
+              } else if (subTypeUpper === 'OA') {
                 results.ftm.rows[saIndex].oa++;
               }
               break;
@@ -130,9 +133,6 @@ export default function AllproPage() {
         results.odp.totals.jumlah += odpRow.jumlah;
     }
     
-    // Do not filter out rows. Display all service areas even if the count is zero.
-    // This keeps the UI consistent and shows what is empty vs. what has data.
-
     return results;
   }, [assets]);
   
