@@ -25,9 +25,6 @@ import { useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 
-
-const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
-
 const skeletonCard = (
   <Card>
     <CardHeader>
@@ -63,67 +60,103 @@ export default function AllproPage() {
 
   const rekapData = useMemo(() => {
     const results = {
-      olt: { title: "OLT All", headers: ["Service Area", "Mini OLT", "OLT", "Grand Total"], rows: serviceAreas.map(sa => ({ serviceArea: sa, miniOlt: 0, olt: 0, grandTotal: 0 })), totals: { miniOlt: 0, olt: 0, grandTotal: 0 }},
-      ftm: { title: "FTM All", headers: ["Service Area", "EA", "OA", "Grand Total"], rows: serviceAreas.map(sa => ({ serviceArea: sa, ea: 0, oa: 0, grandTotal: 0 })), totals: { ea: 0, oa: 0, grandTotal: 0 }},
-      odc: { title: "ODC All", headers: ["Service Area", "Jumlah ODC"], rows: serviceAreas.map(sa => ({ serviceArea: sa, jumlah: 0 })), totals: { jumlah: 0 }},
-      odp: { title: "ODP All", headers: ["Service Area", "Jumlah ODP"], rows: serviceAreas.map(sa => ({ serviceArea: sa, jumlah: 0 })), totals: { jumlah: 0 }},
+      olt: { title: "OLT All", headers: ["Service Area", "Mini OLT", "OLT", "Grand Total"], rows: [] as any[], totals: { miniOlt: 0, olt: 0, grandTotal: 0 }},
+      ftm: { title: "FTM All", headers: ["Service Area", "EA", "OA", "Grand Total"], rows: [] as any[], totals: { ea: 0, oa: 0, grandTotal: 0 }},
+      odc: { title: "ODC All", headers: ["Service Area", "Jumlah ODC"], rows: [] as any[], totals: { jumlah: 0 }},
+      odp: { title: "ODP All", headers: ["Service Area", "Jumlah ODP"], rows: [] as any[], totals: { jumlah: 0 }},
     };
 
     if (!assets) {
       return results;
     }
 
-    for (const asset of assets) {
-      const sa = asset.serviceArea;
-      const assetType = asset.assetType;
-      const subType = asset.subType;
+    const rekapMap = new Map<string, {
+        miniOlt: number;
+        olt: number;
+        ea: number;
+        oa: number;
+        odc: number;
+        odp: number;
+    }>();
 
-      const oltRow = results.olt.rows.find(r => r.serviceArea === sa);
-      const ftmRow = results.ftm.rows.find(r => r.serviceArea === sa);
-      const odcRow = results.odc.rows.find(r => r.serviceArea === sa);
-      const odpRow = results.odp.rows.find(r => r.serviceArea === sa);
+    for (const asset of assets) {
+      const sa = asset.serviceArea?.trim() || 'N/A';
       
-      if (assetType === 'OLT' && oltRow) {
-          if (subType === 'Mini OLT') {
-              oltRow.miniOlt++;
+      if (!rekapMap.has(sa)) {
+        rekapMap.set(sa, { miniOlt: 0, olt: 0, ea: 0, oa: 0, odc: 0, odp: 0 });
+      }
+      
+      const counts = rekapMap.get(sa)!;
+
+      switch (asset.assetType) {
+        case 'OLT':
+          if (asset.subType === 'Mini OLT') {
+            counts.miniOlt++;
           } else {
-              oltRow.olt++;
+            counts.olt++;
           }
-      } else if (assetType === 'FTM' && ftmRow) {
-          if (subType === 'EA') {
-              ftmRow.ea++;
-          } else if (subType === 'OA') {
-              ftmRow.oa++;
+          break;
+        case 'FTM':
+          if (asset.subType === 'EA') {
+            counts.ea++;
+          } else if (asset.subType === 'OA') {
+            counts.oa++;
           }
-      } else if (assetType === 'ODC' && odcRow) {
-          odcRow.jumlah++;
-      } else if (assetType === 'ODP' && odpRow) {
-          odpRow.jumlah++;
+          break;
+        case 'ODC':
+          counts.odc++;
+          break;
+        case 'ODP':
+          counts.odp++;
+          break;
       }
     }
-
-    // Calculate totals
-    results.olt.rows.forEach(row => {
-      row.grandTotal = row.miniOlt + row.olt;
-      results.olt.totals.miniOlt += row.miniOlt;
-      results.olt.totals.olt += row.olt;
-      results.olt.totals.grandTotal += row.grandTotal;
-    });
-
-    results.ftm.rows.forEach(row => {
-      row.grandTotal = row.ea + row.oa;
-      results.ftm.totals.ea += row.ea;
-      results.ftm.totals.oa += row.oa;
-      results.ftm.totals.grandTotal += row.grandTotal;
-    });
     
-    results.odc.rows.forEach(row => {
-      results.odc.totals.jumlah += row.jumlah;
+    const PREFERRED_ORDER = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
+    const sortedServiceAreas = Array.from(rekapMap.keys()).sort((a, b) => {
+        const indexA = PREFERRED_ORDER.indexOf(a);
+        const indexB = PREFERRED_ORDER.indexOf(b);
+        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+        if (indexA !== -1) return -1;
+        if (indexB !== -1) return 1;
+        return a.localeCompare(b);
     });
 
-    results.odp.rows.forEach(row => {
-      results.odp.totals.jumlah += row.jumlah;
-    });
+    for (const sa of sortedServiceAreas) {
+        const counts = rekapMap.get(sa)!;
+
+        // OLT
+        if (counts.miniOlt > 0 || counts.olt > 0) {
+            const oltRow = { serviceArea: sa, miniOlt: counts.miniOlt, olt: counts.olt, grandTotal: counts.miniOlt + counts.olt };
+            results.olt.rows.push(oltRow);
+            results.olt.totals.miniOlt += oltRow.miniOlt;
+            results.olt.totals.olt += oltRow.olt;
+            results.olt.totals.grandTotal += oltRow.grandTotal;
+        }
+
+        // FTM
+        if (counts.ea > 0 || counts.oa > 0) {
+            const ftmRow = { serviceArea: sa, ea: counts.ea, oa: counts.oa, grandTotal: counts.ea + counts.oa };
+            results.ftm.rows.push(ftmRow);
+            results.ftm.totals.ea += ftmRow.ea;
+            results.ftm.totals.oa += ftmRow.oa;
+            results.ftm.totals.grandTotal += ftmRow.grandTotal;
+        }
+
+        // ODC
+        if (counts.odc > 0) {
+            const odcRow = { serviceArea: sa, jumlah: counts.odc };
+            results.odc.rows.push(odcRow);
+            results.odc.totals.jumlah += odcRow.jumlah;
+        }
+
+        // ODP
+        if (counts.odp > 0) {
+            const odpRow = { serviceArea: sa, jumlah: counts.odp };
+            results.odp.rows.push(odpRow);
+            results.odp.totals.jumlah += odpRow.jumlah;
+        }
+    }
 
     return results;
   }, [assets]);
