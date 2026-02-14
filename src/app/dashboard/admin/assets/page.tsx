@@ -424,9 +424,18 @@ export default function AdminAssetsPage() {
                         const assetName = row[assetNameCol]?.toString().trim();
                         if (!assetName) continue;
 
-                        const stoValue = stoCol ? row[stoCol]?.toString().trim() : '';
-                        // Always derive Service Area from STO if STO is present, making it the source of truth.
-                        const finalServiceArea = stoValue ? mapStoToServiceArea(stoValue) : 'SA KUDUS';
+                        // --- Robust STO and Service Area Logic ---
+                        let stoValue = '';
+                        const nameParts = assetName.split('-');
+                        if (nameParts.length > 1) {
+                            stoValue = nameParts[1]; // Priority 1: Extract from name
+                        }
+                        
+                        if (!stoValue && stoCol && row[stoCol]) {
+                            stoValue = row[stoCol].toString().trim(); // Priority 2: Use STO column
+                        }
+
+                        const finalServiceArea = stoValue ? mapStoToServiceArea(stoValue) : 'SA KUDUS'; // Map from STO, fallback to default
 
                         const assetData: Partial<NetworkAsset> = {
                             name: assetName,
@@ -449,7 +458,7 @@ export default function AdminAssetsPage() {
                             let subType: NetworkAsset['subType'] = 'N/A';
 
                             if (importAssetType === 'OLT') {
-                                subType = 'OLT';
+                                subType = 'OLT'; // Default to 'OLT'
                             }
                             
                             if (keteranganCol && row[keteranganCol]) {
