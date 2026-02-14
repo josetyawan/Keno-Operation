@@ -50,7 +50,7 @@ import { Trash2, Upload, Search, Loader2, ChevronLeft, ChevronRight, MapPin } fr
 import { Progress } from "@/components/ui/progress";
 import { useUser, useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking, useDoc, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
 import { collection, query, doc, serverTimestamp, writeBatch, where, getDocs, limit } from 'firebase/firestore';
-import type { UserProfile, NetworkAsset } from '@/lib/types';
+import type { UserProfile, NetworkAsset, MancoreLink, MapLink } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
@@ -60,7 +60,7 @@ import Link from 'next/link';
 
 
 const assetTypes = ['OLT', 'ODC', 'ODP', 'FTM', 'Mini OLT', 'MITRATEL'];
-const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
+const baseServiceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
 
 
 export default function AdminAssetsPage() {
@@ -88,6 +88,20 @@ export default function AdminAssetsPage() {
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
     useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
   );
+  
+    // Fetch links to create dynamic service area list
+  const mancoreLinksQuery = useMemoFirebase(() => collection(firestore, 'mancore-links'), [firestore]);
+  const { data: mancoreLinks, isLoading: areMancoreLinksLoading } = useCollection<MancoreLink>(mancoreLinksQuery);
+
+  const mapLinksQuery = useMemoFirebase(() => collection(firestore, 'map-links'), [firestore]);
+  const { data: mapLinks, isLoading: areMapLinksLoading } = useCollection<MapLink>(mapLinksQuery);
+  
+  const dynamicServiceAreas = useMemo(() => {
+    const allSAs = new Set<string>(baseServiceAreas);
+    if (mancoreLinks) mancoreLinks.forEach(link => allSAs.add(link.serviceArea));
+    if (mapLinks) mapLinks.forEach(link => allSAs.add(link.serviceArea));
+    return Array.from(allSAs).sort();
+  }, [mancoreLinks, mapLinks]);
 
   useEffect(() => {
     if (!isUserLoading && !isProfileLoading && (!user || currentUserProfile?.role !== 'admin')) {
@@ -104,24 +118,33 @@ export default function AdminAssetsPage() {
     if (searchAssetType !== 'all' && searchAssetType !== 'Mini OLT') { // Mini OLT is not a real assetType
       constraints.push(where('assetType', '==', searchAssetType));
     }
-    if (searchServiceArea !== 'all') {
-      constraints.push(where('serviceArea', '==', searchServiceArea));
-    }
-    constraints.push(limit(500)); // Fetch a reasonable number to filter by name on the client.
+    constraints.push(limit(500)); // Fetch a reasonable number to filter on the client.
     
     return query(collection(firestore, 'network-assets'), ...constraints);
-  }, [firestore, currentUserProfile, isUserLoading, isProfileLoading, searchAssetType, searchServiceArea]);
+  }, [firestore, currentUserProfile, isUserLoading, isProfileLoading, searchAssetType]);
 
   const { data: queriedAssets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(filteredAssetsQuery);
 
+  // Perform client-side filtering for SA and name
   const filteredAssetsByName = useMemo(() => {
     if (!queriedAssets) return [];
+
+    // Filter by Service Area first
+    const assetsBySA = (searchServiceArea === 'all')
+        ? queriedAssets
+        : queriedAssets.filter(asset => asset.serviceArea === searchServiceArea);
+
+    // Then filter by name
     const lowercasedSearchName = searchName.toLowerCase().trim();
+    if (!lowercasedSearchName) {
+        return assetsBySA;
+    }
     
-    return queriedAssets.filter(asset => {
-      return searchName ? asset.name.toLowerCase().includes(lowercasedSearchName) : true;
+    return assetsBySA.filter(asset => {
+      return asset.name.toLowerCase().includes(lowercasedSearchName);
     });
-  }, [queriedAssets, searchName]);
+  }, [queriedAssets, searchServiceArea, searchName]);
+
 
   const totalPages = Math.ceil(filteredAssetsByName.length / ITEMS_PER_PAGE);
 
@@ -616,7 +639,7 @@ export default function AdminAssetsPage() {
 };
 
 
-  const isLoading = isUserLoading || isProfileLoading || areAssetsLoading;
+  const isLoading = isUserLoading || isProfileLoading || areAssetsLoading || areMancoreLinksLoading || areMapLinksLoading;
 
   if (isLoading && !queriedAssets) {
       return (
@@ -747,7 +770,7 @@ export default function AdminAssetsPage() {
               <SelectTrigger id="search-area"><SelectValue placeholder="Semua Area" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Semua Area</SelectItem>
-                {serviceAreas.map(sa => <SelectItem key={sa} value={sa}>{sa}</SelectItem>)}
+                {dynamicServiceAreas.map(sa => <SelectItem key={sa} value={sa}>{sa}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
