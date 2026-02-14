@@ -21,7 +21,7 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, AlertTriangle } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import type { NetworkAsset } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
@@ -51,8 +51,10 @@ function MapView() {
     const serviceArea = searchParams.get('serviceArea');
 
     const assetsQuery = useMemoFirebase(() => {
-        return query(collection(firestore, 'network-assets'));
-    }, [firestore]);
+        if (!serviceArea) return null;
+        // Query only for assets in the selected service area to improve performance and reduce cost.
+        return query(collection(firestore, 'network-assets'), where('serviceArea', '==', serviceArea));
+    }, [firestore, serviceArea]);
 
     const { data: allAssets, isLoading } = useCollection<NetworkAsset>(assetsQuery);
 
@@ -61,9 +63,8 @@ function MapView() {
             return { mapUrl: '', displayedAssets: [], truncated: false };
         }
 
-        const filteredAssets = allAssets.filter(asset => 
-            asset.serviceArea === serviceArea && asset.coordinates
-        );
+        // The query now pre-filters by serviceArea, so we only need to filter for coordinates.
+        const filteredAssets = allAssets.filter(asset => asset.coordinates);
 
         const assetsForMap = filteredAssets.slice(0, MAX_MARKERS);
         const wasTruncated = filteredAssets.length > MAX_MARKERS;
