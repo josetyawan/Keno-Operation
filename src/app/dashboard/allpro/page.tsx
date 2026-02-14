@@ -60,118 +60,130 @@ export default function AllproPage() {
 
   const rekapData = useMemo(() => {
     const PREFERRED_ORDER: NetworkAsset['serviceArea'][] = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
+    
+    const mapStoToServiceArea = (sto: string, assetName: string): NetworkAsset['serviceArea'] => {
+        let stoCode = '';
+        const nameParts = (assetName || '').split('-');
+        if (nameParts.length > 1) {
+            stoCode = nameParts[1]?.toUpperCase().trim();
+        }
 
-    const mapStoToServiceArea = (sto: string): NetworkAsset['serviceArea'] => {
-        const upperSto = (sto || '').toUpperCase().trim();
-        if (!upperSto) return 'SA KUDUS';
+        if (!stoCode || stoCode.length < 2) { // Fallback to sto column if name doesn't have a valid code
+            stoCode = (sto || '').toUpperCase().trim();
+        }
 
         // SA PURWODADI Codes
-        if (['PWB', 'PURWODADI', 'WRO', 'WIROSARI', 'TRO', 'TOROH', 'GBU', 'GUBUNG', 'GDO', 'GODONG'].includes(upperSto)) {
+        if (['PWB', 'PURWODADI', 'WRO', 'WIROSARI', 'TRO', 'TOROH', 'GBU', 'GUBUNG', 'GDO', 'GODONG'].some(c => stoCode.includes(c))) {
             return 'SA PURWODADI';
         }
         
         // SA BLORA Codes
-        if (['CEP', 'CEPU', 'BLO', 'BLORA', 'NGA', 'NGAWEN', 'RDB', 'RANDUBLATUNG'].includes(upperSto)) {
+        if (['CEP', 'CEPU', 'BLO', 'BLORA', 'NGA', 'NGAWEN', 'RDB', 'RANDUBLATUNG'].some(c => stoCode.includes(c))) {
             return 'SA BLORA';
         }
 
         // SA JEPARA Codes
-        if (['KMJ', 'JEPARA', 'JPR', 'BAN', 'BANGSRI', 'KEL', 'KELING', 'PEC', 'PECANGAAN'].includes(upperSto)) {
+        if (['KMJ', 'JEPARA', 'JPR', 'BAN', 'BANGSRI', 'KEL', 'KELING', 'PEC', 'PECANGAAN'].some(c => stoCode.includes(c))) {
             return 'SA JEPARA';
         }
 
         // SA KUDUS Codes
-        if (['KUD', 'KUDUS', 'DMA', 'DEMAK'].includes(upperSto)) {
+        if (['KUD', 'KUDUS', 'DMA', 'DEMAK'].some(c => stoCode.includes(c))) {
             return 'SA KUDUS';
         }
 
         // SA PATI Codes
-        if (['PAT', 'PATI', 'TAY', 'JWN'].includes(upperSto)) {
+        if (['PAT', 'PATI', 'TAY', 'JWN'].some(c => stoCode.includes(c))) {
             return 'SA PATI';
         }
         
         // SA REMBANG Codes
-        if (['LSE', 'LASEM', 'RBN', 'REMBANG'].includes(upperSto)) {
+        if (['LSE', 'LASEM', 'RBN', 'REMBANG'].some(c => stoCode.includes(c))) {
             return 'SA REMBANG';
         }
         
         return 'SA KUDUS'; // Default fallback
     };
-
-
-    const results = {
-      olt: { title: "OLT All", headers: ["Service Area", "Mini OLT", "OLT", "Grand Total"], rows: PREFERRED_ORDER.map(sa => ({ serviceArea: sa, miniOlt: 0, olt: 0, grandTotal: 0})), totals: { miniOlt: 0, olt: 0, grandTotal: 0 }},
-      ftm: { title: "FTM All", headers: ["Service Area", "EA", "OA", "Grand Total"], rows: PREFERRED_ORDER.map(sa => ({ serviceArea: sa, ea: 0, oa: 0, grandTotal: 0})), totals: { ea: 0, oa: 0, grandTotal: 0 }},
-      odc: { title: "ODC All", headers: ["Service Area", "Jumlah ODC"], rows: PREFERRED_ORDER.map(sa => ({ serviceArea: sa, jumlah: 0})), totals: { jumlah: 0 }},
-      odp: { title: "ODP All", headers: ["Service Area", "Jumlah ODP"], rows: PREFERRED_ORDER.map(sa => ({ serviceArea: sa, jumlah: 0})), totals: { jumlah: 0 }},
-    };
+    
+    // 1. Initialize a stable structure for the dashboard
+    const serviceAreaMap = PREFERRED_ORDER.reduce((acc, sa) => {
+        acc[sa] = {
+            olt: { miniOlt: 0, olt: 0 },
+            ftm: { ea: 0, oa: 0 },
+            odc: { jumlah: 0 },
+            odp: { jumlah: 0 },
+        };
+        return acc;
+    }, {} as Record<string, { olt: any; ftm: any; odc: any; odp: any; }>);
 
     if (assets) {
-      for (const asset of assets) {
-        let stoValue = asset.sto || '';
-        
-        if (!stoValue || stoValue.toUpperCase() === 'N/A') {
-            const nameParts = asset.name.split('-');
-            if (nameParts.length > 1) {
-                stoValue = nameParts[1];
+        // 2. Iterate through all assets and count them directly into the structure
+        for (const asset of assets) {
+            const correctAssetSA = mapStoToServiceArea(asset.sto, asset.name);
+            
+            if (serviceAreaMap[correctAssetSA]) {
+                const assetTypeUpper = (asset.assetType || '').toUpperCase();
+                const subTypeUpper = (asset.subType || '').toUpperCase();
+
+                switch (assetTypeUpper) {
+                    case 'OLT':
+                        if (subTypeUpper === 'MINI OLT') {
+                            serviceAreaMap[correctAssetSA].olt.miniOlt++;
+                        } else {
+                            serviceAreaMap[correctAssetSA].olt.olt++;
+                        }
+                        break;
+                    case 'FTM':
+                        if (subTypeUpper === 'EA') {
+                            serviceAreaMap[correctAssetSA].ftm.ea++;
+                        } else {
+                            serviceAreaMap[correctAssetSA].ftm.oa++;
+                        }
+                        break;
+                    case 'ODC':
+                        serviceAreaMap[correctAssetSA].odc.jumlah++;
+                        break;
+                    case 'ODP':
+                        serviceAreaMap[correctAssetSA].odp.jumlah++;
+                        break;
+                }
             }
         }
-        
-        const correctAssetSA = mapStoToServiceArea(stoValue);
-        const foundIndex = PREFERRED_ORDER.indexOf(correctAssetSA);
-        
-        if (foundIndex !== -1) {
-          const assetTypeUpper = (asset.assetType || '').toUpperCase();
-          const subTypeUpper = (asset.subType || '').toUpperCase();
-
-          switch (assetTypeUpper) {
-            case 'OLT':
-              if (subTypeUpper === 'MINI OLT') {
-                results.olt.rows[foundIndex].miniOlt++;
-              } else {
-                results.olt.rows[foundIndex].olt++;
-              }
-              break;
-            case 'FTM':
-              if (subTypeUpper === 'EA') {
-                results.ftm.rows[foundIndex].ea++;
-              } else if (subTypeUpper === 'OA') {
-                results.ftm.rows[foundIndex].oa++;
-              }
-              break;
-            case 'ODC':
-              results.odc.rows[foundIndex].jumlah++;
-              break;
-            case 'ODP':
-              results.odp.rows[foundIndex].jumlah++;
-              break;
-          }
-        }
-      }
     }
     
-    // Calculate grand totals for rows and the final footer.
-    for(let i = 0; i < PREFERRED_ORDER.length; i++) {
+    // 3. Build the final display object from the counted data
+    const results = {
+      olt: { title: "OLT All", headers: ["Service Area", "Mini OLT", "OLT", "Grand Total"], rows: [] as any[], totals: { miniOlt: 0, olt: 0, grandTotal: 0 }},
+      ftm: { title: "FTM All", headers: ["Service Area", "EA", "OA", "Grand Total"], rows: [] as any[], totals: { ea: 0, oa: 0, grandTotal: 0 }},
+      odc: { title: "ODC All", headers: ["Service Area", "Jumlah ODC"], rows: [] as any[], totals: { jumlah: 0 }},
+      odp: { title: "ODP All", headers: ["Service Area", "Jumlah ODP"], rows: [] as any[], totals: { jumlah: 0 }},
+    };
+    
+    for (const sa of PREFERRED_ORDER) {
+        const data = serviceAreaMap[sa];
+        
         // OLT
-        const oltRow = results.olt.rows[i];
-        oltRow.grandTotal = oltRow.miniOlt + oltRow.olt;
+        const oltRow = { serviceArea: sa, miniOlt: data.olt.miniOlt, olt: data.olt.olt, grandTotal: data.olt.miniOlt + data.olt.olt };
+        results.olt.rows.push(oltRow);
         results.olt.totals.miniOlt += oltRow.miniOlt;
         results.olt.totals.olt += oltRow.olt;
         results.olt.totals.grandTotal += oltRow.grandTotal;
 
         // FTM
-        const ftmRow = results.ftm.rows[i];
-        ftmRow.grandTotal = ftmRow.ea + ftmRow.oa;
+        const ftmRow = { serviceArea: sa, ea: data.ftm.ea, oa: data.ftm.oa, grandTotal: data.ftm.ea + data.ftm.oa };
+        results.ftm.rows.push(ftmRow);
         results.ftm.totals.ea += ftmRow.ea;
         results.ftm.totals.oa += ftmRow.oa;
         results.ftm.totals.grandTotal += ftmRow.grandTotal;
-
+        
         // ODC
-        const odcRow = results.odc.rows[i];
+        const odcRow = { serviceArea: sa, jumlah: data.odc.jumlah };
+        results.odc.rows.push(odcRow);
         results.odc.totals.jumlah += odcRow.jumlah;
         
         // ODP
-        const odpRow = results.odp.rows[i];
+        const odpRow = { serviceArea: sa, jumlah: data.odp.jumlah };
+        results.odp.rows.push(odpRow);
         results.odp.totals.jumlah += odpRow.jumlah;
     }
     
