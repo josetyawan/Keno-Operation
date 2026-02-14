@@ -57,6 +57,7 @@
           "description": "Defines which application modules the user can access.",
           "enum": [
             "nota",
+            "allpro",
             "all"
           ]
         }

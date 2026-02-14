@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -25,7 +26,10 @@ export default function DashboardSelectorPage() {
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
   const isLoading = isAuthLoading || isProfileLoading;
-  const canAccessAllApps = userProfile?.role === 'admin' || userProfile?.appAccess === 'all';
+  
+  const canAccessNota = !isLoading && (userProfile?.role === 'admin' || userProfile?.appAccess === 'nota' || userProfile?.appAccess === 'all');
+  const canAccessAllpro = !isLoading && (userProfile?.role === 'admin' || userProfile?.appAccess === 'allpro' || userProfile?.appAccess === 'all');
+
 
    if (isLoading) {
     return (
@@ -60,26 +64,28 @@ export default function DashboardSelectorPage() {
         </p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Link href="/dashboard/nota">
-          <Card className="hover:border-primary hover:shadow-lg transition-all duration-200 h-full">
-            <CardHeader className="flex flex-row items-center gap-4">
-              <div className="p-3 rounded-full bg-primary/10 text-primary">
-                <BookCopy className="h-8 w-8" />
-              </div>
-              <div>
-                <CardTitle>Aplikasi Nota</CardTitle>
-                <CardDescription>Manajemen dan pelaporan nota.</CardDescription>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Buat, edit, dan kelola semua laporan nota Anda.
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
+        {canAccessNota && (
+            <Link href="/dashboard/nota">
+            <Card className="hover:border-primary hover:shadow-lg transition-all duration-200 h-full">
+                <CardHeader className="flex flex-row items-center gap-4">
+                <div className="p-3 rounded-full bg-primary/10 text-primary">
+                    <BookCopy className="h-8 w-8" />
+                </div>
+                <div>
+                    <CardTitle>Aplikasi Nota</CardTitle>
+                    <CardDescription>Manajemen dan pelaporan nota.</CardDescription>
+                </div>
+                </CardHeader>
+                <CardContent>
+                <p className="text-sm text-muted-foreground">
+                    Buat, edit, dan kelola semua laporan nota Anda.
+                </p>
+                </CardContent>
+            </Card>
+            </Link>
+        )}
         
-        {canAccessAllApps && (
+        {canAccessAllpro && (
            <Link href="/dashboard/search-assets">
             <Card className="hover:border-primary hover:shadow-lg transition-all duration-200 h-full">
               <CardHeader className="flex flex-row items-center gap-4">
@@ -100,24 +106,26 @@ export default function DashboardSelectorPage() {
           </Link>
         )}
 
-        <Link href="/dashboard/allpro">
-          <Card className="hover:border-primary hover:shadow-lg transition-all duration-200 h-full">
-             <CardHeader className="flex flex-row items-center gap-4">
-               <div className="p-3 rounded-full bg-primary/10 text-primary">
-                <BarChart3 className="h-8 w-8" />
-              </div>
-              <div>
-                <CardTitle>Rekapitulasi Jaringan</CardTitle>
-                <CardDescription>Ringkasan data jaringan.</CardDescription>
-              </div>
-            </CardHeader>
-             <CardContent>
-               <p className="text-sm text-muted-foreground">
-                Lihat ringkasan data OLT, ODC, ODP, dan FTM.
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
+        {canAccessAllpro && (
+            <Link href="/dashboard/allpro">
+            <Card className="hover:border-primary hover:shadow-lg transition-all duration-200 h-full">
+                <CardHeader className="flex flex-row items-center gap-4">
+                <div className="p-3 rounded-full bg-primary/10 text-primary">
+                    <BarChart3 className="h-8 w-8" />
+                </div>
+                <div>
+                    <CardTitle>Rekapitulasi Jaringan</CardTitle>
+                    <CardDescription>Ringkasan data jaringan.</CardDescription>
+                </div>
+                </CardHeader>
+                <CardContent>
+                <p className="text-sm text-muted-foreground">
+                    Lihat ringkasan data OLT, ODC, ODP, dan FTM.
+                </p>
+                </CardContent>
+            </Card>
+            </Link>
+        )}
       </div>
     </>
   );

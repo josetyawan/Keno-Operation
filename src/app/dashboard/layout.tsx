@@ -1,7 +1,8 @@
+
 'use client';
 
 import Link from 'next/link';
-import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home, Network, Search } from 'lucide-react';
+import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home, Network, Search, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -23,13 +24,14 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 const navLinks = [
-  { href: '/dashboard', label: 'Home', icon: Home, adminOnly: false, requiresAllAccess: false },
-  { href: '/dashboard/nota', label: 'Laporan Nota', icon: LayoutGrid, adminOnly: false, requiresAllAccess: false },
-  { href: '/dashboard/search-assets', label: 'Pencarian Aset', icon: Search, adminOnly: false, requiresAllAccess: true },
-  { href: '/dashboard/admin/users', label: 'Manajemen User', icon: Users, adminOnly: true, requiresAllAccess: false },
-  { href: '/dashboard/admin/pids', label: 'Manajemen PID', icon: Tags, adminOnly: true, requiresAllAccess: false },
-  { href: '/dashboard/admin/assets', label: 'Manajemen Aset', icon: Network, adminOnly: true, requiresAllAccess: false },
-  { href: '/dashboard/rekap', label: 'Rekap Telegram', icon: Bot, adminOnly: true, requiresAllAccess: false },
+  { href: '/dashboard', label: 'Home', icon: Home, access: 'public' },
+  { href: '/dashboard/nota', label: 'Laporan Nota', icon: LayoutGrid, access: 'nota' },
+  { href: '/dashboard/search-assets', label: 'Pencarian Aset', icon: Search, access: 'allpro' },
+  { href: '/dashboard/allpro', label: 'Rekap Jaringan', icon: BarChart3, access: 'allpro' },
+  { href: '/dashboard/admin/users', label: 'Manajemen User', icon: Users, access: 'admin' },
+  { href: '/dashboard/admin/pids', label: 'Manajemen PID', icon: Tags, access: 'admin' },
+  { href: '/dashboard/admin/assets', label: 'Manajemen Aset', icon: Network, access: 'admin' },
+  { href: '/dashboard/rekap', label: 'Rekap Telegram', icon: Bot, access: 'admin' },
 ];
 
 function DashboardSkeleton() {
@@ -220,8 +222,25 @@ export default function DashboardLayout({
             <nav className="grid items-start px-4 py-4 text-sm font-medium">
               {navLinks.map(link => {
                 const isAdmin = userProfile?.role === 'admin';
-                if (link.adminOnly && !isAdmin) return null;
-                if (link.requiresAllAccess && !isAdmin && userProfile?.appAccess !== 'all') return null;
+                const appAccess = userProfile?.appAccess;
+                
+                let canView = false;
+                if (isAdmin) {
+                    canView = true;
+                } else {
+                    if (link.access === 'public') {
+                        canView = true;
+                    } else if (appAccess === 'all') {
+                        if (link.access === 'nota' || link.access === 'allpro') {
+                            canView = true;
+                        }
+                    } else if (link.access === appAccess) {
+                        canView = true;
+                    }
+                }
+
+                if (link.access === 'admin' && !isAdmin) canView = false;
+                if (!canView) return null;
 
                 const isActive = link.href === '/dashboard' ? pathname === link.href : pathname.startsWith(link.href);
 
@@ -266,8 +285,24 @@ export default function DashboardLayout({
                 </Link>
                 {navLinks.map(link => {
                   const isAdmin = userProfile?.role === 'admin';
-                  if (link.adminOnly && !isAdmin) return null;
-                  if (link.requiresAllAccess && !isAdmin && userProfile?.appAccess !== 'all') return null;
+                  const appAccess = userProfile?.appAccess;
+
+                  let canView = false;
+                  if (isAdmin) {
+                      canView = true;
+                  } else {
+                      if (link.access === 'public') {
+                          canView = true;
+                      } else if (appAccess === 'all') {
+                          if (link.access === 'nota' || link.access === 'allpro') {
+                              canView = true;
+                          }
+                      } else if (link.access === appAccess) {
+                          canView = true;
+                      }
+                  }
+                  if (link.access === 'admin' && !isAdmin) canView = false;
+                  if (!canView) return null;
                   
                   const isActive = link.href === '/dashboard' ? pathname === link.href : pathname.startsWith(link.href);
                   return (

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -21,7 +22,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import type { NetworkAsset, UserProfile } from '@/lib/types';
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 
@@ -92,6 +93,16 @@ export default function AllproPage() {
     [user, firestore]
   );
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+
+  useEffect(() => {
+    if (!isUserLoading && !isProfileLoading) {
+      const isApproved = userProfile?.registrationStatus === 'approved';
+      const hasAccess = userProfile?.role === 'admin' || userProfile?.appAccess === 'allpro' || userProfile?.appAccess === 'all';
+      if (!user || !isApproved || !hasAccess) {
+        router.push('/dashboard');
+      }
+    }
+  }, [user, userProfile, isUserLoading, isProfileLoading, router]);
 
   const assetsQuery = useMemoFirebase(() => {
     if (isUserLoading || isProfileLoading || !user || userProfile?.registrationStatus !== 'approved') return null;

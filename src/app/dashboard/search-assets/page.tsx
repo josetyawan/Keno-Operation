@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -60,7 +61,7 @@ export default function SearchAssetsPage() {
   useEffect(() => {
     if (!isUserLoading && !isProfileLoading) {
       const isApproved = currentUserProfile?.registrationStatus === 'approved';
-      const hasAccess = currentUserProfile?.role === 'admin' || currentUserProfile?.appAccess === 'all';
+      const hasAccess = currentUserProfile?.role === 'admin' || currentUserProfile?.appAccess === 'allpro' || currentUserProfile?.appAccess === 'all';
       if (!user || !isApproved || !hasAccess) {
         router.push('/dashboard');
       }

@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -51,7 +52,8 @@ function UserActions({ userToManage, currentUserId }: { userToManage: UserProfil
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
-  const [selectedAccess, setSelectedAccess] = useState<'nota' | 'all'>('nota');
+  const [isAccessDialogOpen, setIsAccessDialogOpen] = useState(false);
+  const [selectedAccess, setSelectedAccess] = useState<'nota' | 'allpro' | 'all'>('nota');
 
   const handleUpdate = (data: Partial<UserProfile>) => {
     const userDocRef = doc(firestore, 'users', userToManage.id);
@@ -77,6 +79,11 @@ function UserActions({ userToManage, currentUserId }: { userToManage: UserProfil
   const handleApprove = () => {
     handleUpdate({ registrationStatus: 'approved', appAccess: selectedAccess });
     setIsApproveDialogOpen(false);
+  }
+
+  const handleChangeAccess = () => {
+    handleUpdate({ appAccess: selectedAccess });
+    setIsAccessDialogOpen(false);
   }
   
   // An admin cannot demote or change their own status
@@ -113,9 +120,13 @@ function UserActions({ userToManage, currentUserId }: { userToManage: UserProfil
             </DropdownMenuItem>
           )}
            {userToManage.registrationStatus === 'approved' && (
-             <DropdownMenuItem onClick={() => handleUpdate({ appAccess: userToManage.appAccess === 'all' ? 'nota' : 'all' })}>
+             <DropdownMenuItem onSelect={(e) => {
+                e.preventDefault();
+                setSelectedAccess(userToManage.appAccess || 'nota');
+                setIsAccessDialogOpen(true);
+             }}>
                 <KeyRound className="mr-2 h-4 w-4" />
-                {userToManage.appAccess === 'all' ? 'Batasi ke Nota' : 'Beri Akses Penuh'}
+                Ubah Akses
             </DropdownMenuItem>
            )}
           <AlertDialog>
@@ -154,20 +165,55 @@ function UserActions({ userToManage, currentUserId }: { userToManage: UserProfil
               </AlertDialogDescription>
               </AlertDialogHeader>
               <div className="py-4">
-                  <RadioGroup defaultValue="nota" value={selectedAccess} onValueChange={(value: 'nota' | 'all') => setSelectedAccess(value)}>
+                  <RadioGroup defaultValue="nota" onValueChange={(value: 'nota' | 'allpro' | 'all') => setSelectedAccess(value)}>
                       <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="nota" id="r1" />
-                          <Label htmlFor="r1">Akses Aplikasi Nota Saja</Label>
+                          <RadioGroupItem value="nota" id="r1-approve" />
+                          <Label htmlFor="r1-approve">Hanya Nota (Finance)</Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="all" id="r2" />
-                          <Label htmlFor="r2">Akses Semua Aplikasi (Nota & Pencarian Aset)</Label>
+                          <RadioGroupItem value="allpro" id="r2-approve" />
+                          <Label htmlFor="r2-approve">Hanya Aset (Teknis)</Label>
+                      </div>
+                       <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="all" id="r3-approve" />
+                          <Label htmlFor="r3-approve">Akses Semua (Nota & Aset)</Label>
                       </div>
                   </RadioGroup>
               </div>
               <AlertDialogFooter>
               <AlertDialogCancel>Batal</AlertDialogCancel>
               <AlertDialogAction onClick={handleApprove}>Setujui Pengguna</AlertDialogAction>
+              </AlertDialogFooter>
+          </AlertDialogContent>
+      </AlertDialog>
+
+       <AlertDialog open={isAccessDialogOpen} onOpenChange={setIsAccessDialogOpen}>
+          <AlertDialogContent>
+              <AlertDialogHeader>
+              <AlertDialogTitle>Ubah Akses untuk: {userToManage.email}</AlertDialogTitle>
+              <AlertDialogDescription>
+                  Pilih tingkat akses baru untuk pengguna ini.
+              </AlertDialogDescription>
+              </AlertDialogHeader>
+              <div className="py-4">
+                  <RadioGroup value={selectedAccess} onValueChange={(value: 'nota' | 'allpro' | 'all') => setSelectedAccess(value)}>
+                      <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="nota" id="r1-change" />
+                          <Label htmlFor="r1-change">Hanya Nota (Finance)</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="allpro" id="r2-change" />
+                          <Label htmlFor="r2-change">Hanya Aset (Teknis)</Label>
+                      </div>
+                       <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="all" id="r3-change" />
+                          <Label htmlFor="r3-change">Akses Semua (Nota & Aset)</Label>
+                      </div>
+                  </RadioGroup>
+              </div>
+              <AlertDialogFooter>
+              <AlertDialogCancel>Batal</AlertDialogCancel>
+              <AlertDialogAction onClick={handleChangeAccess}>Simpan Perubahan</AlertDialogAction>
               </AlertDialogFooter>
           </AlertDialogContent>
       </AlertDialog>
@@ -304,11 +350,18 @@ export default function AdminUsersPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="capitalize">
-                      {u.appAccess && u.registrationStatus === 'approved' && (
-                        <Badge variant={u.appAccess === 'all' ? 'default' : 'secondary'}>
-                          {u.appAccess === 'all' ? 'Semua' : 'Nota'}
-                        </Badge>
-                      )}
+                       {u.registrationStatus === 'approved' && (() => {
+                          switch (u.appAccess) {
+                              case 'nota':
+                                  return <Badge variant="secondary">Nota</Badge>;
+                              case 'allpro':
+                                  return <Badge variant="outline" className="text-blue-600 border-blue-600">Aset</Badge>;
+                              case 'all':
+                                  return <Badge variant="default">Semua</Badge>;
+                              default:
+                                  return null;
+                          }
+                      })()}
                     </TableCell>
                     <TableCell className="text-right">
                        {user && <UserActions userToManage={u} currentUserId={user.uid} />}

@@ -31,7 +31,7 @@ export type UserProfile = {
     nik?: string;
     phone?: string;
     registrationStatus: 'pending' | 'approved';
-    appAccess?: 'nota' | 'all';
+    appAccess?: 'nota' | 'allpro' | 'all';
 };
 
 export type ProjectID = {
