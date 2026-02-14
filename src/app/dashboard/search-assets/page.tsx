@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -234,7 +233,7 @@ export default function SearchAssetsPage() {
              {(currentMancoreLinks.length > 0 || currentMapUrl) && (
                 <div className="mt-4 border-t pt-4">
                      <h4 className="text-sm font-medium mb-2">Tautan Eksternal untuk {searchServiceArea}</h4>
-                     <div className="flex flex-wrap gap-2">
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {currentMapUrl && (
                              <Button asChild key={currentMapUrl} variant="outline">
                                 <Link href={currentMapUrl} target="_blank" rel="noopener noreferrer">
