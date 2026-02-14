@@ -61,7 +61,7 @@ export default function AllproPage() {
   const rekapData = useMemo(() => {
     const PREFERRED_ORDER = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
 
-    // Initialize a results object with the final structure, with all counts at 0.
+    // 1. Initialize a results object with the final structure, with all counts at 0.
     const results = {
       olt: { title: "OLT All", headers: ["Service Area", "Mini OLT", "OLT", "Grand Total"], rows: PREFERRED_ORDER.map(sa => ({ serviceArea: sa, miniOlt: 0, olt: 0, grandTotal: 0})), totals: { miniOlt: 0, olt: 0, grandTotal: 0 }},
       ftm: { title: "FTM All", headers: ["Service Area", "EA", "OA", "Grand Total"], rows: PREFERRED_ORDER.map(sa => ({ serviceArea: sa, ea: 0, oa: 0, grandTotal: 0})), totals: { ea: 0, oa: 0, grandTotal: 0 }},
@@ -70,17 +70,20 @@ export default function AllproPage() {
     };
 
     if (assets) {
+      // 2. Loop through every asset from the database.
       for (const asset of assets) {
+        // Normalize the service area from the asset data to make matching robust.
         const sa = asset.serviceArea?.trim().toUpperCase();
+        // Find the index in our predefined order.
         const saIndex = PREFERRED_ORDER.indexOf(sa);
         
-        // Only count assets that belong to a known service area
+        // 3. Only count assets that belong to a known service area.
         if (saIndex !== -1) {
           switch (asset.assetType) {
             case 'OLT':
               if (asset.subType === 'Mini OLT') {
                 results.olt.rows[saIndex].miniOlt++;
-              } else {
+              } else { // Anything else (OLT, N/A, undefined) is counted as a regular OLT.
                 results.olt.rows[saIndex].olt++;
               }
               break;
@@ -102,7 +105,7 @@ export default function AllproPage() {
       }
     }
     
-    // Calculate grand totals for the footer and grand totals for each row
+    // 4. Calculate grand totals for rows and the final footer.
     for(let i = 0; i < PREFERRED_ORDER.length; i++) {
         // OLT
         const oltRow = results.olt.rows[i];
@@ -127,11 +130,8 @@ export default function AllproPage() {
         results.odp.totals.jumlah += odpRow.jumlah;
     }
     
-    // Filter out rows that have no data to display, making the tables cleaner.
-    results.olt.rows = results.olt.rows.filter(r => r.grandTotal > 0);
-    results.ftm.rows = results.ftm.rows.filter(r => r.grandTotal > 0);
-    results.odc.rows = results.odc.rows.filter(r => r.jumlah > 0);
-    results.odp.rows = results.odp.rows.filter(r => r.jumlah > 0);
+    // Do not filter out rows. Display all service areas even if the count is zero.
+    // This keeps the UI consistent and shows what is empty vs. what has data.
 
     return results;
   }, [assets]);
@@ -209,7 +209,7 @@ export default function AllproPage() {
                     </TableCell>
                   </TableRow>
                 ))}
-                 {olt.rows.length === 0 && (
+                 {olt.rows.filter(r => r.grandTotal > 0).length === 0 && (
                     <TableRow><TableCell colSpan={4} className="text-center h-24">Tidak ada data OLT</TableCell></TableRow>
                 )}
               </TableBody>
@@ -270,7 +270,7 @@ export default function AllproPage() {
                     </TableCell>
                   </TableRow>
                 ))}
-                 {ftm.rows.length === 0 && (
+                 {ftm.rows.filter(r => r.grandTotal > 0).length === 0 && (
                     <TableRow><TableCell colSpan={4} className="text-center h-24">Tidak ada data FTM</TableCell></TableRow>
                 )}
               </TableBody>
@@ -321,7 +321,7 @@ export default function AllproPage() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {odc.rows.length === 0 && (
+                {odc.rows.filter(r => r.jumlah > 0).length === 0 && (
                     <TableRow><TableCell colSpan={2} className="text-center h-24">Tidak ada data ODC</TableCell></TableRow>
                 )}
               </TableBody>
@@ -362,7 +362,7 @@ export default function AllproPage() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {odp.rows.length === 0 && (
+                {odp.rows.filter(r => r.jumlah > 0).length === 0 && (
                     <TableRow><TableCell colSpan={2} className="text-center h-24">Tidak ada data ODP</TableCell></TableRow>
                 )}
               </TableBody>
