@@ -26,11 +26,11 @@ import { cn } from '@/lib/utils';
 const navLinks = [
   { href: '/dashboard', label: 'Home', icon: Home, access: 'public' },
   { href: '/dashboard/nota', label: 'Laporan Nota', icon: LayoutGrid, access: 'nota' },
-  { href: '/dashboard/search-assets', label: 'Pencarian Aset', icon: Search, access: 'allpro' },
-  { href: '/dashboard/allpro', label: 'Rekap Jaringan', icon: BarChart3, access: 'allpro' },
+  { href: '/dashboard/search-assets', label: 'Network Cek', icon: Search, access: 'allpro' },
+  { href: '/dashboard/allpro', label: 'Network Service Area', icon: BarChart3, access: 'allpro' },
   { href: '/dashboard/admin/users', label: 'Manajemen User', icon: Users, access: 'admin' },
   { href: '/dashboard/admin/pids', label: 'Manajemen PID', icon: Tags, access: 'admin' },
-  { href: '/dashboard/admin/assets', label: 'Manajemen Aset', icon: Network, access: 'admin' },
+  { href: '/dashboard/admin/assets', label: 'Manajemen Aset Jaringan', icon: Network, access: 'admin' },
   { href: '/dashboard/admin/map-links', label: 'Manajemen Peta', icon: Map, access: 'admin' },
   { href: '/dashboard/rekap', label: 'Rekap Telegram', icon: Bot, access: 'admin' },
 ];

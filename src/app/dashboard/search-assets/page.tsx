@@ -151,9 +151,9 @@ export default function SearchAssetsPage() {
     <>
       <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Pencarian Aset Jaringan</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Network Cek</h1>
           <p className="text-muted-foreground mt-1">
-            Cari dan lihat detail aset jaringan di semua service area.
+            Cek dan cari detail aset jaringan di semua service area.
           </p>
         </div>
       </div>

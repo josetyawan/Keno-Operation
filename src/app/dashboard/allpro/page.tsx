@@ -233,7 +233,7 @@ export default function AllproPage() {
         </Button>
         <div>
           <h1 className="flex-1 shrink-0 whitespace-nowrap text-xl font-bold tracking-tight sm:grow-0">
-            Rekapitulasi Data Jaringan
+            Network Service Area
           </h1>
           <p className="text-muted-foreground text-sm">Ringkasan data OLT, ODC, ODP, dan FTM per Service Area.</p>
         </div>

@@ -93,7 +93,7 @@ export default function DashboardSelectorPage() {
                   <Search className="h-8 w-8" />
                 </div>
                 <div>
-                  <CardTitle>Pencarian Aset</CardTitle>
+                  <CardTitle>Network Cek</CardTitle>
                   <CardDescription>Cari aset jaringan publik.</CardDescription>
                 </div>
               </CardHeader>
@@ -114,7 +114,7 @@ export default function DashboardSelectorPage() {
                     <BarChart3 className="h-8 w-8" />
                 </div>
                 <div>
-                    <CardTitle>Rekapitulasi Jaringan</CardTitle>
+                    <CardTitle>Network Service Area</CardTitle>
                     <CardDescription>Ringkasan data jaringan.</CardDescription>
                 </div>
                 </CardHeader>
