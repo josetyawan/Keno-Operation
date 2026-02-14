@@ -27,7 +27,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Search, ChevronLeft, ChevronRight, MapPin, Map } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, MapPin, Map as MapIcon } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, doc, where, limit } from 'firebase/firestore';
 import type { UserProfile, NetworkAsset, MapLink } from '@/lib/types';
@@ -199,7 +199,7 @@ export default function SearchAssetsPage() {
                 <div className="mt-4 border-t pt-4">
                     <Button asChild>
                         <Link href={currentMapLink} target="_blank" rel="noopener noreferrer">
-                            <Map className="mr-2 h-4 w-4" />
+                            <MapIcon className="mr-2 h-4 w-4" />
                             Buka Peta untuk {searchServiceArea}
                         </Link>
                     </Button>
