@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -27,7 +26,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Search, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, MapPin, Map } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, doc, where, limit } from 'firebase/firestore';
 import type { UserProfile, NetworkAsset } from '@/lib/types';
@@ -175,6 +174,14 @@ export default function SearchAssetsPage() {
             </Select>
           </div>
         </CardContent>
+        <CardFooter>
+            <Button asChild disabled={searchServiceArea === 'all'}>
+                <Link href={`/dashboard/map-view?serviceArea=${searchServiceArea}`}>
+                    <Map className="mr-2 h-4 w-4" />
+                    Tampilkan Peta Area
+                </Link>
+            </Button>
+        </CardFooter>
       </Card>
 
       <Card>
