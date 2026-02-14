@@ -68,7 +68,7 @@ export default function AdminAssetsPage() {
   const { toast } = useToast();
   
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-  const [isImporting, setIsImporting] = useState(isImporting);
+  const [isImporting, setIsImporting] = useState(false);
   const [importAssetType, setImportAssetType] = useState('');
   const [progress, setProgress] = useState(0);
 
