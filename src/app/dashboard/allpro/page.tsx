@@ -62,47 +62,40 @@ export default function AllproPage() {
     const PREFERRED_ORDER: NetworkAsset['serviceArea'][] = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
     
     const mapStoToServiceArea = (sto: string, assetName: string): NetworkAsset['serviceArea'] => {
-        let stoCode = '';
-        const nameParts = (assetName || '').split('-');
-        if (nameParts.length > 1) {
-            stoCode = nameParts[1]?.toUpperCase().trim();
+        const nameParts = (assetName || '').toUpperCase().split('-');
+
+        const saCodeMapping: Record<NetworkAsset['serviceArea'], string[]> = {
+            'SA PURWODADI': ['PWB', 'PURWODADI', 'WRO', 'WIROSARI', 'TRO', 'TOROH', 'GBU', 'GUBUNG', 'GDO', 'GODONG'],
+            'SA BLORA': ['CEP', 'CEPU', 'BLO', 'BLORA', 'NGA', 'NGAWEN', 'RDB', 'RANDUBLATUNG'],
+            'SA JEPARA': ['KMJ', 'JEPARA', 'JPR', 'BAN', 'BANGSRI', 'KEL', 'KELING', 'PEC', 'PECANGAAN'],
+            'SA KUDUS': ['KUD', 'KUDUS', 'DMA', 'DEMAK'],
+            'SA PATI': ['PAT', 'PATI', 'TAY', 'JWN'],
+            'SA REMBANG': ['LSE', 'LASEM', 'RBN', 'REMBANG']
+        };
+
+        // 1. Try to find a matching STO code from the asset name parts
+        for (const part of nameParts) {
+            const trimmedPart = part.trim();
+            for (const [sa, codes] of Object.entries(saCodeMapping)) {
+                if (codes.includes(trimmedPart)) {
+                    return sa as NetworkAsset['serviceArea'];
+                }
+            }
         }
 
-        if (!stoCode || stoCode.length < 2) { // Fallback to sto column if name doesn't have a valid code
-            stoCode = (sto || '').toUpperCase().trim();
+        // 2. If not found in name, try the dedicated 'sto' column from the database
+        const stoFromColumn = (sto || '').toUpperCase().trim();
+        if (stoFromColumn) {
+            for (const [sa, codes] of Object.entries(saCodeMapping)) {
+                // Use .some() to check if any of the codes are included in the stoFromColumn string
+                if (codes.some(c => stoFromColumn.includes(c))) {
+                    return sa as NetworkAsset['serviceArea'];
+                }
+            }
         }
 
-        // SA PURWODADI Codes
-        if (['PWB', 'PURWODADI', 'WRO', 'WIROSARI', 'TRO', 'TOROH', 'GBU', 'GUBUNG', 'GDO', 'GODONG'].some(c => stoCode.includes(c))) {
-            return 'SA PURWODADI';
-        }
-        
-        // SA BLORA Codes
-        if (['CEP', 'CEPU', 'BLO', 'BLORA', 'NGA', 'NGAWEN', 'RDB', 'RANDUBLATUNG'].some(c => stoCode.includes(c))) {
-            return 'SA BLORA';
-        }
-
-        // SA JEPARA Codes
-        if (['KMJ', 'JEPARA', 'JPR', 'BAN', 'BANGSRI', 'KEL', 'KELING', 'PEC', 'PECANGAAN'].some(c => stoCode.includes(c))) {
-            return 'SA JEPARA';
-        }
-
-        // SA KUDUS Codes
-        if (['KUD', 'KUDUS', 'DMA', 'DEMAK'].some(c => stoCode.includes(c))) {
-            return 'SA KUDUS';
-        }
-
-        // SA PATI Codes
-        if (['PAT', 'PATI', 'TAY', 'JWN'].some(c => stoCode.includes(c))) {
-            return 'SA PATI';
-        }
-        
-        // SA REMBANG Codes
-        if (['LSE', 'LASEM', 'RBN', 'REMBANG'].some(c => stoCode.includes(c))) {
-            return 'SA REMBANG';
-        }
-        
-        return 'SA KUDUS'; // Default fallback
+        // 3. Default fallback if no match is found anywhere
+        return 'SA KUDUS';
     };
     
     // 1. Initialize a stable structure for the dashboard
@@ -127,7 +120,7 @@ export default function AllproPage() {
 
                 switch (assetTypeUpper) {
                     case 'OLT':
-                        if (subTypeUpper === 'MINI OLT') {
+                        if (subTypeUpper.includes('MINI')) {
                             serviceAreaMap[correctAssetSA].olt.miniOlt++;
                         } else {
                             serviceAreaMap[correctAssetSA].olt.olt++;
