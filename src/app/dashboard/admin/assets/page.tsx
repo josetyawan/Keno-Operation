@@ -45,7 +45,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Trash2, Upload, Search, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Trash2, Upload, Search, Loader2, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
 import { useUser, useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking, useDoc, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
 import { collection, query, doc, serverTimestamp, writeBatch, where, getDocs, limit } from 'firebase/firestore';
@@ -55,6 +55,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 import * as XLSX from 'xlsx';
+import Link from 'next/link';
 
 
 const assetTypes = ['OLT', 'ODC', 'ODP', 'FTM', 'Mini OLT'];
@@ -108,7 +109,7 @@ export default function AdminAssetsPage() {
     constraints.push(limit(500)); // Fetch a reasonable number to filter by name on the client.
     
     return query(collection(firestore, 'network-assets'), ...constraints);
-  }, [firestore, currentUserProfile?.role, user, isUserLoading, isProfileLoading, searchAssetType, searchServiceArea]);
+  }, [firestore, currentUserProfile, isUserLoading, isProfileLoading, searchAssetType, searchServiceArea]);
 
   const { data: queriedAssets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(filteredAssetsQuery);
 
@@ -738,7 +739,10 @@ export default function AdminAssetsPage() {
                     </TableRow>
                 ))
               ) : paginatedAssets.length > 0 ? (
-                paginatedAssets.map(a => (
+                paginatedAssets.map(a => {
+                  const coords = a.coordinates?.split(',').map(c => c.trim());
+                  const googleMapsUrl = coords && coords.length === 2 ? `https://www.google.com/maps/search/?api=1&query=${coords[0]},${coords[1]}` : null;
+                  return (
                   <TableRow key={a.id}>
                     <TableCell className="font-medium">{a.name}</TableCell>
                     <TableCell>{a.assetType}</TableCell>
@@ -753,6 +757,13 @@ export default function AdminAssetsPage() {
                     <TableCell>{a.portRsv || '-'}</TableCell>
                     <TableCell>{a.portRsk || '-'}</TableCell>
                     <TableCell className="text-right">
+                       {googleMapsUrl && (
+                        <Button asChild variant="ghost" size="icon" title="Lihat di Google Maps">
+                          <Link href={googleMapsUrl} target="_blank" rel="noopener noreferrer">
+                            <MapPin className="h-4 w-4 text-blue-600" />
+                          </Link>
+                        </Button>
+                      )}
                        <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
@@ -776,7 +787,7 @@ export default function AdminAssetsPage() {
                         </AlertDialog>
                     </TableCell>
                   </TableRow>
-                ))
+                )})
               ) : (
                 <TableRow>
                   <TableCell colSpan={13} className="h-24 text-center">

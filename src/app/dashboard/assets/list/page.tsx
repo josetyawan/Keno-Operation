@@ -22,11 +22,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Search, MapPin } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, doc, type QueryConstraint } from 'firebase/firestore';
 import type { UserProfile, NetworkAsset } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import Link from 'next/link';
 
 // --- Shared Logic: Placed at the top for reuse ---
 const SA_CODE_MAPPING: Record<string, NetworkAsset['serviceArea']> = {
@@ -219,10 +220,14 @@ function AssetList() {
                   <TableHead>Used</TableHead>
                   <TableHead>Rsv</TableHead>
                   <TableHead>Rsk</TableHead>
+                  <TableHead className="text-right">Lokasi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedAssets.map(a => (
+                {paginatedAssets.map(a => {
+                    const coords = a.coordinates?.split(',').map(c => c.trim());
+                    const googleMapsUrl = coords && coords.length === 2 ? `https://www.google.com/maps/search/?api=1&query=${coords[0]},${coords[1]}` : null;
+                    return (
                   <TableRow key={a.id}>
                     <TableCell className="font-medium">{a.name}</TableCell>
                     <TableCell>{a.assetType}</TableCell>
@@ -236,8 +241,17 @@ function AssetList() {
                     <TableCell>{a.portUsed || '-'}</TableCell>
                     <TableCell>{a.portRsv || '-'}</TableCell>
                     <TableCell>{a.portRsk || '-'}</TableCell>
+                    <TableCell className="text-right">
+                      {googleMapsUrl && (
+                        <Button asChild variant="ghost" size="icon" title="Lihat di Google Maps">
+                          <Link href={googleMapsUrl} target="_blank" rel="noopener noreferrer">
+                            <MapPin className="h-4 w-4 text-blue-600" />
+                          </Link>
+                        </Button>
+                      )}
+                    </TableCell>
                   </TableRow>
-                ))}
+                )})}
               </TableBody>
             </Table>
           ) : (
