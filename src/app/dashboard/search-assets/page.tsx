@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -30,7 +29,7 @@ import { Label } from '@/components/ui/label';
 import { Search, ChevronLeft, ChevronRight, MapPin, FolderGit2 } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, doc, where, limit } from 'firebase/firestore';
-import type { UserProfile, NetworkAsset, MancoreLink } from '@/lib/types';
+import type { UserProfile, NetworkAsset, MancoreLink, MapLink } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
@@ -58,12 +57,21 @@ export default function SearchAssetsPage() {
     useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
   );
   
+  // Mancore links fetching
   const mancoreLinksQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'mancore-links'));
   }, [firestore]);
 
   const { data: mancoreLinks, isLoading: areMancoreLinksLoading } = useCollection<MancoreLink>(mancoreLinksQuery);
+  
+  // Map links fetching
+  const mapLinksQuery = useMemoFirebase(() => {
+      if (!firestore) return null;
+      return query(collection(firestore, 'map-links'));
+  }, [firestore]);
+
+  const { data: mapLinks, isLoading: areMapLinksLoading } = useCollection<MapLink>(mapLinksQuery);
 
   const mancoreLinksBySA = useMemo(() => {
     if (!mancoreLinks) return new Map<string, MancoreLink[]>();
@@ -76,10 +84,22 @@ export default function SearchAssetsPage() {
     }, new Map<string, MancoreLink[]>());
   }, [mancoreLinks]);
 
+  // Create map of SA to map URL
+  const mapUrlBySA = useMemo(() => {
+      if (!mapLinks) return new Map<string, string>();
+      return new Map(mapLinks.map(link => [link.serviceArea, link.url]));
+  }, [mapLinks]);
+
   const currentMancoreLinks = useMemo(() => {
     if (searchServiceArea === 'all') return [];
     return mancoreLinksBySA.get(searchServiceArea) || [];
   }, [searchServiceArea, mancoreLinksBySA]);
+
+  // Get current map URL
+  const currentMapUrl = useMemo(() => {
+      if (searchServiceArea === 'all') return null;
+      return mapUrlBySA.get(searchServiceArea) || null;
+  }, [searchServiceArea, mapUrlBySA]);
 
 
   useEffect(() => {
@@ -92,6 +112,7 @@ export default function SearchAssetsPage() {
     }
   }, [user, currentUserProfile, isUserLoading, isProfileLoading, router]);
 
+  // Fetch assets by type from server, filter by SA on client for robustness
   const filteredAssetsQuery = useMemoFirebase(() => {
     if (isUserLoading || isProfileLoading || !user || !currentUserProfile) {
       return null;
@@ -100,24 +121,32 @@ export default function SearchAssetsPage() {
     if (searchAssetType !== 'all') {
       constraints.push(where('assetType', '==', searchAssetType));
     }
-    if (searchServiceArea !== 'all') {
-      constraints.push(where('serviceArea', '==', searchServiceArea));
-    }
     constraints.push(limit(500)); 
     
     return query(collection(firestore, 'network-assets'), ...constraints);
-  }, [firestore, currentUserProfile, isUserLoading, isProfileLoading, searchAssetType, searchServiceArea]);
+  }, [firestore, currentUserProfile, isUserLoading, isProfileLoading, searchAssetType]);
 
   const { data: queriedAssets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(filteredAssetsQuery);
 
+  // Perform client-side filtering for SA and name
   const filteredAssetsByName = useMemo(() => {
     if (!queriedAssets) return [];
+
+    // Filter by Service Area first
+    const assetsBySA = (searchServiceArea === 'all')
+        ? queriedAssets
+        : queriedAssets.filter(asset => asset.serviceArea === searchServiceArea);
+
+    // Then filter by name
     const lowercasedSearchName = searchName.toLowerCase().trim();
+    if (!lowercasedSearchName) {
+        return assetsBySA;
+    }
     
-    return queriedAssets.filter(asset => {
-      return searchName ? asset.name.toLowerCase().includes(lowercasedSearchName) : true;
+    return assetsBySA.filter(asset => {
+      return asset.name.toLowerCase().includes(lowercasedSearchName);
     });
-  }, [queriedAssets, searchName]);
+  }, [queriedAssets, searchServiceArea, searchName]);
 
   const totalPages = Math.ceil(filteredAssetsByName.length / ITEMS_PER_PAGE);
 
@@ -132,7 +161,7 @@ export default function SearchAssetsPage() {
   }, [searchName, searchAssetType, searchServiceArea]);
 
 
-  const isLoading = isUserLoading || isProfileLoading || areAssetsLoading || areMancoreLinksLoading;
+  const isLoading = isUserLoading || isProfileLoading || areAssetsLoading || areMancoreLinksLoading || areMapLinksLoading;
 
   if (isLoading && !queriedAssets) {
       return (
@@ -201,10 +230,18 @@ export default function SearchAssetsPage() {
                     </Select>
                 </div>
             </div>
-            {currentMancoreLinks.length > 0 && (
+             {(currentMancoreLinks.length > 0 || currentMapUrl) && (
                 <div className="mt-4 border-t pt-4">
-                     <h4 className="text-sm font-medium mb-2">Link Mancore untuk {searchServiceArea}</h4>
+                     <h4 className="text-sm font-medium mb-2">Tautan Eksternal untuk {searchServiceArea}</h4>
                      <div className="flex flex-wrap gap-2">
+                        {currentMapUrl && (
+                             <Button asChild key={currentMapUrl} variant="outline">
+                                <Link href={currentMapUrl} target="_blank" rel="noopener noreferrer">
+                                    <MapPin className="mr-2 h-4 w-4" />
+                                    Buka Peta Kustom
+                                </Link>
+                            </Button>
+                        )}
                         {currentMancoreLinks.map(link => (
                             <Button asChild key={link.id} variant="secondary">
                                 <Link href={link.url} target="_blank" rel="noopener noreferrer">
