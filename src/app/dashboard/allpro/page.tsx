@@ -84,8 +84,11 @@ export default function AllproPage() {
       // Count the asset based on its type and subtype
       switch (asset.assetType) {
         case 'OLT':
-          if (asset.subType === 'Mini OLT') acc[sa].miniOlt++;
-          else if (asset.subType === 'OLT') acc[sa].olt++;
+          if (asset.subType === 'Mini OLT') {
+            acc[sa].miniOlt++;
+          } else {
+            acc[sa].olt++;
+          }
           break;
         case 'ODC':
           acc[sa].odc++;
