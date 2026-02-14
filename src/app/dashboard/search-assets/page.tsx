@@ -48,6 +48,7 @@ export default function SearchAssetsPage() {
   const [searchName, setSearchName] = useState('');
   const [searchAssetType, setSearchAssetType] = useState('all');
   const [searchServiceArea, setSearchServiceArea] = useState('all');
+  const [mapLink, setMapLink] = useState('');
   
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
@@ -105,6 +106,13 @@ export default function SearchAssetsPage() {
   useEffect(() => {
       setCurrentPage(1);
   }, [searchName, searchAssetType, searchServiceArea]);
+  
+  const handleOpenMap = () => {
+    if (mapLink && (mapLink.startsWith('http://') || mapLink.startsWith('https://'))) {
+      window.open(mapLink, '_blank');
+    }
+  };
+
 
   const isLoading = isUserLoading || isProfileLoading || areAssetsLoading;
 
@@ -148,40 +156,46 @@ export default function SearchAssetsPage() {
             Gunakan filter untuk menemukan aset spesifik. Halaman ini hanya menampilkan sebagian data untuk performa.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
-          <div className="grid gap-1.5">
-            <Label htmlFor="search-name">Nama Aset</Label>
-            <Input id="search-name" placeholder="Cari nama aset..." value={searchName} onChange={(e) => setSearchName(e.target.value)} />
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="search-type">Jenis Aset</Label>
-            <Select value={searchAssetType} onValueChange={setSearchAssetType}>
-              <SelectTrigger id="search-type"><SelectValue placeholder="Semua Jenis" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Jenis</SelectItem>
-                {assetTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="search-area">Service Area</Label>
-            <Select value={searchServiceArea} onValueChange={setSearchServiceArea}>
-              <SelectTrigger id="search-area"><SelectValue placeholder="Semua Area" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Area</SelectItem>
-                {serviceAreas.map(sa => <SelectItem key={sa} value={sa}>{sa}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
+        <CardContent>
+            <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="grid gap-1.5">
+                    <Label htmlFor="search-name">Nama Aset</Label>
+                    <Input id="search-name" placeholder="Cari nama aset..." value={searchName} onChange={(e) => setSearchName(e.target.value)} />
+                </div>
+                <div className="grid gap-1.5">
+                    <Label htmlFor="search-type">Jenis Aset</Label>
+                    <Select value={searchAssetType} onValueChange={setSearchAssetType}>
+                    <SelectTrigger id="search-type"><SelectValue placeholder="Semua Jenis" /></SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Semua Jenis</SelectItem>
+                        {assetTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                    </SelectContent>
+                    </Select>
+                </div>
+                <div className="grid gap-1.5">
+                    <Label htmlFor="search-area">Service Area</Label>
+                    <Select value={searchServiceArea} onValueChange={setSearchServiceArea}>
+                    <SelectTrigger id="search-area"><SelectValue placeholder="Semua Area" /></SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Semua Area</SelectItem>
+                        {serviceAreas.map(sa => <SelectItem key={sa} value={sa}>{sa}</SelectItem>)}
+                    </SelectContent>
+                    </Select>
+                </div>
+            </div>
+             <div className="mt-4 border-t pt-4">
+                <div className="grid gap-1.5 max-w-lg">
+                    <Label htmlFor="map-link">Link Google My Maps</Label>
+                    <div className="flex gap-2">
+                        <Input id="map-link" placeholder="Tempel link Google My Maps di sini..." value={mapLink} onChange={(e) => setMapLink(e.target.value)} />
+                        <Button onClick={handleOpenMap} disabled={!mapLink}>
+                            <Map className="mr-2 h-4 w-4" />
+                            Buka Peta
+                        </Button>
+                    </div>
+                </div>
+            </div>
         </CardContent>
-        <CardFooter>
-            <Button asChild disabled={searchServiceArea === 'all'}>
-                <Link href={`/dashboard/map-view?serviceArea=${searchServiceArea}`}>
-                    <Map className="mr-2 h-4 w-4" />
-                    Tampilkan Peta Area
-                </Link>
-            </Button>
-        </CardFooter>
       </Card>
 
       <Card>
