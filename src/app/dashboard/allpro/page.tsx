@@ -59,9 +59,46 @@ export default function AllproPage() {
   const { data: assets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(assetsQuery);
 
   const rekapData = useMemo(() => {
-    const PREFERRED_ORDER = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
+    const PREFERRED_ORDER: NetworkAsset['serviceArea'][] = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
 
-    // 1. Initialize a results object with the final structure, with all counts at 0.
+    const mapStoToServiceArea = (sto: string): NetworkAsset['serviceArea'] => {
+        const upperSto = (sto || '').toUpperCase().trim();
+        if (!upperSto) return 'SA KUDUS';
+
+        // SA PURWODADI Codes
+        if (['PWB', 'PURWODADI', 'WRO', 'WIROSARI', 'TRO', 'TOROH', 'GBU', 'GUBUNG', 'GDO', 'GODONG'].includes(upperSto)) {
+            return 'SA PURWODADI';
+        }
+        
+        // SA BLORA Codes
+        if (['CEP', 'CEPU', 'BLO', 'BLORA', 'NGA', 'NGAWEN', 'RDB', 'RANDUBLATUNG'].includes(upperSto)) {
+            return 'SA BLORA';
+        }
+
+        // SA JEPARA Codes
+        if (['KMJ', 'JEPARA', 'JPR', 'BAN', 'BANGSRI', 'KEL', 'KELING', 'PEC', 'PECANGAAN'].includes(upperSto)) {
+            return 'SA JEPARA';
+        }
+
+        // SA KUDUS Codes
+        if (['KUD', 'KUDUS', 'DMA', 'DEMAK'].includes(upperSto)) {
+            return 'SA KUDUS';
+        }
+
+        // SA PATI Codes
+        if (['PAT', 'PATI', 'TAY', 'JWN'].includes(upperSto)) {
+            return 'SA PATI';
+        }
+        
+        // SA REMBANG Codes
+        if (['LSE', 'LASEM', 'RBN', 'REMBANG'].includes(upperSto)) {
+            return 'SA REMBANG';
+        }
+        
+        return 'SA KUDUS'; // Default fallback
+    };
+
+
     const results = {
       olt: { title: "OLT All", headers: ["Service Area", "Mini OLT", "OLT", "Grand Total"], rows: PREFERRED_ORDER.map(sa => ({ serviceArea: sa, miniOlt: 0, olt: 0, grandTotal: 0})), totals: { miniOlt: 0, olt: 0, grandTotal: 0 }},
       ftm: { title: "FTM All", headers: ["Service Area", "EA", "OA", "Grand Total"], rows: PREFERRED_ORDER.map(sa => ({ serviceArea: sa, ea: 0, oa: 0, grandTotal: 0})), totals: { ea: 0, oa: 0, grandTotal: 0 }},
@@ -70,28 +107,19 @@ export default function AllproPage() {
     };
 
     if (assets) {
-      // 2. Loop through every asset from the database.
       for (const asset of assets) {
-        const assetSA = (asset.serviceArea || '').trim().toUpperCase();
-        if (!assetSA) continue;
-
-        let foundIndex = -1;
-
-        // Try exact match first for performance
-        foundIndex = PREFERRED_ORDER.indexOf(assetSA);
+        let stoValue = asset.sto || '';
         
-        // If not found, try partial keyword match
-        if (foundIndex === -1) {
-            for (let i = 0; i < PREFERRED_ORDER.length; i++) {
-                const areaKeyword = PREFERRED_ORDER[i].replace('SA ', ''); // e.g., "KUDUS"
-                if (assetSA.includes(areaKeyword)) {
-                    foundIndex = i;
-                    break;
-                }
+        if (!stoValue || stoValue.toUpperCase() === 'N/A') {
+            const nameParts = asset.name.split('-');
+            if (nameParts.length > 1) {
+                stoValue = nameParts[1];
             }
         }
         
-        // 3. Only count assets that belong to a known service area.
+        const correctAssetSA = mapStoToServiceArea(stoValue);
+        const foundIndex = PREFERRED_ORDER.indexOf(correctAssetSA);
+        
         if (foundIndex !== -1) {
           const assetTypeUpper = (asset.assetType || '').toUpperCase();
           const subTypeUpper = (asset.subType || '').toUpperCase();
@@ -100,7 +128,7 @@ export default function AllproPage() {
             case 'OLT':
               if (subTypeUpper === 'MINI OLT') {
                 results.olt.rows[foundIndex].miniOlt++;
-              } else { // Anything else (OLT, N/A, undefined) is counted as a regular OLT.
+              } else {
                 results.olt.rows[foundIndex].olt++;
               }
               break;
@@ -122,7 +150,7 @@ export default function AllproPage() {
       }
     }
     
-    // 4. Calculate grand totals for rows and the final footer.
+    // Calculate grand totals for rows and the final footer.
     for(let i = 0; i < PREFERRED_ORDER.length; i++) {
         // OLT
         const oltRow = results.olt.rows[i];
