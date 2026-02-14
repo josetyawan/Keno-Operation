@@ -59,104 +59,79 @@ export default function AllproPage() {
   const { data: assets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(assetsQuery);
 
   const rekapData = useMemo(() => {
+    const PREFERRED_ORDER = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
+
+    // Initialize a results object with the final structure, with all counts at 0.
     const results = {
-      olt: { title: "OLT All", headers: ["Service Area", "Mini OLT", "OLT", "Grand Total"], rows: [] as any[], totals: { miniOlt: 0, olt: 0, grandTotal: 0 }},
-      ftm: { title: "FTM All", headers: ["Service Area", "EA", "OA", "Grand Total"], rows: [] as any[], totals: { ea: 0, oa: 0, grandTotal: 0 }},
-      odc: { title: "ODC All", headers: ["Service Area", "Jumlah ODC"], rows: [] as any[], totals: { jumlah: 0 }},
-      odp: { title: "ODP All", headers: ["Service Area", "Jumlah ODP"], rows: [] as any[], totals: { jumlah: 0 }},
+      olt: { title: "OLT All", headers: ["Service Area", "Mini OLT", "OLT", "Grand Total"], rows: PREFERRED_ORDER.map(sa => ({ serviceArea: sa, miniOlt: 0, olt: 0, grandTotal: 0})), totals: { miniOlt: 0, olt: 0, grandTotal: 0 }},
+      ftm: { title: "FTM All", headers: ["Service Area", "EA", "OA", "Grand Total"], rows: PREFERRED_ORDER.map(sa => ({ serviceArea: sa, ea: 0, oa: 0, grandTotal: 0})), totals: { ea: 0, oa: 0, grandTotal: 0 }},
+      odc: { title: "ODC All", headers: ["Service Area", "Jumlah ODC"], rows: PREFERRED_ORDER.map(sa => ({ serviceArea: sa, jumlah: 0})), totals: { jumlah: 0 }},
+      odp: { title: "ODP All", headers: ["Service Area", "Jumlah ODP"], rows: PREFERRED_ORDER.map(sa => ({ serviceArea: sa, jumlah: 0})), totals: { jumlah: 0 }},
     };
 
-    if (!assets) {
-      return results;
-    }
-
-    const rekapMap = new Map<string, {
-        miniOlt: number;
-        olt: number;
-        ea: number;
-        oa: number;
-        odc: number;
-        odp: number;
-    }>();
-
-    for (const asset of assets) {
-      const sa = asset.serviceArea?.trim() || 'N/A';
-      
-      if (!rekapMap.has(sa)) {
-        rekapMap.set(sa, { miniOlt: 0, olt: 0, ea: 0, oa: 0, odc: 0, odp: 0 });
-      }
-      
-      const counts = rekapMap.get(sa)!;
-
-      switch (asset.assetType) {
-        case 'OLT':
-          if (asset.subType === 'Mini OLT') {
-            counts.miniOlt++;
-          } else {
-            counts.olt++;
+    if (assets) {
+      for (const asset of assets) {
+        const sa = asset.serviceArea?.trim().toUpperCase();
+        const saIndex = PREFERRED_ORDER.indexOf(sa);
+        
+        // Only count assets that belong to a known service area
+        if (saIndex !== -1) {
+          switch (asset.assetType) {
+            case 'OLT':
+              if (asset.subType === 'Mini OLT') {
+                results.olt.rows[saIndex].miniOlt++;
+              } else {
+                results.olt.rows[saIndex].olt++;
+              }
+              break;
+            case 'FTM':
+              if (asset.subType === 'EA') {
+                results.ftm.rows[saIndex].ea++;
+              } else if (asset.subType === 'OA') {
+                results.ftm.rows[saIndex].oa++;
+              }
+              break;
+            case 'ODC':
+              results.odc.rows[saIndex].jumlah++;
+              break;
+            case 'ODP':
+              results.odp.rows[saIndex].jumlah++;
+              break;
           }
-          break;
-        case 'FTM':
-          if (asset.subType === 'EA') {
-            counts.ea++;
-          } else if (asset.subType === 'OA') {
-            counts.oa++;
-          }
-          break;
-        case 'ODC':
-          counts.odc++;
-          break;
-        case 'ODP':
-          counts.odp++;
-          break;
+        }
       }
     }
     
-    const PREFERRED_ORDER = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
-    const sortedServiceAreas = Array.from(rekapMap.keys()).sort((a, b) => {
-        const indexA = PREFERRED_ORDER.indexOf(a);
-        const indexB = PREFERRED_ORDER.indexOf(b);
-        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-        if (indexA !== -1) return -1;
-        if (indexB !== -1) return 1;
-        return a.localeCompare(b);
-    });
-
-    for (const sa of sortedServiceAreas) {
-        const counts = rekapMap.get(sa)!;
-
+    // Calculate grand totals for the footer and grand totals for each row
+    for(let i = 0; i < PREFERRED_ORDER.length; i++) {
         // OLT
-        if (counts.miniOlt > 0 || counts.olt > 0) {
-            const oltRow = { serviceArea: sa, miniOlt: counts.miniOlt, olt: counts.olt, grandTotal: counts.miniOlt + counts.olt };
-            results.olt.rows.push(oltRow);
-            results.olt.totals.miniOlt += oltRow.miniOlt;
-            results.olt.totals.olt += oltRow.olt;
-            results.olt.totals.grandTotal += oltRow.grandTotal;
-        }
+        const oltRow = results.olt.rows[i];
+        oltRow.grandTotal = oltRow.miniOlt + oltRow.olt;
+        results.olt.totals.miniOlt += oltRow.miniOlt;
+        results.olt.totals.olt += oltRow.olt;
+        results.olt.totals.grandTotal += oltRow.grandTotal;
 
         // FTM
-        if (counts.ea > 0 || counts.oa > 0) {
-            const ftmRow = { serviceArea: sa, ea: counts.ea, oa: counts.oa, grandTotal: counts.ea + counts.oa };
-            results.ftm.rows.push(ftmRow);
-            results.ftm.totals.ea += ftmRow.ea;
-            results.ftm.totals.oa += ftmRow.oa;
-            results.ftm.totals.grandTotal += ftmRow.grandTotal;
-        }
+        const ftmRow = results.ftm.rows[i];
+        ftmRow.grandTotal = ftmRow.ea + ftmRow.oa;
+        results.ftm.totals.ea += ftmRow.ea;
+        results.ftm.totals.oa += ftmRow.oa;
+        results.ftm.totals.grandTotal += ftmRow.grandTotal;
 
         // ODC
-        if (counts.odc > 0) {
-            const odcRow = { serviceArea: sa, jumlah: counts.odc };
-            results.odc.rows.push(odcRow);
-            results.odc.totals.jumlah += odcRow.jumlah;
-        }
-
+        const odcRow = results.odc.rows[i];
+        results.odc.totals.jumlah += odcRow.jumlah;
+        
         // ODP
-        if (counts.odp > 0) {
-            const odpRow = { serviceArea: sa, jumlah: counts.odp };
-            results.odp.rows.push(odpRow);
-            results.odp.totals.jumlah += odpRow.jumlah;
-        }
+        const odpRow = results.odp.rows[i];
+        results.odp.totals.jumlah += odpRow.jumlah;
     }
+    
+    // Filter out rows that have no data to display, making the tables cleaner.
+    results.olt.rows = results.olt.rows.filter(r => r.grandTotal > 0);
+    results.ftm.rows = results.ftm.rows.filter(r => r.grandTotal > 0);
+    results.odc.rows = results.odc.rows.filter(r => r.jumlah > 0);
+    results.odp.rows = results.odp.rows.filter(r => r.jumlah > 0);
 
     return results;
   }, [assets]);
@@ -234,6 +209,9 @@ export default function AllproPage() {
                     </TableCell>
                   </TableRow>
                 ))}
+                 {olt.rows.length === 0 && (
+                    <TableRow><TableCell colSpan={4} className="text-center h-24">Tidak ada data OLT</TableCell></TableRow>
+                )}
               </TableBody>
               <TableFooter>
                 <TableRow>
@@ -292,6 +270,9 @@ export default function AllproPage() {
                     </TableCell>
                   </TableRow>
                 ))}
+                 {ftm.rows.length === 0 && (
+                    <TableRow><TableCell colSpan={4} className="text-center h-24">Tidak ada data FTM</TableCell></TableRow>
+                )}
               </TableBody>
                <TableFooter>
                 <TableRow>
@@ -340,6 +321,9 @@ export default function AllproPage() {
                     </TableCell>
                   </TableRow>
                 ))}
+                {odc.rows.length === 0 && (
+                    <TableRow><TableCell colSpan={2} className="text-center h-24">Tidak ada data ODC</TableCell></TableRow>
+                )}
               </TableBody>
                <TableFooter>
                 <TableRow>
@@ -378,6 +362,9 @@ export default function AllproPage() {
                     </TableCell>
                   </TableRow>
                 ))}
+                {odp.rows.length === 0 && (
+                    <TableRow><TableCell colSpan={2} className="text-center h-24">Tidak ada data ODP</TableCell></TableRow>
+                )}
               </TableBody>
               <TableFooter>
                 <TableRow>
