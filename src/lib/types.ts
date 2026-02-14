@@ -57,3 +57,9 @@ export type NetworkAsset = {
   portRsv?: string; // RSV
   portRsk?: string; // RSK
 };
+
+export type MapLink = {
+  id: string;
+  serviceArea: string;
+  url: string;
+};

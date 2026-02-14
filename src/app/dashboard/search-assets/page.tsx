@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -29,7 +30,7 @@ import { Label } from '@/components/ui/label';
 import { Search, ChevronLeft, ChevronRight, MapPin, Map } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, doc, where, limit } from 'firebase/firestore';
-import type { UserProfile, NetworkAsset } from '@/lib/types';
+import type { UserProfile, NetworkAsset, MapLink } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
@@ -48,7 +49,6 @@ export default function SearchAssetsPage() {
   const [searchName, setSearchName] = useState('');
   const [searchAssetType, setSearchAssetType] = useState('all');
   const [searchServiceArea, setSearchServiceArea] = useState('all');
-  const [mapLink, setMapLink] = useState('');
   
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
@@ -57,6 +57,24 @@ export default function SearchAssetsPage() {
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
     useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
   );
+  
+  const mapLinksQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'map-links'));
+  }, [firestore]);
+
+  const { data: mapLinks, isLoading: areMapLinksLoading } = useCollection<MapLink>(mapLinksQuery);
+
+  const mapLinksBySA = useMemo(() => {
+    if (!mapLinks) return new Map<string, string>();
+    return new Map(mapLinks.map(link => [link.serviceArea, link.url]));
+  }, [mapLinks]);
+
+  const currentMapLink = useMemo(() => {
+    if (searchServiceArea === 'all') return null;
+    return mapLinksBySA.get(searchServiceArea) || null;
+  }, [searchServiceArea, mapLinksBySA]);
+
 
   useEffect(() => {
     if (!isUserLoading && !isProfileLoading) {
@@ -106,15 +124,9 @@ export default function SearchAssetsPage() {
   useEffect(() => {
       setCurrentPage(1);
   }, [searchName, searchAssetType, searchServiceArea]);
-  
-  const handleOpenMap = () => {
-    if (mapLink && (mapLink.startsWith('http://') || mapLink.startsWith('https://'))) {
-      window.open(mapLink, '_blank');
-    }
-  };
 
 
-  const isLoading = isUserLoading || isProfileLoading || areAssetsLoading;
+  const isLoading = isUserLoading || isProfileLoading || areAssetsLoading || areMapLinksLoading;
 
   if (isLoading && !queriedAssets) {
       return (
@@ -183,18 +195,16 @@ export default function SearchAssetsPage() {
                     </Select>
                 </div>
             </div>
-             <div className="mt-4 border-t pt-4">
-                <div className="grid gap-1.5 max-w-lg">
-                    <Label htmlFor="map-link">Link Google My Maps</Label>
-                    <div className="flex gap-2">
-                        <Input id="map-link" placeholder="Tempel link Google My Maps di sini..." value={mapLink} onChange={(e) => setMapLink(e.target.value)} />
-                        <Button onClick={handleOpenMap} disabled={!mapLink}>
+             {currentMapLink && (
+                <div className="mt-4 border-t pt-4">
+                    <Button asChild>
+                        <Link href={currentMapLink} target="_blank" rel="noopener noreferrer">
                             <Map className="mr-2 h-4 w-4" />
-                            Buka Peta
-                        </Button>
-                    </div>
+                            Buka Peta untuk {searchServiceArea}
+                        </Link>
+                    </Button>
                 </div>
-            </div>
+            )}
         </CardContent>
       </Card>
 

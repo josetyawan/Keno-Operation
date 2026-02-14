@@ -305,6 +305,40 @@
         "sto",
         "dateAdded"
       ]
+    },
+    "MapLink": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Map Link",
+      "type": "object",
+      "description": "Stores a Google My Maps link for a specific Service Area.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the MapLink."
+        },
+        "serviceArea": {
+          "type": "string",
+          "description": "The service area the map link belongs to.",
+          "enum": [
+            "SA KUDUS",
+            "SA PATI",
+            "SA JEPARA",
+            "SA PURWODADI",
+            "SA BLORA",
+            "SA REMBANG"
+          ]
+        },
+        "url": {
+          "type": "string",
+          "description": "The URL of the Google My Maps.",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "id",
+        "serviceArea",
+        "url"
+      ]
     }
   },
   "auth": {
@@ -375,6 +409,22 @@
             {
               "name": "assetId",
               "description": "The unique identifier for the network asset."
+            }
+          ]
+        }
+      },
+       {
+        "path": "/map-links/{mapLinkId}",
+        "definition": {
+          "entityName": "MapLink",
+          "schema": {
+            "$ref": "#/backend/entities/MapLink"
+          },
+          "description": "Stores the Google My Maps links for each Service Area.",
+          "params": [
+            {
+              "name": "mapLinkId",
+              "description": "The unique identifier for the map link."
             }
           ]
         }

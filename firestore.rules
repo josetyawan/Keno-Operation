@@ -148,5 +148,17 @@ service cloud.firestore {
       // WRITE: Only admins can create, update, or delete network assets.
       allow create, update, delete: if isAdmin();
     }
+
+    /**
+     * @description Stores map links for service areas.
+     * @path /map-links/{mapLinkId}
+     */
+    match /map-links/{mapLinkId} {
+      // READ: Any approved user can read the map links.
+      allow get, list: if isApproved() || isAdmin();
+
+      // WRITE: Only admins can create, update, or delete map links.
+      allow create, update, delete: if isAdmin();
+    }
   }
 }
