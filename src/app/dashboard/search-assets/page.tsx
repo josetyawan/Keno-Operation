@@ -37,7 +37,7 @@ import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 
 
-const assetTypes = ['OLT', 'ODC', 'ODP', 'FTM'];
+const assetTypes = ['OLT', 'ODC', 'ODP', 'FTM', 'MITRATEL'];
 const baseServiceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
 
 
@@ -287,12 +287,10 @@ export default function SearchAssetsPage() {
                 <TableHead>Service Area</TableHead>
                 <TableHead>STO</TableHead>
                 <TableHead>Coordinates</TableHead>
-                <TableHead>Kapasitas</TableHead>
-                <TableHead>Spesifikasi</TableHead>
+                <TableHead>Mitratel ID</TableHead>
+                <TableHead>Tenant ID</TableHead>
                 <TableHead>Avail</TableHead>
                 <TableHead>Used</TableHead>
-                <TableHead>Rsv</TableHead>
-                <TableHead>Rsk</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -300,7 +298,7 @@ export default function SearchAssetsPage() {
               {areAssetsLoading && paginatedAssets.length === 0 ? (
                  Array.from({ length: 5 }).map((_, index) => (
                     <TableRow key={index}>
-                        <TableCell colSpan={13}><Skeleton className="h-6 w-full" /></TableCell>
+                        <TableCell colSpan={11}><Skeleton className="h-6 w-full" /></TableCell>
                     </TableRow>
                 ))
               ) : paginatedAssets.length > 0 ? (
@@ -315,12 +313,10 @@ export default function SearchAssetsPage() {
                     <TableCell>{a.serviceArea}</TableCell>
                     <TableCell>{a.sto}</TableCell>
                     <TableCell>{a.coordinates || '-'}</TableCell>
-                    <TableCell>{a.kapasitas || '-'}</TableCell>
-                    <TableCell>{a.spec || '-'}</TableCell>
+                    <TableCell>{a.mitratelSiteId || '-'}</TableCell>
+                    <TableCell>{a.tenantSiteId || '-'}</TableCell>
                     <TableCell>{a.portAvai || '-'}</TableCell>
                     <TableCell>{a.portUsed || '-'}</TableCell>
-                    <TableCell>{a.portRsv || '-'}</TableCell>
-                    <TableCell>{a.portRsk || '-'}</TableCell>
                     <TableCell className="text-right">
                        {googleMapsUrl && (
                         <Button asChild variant="ghost" size="icon" title="Lihat di Google Maps">
@@ -334,7 +330,7 @@ export default function SearchAssetsPage() {
                 )})
               ) : (
                 <TableRow>
-                  <TableCell colSpan={13} className="h-24 text-center">
+                  <TableCell colSpan={11} className="h-24 text-center">
                     {(searchName || searchAssetType !== 'all' || searchServiceArea !== 'all') 
                         ? "Tidak ada aset yang cocok dengan filter Anda." 
                         : "Gunakan filter di atas untuk mencari aset."

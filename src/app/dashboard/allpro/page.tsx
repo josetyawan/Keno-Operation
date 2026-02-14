@@ -56,6 +56,10 @@ const SA_CODE_MAPPING: Record<string, NetworkAsset['serviceArea']> = {
  * This function is robust and handles various naming conventions.
  */
 const getAssetServiceArea = (asset: NetworkAsset): NetworkAsset['serviceArea'] => {
+    if (asset.assetType === 'MITRATEL' && asset.serviceArea) {
+      return asset.serviceArea as NetworkAsset['serviceArea'];
+    }
+    
     const upperAssetName = (asset.name || '').toUpperCase();
     const upperSto = (asset.sto || '').toUpperCase().trim();
 
@@ -121,9 +125,10 @@ export default function AllproPage() {
             ftm: { ea: 0, oa: 0 },
             odc: { jumlah: 0 },
             odp: { jumlah: 0 },
+            mitratel: { jumlah: 0 },
         };
         return acc;
-    }, {} as Record<string, { olt: any; ftm: any; odc: any; odp: any; }>);
+    }, {} as Record<string, { olt: any; ftm: any; odc: any; odp: any; mitratel: any; }>);
 
     if (assets) {
         // 2. Iterate through all assets and count them directly into the structure
@@ -156,6 +161,9 @@ export default function AllproPage() {
                     case 'ODP':
                         serviceAreaMap[correctAssetSA].odp.jumlah++;
                         break;
+                    case 'MITRATEL':
+                        serviceAreaMap[correctAssetSA].mitratel.jumlah++;
+                        break;
                 }
             }
         }
@@ -167,6 +175,7 @@ export default function AllproPage() {
       ftm: { title: "FTM All", headers: ["Service Area", "EA", "OA", "Grand Total"], rows: [] as any[], totals: { ea: 0, oa: 0, grandTotal: 0 }},
       odc: { title: "ODC All", headers: ["Service Area", "Jumlah ODC"], rows: [] as any[], totals: { jumlah: 0 }},
       odp: { title: "ODP All", headers: ["Service Area", "Jumlah ODP"], rows: [] as any[], totals: { jumlah: 0 }},
+      mitratel: { title: "Mitratel All", headers: ["Service Area", "Jumlah Site"], rows: [] as any[], totals: { jumlah: 0 }},
     };
     
     for (const sa of PREFERRED_ORDER) {
@@ -195,12 +204,17 @@ export default function AllproPage() {
         const odpRow = { serviceArea: sa, jumlah: data.odp.jumlah };
         results.odp.rows.push(odpRow);
         results.odp.totals.jumlah += odpRow.jumlah;
+
+        // Mitratel
+        const mitratelRow = { serviceArea: sa, jumlah: data.mitratel.jumlah };
+        results.mitratel.rows.push(mitratelRow);
+        results.mitratel.totals.jumlah += mitratelRow.jumlah;
     }
     
     return results;
   }, [assets]);
   
-  const { olt, odc, odp, ftm } = rekapData;
+  const { olt, odc, odp, ftm, mitratel } = rekapData;
 
   const isLoading = isUserLoading || isProfileLoading || areAssetsLoading;
 
@@ -239,7 +253,48 @@ export default function AllproPage() {
         </div>
       </div>
       
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {/* Mitratel Card */}
+        <Card className="lg:col-span-3">
+          <CardHeader>
+            <CardTitle>{mitratel.title}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  {mitratel.headers.map(h => <TableHead key={h}>{h}</TableHead>)}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {mitratel.rows.map(row => (
+                  <TableRow key={row.serviceArea}>
+                    <TableCell className="font-medium">{row.serviceArea}</TableCell>
+                    <TableCell className="font-bold">
+                      <Link href={`/dashboard/assets/list?assetType=MITRATEL&serviceArea=${encodeURIComponent(row.serviceArea)}`} className="hover:underline">
+                        {row.jumlah}
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {mitratel.rows.filter(r => r.jumlah > 0).length === 0 && (
+                    <TableRow><TableCell colSpan={2} className="text-center h-24">Tidak ada data Mitratel</TableCell></TableRow>
+                )}
+              </TableBody>
+               <TableFooter>
+                <TableRow>
+                    <TableCell className="font-bold">Grand Total</TableCell>
+                    <TableCell className="font-bold">
+                      <Link href={`/dashboard/assets/list?assetType=MITRATEL`} className="hover:underline">
+                        {mitratel.totals.jumlah}
+                      </Link>
+                    </TableCell>
+                </TableRow>
+              </TableFooter>
+            </Table>
+          </CardContent>
+        </Card>
+
         {/* OLT Card */}
         <Card>
           <CardHeader>

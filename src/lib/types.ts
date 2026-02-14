@@ -43,7 +43,7 @@ export type ProjectID = {
 export type NetworkAsset = {
   id: string;
   name: string;
-  assetType: 'OLT' | 'ODC' | 'ODP' | 'FTM';
+  assetType: 'OLT' | 'ODC' | 'ODP' | 'FTM' | 'MITRATEL';
   subType: 'Mini OLT' | 'OLT' | 'EA' | 'OA' | 'N/A';
   serviceArea: string;
   sto: string;
@@ -56,6 +56,8 @@ export type NetworkAsset = {
   portUsed?: string; // USED
   portRsv?: string; // RSV
   portRsk?: string; // RSK
+  mitratelSiteId?: string;
+  tenantSiteId?: string;
 };
 
 export type MapLink = {

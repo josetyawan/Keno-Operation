@@ -40,6 +40,10 @@ const SA_CODE_MAPPING: Record<string, NetworkAsset['serviceArea']> = {
 };
 
 const getAssetServiceArea = (asset: NetworkAsset): NetworkAsset['serviceArea'] => {
+    if (asset.assetType === 'MITRATEL' && asset.serviceArea) {
+      return asset.serviceArea as NetworkAsset['serviceArea'];
+    }
+    
     const upperAssetName = (asset.name || '').toUpperCase();
     const upperSto = (asset.sto || '').toUpperCase().trim();
 
@@ -214,12 +218,10 @@ function AssetList() {
                   <TableHead>Service Area</TableHead>
                   <TableHead>STO</TableHead>
                   <TableHead>Coordinates</TableHead>
-                  <TableHead>Kapasitas</TableHead>
-                  <TableHead>Spesifikasi</TableHead>
+                  <TableHead>Mitratel ID</TableHead>
+                  <TableHead>Tenant ID</TableHead>
                   <TableHead>Avail</TableHead>
                   <TableHead>Used</TableHead>
-                  <TableHead>Rsv</TableHead>
-                  <TableHead>Rsk</TableHead>
                   <TableHead className="text-right">Lokasi</TableHead>
                 </TableRow>
               </TableHeader>
@@ -235,12 +237,10 @@ function AssetList() {
                     <TableCell>{a.serviceArea}</TableCell>
                     <TableCell>{a.sto}</TableCell>
                     <TableCell>{a.coordinates || '-'}</TableCell>
-                    <TableCell>{a.kapasitas || '-'}</TableCell>
-                    <TableCell>{a.spec || '-'}</TableCell>
+                    <TableCell>{a.mitratelSiteId || '-'}</TableCell>
+                    <TableCell>{a.tenantSiteId || '-'}</TableCell>
                     <TableCell>{a.portAvai || '-'}</TableCell>
                     <TableCell>{a.portUsed || '-'}</TableCell>
-                    <TableCell>{a.portRsv || '-'}</TableCell>
-                    <TableCell>{a.portRsk || '-'}</TableCell>
                     <TableCell className="text-right">
                       {googleMapsUrl && (
                         <Button asChild variant="ghost" size="icon" title="Lihat di Google Maps">

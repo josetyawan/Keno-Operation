@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -58,7 +59,7 @@ import * as XLSX from 'xlsx';
 import Link from 'next/link';
 
 
-const assetTypes = ['OLT', 'ODC', 'ODP', 'FTM', 'Mini OLT'];
+const assetTypes = ['OLT', 'ODC', 'ODP', 'FTM', 'Mini OLT', 'MITRATEL'];
 const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
 
 
@@ -257,7 +258,7 @@ export default function AdminAssetsPage() {
             const chunkSize = 200;
             let currentIndex = 0;
             
-            const assetNameCol = findColumn(firstRowKeys, ['olt', 'odc', 'odp', 'ftm', 'gpon', 'nama', 'name', `nama ${importAssetType.toLowerCase()}`, 'device name', 'asset name', 'nama aset', 'nama perangkat', 'odp name']);
+            const assetNameCol = findColumn(firstRowKeys, ['olt', 'odc', 'odp', 'ftm', 'gpon', 'nama', 'name', `nama ${importAssetType.toLowerCase()}`, 'device name', 'asset name', 'nama aset', 'nama perangkat', 'odp name', 'site_name']);
             const stoCol = findColumn(firstRowKeys, ['sto', 'lokasi sto', 'telkom sto', 'telkom sto odc 2', 'lokasi', 'sto location', 'area sto', 'kode sto', 'sto/lokasi']);
             const coordinatesCol = findColumn(firstRowKeys, ['koordinat', 'coordinate', 'location', 'lokasi', 'gps']);
             const latCol = findColumn(firstRowKeys, ['lat', 'latitude']);
@@ -268,9 +269,12 @@ export default function AdminAssetsPage() {
             const usedCol = findColumn(firstRowKeys, ['used', 'port used']);
             const rsvCol = findColumn(firstRowKeys, ['rsv', 'port rsv']);
             const rskCol = findColumn(firstRowKeys, ['rsk', 'port rsk']);
+            const mitratelSiteIdCol = findColumn(firstRowKeys, ['site_id_mitratel']);
+            const tenantSiteIdCol = findColumn(firstRowKeys, ['site_id_tenant']);
+
 
             if (!assetNameCol) {
-                throw new Error(`Kolom nama aset (misalnya 'ODP NAME', 'Nama', 'Device Name') tidak ditemukan di sheet '${sheetName}'. Mohon periksa nama kolom di file Excel Anda.`);
+                throw new Error(`Kolom nama aset (misalnya 'ODP NAME', 'Site_Name', 'Nama') tidak ditemukan di sheet '${sheetName}'. Mohon periksa nama kolom di file Excel Anda.`);
             }
             
             if (importAssetType === 'Mini OLT') {
@@ -353,53 +357,137 @@ export default function AdminAssetsPage() {
                 processMiniOltChunk();
                 return;
             }
+
+            if (importAssetType === 'MITRATEL') {
+                if (!assetNameCol || !latCol || !longCol || !tenantSiteIdCol) {
+                    throw new Error(`Kolom wajib (Site_Name, Latitude, Longitude, Site_ID_Tenant) untuk impor Mitratel tidak ditemukan.`);
+                }
+
+                const mapMitratelToServiceArea = (siteName: string, tenantId: string): string => {
+                    const upperName = siteName.toUpperCase();
+                    const upperTenant = tenantId.toUpperCase();
+                    const tenantCode = upperTenant.length >= 5 ? upperTenant.substring(2, 5) : '';
             
+                    if (upperName.includes('KDS') || tenantCode === 'KDS') return 'SA KUDUS';
+                    if (upperName.includes('PAT') || tenantCode === 'PAT') return 'SA PATI';
+                    if (upperName.includes('JPA') || tenantCode === 'JPA') return 'SA JEPARA';
+                    if (upperName.includes('GRO') || tenantCode === 'GRO') return 'SA PURWODADI';
+                    if (upperName.includes('BLO') || tenantCode === 'BLO') return 'SA BLORA'; 
+                    if (upperName.includes('RBN') || tenantCode === 'RBN') return 'SA REMBANG'; 
+                    return 'SA KUDUS'; // Default fallback
+                };
+                
+                let totalCreated = 0;
+                let totalUpdated = 0;
+                const assetsCollection = collection(firestore, 'network-assets');
+
+                const processMitratelChunk = async () => {
+                    try {
+                        const end = Math.min(currentIndex + chunkSize, totalRows);
+                        const chunkRows = jsonData.slice(currentIndex, end);
+                        const tenantIdsInChunk = chunkRows.map(row => row[tenantSiteIdCol]?.toString().trim()).filter(Boolean);
+
+                        if (tenantIdsInChunk.length === 0) {
+                            currentIndex = end;
+                            if (currentIndex < totalRows) setTimeout(processMitratelChunk, 50);
+                            return;
+                        }
+
+                        const existingAssetsMap = new Map<string, { id: string }>();
+                        const queryChunks: string[][] = [];
+                        for (let i = 0; i < tenantIdsInChunk.length; i += 30) {
+                            queryChunks.push(tenantIdsInChunk.slice(i, i + 30));
+                        }
+
+                        for (const idChunk of queryChunks) {
+                            if (idChunk.length > 0) {
+                                const q = query(assetsCollection, where('tenantSiteId', 'in', idChunk));
+                                const querySnapshot = await getDocs(q);
+                                querySnapshot.forEach(doc => {
+                                    existingAssetsMap.set(doc.data().tenantSiteId.trim(), { id: doc.id });
+                                });
+                            }
+                        }
+
+                        const batch = writeBatch(firestore);
+
+                        for (const row of chunkRows) {
+                            const siteName = row[assetNameCol]?.toString().trim();
+                            const tenantId = row[tenantSiteIdCol]?.toString().trim();
+                            if (!siteName || !tenantId) continue;
+                            
+                            const latValue = row[latCol]?.toString().replace(',', '.');
+                            const longValue = row[longCol]?.toString().replace(',', '.');
+
+                            const assetData: Partial<NetworkAsset> = {
+                                name: siteName,
+                                assetType: 'MITRATEL',
+                                serviceArea: mapMitratelToServiceArea(siteName, tenantId),
+                                sto: 'MITRATEL',
+                                subType: 'N/A',
+                                coordinates: `${latValue}, ${longValue}`,
+                                tenantSiteId: tenantId,
+                                mitratelSiteId: row[mitratelSiteIdCol]?.toString().trim() || '-',
+                            };
+                            
+                            const existingAsset = existingAssetsMap.get(tenantId);
+                            if (existingAsset) {
+                                const assetDocRef = doc(assetsCollection, existingAsset.id);
+                                batch.update(assetDocRef, assetData);
+                                totalUpdated++;
+                            } else {
+                                const newAssetDocRef = doc(assetsCollection);
+                                const newAsset = { ...assetData, id: newAssetDocRef.id, dateAdded: serverTimestamp() };
+                                batch.set(newAssetDocRef, newAsset);
+                                totalCreated++;
+                            }
+                        }
+                        
+                        await batch.commit();
+                        
+                        currentIndex = end;
+                        setProgress((currentIndex / totalRows) * 100);
+
+                        if (currentIndex < totalRows) {
+                            setTimeout(processMitratelChunk, 1500); 
+                        } else {
+                            toast({
+                                title: 'Impor Selesai',
+                                description: `Berhasil membuat ${totalCreated} aset Mitratel baru dan memperbarui ${totalUpdated} aset.`,
+                                duration: 9000
+                            });
+                            setIsImporting(false);
+                            setIsImportDialogOpen(false);
+                            setImportAssetType('');
+                            setProgress(0);
+                            const fileInput = document.getElementById('excel-file') as HTMLInputElement;
+                            if (fileInput) fileInput.value = '';
+                        }
+                    } catch (chunkError: any) {
+                        console.error("Failed to process Mitratel data chunk:", chunkError);
+                        toast({ variant: "destructive", title: 'Proses Impor Mitratel Gagal', description: `Error: ${chunkError.message}` });
+                        setIsImporting(false);
+                        setProgress(0);
+                    }
+                };
+
+                processMitratelChunk();
+                return;
+            }
+            
+            // --- Default import logic for other asset types ---
             const assetsCollection = collection(firestore, 'network-assets');
             let totalCreated = 0;
             let totalUpdated = 0;
             
             const mapStoToServiceArea = (sto: string): NetworkAsset['serviceArea'] => {
                 const upperSto = sto.toUpperCase().trim();
-
-                // SA PURWODADI Codes
-                if (['PWB', 'PURWODADI', 'WRO', 'WIROSARI', 'TRO', 'TOROH', 'GBU', 'GUBUNG', 'GDO', 'GODONG'].includes(upperSto)) {
-                    return 'SA PURWODADI';
-                }
-                
-                // SA BLORA Codes
-                if (['CEP', 'CEPU', 'BLO', 'BLORA', 'NGA', 'NGAWEN', 'RDB', 'RANDUBLATUNG'].includes(upperSto)) {
-                    return 'SA BLORA';
-                }
-
-                // SA JEPARA Codes
-                if (['KMJ', 'JEPARA', 'JPR', 'BAN', 'BANGSRI', 'KEL', 'KELING', 'PEC', 'PECANGAAN'].includes(upperSto)) {
-                    return 'SA JEPARA';
-                }
-
-                // SA KUDUS Codes
-                if (['KUD', 'KUDUS', 'DMA', 'DEMAK'].includes(upperSto)) {
-                    return 'SA KUDUS';
-                }
-
-                // SA PATI Codes
-                if (['PAT', 'PATI', 'TAY', 'JWN'].includes(upperSto)) {
-                    return 'SA PATI';
-                }
-                
-                // SA REMBANG Codes
-                if (['LSE', 'LASEM', 'RBN', 'REMBANG'].includes(upperSto)) {
-                    return 'SA REMBANG';
-                }
-
-                // Fallback for partial matches (less reliable, but good for safety)
-                if (upperSto.includes('PURWODADI')) return 'SA PURWODADI';
-                if (upperSto.includes('BLORA')) return 'SA BLORA';
-                if (upperSto.includes('JEPARA')) return 'SA JEPARA';
-                if (upperSto.includes('PATI')) return 'SA PATI';
-                if (upperSto.includes('REMBANG')) return 'SA REMBANG';
-                if (upperSto.includes('KUDUS')) return 'SA KUDUS';
-                
-                // If no match is found, default to SA KUDUS
+                if (['PWB', 'WRO', 'TRO', 'GBU', 'GDO'].some(code => upperSto.includes(code))) return 'SA PURWODADI';
+                if (['CEP', 'BLO', 'NGA', 'RDB'].some(code => upperSto.includes(code))) return 'SA BLORA';
+                if (['KMJ', 'BAN', 'KEL', 'PEC'].some(code => upperSto.includes(code))) return 'SA JEPARA';
+                if (['KUD', 'DMA'].some(code => upperSto.includes(code))) return 'SA KUDUS';
+                if (['PAT', 'TAY', 'JWN'].some(code => upperSto.includes(code))) return 'SA PATI';
+                if (['LSE', 'RBN'].some(code => upperSto.includes(code))) return 'SA REMBANG';
                 return 'SA KUDUS';
             };
 
@@ -411,11 +499,10 @@ export default function AdminAssetsPage() {
 
                     if (assetNamesInChunk.length === 0) {
                         currentIndex = end;
-                        if (currentIndex < totalRows) { setTimeout(processChunk, 50); } else { /* finished */ }
+                        if (currentIndex < totalRows) setTimeout(processChunk, 50);
                         return;
                     }
 
-                    // Find existing assets in this chunk
                     const existingAssetsMap = new Map<string, { id: string }>();
                     const queryChunks: string[][] = [];
                     for (let i = 0; i < assetNamesInChunk.length; i += 30) {
@@ -438,18 +525,12 @@ export default function AdminAssetsPage() {
                         const assetName = row[assetNameCol]?.toString().trim();
                         if (!assetName) continue;
 
-                        // --- Robust STO and Service Area Logic ---
                         let stoValue = '';
                         const nameParts = assetName.split('-');
-                        if (nameParts.length > 1) {
-                            stoValue = nameParts[1]; // Priority 1: Extract from name
-                        }
-                        
-                        if (!stoValue && stoCol && row[stoCol]) {
-                            stoValue = row[stoCol].toString().trim(); // Priority 2: Use STO column
-                        }
+                        if (nameParts.length > 1) stoValue = nameParts[1];
+                        if (!stoValue && stoCol && row[stoCol]) stoValue = row[stoCol].toString().trim();
 
-                        const finalServiceArea = stoValue ? mapStoToServiceArea(stoValue) : 'SA KUDUS'; // Map from STO, fallback to default
+                        const finalServiceArea = stoValue ? mapStoToServiceArea(stoValue) : 'SA KUDUS';
 
                         const assetData: Partial<NetworkAsset> = {
                             name: assetName,
@@ -460,38 +541,23 @@ export default function AdminAssetsPage() {
                         
                         const latValue = latCol ? row[latCol] : null;
                         const longValue = longCol ? row[longCol] : null;
-
-                        if (latValue && longValue) {
-                             assetData.coordinates = `${latValue.toString().replace(',', '.')}, ${longValue.toString().replace(',', '.')}`;
-                        } else if (coordinatesCol && row[coordinatesCol]) {
-                             assetData.coordinates = row[coordinatesCol].toString();
-                        }
+                        if (latValue && longValue) assetData.coordinates = `${latValue.toString().replace(',', '.')}, ${longValue.toString().replace(',', '.')}`;
+                        else if (coordinatesCol && row[coordinatesCol]) assetData.coordinates = row[coordinatesCol].toString();
                         
                         if (importAssetType === 'OLT' || importAssetType === 'FTM') {
                             const keteranganCol = findColumn(firstRowKeys, ['keterangan', 'jenis', 'type', 'sub type', 'description', 'keterangan_sto', 'subtype']);
                             let subType: NetworkAsset['subType'] = 'N/A';
-
                             if (importAssetType === 'OLT') {
-                                subType = 'OLT'; // Default to 'OLT'
-                                if (keteranganCol && row[keteranganCol]) {
-                                    const keterangan = row[keteranganCol].toString().toLowerCase();
-                                    if (keterangan.includes('mini')) {
-                                        subType = 'Mini OLT';
-                                    }
-                                }
-                            }
-                            
-                            if (importAssetType === 'FTM') {
-                                if (keteranganCol && row[keteranganCol]) {
-                                    const keterangan = row[keteranganCol].toString().toLowerCase();
-                                    if (keterangan.includes('ea')) subType = 'EA';
-                                    else if (keterangan.includes('oa')) subType = 'OA';
-                                }
+                                subType = 'OLT';
+                                if (keteranganCol && row[keteranganCol]?.toString().toLowerCase().includes('mini')) subType = 'Mini OLT';
+                            } else if (importAssetType === 'FTM') {
+                                const keterangan = keteranganCol ? row[keteranganCol]?.toString().toLowerCase() : '';
+                                if (keterangan.includes('ea')) subType = 'EA';
+                                else if (keterangan.includes('oa')) subType = 'OA';
                             }
                             assetData.subType = subType;
                         } else if (importAssetType === 'ODP') {
-                            let kapasitasRawValue = kapasitasCol ? row[kapasitasCol]?.toString() : '';
-                            if (kapasitasRawValue) assetData.kapasitas = kapasitasRawValue;
+                            if (kapasitasCol && row[kapasitasCol] != null) assetData.kapasitas = row[kapasitasCol].toString();
                             if (avaiCol && row[avaiCol] != null) assetData.portAvai = row[avaiCol].toString();
                             if (usedCol && row[usedCol] != null) assetData.portUsed = row[usedCol].toString();
                             if (rsvCol && row[rsvCol] != null) assetData.portRsv = row[rsvCol].toString();
@@ -504,8 +570,7 @@ export default function AdminAssetsPage() {
 
                         const existingAsset = existingAssetsMap.get(assetName);
                         if (existingAsset) {
-                            const assetDocRef = doc(assetsCollection, existingAsset.id);
-                            batch.update(assetDocRef, assetData);
+                            batch.update(doc(assetsCollection, existingAsset.id), assetData);
                             totalUpdated++;
                         } else {
                             const newAssetDocRef = doc(assetsCollection);
@@ -518,18 +583,12 @@ export default function AdminAssetsPage() {
                     await batch.commit();
                     
                     currentIndex = end;
-                    const currentProgress = (currentIndex / totalRows) * 100;
-                    setProgress(currentProgress);
+                    setProgress((currentIndex / totalRows) * 100);
 
                     if (currentIndex < totalRows) {
-                        const delay = importAssetType === 'ODP' ? 3000 : 1500;
-                        setTimeout(processChunk, delay); 
+                        setTimeout(processChunk, 1500); 
                     } else {
-                        toast({
-                            title: 'Import Selesai',
-                            description: `Berhasil membuat ${totalCreated} aset baru dan memperbarui ${totalUpdated} aset.`,
-                            duration: 9000
-                        });
+                        toast({ title: 'Import Selesai', description: `Berhasil membuat ${totalCreated} aset baru dan memperbarui ${totalUpdated} aset.` });
                         setIsImporting(false);
                         setIsImportDialogOpen(false);
                         setImportAssetType('');
@@ -539,26 +598,16 @@ export default function AdminAssetsPage() {
                     }
                 } catch (chunkError: any) {
                     console.error("Failed to process data chunk:", chunkError);
-                    toast({
-                        variant: "destructive",
-                        title: 'Proses Impor Gagal',
-                        description: `Error pada baris sekitar ${currentIndex}: ${chunkError.message}`,
-                        duration: 9000,
-                    });
+                    toast({ variant: "destructive", title: 'Proses Impor Gagal', description: `Error: ${chunkError.message}` });
                     setIsImporting(false);
                     setProgress(0);
                 }
             }
-
             processChunk();
            
         } catch (error: any) {
             console.error("Failed to import Excel file:", error);
-            toast({
-                variant: "destructive",
-                title: 'Import Gagal',
-                description: error.message || 'Terjadi kesalahan saat membaca file. Pastikan formatnya benar.',
-            });
+            toast({ variant: "destructive", title: 'Import Gagal', description: error.message });
             setIsImporting(false);
             setProgress(0);
         }
@@ -722,12 +771,10 @@ export default function AdminAssetsPage() {
                 <TableHead>Service Area</TableHead>
                 <TableHead>STO</TableHead>
                 <TableHead>Coordinates</TableHead>
-                <TableHead>Kapasitas</TableHead>
-                <TableHead>Spesifikasi</TableHead>
+                <TableHead>Mitratel ID</TableHead>
+                <TableHead>Tenant ID</TableHead>
                 <TableHead>Avail</TableHead>
                 <TableHead>Used</TableHead>
-                <TableHead>Rsv</TableHead>
-                <TableHead>Rsk</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -735,7 +782,7 @@ export default function AdminAssetsPage() {
               {areAssetsLoading && paginatedAssets.length === 0 ? (
                  Array.from({ length: 5 }).map((_, index) => (
                     <TableRow key={index}>
-                        <TableCell colSpan={13}><Skeleton className="h-6 w-full" /></TableCell>
+                        <TableCell colSpan={11}><Skeleton className="h-6 w-full" /></TableCell>
                     </TableRow>
                 ))
               ) : paginatedAssets.length > 0 ? (
@@ -750,12 +797,10 @@ export default function AdminAssetsPage() {
                     <TableCell>{a.serviceArea}</TableCell>
                     <TableCell>{a.sto}</TableCell>
                     <TableCell>{a.coordinates || '-'}</TableCell>
-                    <TableCell>{a.kapasitas || '-'}</TableCell>
-                    <TableCell>{a.spec || '-'}</TableCell>
+                    <TableCell>{a.mitratelSiteId || '-'}</TableCell>
+                    <TableCell>{a.tenantSiteId || '-'}</TableCell>
                     <TableCell>{a.portAvai || '-'}</TableCell>
                     <TableCell>{a.portUsed || '-'}</TableCell>
-                    <TableCell>{a.portRsv || '-'}</TableCell>
-                    <TableCell>{a.portRsk || '-'}</TableCell>
                     <TableCell className="text-right">
                        {googleMapsUrl && (
                         <Button asChild variant="ghost" size="icon" title="Lihat di Google Maps">
@@ -790,7 +835,7 @@ export default function AdminAssetsPage() {
                 )})
               ) : (
                 <TableRow>
-                  <TableCell colSpan={13} className="h-24 text-center">
+                  <TableCell colSpan={11} className="h-24 text-center">
                     {(searchName || searchAssetType !== 'all' || searchServiceArea !== 'all') 
                         ? "Tidak ada aset yang cocok dengan filter Anda." 
                         : "Gunakan filter di atas untuk mencari atau impor data baru."
