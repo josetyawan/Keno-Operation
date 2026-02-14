@@ -68,7 +68,7 @@ export default function AdminAssetsPage() {
   const { toast } = useToast();
   
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(isImporting);
   const [importAssetType, setImportAssetType] = useState('');
   const [progress, setProgress] = useState(0);
 
@@ -257,7 +257,7 @@ export default function AdminAssetsPage() {
             let currentIndex = 0;
             
             const assetNameCol = findColumn(firstRowKeys, ['olt', 'odc', 'odp', 'ftm', 'gpon', 'nama', 'name', `nama ${importAssetType.toLowerCase()}`, 'device name', 'asset name', 'nama aset', 'nama perangkat', 'odp name']);
-            const stoCol = findColumn(firstRowKeys, ['sto', 'lokasi sto', 'telkom sto', 'telkom sto odc 2', 'lokasi', 'sto location', 'area sto', 'kode sto']);
+            const stoCol = findColumn(firstRowKeys, ['sto', 'lokasi sto', 'telkom sto', 'telkom sto odc 2', 'lokasi', 'sto location', 'area sto', 'kode sto', 'sto/lokasi']);
             const coordinatesCol = findColumn(firstRowKeys, ['koordinat', 'coordinate', 'location', 'lokasi', 'gps']);
             const latCol = findColumn(firstRowKeys, ['lat', 'latitude']);
             const longCol = findColumn(firstRowKeys, ['long', 'longitude', 'longitud']);
@@ -359,34 +359,47 @@ export default function AdminAssetsPage() {
             
             const mapStoToServiceArea = (sto: string): NetworkAsset['serviceArea'] => {
                 const upperSto = sto.toUpperCase().trim();
+
+                // SA PURWODADI Codes
+                if (['PWB', 'PURWODADI', 'WRO', 'WIROSARI', 'TRO', 'TOROH', 'GBU', 'GUBUNG', 'GDO', 'GODONG'].includes(upperSto)) {
+                    return 'SA PURWODADI';
+                }
                 
-                // SA JEPARA
-                if (['BAN', 'BANGSRI', 'KMJ', 'KEL', 'KELING', 'JPR', 'JEPARA', 'PEC', 'PECANGAAN'].includes(upperSto)) return 'SA JEPARA';
+                // SA BLORA Codes
+                if (['CEP', 'CEPU', 'BLO', 'BLORA', 'NGA', 'NGAWEN', 'RDB', 'RANDUBLATUNG'].includes(upperSto)) {
+                    return 'SA BLORA';
+                }
+
+                // SA JEPARA Codes
+                if (['KMJ', 'JEPARA', 'JPR', 'BAN', 'BANGSRI', 'KEL', 'KELING', 'PEC', 'PECANGAAN'].includes(upperSto)) {
+                    return 'SA JEPARA';
+                }
+
+                // SA KUDUS Codes
+                if (['KUD', 'KUDUS', 'DMA', 'DEMAK'].includes(upperSto)) {
+                    return 'SA KUDUS';
+                }
+
+                // SA PATI Codes
+                if (['PAT', 'PATI', 'TAY', 'JWN'].includes(upperSto)) {
+                    return 'SA PATI';
+                }
                 
-                // SA BLORA
-                if (['BLO', 'BLORA', 'CEPU', 'CEP', 'NGA', 'NGAWEN', 'RDB', 'RANDUBLATUNG'].includes(upperSto)) return 'SA BLORA';
+                // SA REMBANG Codes
+                if (['LSE', 'LASEM', 'RBN', 'REMBANG'].includes(upperSto)) {
+                    return 'SA REMBANG';
+                }
 
-                // SA KUDUS
-                if (['KUD', 'KUDUS', 'DMA', 'DEMAK'].includes(upperSto)) return 'SA KUDUS';
-
-                // SA PATI
-                if (['PAT', 'PATI', 'TAY', 'JWN'].includes(upperSto)) return 'SA PATI';
-                
-                // SA REMBANG
-                if (['LSE', 'LASEM', 'RBN', 'REMBANG'].includes(upperSto)) return 'SA REMBANG';
-
-                // SA PURWODADI
-                if (['WRO', 'WIROSARI', 'TRO', 'TOROH', 'GBU', 'GUBUNG', 'GDO', 'GODONG', 'PURWODADI', 'PWB'].includes(upperSto)) return 'SA PURWODADI';
-
-                // Fallback for partial matches for safety, in case of slight misspellings in the data
-                if (upperSto.includes('JEPARA')) return 'SA JEPARA';
+                // Fallback for partial matches (less reliable, but good for safety)
+                if (upperSto.includes('PURWODADI')) return 'SA PURWODADI';
                 if (upperSto.includes('BLORA')) return 'SA BLORA';
-                if (upperSto.includes('KUDUS')) return 'SA KUDUS';
+                if (upperSto.includes('JEPARA')) return 'SA JEPARA';
                 if (upperSto.includes('PATI')) return 'SA PATI';
                 if (upperSto.includes('REMBANG')) return 'SA REMBANG';
-                if (upperSto.includes('PURWODADI')) return 'SA PURWODADI';
+                if (upperSto.includes('KUDUS')) return 'SA KUDUS';
                 
-                return 'SA KUDUS'; // Default fallback
+                // If no match is found, default to SA KUDUS
+                return 'SA KUDUS';
             };
 
             const processChunk = async () => {
@@ -459,18 +472,19 @@ export default function AdminAssetsPage() {
 
                             if (importAssetType === 'OLT') {
                                 subType = 'OLT'; // Default to 'OLT'
-                            }
-                            
-                            if (keteranganCol && row[keteranganCol]) {
-                                const keterangan = row[keteranganCol].toString().toLowerCase();
-                                if (importAssetType === 'FTM') {
-                                    if (keterangan.includes('ea')) subType = 'EA';
-                                    else if (keterangan.includes('oa')) subType = 'OA';
-                                }
-                                if (importAssetType === 'OLT') {
+                                if (keteranganCol && row[keteranganCol]) {
+                                    const keterangan = row[keteranganCol].toString().toLowerCase();
                                     if (keterangan.includes('mini')) {
                                         subType = 'Mini OLT';
                                     }
+                                }
+                            }
+                            
+                            if (importAssetType === 'FTM') {
+                                if (keteranganCol && row[keteranganCol]) {
+                                    const keterangan = row[keteranganCol].toString().toLowerCase();
+                                    if (keterangan.includes('ea')) subType = 'EA';
+                                    else if (keterangan.includes('oa')) subType = 'OA';
                                 }
                             }
                             assetData.subType = subType;
@@ -805,3 +819,5 @@ export default function AdminAssetsPage() {
     </>
   );
 }
+
+    
