@@ -255,7 +255,7 @@ export default function AllproPage() {
       
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {/* Mitratel Card */}
-        <Card className="lg:col-span-3">
+        <Card>
           <CardHeader>
             <CardTitle>{mitratel.title}</CardTitle>
           </CardHeader>
