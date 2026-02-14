@@ -109,50 +109,54 @@ export default function AdminAssetsPage() {
     }
   }, [user, currentUserProfile, isUserLoading, isProfileLoading, router]);
 
-  // Fetch a limited & filtered set of assets for display. This is much more performant.
-  const filteredAssetsQuery = useMemoFirebase(() => {
+  // Fetch all assets from server, filter on client
+  const assetsQuery = useMemoFirebase(() => {
     if (isUserLoading || isProfileLoading || !user || currentUserProfile?.role !== 'admin') {
       return null;
     }
-    const constraints: any[] = [];
-    if (searchAssetType !== 'all' && searchAssetType !== 'Mini OLT') { // Mini OLT is not a real assetType
-      constraints.push(where('assetType', '==', searchAssetType));
-    }
-    constraints.push(limit(500)); // Fetch a reasonable number to filter on the client.
-    
-    return query(collection(firestore, 'network-assets'), ...constraints);
-  }, [firestore, currentUserProfile, isUserLoading, isProfileLoading, searchAssetType]);
+    // Fetch ALL assets. Filtering will happen on the client for consistency.
+    return query(collection(firestore, 'network-assets'));
+  }, [firestore, currentUserProfile, isUserLoading, isProfileLoading]);
 
-  const { data: queriedAssets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(filteredAssetsQuery);
+  const { data: queriedAssets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(assetsQuery);
 
-  // Perform client-side filtering for SA and name
-  const filteredAssetsByName = useMemo(() => {
+  // Perform client-side filtering for all filters
+  const filteredAssets = useMemo(() => {
     if (!queriedAssets) return [];
+    
+    let assets = queriedAssets;
 
-    // Filter by Service Area first
-    const assetsBySA = (searchServiceArea === 'all')
-        ? queriedAssets
-        : queriedAssets.filter(asset => asset.serviceArea === searchServiceArea);
-
-    // Then filter by name
-    const lowercasedSearchName = searchName.toLowerCase().trim();
-    if (!lowercasedSearchName) {
-        return assetsBySA;
+    // Filter by Asset Type
+    if (searchAssetType !== 'all') {
+        if (searchAssetType === 'Mini OLT') {
+             assets = assets.filter(asset => asset.subType === 'Mini OLT');
+        } else {
+             assets = assets.filter(asset => asset.assetType === searchAssetType);
+        }
     }
     
-    return assetsBySA.filter(asset => {
-      return asset.name.toLowerCase().includes(lowercasedSearchName);
-    });
-  }, [queriedAssets, searchServiceArea, searchName]);
+    // Filter by Service Area
+    if (searchServiceArea !== 'all') {
+        assets = assets.filter(asset => asset.serviceArea === searchServiceArea);
+    }
+
+    // Filter by name
+    const lowercasedSearchName = searchName.toLowerCase().trim();
+    if (lowercasedSearchName) {
+        assets = assets.filter(asset => asset.name.toLowerCase().includes(lowercasedSearchName));
+    }
+    
+    return assets;
+  }, [queriedAssets, searchAssetType, searchServiceArea, searchName]);
 
 
-  const totalPages = Math.ceil(filteredAssetsByName.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filteredAssets.length / ITEMS_PER_PAGE);
 
   const paginatedAssets = useMemo(() => {
       const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
       const endIndex = startIndex + ITEMS_PER_PAGE;
-      return filteredAssetsByName.slice(startIndex, endIndex);
-  }, [filteredAssetsByName, currentPage]);
+      return filteredAssets.slice(startIndex, endIndex);
+  }, [filteredAssets, currentPage]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -781,7 +785,7 @@ export default function AdminAssetsPage() {
         <CardHeader>
           <CardTitle>Daftar Aset</CardTitle>
           <CardDescription>
-            Menampilkan {paginatedAssets.length} dari {filteredAssetsByName.length} aset yang cocok.
+            Menampilkan {paginatedAssets.length} dari {filteredAssets.length} aset yang cocok.
           </CardDescription>
         </CardHeader>
         <CardContent>
