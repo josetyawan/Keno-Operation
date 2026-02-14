@@ -27,10 +27,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Search, ChevronLeft, ChevronRight, MapPin, Map as MapIcon } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, MapPin, FolderGit2 } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, doc, where, limit } from 'firebase/firestore';
-import type { UserProfile, NetworkAsset, MapLink } from '@/lib/types';
+import type { UserProfile, NetworkAsset, MancoreLink } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
@@ -58,22 +58,28 @@ export default function SearchAssetsPage() {
     useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
   );
   
-  const mapLinksQuery = useMemoFirebase(() => {
+  const mancoreLinksQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'map-links'));
+    return query(collection(firestore, 'mancore-links'));
   }, [firestore]);
 
-  const { data: mapLinks, isLoading: areMapLinksLoading } = useCollection<MapLink>(mapLinksQuery);
+  const { data: mancoreLinks, isLoading: areMancoreLinksLoading } = useCollection<MancoreLink>(mancoreLinksQuery);
 
-  const mapLinksBySA = useMemo(() => {
-    if (!mapLinks) return new Map<string, string>();
-    return new Map(mapLinks.map(link => [link.serviceArea, link.url]));
-  }, [mapLinks]);
+  const mancoreLinksBySA = useMemo(() => {
+    if (!mancoreLinks) return new Map<string, MancoreLink[]>();
+    return mancoreLinks.reduce((acc, link) => {
+        if (!acc.has(link.serviceArea)) {
+            acc.set(link.serviceArea, []);
+        }
+        acc.get(link.serviceArea)!.push(link);
+        return acc;
+    }, new Map<string, MancoreLink[]>());
+  }, [mancoreLinks]);
 
-  const currentMapLink = useMemo(() => {
-    if (searchServiceArea === 'all') return null;
-    return mapLinksBySA.get(searchServiceArea) || null;
-  }, [searchServiceArea, mapLinksBySA]);
+  const currentMancoreLinks = useMemo(() => {
+    if (searchServiceArea === 'all') return [];
+    return mancoreLinksBySA.get(searchServiceArea) || [];
+  }, [searchServiceArea, mancoreLinksBySA]);
 
 
   useEffect(() => {
@@ -126,7 +132,7 @@ export default function SearchAssetsPage() {
   }, [searchName, searchAssetType, searchServiceArea]);
 
 
-  const isLoading = isUserLoading || isProfileLoading || areAssetsLoading || areMapLinksLoading;
+  const isLoading = isUserLoading || isProfileLoading || areAssetsLoading || areMancoreLinksLoading;
 
   if (isLoading && !queriedAssets) {
       return (
@@ -195,14 +201,19 @@ export default function SearchAssetsPage() {
                     </Select>
                 </div>
             </div>
-             {currentMapLink && (
+            {currentMancoreLinks.length > 0 && (
                 <div className="mt-4 border-t pt-4">
-                    <Button asChild>
-                        <Link href={currentMapLink} target="_blank" rel="noopener noreferrer">
-                            <MapIcon className="mr-2 h-4 w-4" />
-                            Buka Peta untuk {searchServiceArea}
-                        </Link>
-                    </Button>
+                     <h4 className="text-sm font-medium mb-2">Link Mancore untuk {searchServiceArea}</h4>
+                     <div className="flex flex-wrap gap-2">
+                        {currentMancoreLinks.map(link => (
+                            <Button asChild key={link.id} variant="secondary">
+                                <Link href={link.url} target="_blank" rel="noopener noreferrer">
+                                    <FolderGit2 className="mr-2 h-4 w-4" />
+                                    {link.label}
+                                </Link>
+                            </Button>
+                        ))}
+                    </div>
                 </div>
             )}
         </CardContent>

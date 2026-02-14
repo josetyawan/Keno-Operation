@@ -339,6 +339,45 @@
         "serviceArea",
         "url"
       ]
+    },
+    "MancoreLink": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Mancore Link",
+      "type": "object",
+      "description": "Stores a labeled URL for a specific Service Area, typically linking to external resources like Google Drive.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the MancoreLink."
+        },
+        "serviceArea": {
+          "type": "string",
+          "description": "The service area the link belongs to.",
+          "enum": [
+            "SA KUDUS",
+            "SA PATI",
+            "SA JEPARA",
+            "SA PURWODADI",
+            "SA BLORA",
+            "SA REMBANG"
+          ]
+        },
+        "label": {
+          "type": "string",
+          "description": "A descriptive label for the link (e.g., 'Peta ODP', 'Dokumen Jaringan')."
+        },
+        "url": {
+          "type": "string",
+          "description": "The URL the link points to.",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "id",
+        "serviceArea",
+        "label",
+        "url"
+      ]
     }
   },
   "auth": {
@@ -425,6 +464,22 @@
             {
               "name": "mapLinkId",
               "description": "The unique identifier for the map link."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/mancore-links/{mancoreLinkId}",
+        "definition": {
+          "entityName": "MancoreLink",
+          "schema": {
+            "$ref": "#/backend/entities/MancoreLink"
+          },
+          "description": "Stores labeled links to external resources (like Google Drive) for each Service Area.",
+          "params": [
+            {
+              "name": "mancoreLinkId",
+              "description": "The unique identifier for the mancore link."
             }
           ]
         }

@@ -63,3 +63,10 @@ export type MapLink = {
   serviceArea: string;
   url: string;
 };
+
+export type MancoreLink = {
+  id: string;
+  serviceArea: string;
+  label: string;
+  url: string;
+};
