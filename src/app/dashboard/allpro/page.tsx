@@ -62,7 +62,6 @@ export default function AllproPage() {
   const { data: assets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(assetsQuery);
 
   const rekapData = useMemo(() => {
-    // 1. Initialize the final structure with all SAs and zero counts.
     const results = {
       olt: { title: "OLT All", headers: ["Service Area", "Mini OLT", "OLT", "Grand Total"], rows: serviceAreas.map(sa => ({ serviceArea: sa, miniOlt: 0, olt: 0, grandTotal: 0 })), totals: { miniOlt: 0, olt: 0, grandTotal: 0 }},
       ftm: { title: "FTM All", headers: ["Service Area", "EA", "OA", "Grand Total"], rows: serviceAreas.map(sa => ({ serviceArea: sa, ea: 0, oa: 0, grandTotal: 0 })), totals: { ea: 0, oa: 0, grandTotal: 0 }},
@@ -70,45 +69,40 @@ export default function AllproPage() {
       odp: { title: "ODP All", headers: ["Service Area", "Jumlah ODP"], rows: serviceAreas.map(sa => ({ serviceArea: sa, jumlah: 0 })), totals: { jumlah: 0 }},
     };
 
-    if (!assets) return results;
+    if (!assets) {
+      return results;
+    }
 
-    // 2. Create a fast lookup map for SA index.
-    const saIndexMap = new Map(serviceAreas.map((sa, index) => [sa, index]));
-
-    // 3. Loop through assets ONCE and directly increment counters.
     for (const asset of assets) {
-      const saIndex = saIndexMap.get(asset.serviceArea);
+      const sa = asset.serviceArea;
+      const assetType = asset.assetType;
+      const subType = asset.subType;
 
-      // If the asset's service area is not one of our standard SAs, skip it.
-      if (saIndex === undefined) {
-        continue;
-      }
-
-      switch (asset.assetType) {
-        case 'OLT':
-          if (asset.subType === 'Mini OLT') {
-            results.olt.rows[saIndex].miniOlt++;
+      const oltRow = results.olt.rows.find(r => r.serviceArea === sa);
+      const ftmRow = results.ftm.rows.find(r => r.serviceArea === sa);
+      const odcRow = results.odc.rows.find(r => r.serviceArea === sa);
+      const odpRow = results.odp.rows.find(r => r.serviceArea === sa);
+      
+      if (assetType === 'OLT' && oltRow) {
+          if (subType === 'Mini OLT') {
+              oltRow.miniOlt++;
           } else {
-            results.olt.rows[saIndex].olt++;
+              oltRow.olt++;
           }
-          break;
-        case 'FTM':
-          if (asset.subType === 'EA') {
-            results.ftm.rows[saIndex].ea++;
-          } else if (asset.subType === 'OA') {
-            results.ftm.rows[saIndex].oa++;
+      } else if (assetType === 'FTM' && ftmRow) {
+          if (subType === 'EA') {
+              ftmRow.ea++;
+          } else if (subType === 'OA') {
+              ftmRow.oa++;
           }
-          break;
-        case 'ODC':
-          results.odc.rows[saIndex].jumlah++;
-          break;
-        case 'ODP':
-          results.odp.rows[saIndex].jumlah++;
-          break;
+      } else if (assetType === 'ODC' && odcRow) {
+          odcRow.jumlah++;
+      } else if (assetType === 'ODP' && odpRow) {
+          odpRow.jumlah++;
       }
     }
 
-    // 4. Calculate all totals after counting is complete.
+    // Calculate totals
     results.olt.rows.forEach(row => {
       row.grandTotal = row.miniOlt + row.olt;
       results.olt.totals.miniOlt += row.miniOlt;
@@ -132,7 +126,6 @@ export default function AllproPage() {
     });
 
     return results;
-
   }, [assets]);
   
   const { olt, odc, odp, ftm } = rekapData;
