@@ -51,6 +51,14 @@
             "pending",
             "approved"
           ]
+        },
+        "appAccess": {
+          "type": "string",
+          "description": "Defines which application modules the user can access.",
+          "enum": [
+            "nota",
+            "all"
+          ]
         }
       },
       "required": [

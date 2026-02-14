@@ -46,6 +46,7 @@ export default function SignupPage() {
           email: authUser.email!,
           role: 'user',
           registrationStatus: 'pending',
+          appAccess: 'nota', // Default access level
           displayName: authUser.email?.split('@')[0] || 'New User',
           firstName: '',
           lastName: '',

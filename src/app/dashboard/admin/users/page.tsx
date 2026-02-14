@@ -35,7 +35,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Shield, User, CheckCircle, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Shield, User, CheckCircle, Trash2, KeyRound } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, useDoc, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, doc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
@@ -44,10 +44,14 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 
 function UserActions({ userToManage, currentUserId }: { userToManage: UserProfile, currentUserId: string }) {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
+  const [selectedAccess, setSelectedAccess] = useState<'nota' | 'all'>('nota');
 
   const handleUpdate = (data: Partial<UserProfile>) => {
     const userDocRef = doc(firestore, 'users', userToManage.id);
@@ -69,6 +73,11 @@ function UserActions({ userToManage, currentUserId }: { userToManage: UserProfil
       duration: 7000
     });
   }
+
+  const handleApprove = () => {
+    handleUpdate({ registrationStatus: 'approved', appAccess: selectedAccess });
+    setIsApproveDialogOpen(false);
+  }
   
   // An admin cannot demote or change their own status
   if (userToManage.id === currentUserId) {
@@ -76,58 +85,93 @@ function UserActions({ userToManage, currentUserId }: { userToManage: UserProfil
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button aria-haspopup="true" size="icon" variant="ghost">
-          <MoreHorizontal className="h-4 w-4" />
-          <span className="sr-only">Toggle menu</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-        {userToManage.registrationStatus === 'pending' && (
-          <DropdownMenuItem onClick={() => handleUpdate({ registrationStatus: 'approved' })}>
-            <CheckCircle className="mr-2 h-4 w-4" />
-            Approve User
-          </DropdownMenuItem>
-        )}
-        {userToManage.role !== 'admin' ? (
-          <DropdownMenuItem onClick={() => handleUpdate({ role: 'admin' })}>
-            <Shield className="mr-2 h-4 w-4" />
-            Make Admin
-          </DropdownMenuItem>
-        ) : (
-          <DropdownMenuItem onClick={() => handleUpdate({ role: 'user' })}>
-            <User className="mr-2 h-4 w-4" />
-            Make User
-          </DropdownMenuItem>
-        )}
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-              <DropdownMenuItem
-                onSelect={(e) => e.preventDefault()}
-                className="text-destructive focus:text-destructive focus:bg-destructive/10"
-              >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete User
-              </DropdownMenuItem>
-          </AlertDialogTrigger>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button aria-haspopup="true" size="icon" variant="ghost">
+            <MoreHorizontal className="h-4 w-4" />
+            <span className="sr-only">Toggle menu</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+          {userToManage.registrationStatus === 'pending' && (
+            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setIsApproveDialogOpen(true); }}>
+              <CheckCircle className="mr-2 h-4 w-4" />
+              Approve User
+            </DropdownMenuItem>
+          )}
+          {userToManage.role !== 'admin' ? (
+            <DropdownMenuItem onClick={() => handleUpdate({ role: 'admin' })}>
+              <Shield className="mr-2 h-4 w-4" />
+              Make Admin
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem onClick={() => handleUpdate({ role: 'user' })}>
+              <User className="mr-2 h-4 w-4" />
+              Make User
+            </DropdownMenuItem>
+          )}
+           {userToManage.registrationStatus === 'approved' && (
+             <DropdownMenuItem onClick={() => handleUpdate({ appAccess: userToManage.appAccess === 'all' ? 'nota' : 'all' })}>
+                <KeyRound className="mr-2 h-4 w-4" />
+                {userToManage.appAccess === 'all' ? 'Batasi ke Nota' : 'Beri Akses Penuh'}
+            </DropdownMenuItem>
+           )}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+                <DropdownMenuItem
+                  onSelect={(e) => e.preventDefault()}
+                  className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete User
+                </DropdownMenuItem>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    This action only deletes the user's profile data from the application's database. The user's login account must be deleted manually from the Firebase Authentication console. This action cannot be undone.
+                </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteUser} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Continue</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <AlertDialog open={isApproveDialogOpen} onOpenChange={setIsApproveDialogOpen}>
           <AlertDialogContent>
               <AlertDialogHeader>
-              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogTitle>Approve User: {userToManage.email}</AlertDialogTitle>
               <AlertDialogDescription>
-                  This action only deletes the user's profile data from the application's database. The user's login account must be deleted manually from the Firebase Authentication console. This action cannot be undone.
+                  Pilih tingkat akses yang akan diberikan kepada pengguna ini setelah disetujui.
               </AlertDialogDescription>
               </AlertDialogHeader>
+              <div className="py-4">
+                  <RadioGroup defaultValue="nota" value={selectedAccess} onValueChange={(value: 'nota' | 'all') => setSelectedAccess(value)}>
+                      <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="nota" id="r1" />
+                          <Label htmlFor="r1">Akses Aplikasi Nota Saja</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="all" id="r2" />
+                          <Label htmlFor="r2">Akses Semua Aplikasi (Nota & Pencarian Aset)</Label>
+                      </div>
+                  </RadioGroup>
+              </div>
               <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDeleteUser} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Continue</AlertDialogAction>
+              <AlertDialogCancel>Batal</AlertDialogCancel>
+              <AlertDialogAction onClick={handleApprove}>Setujui Pengguna</AlertDialogAction>
               </AlertDialogFooter>
           </AlertDialogContent>
-        </AlertDialog>
-
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </AlertDialog>
+    </>
   );
 }
 
@@ -236,6 +280,7 @@ export default function AdminUsersPage() {
                 <TableHead>No. Pembayaran</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Peran</TableHead>
+                <TableHead>Akses Aplikasi</TableHead>
                 <TableHead className="text-right">
                   <span className="sr-only">Actions</span>
                 </TableHead>
@@ -258,6 +303,13 @@ export default function AdminUsersPage() {
                         {u.role}
                       </Badge>
                     </TableCell>
+                    <TableCell className="capitalize">
+                      {u.appAccess && u.registrationStatus === 'approved' && (
+                        <Badge variant={u.appAccess === 'all' ? 'default' : 'secondary'}>
+                          {u.appAccess === 'all' ? 'Semua' : 'Nota'}
+                        </Badge>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">
                        {user && <UserActions userToManage={u} currentUserId={user.uid} />}
                     </TableCell>
@@ -265,7 +317,7 @@ export default function AdminUsersPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
+                  <TableCell colSpan={7} className="h-24 text-center">
                     Tidak ada pengguna ditemukan.
                   </TableCell>
                 </TableRow>

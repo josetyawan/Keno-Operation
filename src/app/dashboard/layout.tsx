@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home, Network } from 'lucide-react';
+import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home, Network, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -17,18 +17,19 @@ import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useCallback, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { doc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 const navLinks = [
-  { href: '/dashboard', label: 'Home', icon: Home, adminOnly: false },
-  { href: '/dashboard/nota', label: 'Laporan Nota', icon: LayoutGrid, adminOnly: false },
-  { href: '/dashboard/admin/users', label: 'Manajemen User', icon: Users, adminOnly: true },
-  { href: '/dashboard/admin/pids', label: 'Manajemen PID', icon: Tags, adminOnly: true },
-  { href: '/dashboard/admin/assets', label: 'Manajemen Aset', icon: Network, adminOnly: true },
-  { href: '/dashboard/rekap', label: 'Rekap Telegram', icon: Bot, adminOnly: true },
+  { href: '/dashboard', label: 'Home', icon: Home, adminOnly: false, requiresAllAccess: false },
+  { href: '/dashboard/nota', label: 'Laporan Nota', icon: LayoutGrid, adminOnly: false, requiresAllAccess: false },
+  { href: '/dashboard/search-assets', label: 'Pencarian Aset', icon: Search, adminOnly: false, requiresAllAccess: true },
+  { href: '/dashboard/admin/users', label: 'Manajemen User', icon: Users, adminOnly: true, requiresAllAccess: false },
+  { href: '/dashboard/admin/pids', label: 'Manajemen PID', icon: Tags, adminOnly: true, requiresAllAccess: false },
+  { href: '/dashboard/admin/assets', label: 'Manajemen Aset', icon: Network, adminOnly: true, requiresAllAccess: false },
+  { href: '/dashboard/rekap', label: 'Rekap Telegram', icon: Bot, adminOnly: true, requiresAllAccess: false },
 ];
 
 function DashboardSkeleton() {
@@ -160,6 +161,7 @@ export default function DashboardLayout({
             email: user.email!,
             role: 'user',
             registrationStatus: 'pending',
+            appAccess: 'nota',
             displayName: user.email?.split('@')[0] || 'New User',
             firstName: '',
             lastName: '',
@@ -217,7 +219,10 @@ export default function DashboardLayout({
           <div className="flex-1">
             <nav className="grid items-start px-4 py-4 text-sm font-medium">
               {navLinks.map(link => {
-                if (link.adminOnly && userProfile?.role !== 'admin') return null;
+                const isAdmin = userProfile?.role === 'admin';
+                if (link.adminOnly && !isAdmin) return null;
+                if (link.requiresAllAccess && !isAdmin && userProfile?.appAccess !== 'all') return null;
+
                 const isActive = link.href === '/dashboard' ? pathname === link.href : pathname.startsWith(link.href);
 
                 return (
@@ -260,7 +265,10 @@ export default function DashboardLayout({
                   <Logo />
                 </Link>
                 {navLinks.map(link => {
-                  if (link.adminOnly && userProfile?.role !== 'admin') return null;
+                  const isAdmin = userProfile?.role === 'admin';
+                  if (link.adminOnly && !isAdmin) return null;
+                  if (link.requiresAllAccess && !isAdmin && userProfile?.appAccess !== 'all') return null;
+                  
                   const isActive = link.href === '/dashboard' ? pathname === link.href : pathname.startsWith(link.href);
                   return (
                       <Link
