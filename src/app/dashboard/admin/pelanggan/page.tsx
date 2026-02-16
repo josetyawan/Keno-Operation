@@ -175,17 +175,22 @@ export default function AdminPelangganPage() {
   );
 
   useEffect(() => {
-    if (!isUserLoading && !isProfileLoading && (!user || currentUserProfile?.role !== 'admin')) {
+    if (!isUserLoading && !isProfileLoading) {
+      const isApproved = currentUserProfile?.registrationStatus === 'approved';
+      const hasAccess = currentUserProfile?.role === 'admin' || currentUserProfile?.appAccess === 'allpro' || currentUserProfile?.appAccess === 'all';
+      if (!user || !isApproved || !hasAccess) {
         router.push('/dashboard');
+      }
     }
   }, [user, currentUserProfile, isUserLoading, isProfileLoading, router]);
 
   const pelangganQuery = useMemoFirebase(() => {
-      if (currentUserProfile?.role === 'admin') {
+      const hasAccess = currentUserProfile?.role === 'admin' || currentUserProfile?.appAccess === 'allpro' || currentUserProfile?.appAccess === 'all';
+      if (hasAccess) {
           return query(collection(firestore, 'pelanggan'), orderBy('dateAdded', 'desc'));
       }
       return null;
-  }, [firestore, currentUserProfile?.role]);
+  }, [firestore, currentUserProfile]);
 
   const { data: pelangganList, isLoading: arePelangganLoading } = useCollection<Pelanggan>(pelangganQuery);
 
@@ -235,15 +240,17 @@ export default function AdminPelangganPage() {
             fotoCpUrl = await getDownloadURL(storageRef);
         }
 
-        data.fotoCpUrl = fotoCpUrl;
+        const dataToSave: Partial<Pelanggan> = { ...data, fotoCpUrl };
 
         if (pelangganToEdit) {
             const pelangganDocRef = doc(firestore, 'pelanggan', pelangganToEdit.id);
-            updateDocumentNonBlocking(pelangganDocRef, data);
+            updateDocumentNonBlocking(pelangganDocRef, dataToSave);
             toast({ title: 'Pelanggan Diperbarui' });
         } else {
+            dataToSave.userId = user.uid;
+            dataToSave.userEmail = user.email!;
             const pelangganCollection = collection(firestore, 'pelanggan');
-            addDocumentNonBlocking(pelangganCollection, data);
+            addDocumentNonBlocking(pelangganCollection, dataToSave);
             toast({ title: 'Pelanggan Dibuat' });
         }
         setIsFormDialogOpen(false);
@@ -287,6 +294,8 @@ export default function AdminPelangganPage() {
               ) : pelangganList && pelangganList.length > 0 ? (
                 pelangganList.map(p => {
                     const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${p.koordinat}`;
+                    const isOwner = p.userId === user?.uid;
+                    const isAdmin = currentUserProfile?.role === 'admin';
                     return (
                         <TableRow key={p.id}>
                             <TableCell className="font-medium">{p.namaPelanggan}</TableCell>
@@ -295,8 +304,8 @@ export default function AdminPelangganPage() {
                             <TableCell>{p.koordinat}</TableCell>
                             <TableCell className="text-right">
                                 <Button asChild variant="ghost" size="icon" title="Lihat di Google Maps"><Link href={googleMapsUrl} target="_blank" rel="noopener noreferrer"><MapPin className="h-4 w-4 text-blue-600" /></Link></Button>
-                                <Button variant="ghost" size="icon" onClick={() => handleEdit(p)}><Edit className="h-4 w-4" /></Button>
-                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDelete(p)}><Trash2 className="h-4 w-4" /></Button>
+                                {(isOwner || isAdmin) && <Button variant="ghost" size="icon" onClick={() => handleEdit(p)}><Edit className="h-4 w-4" /></Button>}
+                                {isAdmin && <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDelete(p)}><Trash2 className="h-4 w-4" /></Button>}
                             </TableCell>
                         </TableRow>
                     )

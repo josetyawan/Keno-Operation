@@ -365,6 +365,14 @@
           "type": "string",
           "description": "Unique identifier for the Pelanggan."
         },
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who created this customer record."
+        },
+        "userEmail": {
+          "type": "string",
+          "description": "The email of the user who created this customer record."
+        },
         "namaPelanggan": {
           "type": "string",
           "description": "Name of the customer."
@@ -398,6 +406,8 @@
       },
       "required": [
         "id",
+        "userId",
+        "userEmail",
         "namaPelanggan",
         "koordinat",
         "serviceArea",

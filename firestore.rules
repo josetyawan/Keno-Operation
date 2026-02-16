@@ -1,3 +1,4 @@
+
 /**
  * # Firestore Security Rules: NotaKu App
  *
@@ -72,6 +73,20 @@ service cloud.firestore {
      * Validates that a user is updating a nota they own.
      */
     function isUpdatingOwnNota() {
+        return resource.data.userId == request.auth.uid;
+    }
+    
+    /**
+     * Validates that a user is creating a pelanggan record with their own userId.
+     */
+    function isCreatingOwnPelanggan() {
+        return request.resource.data.userId == request.auth.uid;
+    }
+    
+    /**
+     * Validates that a user is updating a pelanggan record they own.
+     */
+    function isUpdatingOwnPelanggan() {
         return resource.data.userId == request.auth.uid;
     }
 
@@ -157,8 +172,14 @@ service cloud.firestore {
       // READ: Any approved user can read customer data.
       allow get, list: if isApproved() || isAdmin();
 
-      // WRITE: Only admins can create, update, or delete customer data.
-      allow create, update, delete: if isAdmin();
+      // CREATE: Any approved user can create a customer record for themselves.
+      allow create: if isApproved() && isCreatingOwnPelanggan();
+
+      // UPDATE: An approved user can update their own record, or an admin can update any record.
+      allow update: if (isApproved() && isUpdatingOwnPelanggan()) || isAdmin();
+
+      // DELETE: Only admins can delete customer data.
+      allow delete: if isAdmin();
     }
 
     /**

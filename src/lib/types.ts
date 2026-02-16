@@ -75,6 +75,8 @@ export type MancoreLink = {
 
 export type Pelanggan = {
   id: string;
+  userId: string;
+  userEmail: string;
   namaPelanggan: string;
   alamat?: string;
   nomorTelepon?: string;
