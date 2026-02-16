@@ -69,6 +69,8 @@ function PelangganForm({ pelanggan, onFormSubmit, isSaving }: { pelanggan?: Pela
   const [serviceArea, setServiceArea] = useState('');
   const [fotoCp, setFotoCp] = useState<File | null>(null);
   const [fotoCpPreview, setFotoCpPreview] = useState<string | null>(null);
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (pelanggan) {
@@ -98,6 +100,50 @@ function PelangganForm({ pelanggan, onFormSubmit, isSaving }: { pelanggan?: Pela
     }
   };
 
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+        toast({
+            variant: 'destructive',
+            title: 'Geolocation Tidak Didukung',
+            description: 'Browser Anda tidak mendukung pengambilan lokasi.',
+        });
+        return;
+    }
+
+    setIsGettingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            const { latitude, longitude } = position.coords;
+            setKoordinat(`${latitude}, ${longitude}`);
+            setIsGettingLocation(false);
+            toast({
+                title: 'Lokasi Berhasil Diambil',
+                description: 'Koordinat telah dimasukkan ke dalam form.',
+            });
+        },
+        (error) => {
+            let description = 'Terjadi kesalahan yang tidak diketahui.';
+            switch (error.code) {
+                case error.PERMISSION_DENIED:
+                    description = 'Anda menolak permintaan untuk Geolocation.';
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    description = 'Informasi lokasi tidak tersedia.';
+                    break;
+                case error.TIMEOUT:
+                    description = 'Permintaan untuk mendapatkan lokasi pengguna timeout.';
+                    break;
+            }
+            toast({
+                variant: 'destructive',
+                title: 'Gagal Mendapatkan Lokasi',
+                description: description,
+            });
+            setIsGettingLocation(false);
+        }
+    );
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!namaPelanggan || !koordinat || !serviceArea) return;
@@ -124,7 +170,13 @@ function PelangganForm({ pelanggan, onFormSubmit, isSaving }: { pelanggan?: Pela
       </div>
       <div className="grid grid-cols-4 items-center gap-4">
         <Label htmlFor="koordinat" className="text-right">Koordinat</Label>
-        <Input id="koordinat" value={koordinat} onChange={(e) => setKoordinat(e.target.value)} className="col-span-3" placeholder="-7.123, 110.456" required />
+        <div className="col-span-3 flex items-center gap-2">
+            <Input id="koordinat" value={koordinat} onChange={(e) => setKoordinat(e.target.value)} className="flex-grow" placeholder="-7.123, 110.456" required />
+            <Button type="button" variant="outline" size="icon" onClick={handleGetLocation} disabled={isGettingLocation} title="Ambil Lokasi Saat Ini">
+                {isGettingLocation ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
+                <span className="sr-only">Ambil Lokasi Saat Ini</span>
+            </Button>
+        </div>
       </div>
        <div className="grid grid-cols-4 items-center gap-4">
         <Label htmlFor="serviceArea" className="text-right">Service Area</Label>
