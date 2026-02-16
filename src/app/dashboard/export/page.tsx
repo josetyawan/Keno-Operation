@@ -821,7 +821,7 @@ const generateSimpleEvidenReport = (notas: Nota[], title: string): string => {
         const notaDate = safeToDate(nota.tanggal);
         // Filter out nulls before creating img tags
         const evidenImagesHtml = (nota.fotoEvidenUrls || []).filter((url): url is string => !!url).map(url => 
-            `<img src="${url}" style="width: 60px; height: auto; object-fit: contain; border: 1px solid #eee;"/>`
+            `<img src="${url}" style="width: 90px; height: auto; object-fit: contain; border: 1px solid #eee;"/>`
         ).join('');
         
         // Use a grid to display multiple photos within the cell
@@ -925,7 +925,7 @@ const getMonthYearOptions = (notas: Nota[]) => {
     return Array.from(monthYears).sort().reverse();
 };
 
-const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA'];
+const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
 
 export default function ExportPage() {
     const firestore = useFirestore();
@@ -1837,3 +1837,4 @@ export default function ExportPage() {
     
 
     
+
