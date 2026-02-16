@@ -821,11 +821,11 @@ const generateSimpleEvidenReport = (notas: Nota[], title: string): string => {
         const notaDate = safeToDate(nota.tanggal);
         // Filter out nulls before creating img tags
         const evidenImagesHtml = (nota.fotoEvidenUrls || []).filter((url): url is string => !!url).map(url => 
-            `<img src="${url}" style="width: 90px; height: auto; object-fit: contain; border: 1px solid #eee;"/>`
+            `<img src="${url}" style="width: 100%; height: auto; object-fit: contain; border: 1px solid #eee; border-radius: 4px;"/>`
         ).join('');
         
-        // Use a grid to display multiple photos within the cell
-        const evidenCellContent = `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; align-items: center; justify-content: start;">${evidenImagesHtml}</div>`;
+        // Use a responsive grid that fits as many 140px columns as possible
+        const evidenCellContent = `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 4px; align-items: start;">${evidenImagesHtml}</div>`;
 
 
         return `
@@ -1837,4 +1837,5 @@ export default function ExportPage() {
     
 
     
+
 
