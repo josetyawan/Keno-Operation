@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home, Network, Search, BarChart3, Map, FolderGit2 } from 'lucide-react';
+import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home, Network, Search, BarChart3, Map, FolderGit2, Contact } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -36,6 +36,7 @@ const navLinks = [
   { href: '/dashboard/admin/users', label: 'Manajemen User', icon: Users, access: 'admin' },
   { href: '/dashboard/admin/pids', label: 'Manajemen PID', icon: Tags, access: 'admin' },
   { href: '/dashboard/admin/assets', label: 'Manajemen Aset Jaringan', icon: Network, access: 'admin' },
+  { href: '/dashboard/admin/pelanggan', label: 'Manajemen Pelanggan', icon: Contact, access: 'admin' },
   { href: '/dashboard/admin/map-links', label: 'Manajemen Peta', icon: Map, access: 'admin' },
   { href: '/dashboard/admin/mancore', label: 'Manajemen Mancore', icon: FolderGit2, access: 'admin' },
   { href: '/dashboard/rekap', label: 'Rekap Telegram', icon: Bot, access: 'admin' },

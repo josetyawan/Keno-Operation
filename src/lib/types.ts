@@ -73,4 +73,14 @@ export type MancoreLink = {
   url: string;
 };
 
+export type Pelanggan = {
+  id: string;
+  namaPelanggan: string;
+  alamat?: string;
+  nomorTelepon?: string;
+  koordinat: string;
+  fotoCpUrl?: string;
+  serviceArea: string;
+  dateAdded: any;
+};
     

@@ -72,7 +72,7 @@ service cloud.firestore {
      * Validates that a user is updating a nota they own.
      */
     function isUpdatingOwnNota() {
-        return resource.data.userId == resource.data.userId;
+        return resource.data.userId == request.auth.uid;
     }
 
 
@@ -146,6 +146,18 @@ service cloud.firestore {
       allow get, list: if isApproved() || isAdmin();
 
       // WRITE: Only admins can create, update, or delete network assets.
+      allow create, update, delete: if isAdmin();
+    }
+
+    /**
+     * @description Stores customer data.
+     * @path /pelanggan/{pelangganId}
+     */
+    match /pelanggan/{pelangganId} {
+      // READ: Any approved user can read customer data.
+      allow get, list: if isApproved() || isAdmin();
+
+      // WRITE: Only admins can create, update, or delete customer data.
       allow create, update, delete: if isAdmin();
     }
 

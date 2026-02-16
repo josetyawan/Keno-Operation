@@ -355,6 +355,54 @@
         "label",
         "url"
       ]
+    },
+    "Pelanggan": {
+      "title": "Pelanggan",
+      "type": "object",
+      "description": "Represents a customer with location and contact information.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Pelanggan."
+        },
+        "namaPelanggan": {
+          "type": "string",
+          "description": "Name of the customer."
+        },
+        "alamat": {
+          "type": "string",
+          "description": "Address of the customer."
+        },
+        "nomorTelepon": {
+          "type": "string",
+          "description": "Phone number of the customer."
+        },
+        "koordinat": {
+          "type": "string",
+          "description": "GPS coordinates of the customer's location."
+        },
+        "fotoCpUrl": {
+          "type": "string",
+          "description": "URL of the customer point (CP) photo.",
+          "format": "uri"
+        },
+        "serviceArea": {
+          "type": "string",
+          "description": "The service area the customer belongs to."
+        },
+        "dateAdded": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The date the customer was added."
+        }
+      },
+      "required": [
+        "id",
+        "namaPelanggan",
+        "koordinat",
+        "serviceArea",
+        "dateAdded"
+      ]
     }
   },
   "auth": {
@@ -457,6 +505,22 @@
             {
               "name": "mancoreLinkId",
               "description": "The unique identifier for the mancore link."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/pelanggan/{pelangganId}",
+        "definition": {
+          "entityName": "Pelanggan",
+          "schema": {
+            "$ref": "#/backend/entities/Pelanggan"
+          },
+          "description": "Stores customer data including location and photos.",
+          "params": [
+            {
+              "name": "pelangganId",
+              "description": "The unique identifier for the customer."
             }
           ]
         }
