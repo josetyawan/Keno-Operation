@@ -49,7 +49,7 @@ import {
 } from '@/components/ui/select';
 import { Edit, PlusCircle, Trash2, MapPin, Loader2, Upload } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc, useStorage } from '@/firebase';
-import { collection, query, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, doc, serverTimestamp, orderBy } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import type { UserProfile, Pelanggan } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -182,7 +182,7 @@ export default function AdminPelangganPage() {
 
   const pelangganQuery = useMemoFirebase(() => {
       if (currentUserProfile?.role === 'admin') {
-          return query(collection(firestore, 'pelanggan'), doc('dateAdded', 'desc'));
+          return query(collection(firestore, 'pelanggan'), orderBy('dateAdded', 'desc'));
       }
       return null;
   }, [firestore, currentUserProfile?.role]);
@@ -204,12 +204,16 @@ export default function AdminPelangganPage() {
   };
   
   const confirmDelete = () => {
-    if (!pelangganToDelete || !firestore) return;
+    if (!pelangganToDelete || !firestore || !storage) return;
     const pelangganDocRef = doc(firestore, 'pelanggan', pelangganToDelete.id);
     deleteDocumentNonBlocking(pelangganDocRef);
     if (pelangganToDelete.fotoCpUrl) {
-        const photoRef = ref(storage, pelangganToDelete.fotoCpUrl);
-        deleteObject(photoRef).catch(err => console.error("Failed to delete old photo:", err));
+        try {
+            const photoRef = ref(storage, pelangganToDelete.fotoCpUrl);
+            deleteObject(photoRef).catch(err => console.error("Failed to delete old photo:", err));
+        } catch (error) {
+             console.error("Error creating photo reference for deletion:", error);
+        }
     }
     toast({
       title: 'Pelanggan Dihapus',
@@ -219,7 +223,7 @@ export default function AdminPelangganPage() {
   }
 
   const handleFormSubmit = async (data: Partial<Pelanggan>, file: File | null) => {
-    if (!firestore || !user) return;
+    if (!firestore || !user || !storage) return;
     setIsSaving(true);
     try {
         let fotoCpUrl = pelangganToEdit?.fotoCpUrl || undefined;
