@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home, Network, Search, BarChart3, Map, FolderGit2, Contact, CalendarClock, ClipboardUser } from 'lucide-react';
+import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home, Network, Search, BarChart3, Map, FolderGit2, Contact, CalendarClock, ClipboardCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -34,7 +34,7 @@ const navLinks = [
   { href: '/dashboard/search-assets', label: 'Network Cek', icon: Search, access: 'allpro' },
   { href: '/dashboard/allpro', label: 'Network Service Area', icon: BarChart3, access: 'allpro' },
   { href: '/dashboard/admin/pelanggan', label: 'Manajemen Pelanggan', icon: Contact, access: 'allpro' }, // Changed access
-  { href: '/dashboard/hr/attendance', label: 'Absensi Jaga', icon: ClipboardUser, access: 'allpro' },
+  { href: '/dashboard/hr/attendance', label: 'Absensi Jaga', icon: ClipboardCheck, access: 'allpro' },
 ];
 
 const adminNavLinks = [
@@ -373,3 +373,5 @@ export default function DashboardLayout({
     </div>
   );
 }
+
+    
