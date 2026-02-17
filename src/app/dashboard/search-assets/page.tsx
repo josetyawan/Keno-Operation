@@ -52,6 +52,7 @@ export default function SearchAssetsPage() {
   const ITEMS_PER_PAGE = 10;
 
   const canSearch = searchServiceArea !== 'all';
+  const hasSearched = canSearch && searchName.trim() !== '';
   const isMitratelSearch = useMemo(() => searchName.toUpperCase().trim().startsWith('MITRATEL'), [searchName]);
 
 
@@ -124,7 +125,10 @@ export default function SearchAssetsPage() {
   }, [user, currentUserProfile, isUserLoading, isProfileLoading, router]);
 
   const assetsQuery = useMemoFirebase(() => {
-    if (!canSearch || !currentUserProfile) return null;
+    // Only query if a service area is selected AND a search term is entered
+    if (!canSearch || !currentUserProfile || searchName.trim() === '') {
+      return null;
+    }
     
     const constraints: QueryConstraint[] = [];
     
@@ -260,7 +264,7 @@ export default function SearchAssetsPage() {
         <CardHeader>
           <CardTitle>Daftar Aset</CardTitle>
           <CardDescription>
-            {canSearch ? `Menampilkan ${paginatedAssets.length} dari ${filteredAssets.length} aset yang cocok.` : 'Pilih Service Area untuk melihat data.'}
+            {hasSearched ? `Menampilkan ${paginatedAssets.length} dari ${filteredAssets.length} aset yang cocok.` : (canSearch ? 'Ketik nama aset untuk memulai pencarian.' : 'Pilih Service Area untuk melihat data.')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -281,11 +285,11 @@ export default function SearchAssetsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {areAssetsLoading && canSearch ? (
+              {areAssetsLoading && hasSearched ? (
                  Array.from({ length: 5 }).map((_, index) => (
                     <TableRow key={index}><TableCell colSpan={11}><Skeleton className="h-6 w-full" /></TableCell></TableRow>
                 ))
-              ) : paginatedAssets.length > 0 && canSearch ? (
+              ) : paginatedAssets.length > 0 && hasSearched ? (
                 paginatedAssets.map(a => {
                   const coords = a.coordinates?.split(',').map(c => c.trim());
                   const googleMapsUrl = coords && coords.length === 2 ? `https://www.google.com/maps/search/?api=1&amp;query=${coords[0]},${coords[1]}` : null;
@@ -313,7 +317,11 @@ export default function SearchAssetsPage() {
               ) : (
                 <TableRow>
                   <TableCell colSpan={11} className="h-24 text-center">
-                    {!canSearch ? "Silakan pilih Service Area untuk memulai." : "Tidak ada aset yang cocok dengan filter Anda."}
+                    {!canSearch 
+                      ? "Silakan pilih Service Area untuk memulai." 
+                      : !hasSearched 
+                      ? "Ketik nama aset di atas untuk mencari." 
+                      : "Tidak ada aset yang cocok dengan filter Anda."}
                   </TableCell>
                 </TableRow>
               )}
