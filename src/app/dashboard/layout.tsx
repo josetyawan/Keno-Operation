@@ -206,14 +206,16 @@ export default function DashboardLayout({
           const newUserProfileData: UserProfile = {
             id: user.uid,
             email: user.email!,
-            role: 'user',
+            role: 'teknisi',
             registrationStatus: 'pending',
             appAccess: 'nota',
             displayName: user.email?.split('@')[0] || 'New User',
             firstName: '',
             lastName: '',
             nik: '',
-            phone: '',
+            paymentInfo: '',
+            jabatan: '',
+            alker: '',
           };
 
           try {
@@ -374,5 +376,3 @@ export default function DashboardLayout({
     </div>
   );
 }
-
-    

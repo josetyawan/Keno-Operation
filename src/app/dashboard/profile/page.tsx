@@ -49,7 +49,8 @@ export default function ProfilePage() {
       setLastName(userProfile.lastName || '');
       setDisplayName(userProfile.displayName || '');
       setNik(userProfile.nik || '');
-      setPaymentInfo(userProfile.paymentInfo || '');
+      // Handle backward compatibility for users with the old 'phone' field
+      setPaymentInfo(userProfile.paymentInfo || (userProfile as any).phone || '');
       setJabatan(userProfile.jabatan || '');
       setAlker(userProfile.alker || '');
     }
@@ -152,8 +153,8 @@ export default function ProfilePage() {
                   </div>
               </div>
                <div className="grid gap-2">
-                  <Label htmlFor="displayName">Nama Panggilan</Label>
-                  <Input id="displayName" value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="john.doe" required />
+                  <Label htmlFor="displayName">Nama Lengkap</Label>
+                  <Input id="displayName" value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="Contoh: John Doe" required />
               </div>
               <div className="grid gap-2">
                   <Label htmlFor="nik">NIK (Nomor Induk Karyawan)</Label>
