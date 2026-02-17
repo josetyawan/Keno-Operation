@@ -112,7 +112,7 @@ service cloud.firestore {
       // This rule is simplified to be more robust.
       allow create: if request.auth.uid == userId &&
                       request.resource.data.email is string &&
-                      request.resource.data.role == 'user' &&
+                      request.resource.data.role == 'teknisi' &&
                       request.resource.data.registrationStatus == 'pending';
       
       // READ (OWNER): Any authenticated user can read their OWN document.

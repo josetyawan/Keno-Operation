@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -44,14 +45,16 @@ export default function SignupPage() {
       const newUserProfileData: UserProfile = {
           id: authUser.uid,
           email: authUser.email!,
-          role: 'user',
+          role: 'teknisi',
           registrationStatus: 'pending',
           appAccess: 'nota', // Default access level
           displayName: authUser.email?.split('@')[0] || 'New User',
           firstName: '',
           lastName: '',
           nik: '',
-          phone: '',
+          paymentInfo: '',
+          jabatan: '',
+          alker: '',
       };
       
       // Await the database write to ensure it completes before proceeding

@@ -26,7 +26,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogClose,
+} from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -35,8 +44,12 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuPortal
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Shield, User, CheckCircle, Trash2, KeyRound } from 'lucide-react';
+import { MoreHorizontal, Shield, User, CheckCircle, Trash2, KeyRound, Edit, Loader2 } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, useDoc, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, doc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
@@ -47,8 +60,54 @@ import { useEffect, useState, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
-function UserActions({ userToManage, currentUserId }: { userToManage: UserProfile, currentUserId: string }) {
+
+function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onFormSubmit: (data: Partial<UserProfile>) => void, isSaving: boolean }) {
+  const [displayName, setDisplayName] = useState(user.displayName || '');
+  const [nik, setNik] = useState(user.nik || '');
+  const [paymentInfo, setPaymentInfo] = useState(user.paymentInfo || '');
+  const [jabatan, setJabatan] = useState(user.jabatan || '');
+  const [alker, setAlker] = useState(user.alker || '');
+  
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onFormSubmit({ displayName, nik, paymentInfo, jabatan, alker });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+        <div className="grid gap-2">
+            <Label htmlFor="edit-displayName">Nama Panggilan</Label>
+            <Input id="edit-displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
+        </div>
+        <div className="grid gap-2">
+            <Label htmlFor="edit-nik">NIK</Label>
+            <Input id="edit-nik" value={nik} onChange={(e) => setNik(e.target.value)} />
+        </div>
+        <div className="grid gap-2">
+            <Label htmlFor="edit-jabatan">Jabatan</Label>
+            <Input id="edit-jabatan" value={jabatan} onChange={(e) => setJabatan(e.target.value)} />
+        </div>
+        <div className="grid gap-2">
+            <Label htmlFor="edit-paymentInfo">Info Pembayaran</Label>
+            <Input id="edit-paymentInfo" value={paymentInfo} onChange={(e) => setPaymentInfo(e.target.value)} />
+        </div>
+        <div className="grid gap-2">
+            <Label htmlFor="edit-alker">Alat Kerja (Alker)</Label>
+            <Textarea id="edit-alker" value={alker} onChange={(e) => setAlker(e.target.value)} />
+        </div>
+      <DialogFooter>
+        <DialogClose asChild><Button type="button" variant="secondary">Batal</Button></DialogClose>
+        <Button type="submit" disabled={isSaving}>
+            {isSaving ? <Loader2 className="animate-spin" /> : 'Simpan'}
+        </Button>
+      </DialogFooter>
+    </form>
+  );
+}
+
+function UserActions({ userToManage, currentUserId, onEdit }: { userToManage: UserProfile, currentUserId: string, onEdit: (user: UserProfile) => void }) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
@@ -65,8 +124,6 @@ function UserActions({ userToManage, currentUserId }: { userToManage: UserProfil
   };
   
   const handleDeleteUser = () => {
-    // Note: This only deletes the Firestore document.
-    // The Auth user needs to be deleted from the Firebase Console.
     const userDocRef = doc(firestore, 'users', userToManage.id);
     deleteDocumentNonBlocking(userDocRef);
      toast({
@@ -86,7 +143,6 @@ function UserActions({ userToManage, currentUserId }: { userToManage: UserProfil
     setIsAccessDialogOpen(false);
   }
   
-  // An admin cannot demote or change their own status
   if (userToManage.id === currentUserId) {
       return null;
   }
@@ -102,23 +158,31 @@ function UserActions({ userToManage, currentUserId }: { userToManage: UserProfil
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
+           <DropdownMenuItem onSelect={() => onEdit(userToManage)}>
+              <Edit className="mr-2 h-4 w-4" />
+              Edit Data HR
+            </DropdownMenuItem>
           {userToManage.registrationStatus === 'pending' && (
             <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setIsApproveDialogOpen(true); }}>
               <CheckCircle className="mr-2 h-4 w-4" />
               Approve User
             </DropdownMenuItem>
           )}
-          {userToManage.role !== 'admin' ? (
-            <DropdownMenuItem onClick={() => handleUpdate({ role: 'admin' })}>
+
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
               <Shield className="mr-2 h-4 w-4" />
-              Make Admin
-            </DropdownMenuItem>
-          ) : (
-            <DropdownMenuItem onClick={() => handleUpdate({ role: 'user' })}>
-              <User className="mr-2 h-4 w-4" />
-              Make User
-            </DropdownMenuItem>
-          )}
+              Set Role
+            </DropdownMenuSubTrigger>
+            <DropdownMenuPortal>
+              <DropdownMenuSubContent>
+                <DropdownMenuItem onClick={() => handleUpdate({ role: 'admin' })}>Admin</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleUpdate({ role: 'korlap' })}>Korlap</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleUpdate({ role: 'teknisi' })}>Teknisi</DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuPortal>
+          </DropdownMenuSub>
+          
            {userToManage.registrationStatus === 'approved' && (
              <DropdownMenuItem onSelect={(e) => {
                 e.preventDefault();
@@ -225,7 +289,11 @@ export default function AdminUsersPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
+  
+  const [userToEdit, setUserToEdit] = useState<UserProfile | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Redirect if user is not an admin
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
@@ -240,9 +308,7 @@ export default function AdminUsersPage() {
     }
   }, [user, currentUserProfile, isUserLoading, isProfileLoading, router]);
 
-  // Fetch all users
   const usersQuery = useMemoFirebase(() => {
-      // Only attempt to query if the user profile is loaded and they are an admin
       if (currentUserProfile?.role === 'admin') {
           return query(collection(firestore, 'users'));
       }
@@ -259,10 +325,30 @@ export default function AdminUsersPage() {
     return users.filter(user => 
       user.email?.toLowerCase().includes(lowercasedQuery) ||
       user.nik?.toLowerCase().includes(lowercasedQuery) ||
-      user.phone?.toLowerCase().includes(lowercasedQuery)
+      user.paymentInfo?.toLowerCase().includes(lowercasedQuery) ||
+      user.jabatan?.toLowerCase().includes(lowercasedQuery)
     );
   }, [users, searchQuery]);
-
+  
+  const handleEditUser = (user: UserProfile) => {
+    setUserToEdit(user);
+  };
+  
+  const handleFormSubmit = (data: Partial<UserProfile>) => {
+    if (!userToEdit) return;
+    setIsSaving(true);
+    
+    const userDocRef = doc(firestore, 'users', userToEdit.id);
+    updateDocumentNonBlocking(userDocRef, data);
+    
+    toast({
+      title: 'User Data Updated',
+      description: `Data untuk ${userToEdit.email} telah diperbarui.`,
+    });
+    
+    setIsSaving(false);
+    setUserToEdit(null);
+  };
 
   const isLoading = isUserLoading || isProfileLoading || areUsersLoading;
 
@@ -298,7 +384,7 @@ export default function AdminUsersPage() {
             Manajemen User
           </h1>
           <p className="text-muted-foreground mt-1">
-            Setujui pengguna baru dan kelola peran di sini.
+            Setujui pengguna baru, kelola peran, dan perbarui data HR di sini.
           </p>
         </div>
       </div>
@@ -310,7 +396,7 @@ export default function AdminUsersPage() {
           </CardDescription>
            <div className="pt-4">
             <Input
-              placeholder="Cari berdasarkan email, NIK, atau no. pembayaran..."
+              placeholder="Cari berdasarkan email, NIK, jabatan, atau no. pembayaran..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="max-w-md"
@@ -323,10 +409,10 @@ export default function AdminUsersPage() {
               <TableRow>
                 <TableHead className="w-[250px]">Email</TableHead>
                 <TableHead>NIK</TableHead>
-                <TableHead>No. Pembayaran</TableHead>
-                <TableHead>Status</TableHead>
                 <TableHead>Peran</TableHead>
-                <TableHead>Akses Aplikasi</TableHead>
+                <TableHead>Jabatan</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Akses App</TableHead>
                 <TableHead className="text-right">
                   <span className="sr-only">Actions</span>
                 </TableHead>
@@ -338,15 +424,15 @@ export default function AdminUsersPage() {
                   <TableRow key={u.id}>
                     <TableCell className="font-medium">{u.email}</TableCell>
                     <TableCell>{u.nik || '-'}</TableCell>
-                    <TableCell>{u.phone || '-'}</TableCell>
+                     <TableCell className="capitalize">
+                      <Badge variant={u.role === 'admin' ? 'destructive' : u.role === 'korlap' ? 'secondary' : 'outline'}>
+                        {u.role}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{u.jabatan || '-'}</TableCell>
                     <TableCell>
                       <Badge variant={u.registrationStatus === 'approved' ? 'default' : 'secondary'} className="capitalize">
                         {u.registrationStatus}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="capitalize">
-                      <Badge variant={u.role === 'admin' ? 'destructive' : 'outline'}>
-                        {u.role}
                       </Badge>
                     </TableCell>
                     <TableCell className="capitalize">
@@ -364,7 +450,7 @@ export default function AdminUsersPage() {
                       })()}
                     </TableCell>
                     <TableCell className="text-right">
-                       {user && <UserActions userToManage={u} currentUserId={user.uid} />}
+                       {user && <UserActions userToManage={u} currentUserId={user.uid} onEdit={handleEditUser} />}
                     </TableCell>
                   </TableRow>
                 ))
@@ -379,6 +465,20 @@ export default function AdminUsersPage() {
           </Table>
         </CardContent>
       </Card>
+      
+      {userToEdit && (
+        <Dialog open={!!userToEdit} onOpenChange={(open) => !open && setUserToEdit(null)}>
+            <DialogContent>
+                <DialogHeader>
+                <DialogTitle>Edit Data HR: {userToEdit.displayName}</DialogTitle>
+                <DialogDescription>
+                    Perbarui informasi untuk pengguna {userToEdit.email}.
+                </DialogDescription>
+                </DialogHeader>
+                <UserEditForm user={userToEdit} onFormSubmit={handleFormSubmit} isSaving={isSaving} />
+            </DialogContent>
+        </Dialog>
+      )}
     </>
   );
 }

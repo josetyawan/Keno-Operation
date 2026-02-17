@@ -1,6 +1,5 @@
 
 
-
 export type Nota = {
   id: string;
   userId: string;
@@ -29,9 +28,11 @@ export type UserProfile = {
     firstName?: string;
     lastName?: string;
     displayName?: string;
-    role: 'admin' | 'user';
+    role: 'admin' | 'korlap' | 'teknisi';
     nik?: string;
-    phone?: string;
+    paymentInfo?: string;
+    jabatan?: string;
+    alker?: string; 
     registrationStatus: 'pending' | 'approved';
     appAccess?: 'nota' | 'allpro' | 'all';
 };

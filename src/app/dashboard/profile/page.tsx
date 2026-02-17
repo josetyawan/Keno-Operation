@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
@@ -10,6 +11,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import type { UserProfile } from '@/lib/types';
 import { useState, useEffect } from 'react';
@@ -27,7 +29,10 @@ export default function ProfilePage() {
   const [lastName, setLastName] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [nik, setNik] = useState('');
-  const [phone, setPhone] = useState('');
+  const [paymentInfo, setPaymentInfo] = useState('');
+  const [jabatan, setJabatan] = useState('');
+  const [alker, setAlker] = useState('');
+
 
   // Memoize the document reference to prevent re-renders
   const userDocRef = useMemoFirebase(() => {
@@ -44,7 +49,9 @@ export default function ProfilePage() {
       setLastName(userProfile.lastName || '');
       setDisplayName(userProfile.displayName || '');
       setNik(userProfile.nik || '');
-      setPhone(userProfile.phone || '');
+      setPaymentInfo(userProfile.paymentInfo || '');
+      setJabatan(userProfile.jabatan || '');
+      setAlker(userProfile.alker || '');
     }
   }, [userProfile]);
 
@@ -60,22 +67,24 @@ export default function ProfilePage() {
       lastName,
       displayName,
       nik,
-      phone,
+      paymentInfo,
+      jabatan,
+      alker
     };
 
     try {
       // Using updateDoc directly here since non-blocking isn't as crucial for a profile save
       await updateDoc(userDocRef, updatedData);
       toast({
-        title: 'Profile Updated',
-        description: 'Your profile information has been saved.',
+        title: 'Profil Diperbarui',
+        description: 'Informasi profil Anda telah disimpan.',
       });
     } catch (error) {
       console.error('Error updating profile:', error);
       toast({
         variant: 'destructive',
-        title: 'Update Failed',
-        description: 'Could not save your profile. Please try again.',
+        title: 'Gagal Memperbarui',
+        description: 'Tidak dapat menyimpan profil Anda. Silakan coba lagi.',
       });
     } finally {
       setIsSaving(false);
@@ -118,49 +127,57 @@ export default function ProfilePage() {
                 <span className="sr-only">Back</span>
             </Button>
             <h1 className="flex-1 shrink-0 whitespace-nowrap text-xl font-semibold tracking-tight sm:grow-0 font-headline">
-                Edit Profile
+                Edit Profil
             </h1>
-            {userProfile?.role === 'admin' && <Badge variant="secondary" className="ml-auto sm:ml-0">Admin</Badge>}
+            {userProfile?.role === 'admin' && <Badge variant="destructive" className="ml-auto sm:ml-0 capitalize">{userProfile.role}</Badge>}
+            {userProfile?.role === 'korlap' && <Badge variant="secondary" className="ml-auto sm:ml-0 capitalize">{userProfile.role}</Badge>}
         </div>
       <Card>
         <form onSubmit={handleProfileUpdate}>
           <CardHeader>
-            <CardTitle>Your Profile</CardTitle>
+            <CardTitle>Profil Anda</CardTitle>
             <CardDescription>
-              Update your personal details here.
+              Perbarui detail pribadi dan perusahaan Anda di sini.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="grid gap-2">
-                      <Label htmlFor="firstName">First Name</Label>
+                      <Label htmlFor="firstName">Nama Depan</Label>
                       <Input id="firstName" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="John" />
                   </div>
                    <div className="grid gap-2">
-                      <Label htmlFor="lastName">Last Name</Label>
+                      <Label htmlFor="lastName">Nama Belakang</Label>
                       <Input id="lastName" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Doe" />
                   </div>
               </div>
                <div className="grid gap-2">
-                  <Label htmlFor="displayName">Display Name</Label>
+                  <Label htmlFor="displayName">Nama Panggilan</Label>
                   <Input id="displayName" value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="john.doe" required />
               </div>
               <div className="grid gap-2">
-                  <Label htmlFor="nik">NIK (Nomor Induk Pegawai)</Label>
-                  <Input id="nik" value={nik} onChange={e => setNik(e.target.value)} placeholder="e.g. 12345678" />
+                  <Label htmlFor="nik">NIK (Nomor Induk Karyawan)</Label>
+                  <Input id="nik" value={nik} onChange={e => setNik(e.target.value)} placeholder="e.g. 123456" />
               </div>
-
+               <div className="grid gap-2">
+                  <Label htmlFor="jabatan">Jabatan</Label>
+                  <Input id="jabatan" value={jabatan} onChange={e => setJabatan(e.target.value)} placeholder="e.g. Teknisi" />
+              </div>
               <div className="grid gap-2">
-                  <Label htmlFor="phone">No. Pembayaran</Label>
-                  <Input id="phone" value={phone} onChange={e => setPhone(e.target.value)} placeholder="e.g., 0812... atau BCA 123..." />
+                  <Label htmlFor="paymentInfo">No. Pembayaran</Label>
+                  <Input id="paymentInfo" value={paymentInfo} onChange={e => setPaymentInfo(e.target.value)} placeholder="e.g., OVO 0812... atau BCA 123..." />
                   <p className="text-sm text-muted-foreground">Bisa diisi no e-wallet (GoPay, OVO, dll) atau No. Rekening (diawali nama bank).</p>
+              </div>
+               <div className="grid gap-2">
+                  <Label htmlFor="alker">Alat Kerja (Alker)</Label>
+                  <Textarea id="alker" value={alker} onChange={(e) => setAlker(e.target.value)} placeholder="Contoh: Tang, Obeng, Splicer, OPM..." />
               </div>
               <div className="grid gap-2">
                   <Label htmlFor="email">Email</Label>
                   <Input id="email" value={user?.email || ''} readOnly disabled />
               </div>
               <Button type="submit" className="w-full" disabled={isSaving}>
-                  {isSaving ? 'Saving...' : 'Save Changes'}
+                  {isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
               </Button>
           </CardContent>
         </form>
