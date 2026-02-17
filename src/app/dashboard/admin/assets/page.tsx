@@ -78,13 +78,15 @@ export default function AdminAssetsPage() {
   const [isDeletingAll, setIsDeletingAll] = useState(false);
 
   const [searchName, setSearchName] = useState('');
-  const [searchAssetType, setSearchAssetType] = useState('all');
   const [searchServiceArea, setSearchServiceArea] = useState('all');
   
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
 
-  const canSearch = searchAssetType !== 'all' || searchServiceArea !== 'all';
+  const canSearch = searchServiceArea !== 'all';
+  const hasSearched = canSearch && searchName.trim() !== '';
+  const isMitratelSearch = useMemo(() => searchName.toUpperCase().trim().startsWith('MITRATEL'), [searchName]);
+
 
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
     useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
@@ -112,27 +114,32 @@ export default function AdminAssetsPage() {
 
   // Fetch assets from server with server-side filtering
   const assetsQuery = useMemoFirebase(() => {
-    if (isUserLoading || isProfileLoading || !user || currentUserProfile?.role !== 'admin' || !canSearch) {
+    if (isUserLoading || isProfileLoading || !user || currentUserProfile?.role !== 'admin' || !hasSearched) {
       return null;
     }
     
     const constraints: QueryConstraint[] = [];
-
-    if (searchAssetType !== 'all') {
-      if (searchAssetType === 'Mini OLT') {
-        constraints.push(where('subType', '==', 'Mini OLT'));
-      } else {
-        constraints.push(where('assetType', '==', searchAssetType));
-      }
-    }
     
-    if (searchServiceArea !== 'all') {
-        constraints.push(where('serviceArea', '==', searchServiceArea));
+    constraints.push(where('serviceArea', '==', searchServiceArea));
+
+    const upperSearch = searchName.toUpperCase().trim();
+    const assetPrefixes = ['ODP', 'ODC', 'OLT', 'FTM', 'MITRATEL'];
+    let inferredType: string | null = null;
+    
+    for (const prefix of assetPrefixes) {
+        if (upperSearch.startsWith(prefix)) {
+            inferredType = prefix;
+            break;
+        }
+    }
+
+    if (inferredType) {
+        constraints.push(where('assetType', '==', inferredType));
     }
     
     return query(collection(firestore, 'network-assets'), ...constraints);
 
-  }, [firestore, currentUserProfile, isUserLoading, isProfileLoading, canSearch, searchAssetType, searchServiceArea]);
+  }, [firestore, currentUserProfile, isUserLoading, isProfileLoading, hasSearched, searchServiceArea, searchName]);
 
 
   const { data: queriedAssets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(assetsQuery);
@@ -161,7 +168,7 @@ export default function AdminAssetsPage() {
   // Reset to page 1 when filters change
   useEffect(() => {
       setCurrentPage(1);
-  }, [searchName, searchAssetType, searchServiceArea]);
+  }, [searchName, searchServiceArea]);
 
 
   const handleDeleteAsset = (assetId: string, assetName: string) => {
@@ -745,39 +752,26 @@ export default function AdminAssetsPage() {
 
        <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Search className="h-5 w-5" />
-            Cari & Filter Aset
-          </CardTitle>
-          <CardDescription>
-            Pilih Jenis Aset atau Service Area untuk memulai pencarian.
-          </CardDescription>
+          <CardTitle className="flex items-center gap-2"><Search className="h-5 w-5" />Cari Aset</CardTitle>
+          <CardDescription>Pilih Service Area untuk mengaktifkan pencarian, lalu ketik nama aset.</CardDescription>
         </CardHeader>
-        <CardContent className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
-          <div className="grid gap-1.5">
-            <Label htmlFor="search-name">Nama Aset</Label>
-            <Input id="search-name" placeholder="Cari nama aset..." value={searchName} onChange={(e) => setSearchName(e.target.value)} disabled={!canSearch} />
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="search-type">Jenis Aset</Label>
-            <Select value={searchAssetType} onValueChange={setSearchAssetType}>
-              <SelectTrigger id="search-type"><SelectValue placeholder="Semua Jenis" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Jenis</SelectItem>
-                {assetTypes.filter(t => t !== 'Mini OLT').map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="search-area">Service Area</Label>
-            <Select value={searchServiceArea} onValueChange={setSearchServiceArea}>
-              <SelectTrigger id="search-area"><SelectValue placeholder="Semua Area" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Area</SelectItem>
-                {dynamicServiceAreas.map(sa => <SelectItem key={sa} value={sa}>{sa}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
+        <CardContent>
+            <div className="grid sm:grid-cols-1 md:grid-cols-3 gap-4">
+                 <div className="grid gap-1.5 md:col-span-1">
+                    <Label htmlFor="search-area">1. Pilih Service Area *</Label>
+                    <Select value={searchServiceArea} onValueChange={setSearchServiceArea}>
+                        <SelectTrigger id="search-area"><SelectValue placeholder="Pilih untuk memulai..." /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Pilih Service Area...</SelectItem>
+                            {dynamicServiceAreas.map(sa => <SelectItem key={sa} value={sa}>{sa}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="grid gap-1.5 md:col-span-2">
+                    <Label htmlFor="search-name">2. Cari Nama Aset</Label>
+                    <Input id="search-name" placeholder="Ketik nama aset (e.g., ODP-KDS-FA/001)..." value={searchName} onChange={(e) => setSearchName(e.target.value)} disabled={!canSearch}/>
+                </div>
+            </div>
         </CardContent>
       </Card>
 
@@ -785,7 +779,7 @@ export default function AdminAssetsPage() {
         <CardHeader>
           <CardTitle>Daftar Aset</CardTitle>
           <CardDescription>
-            {canSearch ? `Menampilkan ${paginatedAssets.length} dari ${filteredAssets.length} aset yang cocok.` : 'Pilih filter untuk melihat data.'}
+            {hasSearched ? `Menampilkan ${paginatedAssets.length} dari ${filteredAssets.length} aset yang cocok.` : (canSearch ? 'Ketik nama aset untuk memulai pencarian.' : 'Pilih Service Area untuk mengaktifkan pencarian.')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -794,25 +788,25 @@ export default function AdminAssetsPage() {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Type</TableHead>
-                <TableHead>Sub-Type</TableHead>
+                {!isMitratelSearch && <TableHead>Sub-Type</TableHead>}
                 <TableHead>Service Area</TableHead>
-                <TableHead>STO</TableHead>
+                {!isMitratelSearch && <TableHead>STO</TableHead>}
                 <TableHead>Coordinates</TableHead>
-                <TableHead>Mitratel ID</TableHead>
-                <TableHead>Tenant ID</TableHead>
-                <TableHead>Avail</TableHead>
-                <TableHead>Used</TableHead>
+                {isMitratelSearch && <TableHead>Mitratel ID</TableHead>}
+                {isMitratelSearch && <TableHead>Tenant ID</TableHead>}
+                {!isMitratelSearch && <TableHead>Avail</TableHead>}
+                {!isMitratelSearch && <TableHead>Used</TableHead>}
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {areAssetsLoading && canSearch ? (
+              {areAssetsLoading && hasSearched ? (
                  Array.from({ length: 5 }).map((_, index) => (
                     <TableRow key={index}>
                         <TableCell colSpan={11}><Skeleton className="h-6 w-full" /></TableCell>
                     </TableRow>
                 ))
-              ) : paginatedAssets.length > 0 && canSearch ? (
+              ) : paginatedAssets.length > 0 && hasSearched ? (
                 paginatedAssets.map(a => {
                   const coords = a.coordinates?.split(',').map(c => c.trim());
                   const googleMapsUrl = coords && coords.length === 2 ? `https://www.google.com/maps/search/?api=1&query=${coords[0]},${coords[1]}` : null;
@@ -820,14 +814,14 @@ export default function AdminAssetsPage() {
                   <TableRow key={a.id}>
                     <TableCell className="font-medium">{a.name}</TableCell>
                     <TableCell>{a.assetType}</TableCell>
-                    <TableCell>{a.subType}</TableCell>
+                    {!isMitratelSearch && <TableCell>{a.subType}</TableCell>}
                     <TableCell>{a.serviceArea}</TableCell>
-                    <TableCell>{a.sto}</TableCell>
+                    {!isMitratelSearch && <TableCell>{a.sto}</TableCell>}
                     <TableCell>{a.coordinates || '-'}</TableCell>
-                    <TableCell>{a.mitratelSiteId || '-'}</TableCell>
-                    <TableCell>{a.tenantSiteId || '-'}</TableCell>
-                    <TableCell>{a.portAvai || '-'}</TableCell>
-                    <TableCell>{a.portUsed || '-'}</TableCell>
+                    {isMitratelSearch && <TableCell>{a.mitratelSiteId || '-'}</TableCell>}
+                    {isMitratelSearch && <TableCell>{a.tenantSiteId || '-'}</TableCell>}
+                    {!isMitratelSearch && <TableCell>{a.portAvai || '-'}</TableCell>}
+                    {!isMitratelSearch && <TableCell>{a.portUsed || '-'}</TableCell>}
                     <TableCell className="text-right">
                        {googleMapsUrl && (
                         <Button asChild variant="ghost" size="icon" title="Lihat di Google Maps">
@@ -863,10 +857,11 @@ export default function AdminAssetsPage() {
               ) : (
                 <TableRow>
                   <TableCell colSpan={11} className="h-24 text-center">
-                    {!canSearch 
-                        ? "Silakan pilih Jenis Aset atau Service Area untuk memulai pencarian." 
-                        : "Tidak ada aset yang cocok dengan filter Anda."
-                    }
+                     {!canSearch 
+                      ? "Silakan pilih Service Area untuk memulai." 
+                      : !hasSearched 
+                      ? "Ketik nama aset di atas untuk mencari." 
+                      : "Tidak ada aset yang cocok dengan pencarian Anda."}
                   </TableCell>
                 </TableRow>
               )}
@@ -875,7 +870,7 @@ export default function AdminAssetsPage() {
         </CardContent>
          <CardFooter>
             <div className="text-xs text-muted-foreground">
-                Halaman <strong>{currentPage}</strong> dari <strong>{totalPages}</strong>
+                Halaman <strong>{totalPages > 0 ? currentPage : 0}</strong> dari <strong>{totalPages}</strong>
             </div>
             <div className="flex items-center gap-2 ml-auto">
                 <Button
