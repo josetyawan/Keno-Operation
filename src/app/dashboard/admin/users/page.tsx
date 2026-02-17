@@ -43,7 +43,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuTrigger,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
@@ -70,6 +69,17 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
   const [jabatan, setJabatan] = useState(user.jabatan || '');
   const [alker, setAlker] = useState(user.alker || '');
   
+  // This effect will re-populate the form when the user prop changes.
+  useEffect(() => {
+    if (user) {
+        setDisplayName(user.displayName || '');
+        setNik(user.nik || '');
+        setPaymentInfo(user.paymentInfo || '');
+        setJabatan(user.jabatan || '');
+        setAlker(user.alker || '');
+    }
+  }, [user]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onFormSubmit({ displayName, nik, paymentInfo, jabatan, alker });
@@ -78,7 +88,7 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
   return (
     <form onSubmit={handleSubmit} className="grid gap-4 py-4">
         <div className="grid gap-2">
-            <Label htmlFor="edit-displayName">Nama Panggilan</Label>
+            <Label htmlFor="edit-displayName">Nama Lengkap</Label>
             <Input id="edit-displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
         </div>
         <div className="grid gap-2">
@@ -484,3 +494,5 @@ export default function AdminUsersPage() {
     </>
   );
 }
+
+    
