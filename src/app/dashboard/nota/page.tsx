@@ -34,7 +34,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { MoreHorizontal, PlusCircle, Edit, Trash2, User } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, doc, where, type QueryConstraint } from 'firebase/firestore';
@@ -123,6 +123,14 @@ const getStatusVariant = (status: Nota['status']): VariantProps<typeof badgeVari
     }
 };
 
+const safeToDate = (timestamp: any): Date | null => {
+    if (!timestamp) return null;
+    if (timestamp.toDate) return timestamp.toDate();
+    if (timestamp instanceof Date && isValid(timestamp)) return timestamp;
+    const d = new Date(timestamp);
+    return isValid(d) ? d : null;
+};
+
 
 export default function DashboardPage() {
   const firestore = useFirestore();
@@ -171,7 +179,8 @@ export default function DashboardPage() {
       if (selectedStatus !== 'all') {
         constraints.push(where('status', '==', selectedStatus));
       }
-      constraints.push(orderBy('dateCreated', 'desc'));
+      // Removed orderBy('dateCreated', 'desc') to prevent index error for admins.
+      // Sorting will be handled client-side.
       return query(notasCollectionRef, ...constraints);
     }
     
@@ -210,7 +219,19 @@ export default function DashboardPage() {
   const filteredNotas = useMemo(() => {
       if (!notas) return [];
       
-      let clientFiltered = [...notas];
+      const processedNotas = [...notas];
+
+      // For admins, sort client-side to avoid composite indexes.
+      // For non-admins, the data is already sorted by the Firestore query.
+      if (isAdmin) {
+        processedNotas.sort((a, b) => {
+          const timeA = safeToDate(a.dateCreated)?.getTime() ?? 0;
+          const timeB = safeToDate(b.dateCreated)?.getTime() ?? 0;
+          return timeB - timeA; // Descending
+        });
+      }
+
+      let clientFiltered = processedNotas;
 
       // For non-admins, apply client-side filters since the base query is broad (all their notes).
       if (!isAdmin) {
@@ -234,7 +255,6 @@ export default function DashboardPage() {
           });
       }
 
-      // Sorting is already handled by the Firestore query `orderBy`.
       return clientFiltered;
 
   }, [notas, isAdmin, selectedSA, selectedStatus, searchQuery, userMap]);
