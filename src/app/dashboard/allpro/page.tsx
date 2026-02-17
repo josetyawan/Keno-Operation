@@ -292,18 +292,19 @@ export default function AllproPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {mitratel.rows.map(row => (
-                  <TableRow key={row.serviceArea}>
-                    <TableCell className="font-medium">{row.serviceArea}</TableCell>
-                    <TableCell className="font-bold">
-                      <Link href={`/dashboard/assets/list?assetType=MITRATEL&serviceArea=${encodeURIComponent(row.serviceArea)}`} className="hover:underline">
-                        {row.jumlah}
-                      </Link>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {mitratel.rows.filter(r => r.jumlah > 0).length === 0 && (
-                    <TableRow><TableCell colSpan={2} className="text-center h-24">Tidak ada data Mitratel</TableCell></TableRow>
+                {mitratel.totals.jumlah > 0 ? (
+                    mitratel.rows.map(row => (
+                      <TableRow key={row.serviceArea}>
+                        <TableCell className="font-medium">{row.serviceArea}</TableCell>
+                        <TableCell className="font-bold">
+                          <Link href={`/dashboard/assets/list?assetType=MITRATEL&serviceArea=${encodeURIComponent(row.serviceArea)}`} className="hover:underline">
+                            {row.jumlah}
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                ) : (
+                    <TableRow><TableCell colSpan={2} className="text-center h-24">{!networkStats ? "Statistik belum dihitung." : "Tidak ada data Mitratel."}</TableCell></TableRow>
                 )}
               </TableBody>
                <TableFooter>
@@ -333,28 +334,29 @@ export default function AllproPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {olt.rows.map(row => (
-                  <TableRow key={row.serviceArea}>
-                    <TableCell className="font-medium">{row.serviceArea}</TableCell>
-                    <TableCell>
-                      <Link href={`/dashboard/assets/list?assetType=OLT&subType=Mini%20OLT&serviceArea=${encodeURIComponent(row.serviceArea)}`} className="hover:underline">
-                        {row.miniOlt}
-                      </Link>
-                    </TableCell>
-                    <TableCell>
-                      <Link href={`/dashboard/assets/list?assetType=OLT&subType=OLT&serviceArea=${encodeURIComponent(row.serviceArea)}`} className="hover:underline">
-                        {row.olt}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="font-bold">
-                      <Link href={`/dashboard/assets/list?assetType=OLT&serviceArea=${encodeURIComponent(row.serviceArea)}`} className="hover:underline">
-                        {row.grandTotal}
-                      </Link>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                 {olt.rows.filter(r => r.grandTotal > 0).length === 0 && (
-                    <TableRow><TableCell colSpan={4} className="text-center h-24">Tidak ada data OLT</TableCell></TableRow>
+                {olt.totals.grandTotal > 0 ? (
+                    olt.rows.map(row => (
+                      <TableRow key={row.serviceArea}>
+                        <TableCell className="font-medium">{row.serviceArea}</TableCell>
+                        <TableCell>
+                          <Link href={`/dashboard/assets/list?assetType=OLT&subType=Mini%20OLT&serviceArea=${encodeURIComponent(row.serviceArea)}`} className="hover:underline">
+                            {row.miniOlt}
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          <Link href={`/dashboard/assets/list?assetType=OLT&subType=OLT&serviceArea=${encodeURIComponent(row.serviceArea)}`} className="hover:underline">
+                            {row.olt}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="font-bold">
+                          <Link href={`/dashboard/assets/list?assetType=OLT&serviceArea=${encodeURIComponent(row.serviceArea)}`} className="hover:underline">
+                            {row.grandTotal}
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                ) : (
+                    <TableRow><TableCell colSpan={4} className="text-center h-24">{!networkStats ? "Statistik belum dihitung." : "Tidak ada data OLT."}</TableCell></TableRow>
                 )}
               </TableBody>
               <TableFooter>
@@ -394,28 +396,29 @@ export default function AllproPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {ftm.rows.map(row => (
-                  <TableRow key={row.serviceArea}>
-                    <TableCell className="font-medium">{row.serviceArea}</TableCell>
-                    <TableCell>
-                      <Link href={`/dashboard/assets/list?assetType=FTM&subType=EA&serviceArea=${encodeURIComponent(row.serviceArea)}`} className="hover:underline">
-                        {row.ea}
-                      </Link>
-                    </TableCell>
-                    <TableCell>
-                      <Link href={`/dashboard/assets/list?assetType=FTM&subType=OA&serviceArea=${encodeURIComponent(row.serviceArea)}`} className="hover:underline">
-                        {row.oa}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="font-bold">
-                      <Link href={`/dashboard/assets/list?assetType=FTM&serviceArea=${encodeURIComponent(row.serviceArea)}`} className="hover:underline">
-                        {row.grandTotal}
-                      </Link>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                 {ftm.rows.filter(r => r.grandTotal > 0).length === 0 && (
-                    <TableRow><TableCell colSpan={4} className="text-center h-24">Tidak ada data FTM</TableCell></TableRow>
+                {ftm.totals.grandTotal > 0 ? (
+                    ftm.rows.map(row => (
+                      <TableRow key={row.serviceArea}>
+                        <TableCell className="font-medium">{row.serviceArea}</TableCell>
+                        <TableCell>
+                          <Link href={`/dashboard/assets/list?assetType=FTM&subType=EA&serviceArea=${encodeURIComponent(row.serviceArea)}`} className="hover:underline">
+                            {row.ea}
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          <Link href={`/dashboard/assets/list?assetType=FTM&subType=OA&serviceArea=${encodeURIComponent(row.serviceArea)}`} className="hover:underline">
+                            {row.oa}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="font-bold">
+                          <Link href={`/dashboard/assets/list?assetType=FTM&serviceArea=${encodeURIComponent(row.serviceArea)}`} className="hover:underline">
+                            {row.grandTotal}
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                ) : (
+                    <TableRow><TableCell colSpan={4} className="text-center h-24">{!networkStats ? "Statistik belum dihitung." : "Tidak ada data FTM."}</TableCell></TableRow>
                 )}
               </TableBody>
                <TableFooter>
@@ -455,18 +458,19 @@ export default function AllproPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {odc.rows.map(row => (
-                  <TableRow key={row.serviceArea}>
-                    <TableCell className="font-medium">{row.serviceArea}</TableCell>
-                    <TableCell className="font-bold">
-                      <Link href={`/dashboard/assets/list?assetType=ODC&serviceArea=${encodeURIComponent(row.serviceArea)}`} className="hover:underline">
-                        {row.jumlah}
-                      </Link>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {odc.rows.filter(r => r.jumlah > 0).length === 0 && (
-                    <TableRow><TableCell colSpan={2} className="text-center h-24">Tidak ada data ODC</TableCell></TableRow>
+                {odc.totals.jumlah > 0 ? (
+                    odc.rows.map(row => (
+                      <TableRow key={row.serviceArea}>
+                        <TableCell className="font-medium">{row.serviceArea}</TableCell>
+                        <TableCell className="font-bold">
+                          <Link href={`/dashboard/assets/list?assetType=ODC&serviceArea=${encodeURIComponent(row.serviceArea)}`} className="hover:underline">
+                            {row.jumlah}
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                ) : (
+                    <TableRow><TableCell colSpan={2} className="text-center h-24">{!networkStats ? "Statistik belum dihitung." : "Tidak ada data ODC."}</TableCell></TableRow>
                 )}
               </TableBody>
                <TableFooter>
@@ -496,18 +500,19 @@ export default function AllproPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {odp.rows.map(row => (
-                  <TableRow key={row.serviceArea}>
-                    <TableCell className="font-medium">{row.serviceArea}</TableCell>
-                    <TableCell className="font-bold">
-                      <Link href={`/dashboard/assets/list?assetType=ODP&serviceArea=${encodeURIComponent(row.serviceArea)}`} className="hover:underline">
-                        {row.jumlah}
-                      </Link>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {odp.rows.filter(r => r.jumlah > 0).length === 0 && (
-                    <TableRow><TableCell colSpan={2} className="text-center h-24">Tidak ada data ODP</TableCell></TableRow>
+                {odp.totals.jumlah > 0 ? (
+                    odp.rows.map(row => (
+                      <TableRow key={row.serviceArea}>
+                        <TableCell className="font-medium">{row.serviceArea}</TableCell>
+                        <TableCell className="font-bold">
+                          <Link href={`/dashboard/assets/list?assetType=ODP&serviceArea=${encodeURIComponent(row.serviceArea)}`} className="hover:underline">
+                            {row.jumlah}
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                ) : (
+                    <TableRow><TableCell colSpan={2} className="text-center h-24">{!networkStats ? "Statistik belum dihitung." : "Tidak ada data ODP."}</TableCell></TableRow>
                 )}
               </TableBody>
               <TableFooter>
@@ -527,3 +532,5 @@ export default function AllproPage() {
     </div>
   );
 }
+
+    
