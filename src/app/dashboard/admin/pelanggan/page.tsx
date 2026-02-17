@@ -155,7 +155,7 @@ function PelangganForm({ pelanggan, onFormSubmit, isSaving }: { pelanggan?: Pela
   };
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+     <form onSubmit={handleSubmit} className="grid gap-4 py-4">
       <div className="grid gap-2">
         <Label htmlFor="namaPelanggan">Nama</Label>
         <Input id="namaPelanggan" value={namaPelanggan} onChange={(e) => setNamaPelanggan(e.target.value)} placeholder="Nama Pelanggan" required />

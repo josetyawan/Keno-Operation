@@ -434,6 +434,48 @@
         "id",
         "lastUpdated"
       ]
+    },
+    "Schedule": {
+        "title": "Schedule",
+        "type": "object",
+        "description": "Represents a work schedule for a user on a specific day.",
+        "properties": {
+            "id": {"type": "string"},
+            "userId": {"type": "string"},
+            "userEmail": {"type": "string"},
+            "date": {"type": "string", "format": "date"},
+            "shiftType": {"type": "string", "enum": ["weekend-duty", "holiday-duty"]},
+            "notes": {"type": "string"},
+            "createdAt": {"type": "string", "format": "date-time"}
+        },
+        "required": ["id", "userId", "userEmail", "date", "shiftType", "createdAt"]
+    },
+    "Attendance": {
+        "title": "Attendance",
+        "type": "object",
+        "description": "An attendance record for a user's scheduled shift.",
+        "properties": {
+            "id": {"type": "string"},
+            "userId": {"type": "string"},
+            "scheduleId": {"type": "string"},
+            "checkInTime": {"type": "string", "format": "date-time"},
+            "checkInPhotoUrl": {"type": "string", "format": "uri"},
+            "checkInCoordinates": {"type": "string"},
+            "status": {"type": "string", "enum": ["present", "absent"]}
+        },
+        "required": ["id", "userId", "scheduleId", "checkInTime", "checkInPhotoUrl", "checkInCoordinates", "status"]
+    },
+    "Holiday": {
+        "title": "Holiday",
+        "type": "object",
+        "description": "A national holiday or collective leave day.",
+        "properties": {
+            "id": {"type": "string"},
+            "date": {"type": "string", "format": "date"},
+            "name": {"type": "string"},
+            "type": {"type": "string", "enum": ["national-holiday", "collective-leave"]}
+        },
+        "required": ["id", "date", "name", "type"]
     }
   },
   "auth": {
@@ -570,6 +612,33 @@
               "description": "The unique identifier for the summary document, typically 'summary'."
             }
           ]
+        }
+      },
+      {
+        "path": "/schedules/{scheduleId}",
+        "definition": {
+            "entityName": "Schedule",
+            "schema": {"$ref": "#/backend/entities/Schedule"},
+            "description": "Stores work schedules for users.",
+            "params": [{"name": "scheduleId", "description": "The unique ID for the schedule."}]
+        }
+      },
+      {
+        "path": "/attendances/{attendanceId}",
+        "definition": {
+            "entityName": "Attendance",
+            "schema": {"$ref": "#/backend/entities/Attendance"},
+            "description": "Stores attendance records for scheduled shifts.",
+            "params": [{"name": "attendanceId", "description": "The unique ID for the attendance record."}]
+        }
+      },
+      {
+        "path": "/holidays/{holidayId}",
+        "definition": {
+            "entityName": "Holiday",
+            "schema": {"$ref": "#/backend/entities/Holiday"},
+            "description": "Stores national holidays and collective leave dates.",
+            "params": [{"name": "holidayId", "description": "The unique ID for the holiday."}]
         }
       }
     ],

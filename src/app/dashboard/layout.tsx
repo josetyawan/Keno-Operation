@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home, Network, Search, BarChart3, Map, FolderGit2, Contact } from 'lucide-react';
+import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home, Network, Search, BarChart3, Map, FolderGit2, Contact, CalendarClock, ClipboardUser } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -33,14 +33,20 @@ const navLinks = [
   { href: '/dashboard/nota', label: 'Laporan Nota', icon: LayoutGrid, access: 'nota' },
   { href: '/dashboard/search-assets', label: 'Network Cek', icon: Search, access: 'allpro' },
   { href: '/dashboard/allpro', label: 'Network Service Area', icon: BarChart3, access: 'allpro' },
-  { href: '/dashboard/admin/users', label: 'Manajemen User', icon: Users, access: 'admin' },
-  { href: '/dashboard/admin/pids', label: 'Manajemen PID', icon: Tags, access: 'admin' },
-  { href: '/dashboard/admin/assets', label: 'Manajemen Aset Jaringan', icon: Network, access: 'admin' },
-  { href: '/dashboard/admin/pelanggan', label: 'Manajemen Pelanggan', icon: Contact, access: 'admin' },
-  { href: '/dashboard/admin/map-links', label: 'Manajemen Peta', icon: Map, access: 'admin' },
-  { href: '/dashboard/admin/mancore', label: 'Manajemen Mancore', icon: FolderGit2, access: 'admin' },
-  { href: '/dashboard/rekap', label: 'Rekap Telegram', icon: Bot, access: 'admin' },
+  { href: '/dashboard/admin/pelanggan', label: 'Manajemen Pelanggan', icon: Contact, access: 'allpro' }, // Changed access
+  { href: '/dashboard/hr/attendance', label: 'Absensi Jaga', icon: ClipboardUser, access: 'allpro' },
 ];
+
+const adminNavLinks = [
+  { href: '/dashboard/admin/users', label: 'Manajemen User', icon: Users },
+  { href: '/dashboard/admin/pids', label: 'Manajemen PID', icon: Tags },
+  { href: '/dashboard/admin/assets', label: 'Manajemen Aset Jaringan', icon: Network },
+  { href: '/dashboard/admin/map-links', label: 'Manajemen Peta', icon: Map },
+  { href: '/dashboard/admin/mancore', label: 'Manajemen Mancore', icon: FolderGit2 },
+  { href: '/dashboard/rekap', label: 'Rekap Pembayaran', icon: Bot },
+  { href: '/dashboard/admin/hr/schedules', label: 'Manajemen Jadwal', icon: CalendarClock },
+];
+
 
 function DashboardSkeleton() {
     return (
@@ -77,6 +83,36 @@ function DashboardSkeleton() {
           </div>
         </div>
       );
+}
+
+function NavLink({ href, label, icon: Icon, isActive }: { href: string, label: string, icon: React.ElementType, isActive: boolean }) {
+    return (
+        <Link
+            href={href}
+            className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:text-primary",
+                isActive ? "bg-primary/10 text-primary" : "text-muted-foreground"
+            )}
+        >
+            <Icon className="h-4 w-4" />
+            {label}
+        </Link>
+    );
+}
+
+function MobileNavLink({ href, label, icon: Icon, isActive }: { href: string, label: string, icon: React.ElementType, isActive: boolean }) {
+    return (
+        <Link
+            href={href}
+            className={cn(
+                "mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground",
+                isActive && "bg-muted"
+            )}
+        >
+            <Icon className="h-5 w-5" />
+            {label}
+        </Link>
+    );
 }
 
 
@@ -214,6 +250,29 @@ export default function DashboardLayout({
   if (!isReady) {
     return <DashboardSkeleton />;
   }
+  
+  const isAdmin = userProfile?.role === 'admin';
+
+  const getFilteredNavLinks = (isMobile: boolean) => {
+    const NavComponent = isMobile ? MobileNavLink : NavLink;
+    return navLinks
+      .filter(link => {
+        const appAccess = userProfile?.appAccess;
+        if (isAdmin || link.access === 'public') return true;
+        if (appAccess === 'all') return link.access === 'nota' || link.access === 'allpro';
+        return link.access === appAccess;
+      })
+      .map(link => (
+        <NavComponent
+          key={link.href}
+          href={link.href}
+          label={link.label}
+          icon={link.icon}
+          isActive={pathname.startsWith(link.href) && (link.href !== '/dashboard' || pathname === '/dashboard')}
+        />
+      ));
+  };
+
 
   // If we are ready, we can safely render the dashboard.
   // userProfile is guaranteed to exist and have the correct role at this point.
@@ -228,44 +287,21 @@ export default function DashboardLayout({
           </div>
           <div className="flex-1">
             <nav className="grid items-start px-4 py-4 text-sm font-medium">
-              {navLinks.map(link => {
-                const isAdmin = userProfile?.role === 'admin';
-                const appAccess = userProfile?.appAccess;
-                
-                let canView = false;
-                if (isAdmin) {
-                    canView = true;
-                } else {
-                    if (link.access === 'public') {
-                        canView = true;
-                    } else if (appAccess === 'all') {
-                        if (link.access === 'nota' || link.access === 'allpro') {
-                            canView = true;
-                        }
-                    } else if (link.access === appAccess) {
-                        canView = true;
-                    }
-                }
-
-                if (link.access === 'admin' && !isAdmin) canView = false;
-                if (!canView) return null;
-
-                const isActive = link.href === '/dashboard' ? pathname === link.href : pathname.startsWith(link.href);
-
-                return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:text-primary",
-                      isActive ? "bg-primary/10 text-primary" : "text-muted-foreground"
-                    )}
-                  >
-                    <link.icon className="h-4 w-4" />
-                    {link.label}
-                  </Link>
-                )
-              })}
+               {getFilteredNavLinks(false)}
+               {isAdmin && (
+                <>
+                    <p className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-4">Admin</p>
+                    {adminNavLinks.map(link => (
+                         <NavLink
+                            key={link.href}
+                            href={link.href}
+                            label={link.label}
+                            icon={link.icon}
+                            isActive={pathname.startsWith(link.href)}
+                        />
+                    ))}
+                </>
+               )}
             </nav>
           </div>
         </div>
@@ -291,43 +327,21 @@ export default function DashboardLayout({
                 >
                   <Logo />
                 </Link>
-                {navLinks.map(link => {
-                  const isAdmin = userProfile?.role === 'admin';
-                  const appAccess = userProfile?.appAccess;
-
-                  let canView = false;
-                  if (isAdmin) {
-                      canView = true;
-                  } else {
-                      if (link.access === 'public') {
-                          canView = true;
-                      } else if (appAccess === 'all') {
-                          if (link.access === 'nota' || link.access === 'allpro') {
-                              canView = true;
-                          }
-                      } else if (link.access === appAccess) {
-                          canView = true;
-                      }
-                  }
-                  if (link.access === 'admin' && !isAdmin) canView = false;
-                  if (!canView) return null;
-                  
-                  const isActive = link.href === '/dashboard' ? pathname === link.href : pathname.startsWith(link.href);
-
-                  return (
-                      <Link
-                      key={link.href}
-                      href={link.href}
-                      className={cn(
-                        "mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground",
-                        isActive && "bg-muted"
-                      )}
-                    >
-                      <link.icon className="h-5 w-5" />
-                      {link.label}
-                    </Link>
-                  )
-                })}
+                {getFilteredNavLinks(true)}
+                 {isAdmin && (
+                    <>
+                        <p className="px-3 py-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider mt-4">Admin</p>
+                        {adminNavLinks.map(link => (
+                            <MobileNavLink
+                                key={link.href}
+                                href={link.href}
+                                label={link.label}
+                                icon={link.icon}
+                                isActive={pathname.startsWith(link.href)}
+                            />
+                        ))}
+                    </>
+                )}
               </nav>
               <div className="mt-auto">
                   <Card>

@@ -1,5 +1,6 @@
 
 
+
 export type Nota = {
   id: string;
   userId: string;
@@ -101,5 +102,32 @@ export type NetworkStats = {
   statsByServiceArea: {
     [serviceArea: string]: ServiceAreaStats;
   };
+};
+
+export type Holiday = {
+    id: string;
+    date: any; // Firestore Timestamp
+    name: string;
+    type: 'national-holiday' | 'collective-leave';
+};
+
+export type Schedule = {
+    id: string;
+    userId: string;
+    userEmail: string;
+    date: any; // Firestore Timestamp
+    shiftType: 'weekend-duty' | 'holiday-duty';
+    notes?: string;
+    createdAt: any; // Firestore Timestamp
+};
+
+export type Attendance = {
+    id: string;
+    userId: string;
+    scheduleId: string;
+    checkInTime: any; // Firestore Timestamp
+    checkInPhotoUrl: string;
+    checkInCoordinates: string;
+    status: 'present' | 'absent';
 };
     
