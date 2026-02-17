@@ -37,7 +37,6 @@ import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 
 
-const assetTypes = ['OLT', 'ODC', 'ODP', 'FTM', 'MITRATEL'];
 const baseServiceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
 
 
@@ -47,16 +46,13 @@ export default function SearchAssetsPage() {
   const router = useRouter();
   
   const [searchName, setSearchName] = useState('');
-  const [searchAssetType, setSearchAssetType] = useState('all');
   const [searchServiceArea, setSearchServiceArea] = useState('all');
   
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
 
-  // This is the main trigger for enabling search and showing data.
-  // We only start searching when a Service Area is selected to keep queries efficient.
   const canSearch = searchServiceArea !== 'all';
-  const isMitratelSelectedAsAssetType = searchAssetType === 'MITRATEL';
+  const isMitratelSearch = useMemo(() => searchName.toUpperCase().trim().startsWith('MITRATEL'), [searchName]);
 
 
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
@@ -134,18 +130,31 @@ export default function SearchAssetsPage() {
     
     constraints.push(where('serviceArea', '==', searchServiceArea));
     
-    if (searchAssetType !== 'all') {
-        constraints.push(where('assetType', '==', searchAssetType));
+    // Infer asset type from search query to make Firestore query more efficient
+    const upperSearch = searchName.toUpperCase().trim();
+    const assetPrefixes = ['ODP', 'ODC', 'OLT', 'FTM', 'MITRATEL'];
+    let inferredType: string | null = null;
+    
+    for (const prefix of assetPrefixes) {
+        if (upperSearch.startsWith(prefix)) {
+            inferredType = prefix;
+            break;
+        }
+    }
+
+    if (inferredType) {
+        constraints.push(where('assetType', '==', inferredType));
     }
 
     return query(collection(firestore, 'network-assets'), ...constraints);
-  }, [firestore, currentUserProfile, canSearch, searchServiceArea, searchAssetType]);
+  }, [firestore, currentUserProfile, canSearch, searchServiceArea, searchName]);
 
   const { data: queriedAssets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(assetsQuery);
 
   const filteredAssets = useMemo(() => {
     if (!queriedAssets) return [];
     
+    // Client-side filtering for the full name match after getting the narrowed down list from server
     const lowercasedSearchName = searchName.toLowerCase().trim();
     if (lowercasedSearchName) {
         return queriedAssets.filter(asset => asset.name.toLowerCase().includes(lowercasedSearchName));
@@ -164,7 +173,7 @@ export default function SearchAssetsPage() {
 
   useEffect(() => {
       setCurrentPage(1);
-  }, [searchName, searchAssetType, searchServiceArea]);
+  }, [searchName, searchServiceArea]);
 
 
   const isLoading = isUserLoading || isProfileLoading || areAssetsLoading || areMancoreLinksLoading || areMapLinksLoading;
@@ -191,13 +200,13 @@ export default function SearchAssetsPage() {
 
        <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Search className="h-5 w-5" />Cari &amp; Filter Aset</CardTitle>
+          <CardTitle className="flex items-center gap-2"><Search className="h-5 w-5" />Cari Aset</CardTitle>
           <CardDescription>Pilih Service Area untuk memulai pencarian dan melihat tautan terkait.</CardDescription>
         </CardHeader>
         <CardContent>
-            <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
-                 <div className="grid gap-1.5">
-                    <Label htmlFor="search-area">Service Area *</Label>
+            <div className="grid sm:grid-cols-1 md:grid-cols-3 gap-4">
+                 <div className="grid gap-1.5 md:col-span-1">
+                    <Label htmlFor="search-area">1. Pilih Service Area *</Label>
                     <Select value={searchServiceArea} onValueChange={setSearchServiceArea}>
                         <SelectTrigger id="search-area"><SelectValue placeholder="Pilih untuk memulai..." /></SelectTrigger>
                         <SelectContent>
@@ -206,22 +215,12 @@ export default function SearchAssetsPage() {
                         </SelectContent>
                     </Select>
                 </div>
-                <div className="grid gap-1.5">
-                    <Label htmlFor="search-name">Nama Aset</Label>
-                    <Input id="search-name" placeholder="Cari nama aset..." value={searchName} onChange={(e) => setSearchName(e.target.value)} disabled={!canSearch}/>
-                </div>
-                <div className="grid gap-1.5">
-                    <Label htmlFor="search-type">Jenis Aset</Label>
-                    <Select value={searchAssetType} onValueChange={setSearchAssetType} disabled={!canSearch}>
-                        <SelectTrigger id="search-type"><SelectValue placeholder="Semua Jenis" /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Semua Jenis</SelectItem>
-                            {assetTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
+                <div className="grid gap-1.5 md:col-span-2">
+                    <Label htmlFor="search-name">2. Cari Nama Aset</Label>
+                    <Input id="search-name" placeholder="Ketik nama aset (e.g., ODP-KUD-FA/001)..." value={searchName} onChange={(e) => setSearchName(e.target.value)} disabled={!canSearch}/>
                 </div>
             </div>
-             {(currentMancoreLinks.length > 0 || currentMapUrl || (isMitratelSelectedAsAssetType && mitratelMapUrl)) && (
+             {(currentMancoreLinks.length > 0 || currentMapUrl || (isMitratelSearch && mitratelMapUrl)) && (
                 <div className="mt-4 border-t pt-4">
                      <h4 className="text-sm font-medium mb-2">Tautan Eksternal {searchServiceArea !== 'all' && `untuk ${searchServiceArea}`}</h4>
                      <div className="max-w-2xl">
@@ -234,7 +233,7 @@ export default function SearchAssetsPage() {
                                     </Link>
                                 </Button>
                             )}
-                            {isMitratelSelectedAsAssetType && mitratelMapUrl && (
+                            {isMitratelSearch && mitratelMapUrl && (
                                 <Button asChild key="mitratel-map" variant="outline">
                                     <Link href={mitratelMapUrl} target="_blank" rel="noopener noreferrer">
                                         <MapPin className="mr-2 h-4 w-4" />
@@ -270,14 +269,14 @@ export default function SearchAssetsPage() {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Type</TableHead>
-                {!isMitratelSelectedAsAssetType && <TableHead>Sub-Type</TableHead>}
+                {!isMitratelSearch && <TableHead>Sub-Type</TableHead>}
                 <TableHead>Service Area</TableHead>
-                {!isMitratelSelectedAsAssetType && <TableHead>STO</TableHead>}
+                {!isMitratelSearch && <TableHead>STO</TableHead>}
                 <TableHead>Coordinates</TableHead>
-                {isMitratelSelectedAsAssetType && <TableHead>Mitratel ID</TableHead>}
-                {isMitratelSelectedAsAssetType && <TableHead>Tenant ID</TableHead>}
-                {!isMitratelSelectedAsAssetType && <TableHead>Avail</TableHead>}
-                {!isMitratelSelectedAsAssetType && <TableHead>Used</TableHead>}
+                {isMitratelSearch && <TableHead>Mitratel ID</TableHead>}
+                {isMitratelSearch && <TableHead>Tenant ID</TableHead>}
+                {!isMitratelSearch && <TableHead>Avail</TableHead>}
+                {!isMitratelSearch && <TableHead>Used</TableHead>}
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -294,14 +293,14 @@ export default function SearchAssetsPage() {
                   <TableRow key={a.id}>
                     <TableCell className="font-medium">{a.name}</TableCell>
                     <TableCell>{a.assetType}</TableCell>
-                    {!isMitratelSelectedAsAssetType && <TableCell>{a.subType}</TableCell>}
+                    {!isMitratelSearch && <TableCell>{a.subType}</TableCell>}
                     <TableCell>{a.serviceArea}</TableCell>
-                    {!isMitratelSelectedAsAssetType && <TableCell>{a.sto}</TableCell>}
+                    {!isMitratelSearch && <TableCell>{a.sto}</TableCell>}
                     <TableCell>{a.coordinates || '-'}</TableCell>
-                    {isMitratelSelectedAsAssetType && <TableCell>{a.mitratelSiteId || '-'}</TableCell>}
-                    {isMitratelSelectedAsAssetType && <TableCell>{a.tenantSiteId || '-'}</TableCell>}
-                    {!isMitratelSelectedAsAssetType && <TableCell>{a.portAvai || '-'}</TableCell>}
-                    {!isMitratelSelectedAsAssetType && <TableCell>{a.portUsed || '-'}</TableCell>}
+                    {isMitratelSearch && <TableCell>{a.mitratelSiteId || '-'}</TableCell>}
+                    {isMitratelSearch && <TableCell>{a.tenantSiteId || '-'}</TableCell>}
+                    {!isMitratelSearch && <TableCell>{a.portAvai || '-'}</TableCell>}
+                    {!isMitratelSearch && <TableCell>{a.portUsed || '-'}</TableCell>}
                     <TableCell className="text-right">
                        {googleMapsUrl && (
                         <Button asChild variant="ghost" size="icon" title="Lihat di Google Maps">
