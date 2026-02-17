@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home, Network, Search, BarChart3, Map, FolderGit2, Contact, CalendarClock, ClipboardCheck } from 'lucide-react';
+import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home, Network, Search, BarChart3, Map, FolderGit2, Contact, CalendarClock, ClipboardCheck, CalendarOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -45,6 +45,7 @@ const adminNavLinks = [
   { href: '/dashboard/admin/mancore', label: 'Manajemen Mancore', icon: FolderGit2 },
   { href: '/dashboard/rekap', label: 'Rekap Pembayaran', icon: Bot },
   { href: '/dashboard/admin/hr/schedules', label: 'Manajemen Jadwal', icon: CalendarClock },
+  { href: '/dashboard/admin/hr/holidays', label: 'Manajemen Hari Libur', icon: CalendarOff },
 ];
 
 
