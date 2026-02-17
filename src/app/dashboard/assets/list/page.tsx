@@ -29,42 +29,6 @@ import type { UserProfile, NetworkAsset } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 
-// --- Shared Logic: Placed at the top for reuse ---
-const SA_CODE_MAPPING: Record<string, NetworkAsset['serviceArea']> = {
-    'PWB': 'SA PURWODADI', 'PURWODADI': 'SA PURWODADI', 'WRO': 'SA PURWODADI', 'WIROSARI': 'SA PURWODADI', 'TRO': 'SA PURWODADI', 'TOROH': 'SA PURWODADI', 'GBU': 'SA PURWODADI', 'GUBUNG': 'SA PURWODADI', 'GDO': 'SA PURWODADI', 'GODONG': 'SA PURWODADI',
-    'CEP': 'SA BLORA', 'CEPU': 'SA BLORA', 'BLO': 'SA BLORA', 'BLORA': 'SA BLORA', 'NGA': 'SA BLORA', 'NGAWEN': 'SA BLORA', 'RDB': 'SA BLORA', 'RANDUBLATUNG': 'SA BLORA',
-    'KMJ': 'SA JEPARA', 'JEPARA': 'SA JEPARA', 'JPR': 'SA JEPARA', 'BAN': 'SA JEPARA', 'BANGSRI': 'SA JEPARA', 'KEL': 'SA JEPARA', 'KELING': 'SA JEPARA', 'PEC': 'SA JEPARA', 'PECANGAAN': 'SA JEPARA',
-    'KUD': 'SA KUDUS', 'KUDUS': 'SA KUDUS', 'DMA': 'SA KUDUS', 'DEMAK': 'SA KUDUS',
-    'PAT': 'SA PATI', 'PATI': 'SA PATI', 'TAY': 'SA PATI', 'JWN': 'SA PATI',
-    'LSE': 'SA REMBANG', 'LASEM': 'SA REMBANG', 'RBN': 'SA REMBANG', 'REMBANG': 'SA REMBANG'
-};
-
-const getAssetServiceArea = (asset: NetworkAsset): NetworkAsset['serviceArea'] => {
-    if (asset.assetType === 'MITRATEL' && asset.serviceArea) {
-      return asset.serviceArea as NetworkAsset['serviceArea'];
-    }
-    
-    const upperAssetName = (asset.name || '').toUpperCase();
-    const upperSto = (asset.sto || '').toUpperCase().trim();
-
-    for (const code in SA_CODE_MAPPING) {
-        const regex = new RegExp(`[\\s-_]${code}[\\s-_]|^${code}[\\s-_]|[\\s-_]${code}$|^${code}$`);
-        if (regex.test(upperAssetName)) {
-            return SA_CODE_MAPPING[code];
-        }
-    }
-
-    if (upperSto) {
-       for (const code in SA_CODE_MAPPING) {
-            if (upperSto.includes(code)) {
-                return SA_CODE_MAPPING[code];
-            }
-        }
-    }
-    return 'SA KUDUS';
-};
-// --- End Shared Logic ---
-
 function AssetListSkeleton() {
     return (
         <div className="mx-auto grid w-full flex-1 auto-rows-max gap-6">
@@ -115,8 +79,7 @@ function AssetList() {
   );
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
-  // The query now only filters by type, not service area.
-  // This fetches a broader set of data to be filtered on the client.
+  // The query now filters by both type and service area on the server.
   const assetsQuery = useMemoFirebase(() => {
     if (isUserLoading || isProfileLoading || !user || !userProfile || userProfile.registrationStatus !== 'approved' || !assetType) {
         return null;
@@ -125,7 +88,12 @@ function AssetList() {
     const constraints: QueryConstraint[] = [];
     constraints.push(where('assetType', '==', assetType));
     
-    // SubType filter is still efficient and can be done server-side
+    // Add server-side filtering for service area
+    if (serviceArea) {
+      constraints.push(where('serviceArea', '==', serviceArea));
+    }
+
+    // SubType filter is also efficient and can be done server-side
     if (subType) {
         constraints.push(where('subType', '==', subType));
     }
@@ -133,30 +101,25 @@ function AssetList() {
     const collectionRef = collection(firestore, 'network-assets');
     return query(collectionRef, ...constraints);
 
-  }, [firestore, isUserLoading, isProfileLoading, user, userProfile, assetType, subType]);
+  }, [firestore, isUserLoading, isProfileLoading, user, userProfile, assetType, serviceArea, subType]);
 
   const { data: assets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(assetsQuery);
   
-  // This performs the crucial client-side filtering
+  // This performs client-side filtering only for the search name.
   const clientFilteredAssets = useMemo(() => {
       if (!assets) return [];
 
-      return assets.filter(asset => {
-        // Filter by Service Area using the smart mapping function
-        if (serviceArea && getAssetServiceArea(asset) !== serviceArea) {
-            return false;
-        }
+      // Filter by name search query
+      const lowercasedSearchName = searchName.toLowerCase().trim();
+      if (searchName && lowercasedSearchName.length > 0) {
+        return assets.filter(asset => 
+            asset.name.toLowerCase().includes(lowercasedSearchName)
+        );
+      }
+      
+      return assets; // Return all server-filtered assets if no name search
 
-        // Filter by name search query
-        const lowercasedSearchName = searchName.toLowerCase().trim();
-        if (searchName && !asset.name.toLowerCase().includes(lowercasedSearchName)) {
-            return false;
-        }
-
-        return true;
-      });
-
-  }, [assets, serviceArea, searchName]);
+  }, [assets, searchName]);
 
   const totalPages = Math.ceil(clientFilteredAssets.length / ITEMS_PER_PAGE);
 
