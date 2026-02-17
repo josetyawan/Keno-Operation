@@ -1,4 +1,5 @@
 
+
 export type Nota = {
   id: string;
   userId: string;
@@ -84,5 +85,21 @@ export type Pelanggan = {
   fotoCpUrl?: string;
   serviceArea: string;
   dateAdded: any;
+};
+
+export type ServiceAreaStats = {
+  olt: { miniOlt: number; olt: number };
+  ftm: { ea: number; oa: number };
+  odc: { jumlah: number };
+  odp: { jumlah: number };
+  mitratel: { jumlah: number };
+};
+
+export type NetworkStats = {
+  id: string;
+  lastUpdated: any; // Firestore Timestamp
+  statsByServiceArea: {
+    [serviceArea: string]: ServiceAreaStats;
+  };
 };
     

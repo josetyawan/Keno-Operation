@@ -413,6 +413,27 @@
         "serviceArea",
         "dateAdded"
       ]
+    },
+    "NetworkStats": {
+      "title": "Network Statistics",
+      "type": "object",
+      "description": "A summary document containing aggregated counts of all network assets.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "lastUpdated": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "statsByServiceArea": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "lastUpdated"
+      ]
     }
   },
   "auth": {
@@ -531,6 +552,22 @@
             {
               "name": "pelangganId",
               "description": "The unique identifier for the customer."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/network-stats/{statId}",
+        "definition": {
+          "entityName": "NetworkStats",
+          "schema": {
+            "$ref": "#/backend/entities/NetworkStats"
+          },
+          "description": "Stores a single document with aggregated network asset statistics.",
+          "params": [
+            {
+              "name": "statId",
+              "description": "The unique identifier for the summary document, typically 'summary'."
             }
           ]
         }

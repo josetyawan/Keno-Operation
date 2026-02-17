@@ -18,13 +18,19 @@ import {
   TableRow,
   TableFooter,
 } from '@/components/ui/table';
-import { ArrowLeft } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
-import type { NetworkAsset, UserProfile } from '@/lib/types';
-import { useMemo, useEffect } from 'react';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { ArrowLeft, RefreshCw, Loader2, Info } from 'lucide-react';
+import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
+import { collection, doc, getDocs, setDoc, serverTimestamp } from 'firebase/firestore';
+import type { NetworkAsset, UserProfile, NetworkStats, ServiceAreaStats } from '@/lib/types';
+import { useMemo, useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
+import { useToast } from '@/hooks/use-toast';
+import { formatDistanceToNow } from 'date-fns';
+import { id as idLocale } from 'date-fns/locale';
+
+const PREFERRED_ORDER: NetworkAsset['serviceArea'][] = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
 
 const skeletonCard = (
   <Card>
@@ -51,10 +57,6 @@ const SA_CODE_MAPPING: Record<string, NetworkAsset['serviceArea']> = {
     'LSE': 'SA REMBANG', 'LASEM': 'SA REMBANG', 'RBN': 'SA REMBANG', 'REMBANG': 'SA REMBANG'
 };
 
-/**
- * Determines the correct Service Area for an asset by intelligently checking its name and STO property.
- * This function is robust and handles various naming conventions.
- */
 const getAssetServiceArea = (asset: NetworkAsset): NetworkAsset['serviceArea'] => {
     if (asset.assetType === 'MITRATEL' && asset.serviceArea) {
       return asset.serviceArea as NetworkAsset['serviceArea'];
@@ -63,17 +65,13 @@ const getAssetServiceArea = (asset: NetworkAsset): NetworkAsset['serviceArea'] =
     const upperAssetName = (asset.name || '').toUpperCase();
     const upperSto = (asset.sto || '').toUpperCase().trim();
 
-    // Priority 1: Check if asset name contains any known STO code.
-    // This is more reliable as asset names often contain the STO.
     for (const code in SA_CODE_MAPPING) {
-        // Use a regex to find the code as a whole word or surrounded by common delimiters.
         const regex = new RegExp(`[\\s-_]${code}[\\s-_]|^${code}[\\s-_]|[\\s-_]${code}$|^${code}$`);
         if (regex.test(upperAssetName)) {
             return SA_CODE_MAPPING[code];
         }
     }
 
-    // Priority 2: Check the dedicated 'sto' column from the database if name check fails.
     if (upperSto) {
        for (const code in SA_CODE_MAPPING) {
             if (upperSto.includes(code)) {
@@ -81,8 +79,6 @@ const getAssetServiceArea = (asset: NetworkAsset): NetworkAsset['serviceArea'] =
             }
         }
     }
-
-    // Default fallback if no match is found anywhere.
     return 'SA KUDUS';
 };
 
@@ -91,6 +87,8 @@ export default function AllproPage() {
   const router = useRouter();
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
+  const { toast } = useToast();
+  const [isRecalculating, setIsRecalculating] = useState(false);
 
   const userProfileRef = useMemoFirebase(
     () => (user ? doc(firestore, 'users', user.uid) : null),
@@ -108,68 +106,76 @@ export default function AllproPage() {
     }
   }, [user, userProfile, isUserLoading, isProfileLoading, router]);
 
-  const assetsQuery = useMemoFirebase(() => {
-    if (isUserLoading || isProfileLoading || !user || userProfile?.registrationStatus !== 'approved') return null;
-    return collection(firestore, 'network-assets');
-  }, [firestore, user, userProfile?.registrationStatus, isUserLoading, isProfileLoading]);
+  const summaryDocRef = useMemoFirebase(
+    () => doc(firestore, 'network-stats', 'summary'),
+    [firestore]
+  );
+  const { data: networkStats, isLoading: areStatsLoading } = useDoc<NetworkStats>(summaryDocRef);
 
-  const { data: assets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(assetsQuery);
+  const handleRecalculate = async () => {
+    if (userProfile?.role !== 'admin') return;
+    setIsRecalculating(true);
+    toast({ title: 'Memulai penghitungan ulang...', description: 'Ini mungkin membutuhkan waktu beberapa saat.' });
 
-  const rekapData = useMemo(() => {
-    const PREFERRED_ORDER: NetworkAsset['serviceArea'][] = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
-    
-    // 1. Initialize a stable structure for the dashboard
-    const serviceAreaMap = PREFERRED_ORDER.reduce((acc, sa) => {
-        acc[sa] = {
-            olt: { miniOlt: 0, olt: 0 },
-            ftm: { ea: 0, oa: 0 },
-            odc: { jumlah: 0 },
-            odp: { jumlah: 0 },
-            mitratel: { jumlah: 0 },
-        };
-        return acc;
-    }, {} as Record<string, { olt: any; ftm: any; odc: any; odp: any; mitratel: any; }>);
+    try {
+        const assetsCollectionRef = collection(firestore, 'network-assets');
+        const assetsSnapshot = await getDocs(assetsCollectionRef);
+        const allAssets = assetsSnapshot.docs.map(doc => doc.data() as NetworkAsset);
+        
+        const initialStats: { [key: string]: ServiceAreaStats } = PREFERRED_ORDER.reduce((acc, sa) => {
+            acc[sa] = {
+                olt: { miniOlt: 0, olt: 0 },
+                ftm: { ea: 0, oa: 0 },
+                odc: { jumlah: 0 },
+                odp: { jumlah: 0 },
+                mitratel: { jumlah: 0 },
+            };
+            return acc;
+        }, {} as { [key: string]: ServiceAreaStats });
 
-    if (assets) {
-        // 2. Iterate through all assets and count them directly into the structure
-        for (const asset of assets) {
+        const newStatsByServiceArea = allAssets.reduce((acc, asset) => {
             const correctAssetSA = getAssetServiceArea(asset);
-            
-            if (serviceAreaMap[correctAssetSA]) {
+            if (acc[correctAssetSA]) {
                 const assetTypeUpper = (asset.assetType || '').toUpperCase();
                 const subTypeUpper = (asset.subType || '').toUpperCase().trim();
-
                 switch (assetTypeUpper) {
                     case 'OLT':
-                        if (subTypeUpper.includes('MINI')) {
-                            serviceAreaMap[correctAssetSA].olt.miniOlt++;
-                        } else {
-                            serviceAreaMap[correctAssetSA].olt.olt++;
-                        }
+                        if (subTypeUpper.includes('MINI')) acc[correctAssetSA].olt.miniOlt++;
+                        else acc[correctAssetSA].olt.olt++;
                         break;
                     case 'FTM':
-                        if (subTypeUpper === 'EA') {
-                            serviceAreaMap[correctAssetSA].ftm.ea++;
-                        } else {
-                            // Count anything not 'EA' as 'OA' to ensure all FTMs are counted
-                            serviceAreaMap[correctAssetSA].ftm.oa++;
-                        }
+                        if (subTypeUpper === 'EA') acc[correctAssetSA].ftm.ea++;
+                        else acc[correctAssetSA].ftm.oa++;
                         break;
-                    case 'ODC':
-                        serviceAreaMap[correctAssetSA].odc.jumlah++;
-                        break;
-                    case 'ODP':
-                        serviceAreaMap[correctAssetSA].odp.jumlah++;
-                        break;
-                    case 'MITRATEL':
-                        serviceAreaMap[correctAssetSA].mitratel.jumlah++;
-                        break;
+                    case 'ODC': acc[correctAssetSA].odc.jumlah++; break;
+                    case 'ODP': acc[correctAssetSA].odp.jumlah++; break;
+                    case 'MITRATEL': acc[correctAssetSA].mitratel.jumlah++; break;
                 }
             }
-        }
+            return acc;
+        }, initialStats);
+
+        const newSummaryData: NetworkStats = {
+            id: 'summary',
+            lastUpdated: serverTimestamp(),
+            statsByServiceArea: newStatsByServiceArea,
+        };
+
+        await setDoc(summaryDocRef, newSummaryData);
+
+        toast({ title: 'Statistik Diperbarui!', description: `Total ${allAssets.length} aset telah dihitung ulang.` });
+    } catch (error: any) {
+        console.error("Failed to recalculate statistics:", error);
+        toast({ variant: 'destructive', title: 'Gagal Menghitung Ulang', description: error.message });
+    } finally {
+        setIsRecalculating(false);
     }
-    
-    // 3. Build the final display object from the counted data
+  };
+
+
+  const rekapData = useMemo(() => {
+    const stats = networkStats?.statsByServiceArea;
+
     const results = {
       olt: { title: "OLT All", headers: ["Service Area", "Mini OLT", "OLT", "Grand Total"], rows: [] as any[], totals: { miniOlt: 0, olt: 0, grandTotal: 0 }},
       ftm: { title: "FTM All", headers: ["Service Area", "EA", "OA", "Grand Total"], rows: [] as any[], totals: { ea: 0, oa: 0, grandTotal: 0 }},
@@ -178,8 +184,11 @@ export default function AllproPage() {
       mitratel: { title: "Mitratel All", headers: ["Service Area", "Jumlah Site"], rows: [] as any[], totals: { jumlah: 0 }},
     };
     
+    if (!stats) return results;
+
     for (const sa of PREFERRED_ORDER) {
-        const data = serviceAreaMap[sa];
+        const data = stats[sa];
+        if (!data) continue;
         
         // OLT
         const oltRow = { serviceArea: sa, miniOlt: data.olt.miniOlt, olt: data.olt.olt, grandTotal: data.olt.miniOlt + data.olt.olt };
@@ -212,11 +221,13 @@ export default function AllproPage() {
     }
     
     return results;
-  }, [assets]);
+  }, [networkStats]);
   
   const { olt, odc, odp, ftm, mitratel } = rekapData;
 
-  const isLoading = isUserLoading || isProfileLoading || areAssetsLoading;
+  const isLoading = isUserLoading || isProfileLoading || areStatsLoading;
+  const lastUpdated = networkStats?.lastUpdated?.toDate();
+  const lastUpdatedString = lastUpdated ? formatDistanceToNow(lastUpdated, { addSuffix: true, locale: idLocale }) : 'belum pernah';
 
   if (isLoading) {
     return (
@@ -245,13 +256,27 @@ export default function AllproPage() {
           <ArrowLeft className="h-4 w-4" />
           <span className="sr-only">Kembali</span>
         </Button>
-        <div>
+        <div className="flex-grow">
           <h1 className="flex-1 shrink-0 whitespace-nowrap text-xl font-bold tracking-tight sm:grow-0">
             Network Service Area
           </h1>
           <p className="text-muted-foreground text-sm">Ringkasan data OLT, ODC, ODP, dan FTM per Service Area.</p>
         </div>
+         {userProfile?.role === 'admin' && (
+            <Button onClick={handleRecalculate} disabled={isRecalculating}>
+                {isRecalculating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                {isRecalculating ? 'Menghitung...' : 'Hitung Ulang Statistik'}
+            </Button>
+         )}
       </div>
+
+       <Alert>
+          <Info className="h-4 w-4" />
+          <AlertTitle>Informasi Data</AlertTitle>
+          <AlertDescription>
+            Data yang ditampilkan adalah ringkasan yang terakhir diperbarui: <strong>{lastUpdatedString}</strong>. Admin dapat memperbarui data menggunakan tombol "Hitung Ulang Statistik".
+          </AlertDescription>
+        </Alert>
       
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {/* Mitratel Card */}
