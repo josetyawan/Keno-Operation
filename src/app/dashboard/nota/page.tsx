@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -36,7 +37,7 @@ import { MoreHorizontal, PlusCircle, Edit, Trash2, User } from 'lucide-react';
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, query, orderBy, doc, where } from 'firebase/firestore';
+import { collection, query, orderBy, doc, where, type QueryConstraint } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useMemo, useCallback } from 'react';
@@ -134,7 +135,7 @@ export default function DashboardPage() {
   const selectedStatus = searchParams.get('status') || 'all';
   const searchQuery = searchParams.get('q') || '';
   
-  const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA'];
+  const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
 
   const createQueryString = useCallback(
     (name: string, value: string) => {
@@ -156,28 +157,29 @@ export default function DashboardPage() {
   const isAdmin = userProfile?.role === 'admin';
 
   const notasQuery = useMemoFirebase(() => {
-    // Don't query until profile is loaded, because we need the role to build the query.
-    if (isProfileLoading) {
+    if (isProfileLoading || !user) {
       return null;
     }
 
     const notasCollectionRef = collection(firestore, 'notas');
 
-    // Admin can see all notas, sorted by creation date.
     if (isAdmin) {
-      return query(notasCollectionRef, orderBy('dateCreated', 'desc'));
+      const constraints: QueryConstraint[] = [];
+      if (selectedSA !== 'all') {
+        constraints.push(where('serviceArea', '==', selectedSA));
+      }
+      if (selectedStatus !== 'all') {
+        constraints.push(where('status', '==', selectedStatus));
+      }
+      constraints.push(orderBy('dateCreated', 'desc'));
+      return query(notasCollectionRef, ...constraints);
     }
+    
+    // For regular users, we still fetch all their notes, as the number is expected to be manageable.
+    // Server-side filtering is applied on top of this smaller set.
+    return query(notasCollectionRef, where('userId', '==', user.uid), orderBy('dateCreated', 'desc'));
 
-    // Regular user can only see their own notas.
-    // We remove `orderBy` to avoid needing a composite index that crashes the app.
-    // Sorting will be handled on the client-side.
-    if (user) {
-      return query(notasCollectionRef, where('userId', '==', user.uid));
-    }
-
-    // If no user or not admin (and profile is loaded), return null to fetch nothing.
-    return null;
-  }, [firestore, user, isProfileLoading, isAdmin]);
+  }, [firestore, user, isProfileLoading, isAdmin, selectedSA, selectedStatus]);
 
   const { data: notas, isLoading: isNotasLoading } = useCollection<Nota>(notasQuery);
   
@@ -195,53 +197,47 @@ export default function DashboardPage() {
   const { data: users, isLoading: isUsersLoading } = useCollection<UserProfile>(usersQuery);
 
   const userMap = useMemo(() => {
-    // For admins, create a map of all users from the collection query
     if (isAdmin) {
         if (!users) return new Map<string, UserProfile>();
         return new Map(users.map(u => [u.id, u]));
     }
-    
-    // For non-admins, create a map containing only their own profile
     if (userProfile) {
         return new Map([[userProfile.id, userProfile]]);
     }
-
     return new Map<string, UserProfile>();
   }, [users, isAdmin, userProfile]);
 
   const filteredNotas = useMemo(() => {
       if (!notas) return [];
       
-      const filtered = notas.filter(nota => {
-          // SA filter
-          if (selectedSA !== 'all' && nota.serviceArea !== selectedSA) {
-              return false;
-          }
-          // Status filter
-          if (selectedStatus !== 'all' && nota.status !== selectedStatus) {
-              return false;
-          }
-          // Search query filter
-          if (searchQuery) {
-              const lowercasedQuery = searchQuery.toLowerCase();
+      let clientFiltered = [...notas];
+
+      // For non-admins, apply client-side filters since the base query is broad (all their notes).
+      if (!isAdmin) {
+          clientFiltered = clientFiltered.filter(nota => {
+              if (selectedSA !== 'all' && nota.serviceArea !== selectedSA) return false;
+              if (selectedStatus !== 'all' && nota.status !== selectedStatus) return false;
+              return true;
+          });
+      }
+      
+      // The search query filter always runs on the client for all users on the (now smaller) dataset.
+      if (searchQuery) {
+          const lowercasedQuery = searchQuery.toLowerCase();
+          clientFiltered = clientFiltered.filter(nota => {
               const user = userMap.get(nota.userId);
               const nik = user?.nik || '';
-              const isMatch = nota.namaPic.toLowerCase().includes(lowercasedQuery) ||
-                              nota.segmen.toLowerCase().includes(lowercasedQuery) ||
-                              nik.toLowerCase().includes(lowercasedQuery) ||
-                              nota.status.toLowerCase().includes(lowercasedQuery);
-              if (!isMatch) return false;
-          }
-          return true;
-      });
+              return nota.namaPic.toLowerCase().includes(lowercasedQuery) ||
+                     nota.segmen.toLowerCase().includes(lowercasedQuery) ||
+                     nik.toLowerCase().includes(lowercasedQuery) ||
+                     nota.status.toLowerCase().includes(lowercasedQuery);
+          });
+      }
 
-      // Sort results by dateCreated descending, as it's no longer guaranteed by the query for all users.
-      return filtered.sort((a, b) => {
-        const dateA = a.dateCreated?.toDate ? a.dateCreated.toDate().getTime() : 0;
-        const dateB = b.dateCreated?.toDate ? b.dateCreated.toDate().getTime() : 0;
-        return dateB - dateA; // descending order
-      });
-  }, [notas, selectedSA, selectedStatus, searchQuery, userMap]);
+      // Sorting is already handled by the Firestore query `orderBy`.
+      return clientFiltered;
+
+  }, [notas, isAdmin, selectedSA, selectedStatus, searchQuery, userMap]);
 
   const isLoading = isNotasLoading || isUsersLoading || isProfileLoading;
 

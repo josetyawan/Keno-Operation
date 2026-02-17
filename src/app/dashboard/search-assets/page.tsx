@@ -29,7 +29,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Search, ChevronLeft, ChevronRight, MapPin, FolderGit2 } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, doc } from 'firebase/firestore';
+import { collection, query, doc, where, type QueryConstraint } from 'firebase/firestore';
 import type { UserProfile, NetworkAsset, MancoreLink, MapLink } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
@@ -54,6 +54,7 @@ export default function SearchAssetsPage() {
   const ITEMS_PER_PAGE = 10;
 
   const isMitratelView = searchAssetType === 'MITRATEL';
+  const canSearch = searchAssetType !== 'all' || searchServiceArea !== 'all';
 
 
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
@@ -134,41 +135,39 @@ export default function SearchAssetsPage() {
     }
   }, [user, currentUserProfile, isUserLoading, isProfileLoading, router]);
 
-  // Fetch all assets from server, filter on client
+  // Fetch assets from server with server-side filtering
   const assetsQuery = useMemoFirebase(() => {
-    if (isUserLoading || isProfileLoading || !user || !currentUserProfile) {
+    if (isUserLoading || isProfileLoading || !user || !currentUserProfile || !canSearch) {
       return null;
     }
-    // Fetch ALL assets. Filtering will happen on the client for consistency.
-    return query(collection(firestore, 'network-assets'));
-  }, [firestore, currentUserProfile, isUserLoading, isProfileLoading]);
+    
+    const constraints: QueryConstraint[] = [];
+    
+    if (searchAssetType !== 'all') {
+        constraints.push(where('assetType', '==', searchAssetType));
+    }
+    
+    if (searchServiceArea !== 'all') {
+        constraints.push(where('serviceArea', '==', searchServiceArea));
+    }
+
+    return query(collection(firestore, 'network-assets'), ...constraints);
+  }, [firestore, currentUserProfile, isUserLoading, isProfileLoading, searchAssetType, searchServiceArea, canSearch]);
+
 
   const { data: queriedAssets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(assetsQuery);
 
-  // Perform client-side filtering for all filters
+  // Perform client-side filtering for name only
   const filteredAssets = useMemo(() => {
     if (!queriedAssets) return [];
     
-    let assets = queriedAssets;
-
-    // Filter by Asset Type
-    if (searchAssetType !== 'all') {
-        assets = assets.filter(asset => asset.assetType === searchAssetType);
-    }
-    
-    // Filter by Service Area
-    if (searchServiceArea !== 'all') {
-        assets = assets.filter(asset => asset.serviceArea === searchServiceArea);
-    }
-
-    // Filter by name
     const lowercasedSearchName = searchName.toLowerCase().trim();
     if (lowercasedSearchName) {
-        assets = assets.filter(asset => asset.name.toLowerCase().includes(lowercasedSearchName));
+        return queriedAssets.filter(asset => asset.name.toLowerCase().includes(lowercasedSearchName));
     }
     
-    return assets;
-  }, [queriedAssets, searchAssetType, searchServiceArea, searchName]);
+    return queriedAssets;
+  }, [queriedAssets, searchName]);
 
   const totalPages = Math.ceil(filteredAssets.length / ITEMS_PER_PAGE);
 
@@ -185,7 +184,7 @@ export default function SearchAssetsPage() {
 
   const isLoading = isUserLoading || isProfileLoading || areAssetsLoading || areMancoreLinksLoading || areMapLinksLoading;
 
-  if (isLoading && !queriedAssets) {
+  if (isLoading && !queriedAssets && canSearch) {
       return (
           <div>
               <div className="flex items-center justify-between mb-8">
@@ -222,14 +221,14 @@ export default function SearchAssetsPage() {
             Cari & Filter Aset
           </CardTitle>
           <CardDescription>
-            Gunakan filter untuk menemukan aset spesifik.
+            Pilih Jenis Aset atau Service Area untuk memulai pencarian.
           </CardDescription>
         </CardHeader>
         <CardContent>
             <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="grid gap-1.5">
                     <Label htmlFor="search-name">Nama Aset</Label>
-                    <Input id="search-name" placeholder="Cari nama aset..." value={searchName} onChange={(e) => setSearchName(e.target.value)} />
+                    <Input id="search-name" placeholder="Cari nama aset..." value={searchName} onChange={(e) => setSearchName(e.target.value)} disabled={!canSearch}/>
                 </div>
                 <div className="grid gap-1.5">
                     <Label htmlFor="search-type">Jenis Aset</Label>
@@ -292,7 +291,7 @@ export default function SearchAssetsPage() {
         <CardHeader>
           <CardTitle>Daftar Aset</CardTitle>
           <CardDescription>
-            Menampilkan {paginatedAssets.length} dari {filteredAssets.length} aset yang cocok.
+            {canSearch ? `Menampilkan ${paginatedAssets.length} dari ${filteredAssets.length} aset yang cocok.` : 'Pilih filter untuk melihat data.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -313,13 +312,13 @@ export default function SearchAssetsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {areAssetsLoading && paginatedAssets.length === 0 ? (
+              {areAssetsLoading && canSearch ? (
                  Array.from({ length: 5 }).map((_, index) => (
                     <TableRow key={index}>
                         <TableCell colSpan={11}><Skeleton className="h-6 w-full" /></TableCell>
                     </TableRow>
                 ))
-              ) : paginatedAssets.length > 0 ? (
+              ) : paginatedAssets.length > 0 && canSearch ? (
                 paginatedAssets.map(a => {
                   const coords = a.coordinates?.split(',').map(c => c.trim());
                   const googleMapsUrl = coords && coords.length === 2 ? `https://www.google.com/maps/search/?api=1&query=${coords[0]},${coords[1]}` : null;
@@ -349,9 +348,9 @@ export default function SearchAssetsPage() {
               ) : (
                 <TableRow>
                   <TableCell colSpan={11} className="h-24 text-center">
-                    {(searchName || searchAssetType !== 'all' || searchServiceArea !== 'all') 
-                        ? "Tidak ada aset yang cocok dengan filter Anda." 
-                        : "Gunakan filter di atas untuk mencari aset."
+                    {!canSearch 
+                        ? "Silakan pilih Jenis Aset atau Service Area untuk memulai pencarian." 
+                        : "Tidak ada aset yang cocok dengan filter Anda."
                     }
                   </TableCell>
                 </TableRow>
