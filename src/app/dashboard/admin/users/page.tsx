@@ -91,7 +91,7 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
         </div>
         <div className="grid gap-2">
             <Label htmlFor="edit-paymentInfo">Info Pembayaran</Label>
-            <Input id="edit-paymentInfo" value={paymentInfo} onChange={(e) => setPaymentInfo(e.target.value)} />
+            <Input id="edit-paymentInfo" value={paymentInfo} onChange={(e) => setPaymentInfo(e.target.value)} placeholder="e.g., OVO 0812... / BCA 123..."/>
         </div>
         <div className="grid gap-2">
             <Label htmlFor="edit-alker">Alat Kerja (Alker)</Label>
@@ -409,6 +409,7 @@ export default function AdminUsersPage() {
               <TableRow>
                 <TableHead className="w-[250px]">Email</TableHead>
                 <TableHead>NIK</TableHead>
+                <TableHead>Info Pembayaran</TableHead>
                 <TableHead>Peran</TableHead>
                 <TableHead>Jabatan</TableHead>
                 <TableHead>Status</TableHead>
@@ -424,6 +425,7 @@ export default function AdminUsersPage() {
                   <TableRow key={u.id}>
                     <TableCell className="font-medium">{u.email}</TableCell>
                     <TableCell>{u.nik || '-'}</TableCell>
+                    <TableCell>{u.paymentInfo || '-'}</TableCell>
                      <TableCell className="capitalize">
                       <Badge variant={u.role === 'admin' ? 'destructive' : u.role === 'korlap' ? 'secondary' : 'outline'}>
                         {u.role}
@@ -456,7 +458,7 @@ export default function AdminUsersPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center">
+                  <TableCell colSpan={8} className="h-24 text-center">
                     Tidak ada pengguna ditemukan.
                   </TableCell>
                 </TableRow>
