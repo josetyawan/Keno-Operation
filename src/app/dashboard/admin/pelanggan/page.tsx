@@ -156,21 +156,21 @@ function PelangganForm({ pelanggan, onFormSubmit, isSaving }: { pelanggan?: Pela
 
   return (
     <form onSubmit={handleSubmit} className="grid gap-4 py-4">
-      <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="namaPelanggan" className="text-right">Nama</Label>
-        <Input id="namaPelanggan" value={namaPelanggan} onChange={(e) => setNamaPelanggan(e.target.value)} className="col-span-3" placeholder="Nama Pelanggan" required />
+      <div className="grid gap-2">
+        <Label htmlFor="namaPelanggan">Nama</Label>
+        <Input id="namaPelanggan" value={namaPelanggan} onChange={(e) => setNamaPelanggan(e.target.value)} placeholder="Nama Pelanggan" required />
       </div>
-      <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="alamat" className="text-right">Alamat</Label>
-        <Textarea id="alamat" value={alamat} onChange={(e) => setAlamat(e.target.value)} className="col-span-3" placeholder="Alamat lengkap pelanggan" />
+      <div className="grid gap-2">
+        <Label htmlFor="alamat">Alamat</Label>
+        <Textarea id="alamat" value={alamat} onChange={(e) => setAlamat(e.target.value)} placeholder="Alamat lengkap pelanggan" />
       </div>
-       <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="nomorTelepon" className="text-right">No. Telepon</Label>
-        <Input id="nomorTelepon" value={nomorTelepon} onChange={(e) => setNomorTelepon(e.target.value)} className="col-span-3" placeholder="0812..." />
+       <div className="grid gap-2">
+        <Label htmlFor="nomorTelepon">No. Telepon</Label>
+        <Input id="nomorTelepon" value={nomorTelepon} onChange={(e) => setNomorTelepon(e.target.value)} placeholder="0812..." />
       </div>
-      <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="koordinat" className="text-right">Koordinat</Label>
-        <div className="col-span-3 flex items-center gap-2">
+      <div className="grid gap-2">
+        <Label htmlFor="koordinat">Koordinat</Label>
+        <div className="flex items-center gap-2">
             <Input id="koordinat" value={koordinat} onChange={(e) => setKoordinat(e.target.value)} className="flex-grow" placeholder="-7.123, 110.456" required />
             <Button type="button" variant="outline" size="icon" onClick={handleGetLocation} disabled={isGettingLocation} title="Ambil Lokasi Saat Ini">
                 {isGettingLocation ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
@@ -178,10 +178,10 @@ function PelangganForm({ pelanggan, onFormSubmit, isSaving }: { pelanggan?: Pela
             </Button>
         </div>
       </div>
-       <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="serviceArea" className="text-right">Service Area</Label>
+       <div className="grid gap-2">
+        <Label htmlFor="serviceArea">Service Area</Label>
          <Select value={serviceArea} onValueChange={setServiceArea} required>
-            <SelectTrigger className="col-span-3">
+            <SelectTrigger>
               <SelectValue placeholder="Pilih Service Area" />
             </SelectTrigger>
             <SelectContent>
@@ -189,16 +189,14 @@ function PelangganForm({ pelanggan, onFormSubmit, isSaving }: { pelanggan?: Pela
             </SelectContent>
           </Select>
       </div>
-      <div className="grid grid-cols-4 items-start gap-4">
-        <Label htmlFor="fotoCp" className="text-right pt-2">Foto CP</Label>
-        <div className="col-span-3 grid gap-2">
-            <Input id="fotoCp" type="file" onChange={handleFileChange} accept="image/*" />
-            {fotoCpPreview && (
-                <div className="relative w-32 h-32">
-                    <Image src={fotoCpPreview} alt="Preview Foto CP" fill className="rounded-md object-cover" />
-                </div>
-            )}
-        </div>
+      <div className="grid gap-2">
+        <Label htmlFor="fotoCp">Foto CP</Label>
+        <Input id="fotoCp" type="file" onChange={handleFileChange} accept="image/*" />
+        {fotoCpPreview && (
+            <div className="relative w-32 h-32 mt-2">
+                <Image src={fotoCpPreview} alt="Preview Foto CP" fill className="rounded-md object-cover" />
+            </div>
+        )}
       </div>
       <DialogFooter>
         <DialogClose asChild><Button type="button" variant="secondary">Batal</Button></DialogClose>
