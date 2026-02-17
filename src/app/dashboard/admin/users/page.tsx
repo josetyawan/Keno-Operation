@@ -64,18 +64,19 @@ import { Textarea } from '@/components/ui/textarea';
 
 
 function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onFormSubmit: (data: Partial<UserProfile>) => void, isSaving: boolean }) {
-  const [displayName, setDisplayName] = useState(user.displayName || '');
-  const [nik, setNik] = useState(user.nik || '');
-  const [paymentInfo, setPaymentInfo] = useState(user.paymentInfo || '');
-  const [jabatan, setJabatan] = useState(user.jabatan || '');
-  const [alker, setAlker] = useState(user.alker || '');
+  const [displayName, setDisplayName] = useState('');
+  const [nik, setNik] = useState('');
+  const [paymentInfo, setPaymentInfo] = useState('');
+  const [jabatan, setJabatan] = useState('');
+  const [alker, setAlker] = useState('');
   
   // This effect will re-populate the form when the user prop changes.
   useEffect(() => {
     if (user) {
         setDisplayName(user.displayName || '');
         setNik(user.nik || '');
-        setPaymentInfo(user.paymentInfo || '');
+        // Handle backward compatibility for users with the old 'phone' field
+        setPaymentInfo((user as any).paymentInfo || (user as any).phone || '');
         setJabatan(user.jabatan || '');
         setAlker(user.alker || '');
     }
@@ -436,7 +437,7 @@ export default function AdminUsersPage() {
                   <TableRow key={u.id}>
                     <TableCell className="font-medium">{u.email}</TableCell>
                     <TableCell>{u.nik || '-'}</TableCell>
-                    <TableCell>{u.paymentInfo || '-'}</TableCell>
+                    <TableCell>{(u as any).paymentInfo || (u as any).phone || '-'}</TableCell>
                      <TableCell className="capitalize">
                       <Badge variant={u.role === 'admin' ? 'destructive' : u.role === 'korlap' ? 'secondary' : 'outline'}>
                         {u.role}
