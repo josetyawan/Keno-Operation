@@ -140,9 +140,9 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
       jumlahAnak: statusPernikahan === 'menikah' ? Number(jumlahAnak) || 0 : 0,
       tinggiBadan: Number(tinggiBadan) || 0,
       beratBadan: Number(beratBadan) || 0,
-      tanggalLahir: tanggalLahir ? Timestamp.fromDate(tanggalLahir) : null,
-      masaBerlakuSim: masaBerlakuSim ? Timestamp.fromDate(masaBerlakuSim) : null,
-      tanggalMasukKerja: tanggalMasukKerja ? Timestamp.fromDate(tanggalMasukKerja) : null,
+      tanggalLahir: tanggalLahir ? Timestamp.fromDate(tanggalLahir) : undefined,
+      masaBerlakuSim: masaBerlakuSim ? Timestamp.fromDate(masaBerlakuSim) : undefined,
+      tanggalMasukKerja: tanggalMasukKerja ? Timestamp.fromDate(tanggalMasukKerja) : undefined,
     };
     onFormSubmit(updatedData);
   };
