@@ -7,76 +7,51 @@
       "type": "object",
       "description": "Represents a user of the NotaKu application.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the User entity."
+        "id": { "type": "string", "description": "Unique identifier for the User entity." },
+        "email": { "type": "string", "description": "User's email address.", "format": "email" },
+        "firstName": { "type": "string", "description": "User's first name." },
+        "lastName": { "type": "string", "description": "User's last name." },
+        "displayName": { "type": "string", "description": "User's full display name." },
+        "nik": { "type": "string", "description": "User's NIK (Nomor Induk Pegawai - Employee ID Number)." },
+        "paymentInfo": { "type": "string", "description": "Nomor pembayaran pengguna (e-wallet atau rekening bank)." },
+        "jabatan": { "type": "string", "description": "Jabatan atau posisi karyawan, misal: 'Teknisi Fiber Optik'." },
+        "role": { "type": "string", "description": "Peran pengguna dalam sistem.", "enum": ["admin", "korlap", "teknisi"] },
+        "registrationStatus": { "type": "string", "description": "The registration status of the user's account.", "enum": ["pending", "approved"] },
+        "appAccess": { "type": "string", "description": "Defines which application modules the user can access.", "enum": ["nota", "allpro", "all"] },
+        "emailCorporate": { "type": "string", "description": "User's corporate email address.", "format": "email" },
+        "noHpTsel": { "type": "string", "description": "User's active T-Sel phone number." },
+        "jobDescHrmista": { "type": "string", "description": "User's job description in HRMISTA." },
+        "jobDescLapangan": { "type": "string", "description": "User's job description in the field." },
+        "alamat": { "type": "string", "description": "User's home address." },
+        "nikKtp": { "type": "string", "description": "User's NIK from KTP (National ID)." },
+        "noSimA": { "type": "string", "description": "User's SIM A (car) license number." },
+        "noSimC": { "type": "string", "description": "User's SIM C (motorcycle) license number." },
+        "masaBerlakuSim": { "type": "string", "description": "Expiration date of the driver's license.", "format": "date-time" },
+        "golonganDarah": { "type": "string", "description": "User's blood type." },
+        "tanggalMasukKerja": { "type": "string", "description": "User's start date of employment.", "format": "date-time" },
+        "statusPernikahan": { "type": "string", "description": "Marital status.", "enum": ["menikah", "lajang"] },
+        "jumlahAnak": { "type": "number", "description": "Number of children." },
+        "tempatLahir": { "type": "string", "description": "Place of birth." },
+        "tanggalLahir": { "type": "string", "description": "Date of birth.", "format": "date-time" },
+        "tinggiBadan": { "type": "number", "description": "Height in cm." },
+        "beratBadan": { "type": "number", "description": "Weight in kg." },
+        "noBpjsKetenagakerjaan": { "type": "string", "description": "BPJS Ketenagakerjaan number." },
+        "noBpjsKesehatan": { "type": "string", "description": "BPJS Kesehatan number." },
+        "pendidikanTerakhir": {
+          "type": "object",
+          "description": "Last formal education.",
+          "properties": {
+            "institusi": { "type": "string", "description": "Nama institusi/sekolah" },
+            "jurusan": { "type": "string", "description": "Jurusan/Program Studi" },
+            "tahunLulus": { "type": "string", "description": "Tahun kelulusan" }
+          }
         },
-        "email": {
-          "type": "string",
-          "description": "User's email address.",
-          "format": "email"
-        },
-        "firstName": {
-          "type": "string",
-          "description": "User's first name."
-        },
-        "lastName": {
-          "type": "string",
-          "description": "User's last name."
-        },
-        "displayName": {
-          "type": "string",
-          "description": "User's full display name."
-        },
-        "nik": {
-          "type": "string",
-          "description": "User's NIK (Nomor Induk Pegawai - Employee ID Number)."
-        },
-        "paymentInfo": {
-          "type": "string",
-          "description": "Nomor pembayaran pengguna (e-wallet atau rekening bank)."
-        },
-        "jabatan": {
-            "type": "string",
-            "description": "Jabatan atau posisi karyawan, misal: 'Teknisi Fiber Optik'."
-        },
-        "alker": {
-            "type": "string",
-            "description": "Daftar alat kerja yang dimiliki karyawan (teks)."
-        },
-        "role": {
-          "type": "string",
-          "description": "Peran pengguna dalam sistem.",
-          "enum": [
-            "admin",
-            "korlap",
-            "teknisi"
-          ]
-        },
-        "registrationStatus": {
-          "type": "string",
-          "description": "The registration status of the user's account.",
-          "enum": [
-            "pending",
-            "approved"
-          ]
-        },
-        "appAccess": {
-          "type": "string",
-          "description": "Defines which application modules the user can access.",
-          "enum": [
-            "nota",
-            "allpro",
-            "all"
-          ]
-        }
+        "labor": { "type": "string", "description": "Labor information." },
+        "ukuranBaju": { "type": "string", "description": "Shirt size." },
+        "ukuranCelana": { "type": "string", "description": "Pants size." },
+        "ukuranSepatu": { "type": "string", "description": "Shoe size." }
       },
-      "required": [
-        "id",
-        "email",
-        "role",
-        "registrationStatus"
-      ]
+      "required": [ "id", "email", "role", "registrationStatus" ]
     },
     "Nota": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -84,109 +59,27 @@
       "type": "object",
       "description": "Represents a single nota (receipt/report) in the NotaKu application.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Nota entity."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to User. The ID of the user who created the nota."
-        },
-        "userEmail": {
-          "type": "string",
-          "description": "Denormalized email of the user for display purposes."
-        },
-        "tanggal": {
-          "type": "string",
-          "description": "Date of the report.",
-          "format": "date-time"
-        },
-        "segmen": {
-          "type": "string",
-          "description": "The segment/department for the report."
-        },
-        "serviceArea": {
-          "type": "string",
-          "description": "The service area the nota belongs to."
-        },
-        "noPlatKendaraan": {
-          "type": "string",
-          "description": "Vehicle license plate number."
-        },
-        "kmAwal": {
-          "type": "number",
-          "description": "Starting odometer reading."
-        },
-        "kmAkhir": {
-          "type": "number",
-          "description": "Ending odometer reading."
-        },
-        "namaBarang": {
-          "type": "string",
-          "description": "Name of the item or service purchased."
-        },
-        "keterangan": {
-          "type": "string",
-          "description": "Job description or additional details."
-        },
-        "nominal": {
-          "type": "number",
-          "description": "The nominal value/amount of the report."
-        },
-        "namaPic": {
-          "type": "string",
-          "description": "Name of the Person in Charge."
-        },
-        "fotoEvidenUrls": {
-          "type": "array",
-          "description": "A list of URLs for the evidence photos.",
-          "items": {
-            "type": "string",
-            "format": "uri"
-          }
-        },
-        "dateCreated": {
-          "type": "string",
-          "description": "Date and time the nota was created.",
-          "format": "date-time"
-        },
-        "status": {
-          "type": "string",
-          "description": "Verification status of the nota.",
-          "enum": [
-            "pending",
-            "verified",
-            "rejected",
-            "paid"
-          ]
-        },
-        "tanggalVerifikasi": {
-          "type": "string",
-          "description": "Date the nota was verified by an admin.",
-          "format": "date-time"
-        },
-        "rejectionReason": {
-          "type": "string",
-          "description": "Reason why the nota was rejected by an admin."
-        },
-        "tanggalPembayaran": {
-          "type": "string",
-          "description": "Date the nota was paid.",
-          "format": "date-time"
-        }
+        "id": { "type": "string", "description": "Unique identifier for the Nota entity." },
+        "userId": { "type": "string", "description": "Reference to User. The ID of the user who created the nota." },
+        "userEmail": { "type": "string", "description": "Denormalized email of the user for display purposes." },
+        "tanggal": { "type": "string", "description": "Date of the report.", "format": "date-time" },
+        "segmen": { "type": "string", "description": "The segment/department for the report." },
+        "serviceArea": { "type": "string", "description": "The service area the nota belongs to." },
+        "noPlatKendaraan": { "type": "string", "description": "Vehicle license plate number." },
+        "kmAwal": { "type": "number", "description": "Starting odometer reading." },
+        "kmAkhir": { "type": "number", "description": "Ending odometer reading." },
+        "namaBarang": { "type": "string", "description": "Name of the item or service purchased." },
+        "keterangan": { "type": "string", "description": "Job description or additional details." },
+        "nominal": { "type": "number", "description": "The nominal value/amount of the report." },
+        "namaPic": { "type": "string", "description": "Name of the Person in Charge." },
+        "fotoEvidenUrls": { "type": "array", "description": "A list of URLs for the evidence photos.", "items": { "type": "string", "format": "uri" } },
+        "dateCreated": { "type": "string", "description": "Date and time the nota was created.", "format": "date-time" },
+        "status": { "type": "string", "description": "Verification status of the nota.", "enum": ["pending", "verified", "rejected", "paid"] },
+        "tanggalVerifikasi": { "type": "string", "description": "Date the nota was verified by an admin.", "format": "date-time" },
+        "rejectionReason": { "type": "string", "description": "Reason why the nota was rejected by an admin." },
+        "tanggalPembayaran": { "type": "string", "description": "Date the nota was paid.", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "userId",
-        "userEmail",
-        "tanggal",
-        "segmen",
-        "serviceArea",
-        "nominal",
-        "namaPic",
-        "dateCreated",
-        "status"
-      ]
+      "required": ["id", "userId", "userEmail", "tanggal", "segmen", "serviceArea", "nominal", "namaPic", "dateCreated", "status"]
     },
     "ProjectID": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -194,24 +87,11 @@
       "type": "object",
       "description": "Represents a Project ID used in financial reports.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the ProjectID entity."
-        },
-        "projectType": {
-          "type": "string",
-          "description": "The type of project this ID belongs to (e.g., B2B IOAN, PROVISIONING)."
-        },
-        "pid": {
-          "type": "string",
-          "description": "The actual Project ID string (e.g., TIF-215/2026)."
-        }
+        "id": { "type": "string", "description": "Unique identifier for the ProjectID entity." },
+        "projectType": { "type": "string", "description": "The type of project this ID belongs to (e.g., B2B IOAN, PROVISIONING)." },
+        "pid": { "type": "string", "description": "The actual Project ID string (e.g., TIF-215/2026)." }
       },
-      "required": [
-        "id",
-        "projectType",
-        "pid"
-      ]
+      "required": ["id", "projectType", "pid"]
     },
     "NetworkAsset": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -219,94 +99,24 @@
       "type": "object",
       "description": "Represents a single piece of network equipment in a service area.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Network Asset."
-        },
-        "name": {
-          "type": "string",
-          "description": "A unique name or identifier for the asset (e.g., OLT-KDS-01)."
-        },
-        "assetType": {
-          "type": "string",
-          "description": "The main type of the asset.",
-          "enum": [
-            "OLT",
-            "ODC",
-            "ODP",
-            "FTM",
-            "MITRATEL"
-          ]
-        },
-        "subType": {
-          "type": "string",
-          "description": "A subtype for assets like OLT (Mini OLT/OLT) or FTM (EA/OA).",
-          "enum": [
-            "Mini OLT",
-            "OLT",
-            "EA",
-            "OA",
-            "N/A"
-          ]
-        },
-        "serviceArea": {
-          "type": "string",
-          "description": "The service area the asset belongs to."
-        },
-        "sto": {
-          "type": "string",
-          "description": "STO (Sentral Telepon Otomat) location identifier."
-        },
-        "coordinates": {
-          "type": "string",
-          "description": "GPS coordinates of the asset."
-        },
-        "dateAdded": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The date the asset was added."
-        },
-        "kapasitas": {
-          "type": "string",
-          "description": "The capacity of an asset, typically for ODP (e.g., '8', '16')."
-        },
-        "spec": {
-          "type": "string",
-          "description": "The specification or model of an asset, typically for ODC."
-        },
-        "portAvai": {
-          "type": "string",
-          "description": "Available ports, typically for ODP."
-        },
-        "portUsed": {
-          "type": "string",
-          "description": "Used ports, typically for ODP."
-        },
-        "portRsv": {
-          "type": "string",
-          "description": "Reserved ports, typically for ODP."
-        },
-        "portRsk": {
-          "type": "string",
-          "description": "Damaged/Rusak ports, typically for ODP."
-        },
-        "mitratelSiteId": {
-          "type": "string",
-          "description": "Site ID from Mitratel for a Mitratel asset."
-        },
-        "tenantSiteId": {
-          "type": "string",
-          "description": "Tenant Site ID for a Mitratel asset."
-        }
+        "id": { "type": "string", "description": "Unique identifier for the Network Asset." },
+        "name": { "type": "string", "description": "A unique name or identifier for the asset (e.g., OLT-KDS-01)." },
+        "assetType": { "type": "string", "description": "The main type of the asset.", "enum": ["OLT", "ODC", "ODP", "FTM", "MITRATEL"] },
+        "subType": { "type": "string", "description": "A subtype for assets like OLT (Mini OLT/OLT) or FTM (EA/OA).", "enum": ["Mini OLT", "OLT", "EA", "OA", "N/A"] },
+        "serviceArea": { "type": "string", "description": "The service area the asset belongs to." },
+        "sto": { "type": "string", "description": "STO (Sentral Telepon Otomat) location identifier." },
+        "coordinates": { "type": "string", "description": "GPS coordinates of the asset." },
+        "dateAdded": { "type": "string", "format": "date-time", "description": "The date the asset was added." },
+        "kapasitas": { "type": "string", "description": "The capacity of an asset, typically for ODP (e.g., '8', '16')." },
+        "spec": { "type": "string", "description": "The specification or model of an asset, typically for ODC." },
+        "portAvai": { "type": "string", "description": "Available ports, typically for ODP." },
+        "portUsed": { "type": "string", "description": "Used ports, typically for ODP." },
+        "portRsv": { "type": "string", "description": "Reserved ports, typically for ODP." },
+        "portRsk": { "type": "string", "description": "Damaged/Rusak ports, typically for ODP." },
+        "mitratelSiteId": { "type": "string", "description": "Site ID from Mitratel for a Mitratel asset." },
+        "tenantSiteId": { "type": "string", "description": "Tenant Site ID for a Mitratel asset." }
       },
-      "required": [
-        "id",
-        "name",
-        "assetType",
-        "serviceArea",
-        "sto",
-        "dateAdded"
-      ]
+      "required": ["id", "name", "assetType", "serviceArea", "sto", "dateAdded"]
     },
     "MapLink": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -314,25 +124,11 @@
       "type": "object",
       "description": "Stores a Google My Maps link for a specific Service Area.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the MapLink."
-        },
-        "serviceArea": {
-          "type": "string",
-          "description": "The service area the map link belongs to."
-        },
-        "url": {
-          "type": "string",
-          "description": "The URL of the Google My Maps.",
-          "format": "uri"
-        }
+        "id": { "type": "string", "description": "Unique identifier for the MapLink." },
+        "serviceArea": { "type": "string", "description": "The service area the map link belongs to." },
+        "url": { "type": "string", "description": "The URL of the Google My Maps.", "format": "uri" }
       },
-      "required": [
-        "id",
-        "serviceArea",
-        "url"
-      ]
+      "required": ["id", "serviceArea", "url"]
     },
     "MancoreLink": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -340,109 +136,41 @@
       "type": "object",
       "description": "Stores a labeled URL for a specific Service Area, typically linking to external resources like Google Drive.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the MancoreLink."
-        },
-        "serviceArea": {
-          "type": "string",
-          "description": "The service area the link belongs to."
-        },
-        "label": {
-          "type": "string",
-          "description": "A descriptive label for the link (e.g., 'Peta ODP', 'Dokumen Jaringan')."
-        },
-        "url": {
-          "type": "string",
-          "description": "The URL the link points to.",
-          "format": "uri"
-        }
+        "id": { "type": "string", "description": "Unique identifier for the MancoreLink." },
+        "serviceArea": { "type": "string", "description": "The service area the link belongs to." },
+        "label": { "type": "string", "description": "A descriptive label for the link (e.g., 'Peta ODP', 'Dokumen Jaringan')." },
+        "url": { "type": "string", "description": "The URL the link points to.", "format": "uri" }
       },
-      "required": [
-        "id",
-        "serviceArea",
-        "label",
-        "url"
-      ]
+      "required": ["id", "serviceArea", "label", "url"]
     },
     "Pelanggan": {
       "title": "Pelanggan",
       "type": "object",
       "description": "Represents a customer with location and contact information.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Pelanggan."
-        },
-        "userId": {
-          "type": "string",
-          "description": "The ID of the user who created this customer record."
-        },
-        "userEmail": {
-          "type": "string",
-          "description": "The email of the user who created this customer record."
-        },
-        "namaPelanggan": {
-          "type": "string",
-          "description": "Name of the customer."
-        },
-        "alamat": {
-          "type": "string",
-          "description": "Address of the customer."
-        },
-        "nomorTelepon": {
-          "type": "string",
-          "description": "Phone number of the customer."
-        },
-        "koordinat": {
-          "type": "string",
-          "description": "GPS coordinates of the customer's location."
-        },
-        "fotoCpUrl": {
-          "type": "string",
-          "description": "URL of the customer point (CP) photo.",
-          "format": "uri"
-        },
-        "serviceArea": {
-          "type": "string",
-          "description": "The service area the customer belongs to."
-        },
-        "dateAdded": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The date the customer was added."
-        }
+        "id": { "type": "string", "description": "Unique identifier for the Pelanggan." },
+        "userId": { "type": "string", "description": "The ID of the user who created this customer record." },
+        "userEmail": { "type": "string", "description": "The email of the user who created this customer record." },
+        "namaPelanggan": { "type": "string", "description": "Name of the customer." },
+        "alamat": { "type": "string", "description": "Address of the customer." },
+        "nomorTelepon": { "type": "string", "description": "Phone number of the customer." },
+        "koordinat": { "type": "string", "description": "GPS coordinates of the customer's location." },
+        "fotoCpUrl": { "type": "string", "description": "URL of the customer point (CP) photo.", "format": "uri" },
+        "serviceArea": { "type": "string", "description": "The service area the customer belongs to." },
+        "dateAdded": { "type": "string", "format": "date-time", "description": "The date the customer was added." }
       },
-      "required": [
-        "id",
-        "userId",
-        "userEmail",
-        "namaPelanggan",
-        "koordinat",
-        "serviceArea",
-        "dateAdded"
-      ]
+      "required": ["id", "userId", "userEmail", "namaPelanggan", "koordinat", "serviceArea", "dateAdded"]
     },
     "NetworkStats": {
       "title": "Network Statistics",
       "type": "object",
       "description": "A summary document containing aggregated counts of all network assets.",
       "properties": {
-        "id": {
-          "type": "string"
-        },
-        "lastUpdated": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "statsByServiceArea": {
-          "type": "object"
-        }
+        "id": { "type": "string" },
+        "lastUpdated": { "type": "string", "format": "date-time" },
+        "statsByServiceArea": { "type": "object" }
       },
-      "required": [
-        "id",
-        "lastUpdated"
-      ]
+      "required": ["id", "lastUpdated"]
     },
     "Schedule": {
         "title": "Schedule",
@@ -487,169 +215,20 @@
         "required": ["id", "date", "name", "type"]
     }
   },
-  "auth": {
-    "providers": [
-      "password",
-      "anonymous"
-    ]
-  },
+  "auth": { "providers": ["password", "anonymous"] },
   "firestore": {
     "structure": [
-      {
-        "path": "/users/{userId}",
-        "definition": {
-          "entityName": "User",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "Stores user profiles. The 'userId' parameter corresponds to the Firebase Auth UID.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user, matching the Firebase Auth UID."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/notas/{notaId}",
-        "definition": {
-          "entityName": "Nota",
-          "schema": {
-            "$ref": "#/backend/entities/Nota"
-          },
-          "description": "A global collection of all notas from all users. Access is controlled by security rules based on ownership and roles.",
-          "params": [
-            {
-              "name": "notaId",
-              "description": "The unique identifier for the nota."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/project-ids/{projectID}",
-        "definition": {
-          "entityName": "ProjectID",
-          "schema": {
-            "$ref": "#/backend/entities/ProjectID"
-          },
-          "description": "Stores the mapping of project types to their specific Project IDs for reporting.",
-          "params": [
-            {
-              "name": "projectID",
-              "description": "The unique identifier for the Project ID mapping."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/network-assets/{assetId}",
-        "definition": {
-          "entityName": "NetworkAsset",
-          "schema": {
-            "$ref": "#/backend/entities/NetworkAsset"
-          },
-          "description": "Stores all individual network assets across all service areas.",
-          "params": [
-            {
-              "name": "assetId",
-              "description": "The unique identifier for the network asset."
-            }
-          ]
-        }
-      },
-       {
-        "path": "/map-links/{mapLinkId}",
-        "definition": {
-          "entityName": "MapLink",
-          "schema": {
-            "$ref": "#/backend/entities/MapLink"
-          },
-          "description": "Stores the Google My Maps links for each Service Area.",
-          "params": [
-            {
-              "name": "mapLinkId",
-              "description": "The unique identifier for the map link."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/mancore-links/{mancoreLinkId}",
-        "definition": {
-          "entityName": "MancoreLink",
-          "schema": {
-            "$ref": "#/backend/entities/MancoreLink"
-          },
-          "description": "Stores labeled links to external resources (like Google Drive) for each Service Area.",
-          "params": [
-            {
-              "name": "mancoreLinkId",
-              "description": "The unique identifier for the mancore link."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/pelanggan/{pelangganId}",
-        "definition": {
-          "entityName": "Pelanggan",
-          "schema": {
-            "$ref": "#/backend/entities/Pelanggan"
-          },
-          "description": "Stores customer data including location and photos.",
-          "params": [
-            {
-              "name": "pelangganId",
-              "description": "The unique identifier for the customer."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/network-stats/{statId}",
-        "definition": {
-          "entityName": "NetworkStats",
-          "schema": {
-            "$ref": "#/backend/entities/NetworkStats"
-          },
-          "description": "Stores a single document with aggregated network asset statistics.",
-          "params": [
-            {
-              "name": "statId",
-              "description": "The unique identifier for the summary document, typically 'summary'."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/schedules/{scheduleId}",
-        "definition": {
-            "entityName": "Schedule",
-            "schema": {"$ref": "#/backend/entities/Schedule"},
-            "description": "Stores work schedules for users.",
-            "params": [{"name": "scheduleId", "description": "The unique ID for the schedule."}]
-        }
-      },
-      {
-        "path": "/attendances/{attendanceId}",
-        "definition": {
-            "entityName": "Attendance",
-            "schema": {"$ref": "#/backend/entities/Attendance"},
-            "description": "Stores attendance records for scheduled shifts.",
-            "params": [{"name": "attendanceId", "description": "The unique ID for the attendance record."}]
-        }
-      },
-      {
-        "path": "/holidays/{holidayId}",
-        "definition": {
-            "entityName": "Holiday",
-            "schema": {"$ref": "#/backend/entities/Holiday"},
-            "description": "Stores national holidays and collective leave dates.",
-            "params": [{"name": "holidayId", "description": "The unique ID for the holiday."}]
-        }
-      }
+      { "path": "/users/{userId}", "definition": { "entityName": "User", "schema": { "$ref": "#/backend/entities/User" }, "description": "Stores user profiles. The 'userId' parameter corresponds to the Firebase Auth UID.", "params": [{ "name": "userId", "description": "The unique identifier for the user, matching the Firebase Auth UID." }] } },
+      { "path": "/notas/{notaId}", "definition": { "entityName": "Nota", "schema": { "$ref": "#/backend/entities/Nota" }, "description": "A global collection of all notas from all users. Access is controlled by security rules based on ownership and roles.", "params": [{ "name": "notaId", "description": "The unique identifier for the nota." }] } },
+      { "path": "/project-ids/{projectID}", "definition": { "entityName": "ProjectID", "schema": { "$ref": "#/backend/entities/ProjectID" }, "description": "Stores the mapping of project types to their specific Project IDs for reporting.", "params": [{ "name": "projectID", "description": "The unique identifier for the Project ID mapping." }] } },
+      { "path": "/network-assets/{assetId}", "definition": { "entityName": "NetworkAsset", "schema": { "$ref": "#/backend/entities/NetworkAsset" }, "description": "Stores all individual network assets across all service areas.", "params": [{ "name": "assetId", "description": "The unique identifier for the network asset." }] } },
+       { "path": "/map-links/{mapLinkId}", "definition": { "entityName": "MapLink", "schema": { "$ref": "#/backend/entities/MapLink" }, "description": "Stores the Google My Maps links for each Service Area.", "params": [{ "name": "mapLinkId", "description": "The unique identifier for the map link." }] } },
+      { "path": "/mancore-links/{mancoreLinkId}", "definition": { "entityName": "MancoreLink", "schema": { "$ref": "#/backend/entities/MancoreLink" }, "description": "Stores labeled links to external resources (like Google Drive) for each Service Area.", "params": [{ "name": "mancoreLinkId", "description": "The unique identifier for the mancore link." }] } },
+      { "path": "/pelanggan/{pelangganId}", "definition": { "entityName": "Pelanggan", "schema": { "$ref": "#/backend/entities/Pelanggan" }, "description": "Stores customer data including location and photos.", "params": [{ "name": "pelangganId", "description": "The unique identifier for the customer." }] } },
+      { "path": "/network-stats/{statId}", "definition": { "entityName": "NetworkStats", "schema": { "$ref": "#/backend/entities/NetworkStats" }, "description": "Stores a single document with aggregated network asset statistics.", "params": [{ "name": "statId", "description": "The unique identifier for the summary document, typically 'summary'." }] } },
+      { "path": "/schedules/{scheduleId}", "definition": { "entityName": "Schedule", "schema": {"$ref": "#/backend/entities/Schedule"}, "description": "Stores work schedules for users.", "params": [{"name": "scheduleId", "description": "The unique ID for the schedule."}] } },
+      { "path": "/attendances/{attendanceId}", "definition": { "entityName": "Attendance", "schema": {"$ref": "#/backend/entities/Attendance"}, "description": "Stores attendance records for scheduled shifts.", "params": [{"name": "attendanceId", "description": "The unique ID for the attendance record."}] } },
+      { "path": "/holidays/{holidayId}", "definition": { "entityName": "Holiday", "schema": {"$ref": "#/backend/entities/Holiday"}, "description": "Stores national holidays and collective leave dates.", "params": [{"name": "holidayId", "description": "The unique ID for the holiday."}] } }
     ],
     "reasoning": "The data is structured with a top-level `users` collection for profiles and a top-level `notas` collection for all user-generated notes. This flat structure for `notas` simplifies querying, allowing all users to view all notes easily, which aligns with the application's requirements. Security is enforced within the rules: while reads are permissive, writes (create, update, delete) are strictly controlled. A user can only create a nota with their own `userId`, and can only update or delete notas they own. Admins are granted special privileges to update any nota for verification purposes. A `network-assets` collection is added for managing network equipment, with admin-only write access. This design is efficient and secure for the specified use case."
   }

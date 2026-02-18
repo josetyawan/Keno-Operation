@@ -1,4 +1,5 @@
 
+import { Timestamp } from 'firebase/firestore';
 
 export type Nota = {
   id: string;
@@ -22,6 +23,12 @@ export type Nota = {
   tanggalPembayaran?: any;
 };
 
+export type Pendidikan = {
+  institusi?: string;
+  jurusan?: string;
+  tahunLulus?: string;
+};
+
 export type UserProfile = {
     id: string;
     email: string;
@@ -29,12 +36,37 @@ export type UserProfile = {
     lastName?: string;
     displayName?: string;
     role: 'admin' | 'korlap' | 'teknisi';
-    nik?: string;
+    nik?: string; // NIK Karyawan
     paymentInfo?: string;
     jabatan?: string;
-    alker?: string; 
     registrationStatus: 'pending' | 'approved';
     appAccess?: 'nota' | 'allpro' | 'all';
+    
+    // New HR Fields
+    emailCorporate?: string;
+    noHpTsel?: string;
+    jobDescHrmista?: string;
+    jobDescLapangan?: string;
+    alamat?: string;
+    nikKtp?: string;
+    noSimA?: string;
+    noSimC?: string;
+    masaBerlakuSim?: any; // Timestamp
+    golonganDarah?: string;
+    tanggalMasukKerja?: any; // Timestamp
+    statusPernikahan?: 'menikah' | 'lajang';
+    jumlahAnak?: number;
+    tempatLahir?: string;
+    tanggalLahir?: any; // Timestamp
+    tinggiBadan?: number;
+    beratBadan?: number;
+    noBpjsKetenagakerjaan?: string;
+    noBpjsKesehatan?: string;
+    pendidikanTerakhir?: Pendidikan;
+    labor?: string;
+    ukuranBaju?: string;
+    ukuranCelana?: string;
+    ukuranSepatu?: string;
 };
 
 export type ProjectID = {
@@ -131,4 +163,3 @@ export type Attendance = {
     checkInCoordinates: string;
     status: 'present' | 'absent';
 };
-    
