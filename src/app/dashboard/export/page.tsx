@@ -822,8 +822,8 @@ const generateSimpleEvidenReport = (notas: Nota[], title: string): string => {
     const tableRows = notas.map((nota, index) => {
         const notaDate = safeToDate(nota.tanggal);
         const evidenImagesHtml = (nota.fotoEvidenUrls || []).filter((url): url is string => !!url).map(url => 
-             `<div style="width: 120px; margin: 2px; display: inline-block;">
-                <img src="${url}" style="width: 100%; height: auto; object-fit: contain; border: 1px solid #eee; border-radius: 4px;"/>
+             `<div style="display: flex; flex-wrap: wrap; align-items: flex-start;">
+                <img src="${url}" style="width: 100px; height: auto; object-fit: contain; border: 1px solid #eee; border-radius: 4px; margin: 2px;"/>
               </div>`
         ).join('');
         
@@ -1223,7 +1223,7 @@ export default function ExportPage() {
             const jasaNotas = sortedNotas.filter(n => jasaSegments.includes(n.segmen));
             if (jasaNotas.length > 0) {
                 const jasaData = jasaNotas.map((nota, index) => ({
-                    'No': index + 1,
+                     'No': index + 1,
                     'Tanggal': safeToDate(nota.tanggal) ? format(safeToDate(nota.tanggal)!, 'dd/MM/yyyy') : '-',
                     'Keterangan': nota.keterangan || nota.namaBarang || '-',
                     'DPP': nota.nominal / 1.02,
@@ -1324,9 +1324,18 @@ export default function ExportPage() {
                 return;
             }
             
-            const fullHtml = pages.map(page => {
-                return `<div style="page-break-after: always;">${page.html}</div>`;
-            }).join('');
+            const fullHtml = `
+              <!DOCTYPE html>
+              <html lang="id">
+                <head>
+                  <meta charset="UTF-8">
+                  <title>Laporan Nota</title>
+                </head>
+                <body>
+                  ${pages.map(page => `<div style="page-break-after: always;">${page.html}</div>`).join('')}
+                </body>
+              </html>
+            `;
             
             const documentOptions = {
                 margins: {
@@ -1925,6 +1934,7 @@ export default function ExportPage() {
     
 
     
+
 
 
 
