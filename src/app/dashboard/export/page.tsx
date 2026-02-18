@@ -1314,7 +1314,7 @@ export default function ExportPage() {
         }
 
         setIsDownloadingWord(true);
-        toast({ title: "Memulai Unduhan", description: "Mengonversi gambar dan mempersiapkan dokumen di server..." });
+        toast({ title: "Memulai Unduhan", description: "Mempersiapkan dokumen di server..." });
 
         try {
             const pages = generatePages('all');
