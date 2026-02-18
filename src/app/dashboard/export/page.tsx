@@ -862,10 +862,14 @@ function ReportPreview({
   pages,
   onClose,
   onPrint,
+  onDownloadWord,
+  isDownloadingWord,
 }: {
   pages: {html: string, orientation: 'portrait' | 'landscape'}[];
   onClose: () => void;
   onPrint: (orientation: 'portrait' | 'landscape' | 'all') => void;
+  onDownloadWord: () => void;
+  isDownloadingWord: boolean;
 }) {
 
   return (
@@ -875,6 +879,10 @@ function ReportPreview({
           <CardTitle>Pratinjau Laporan</CardTitle>
           <div className="flex gap-2 flex-wrap justify-end">
             <Button variant="outline" onClick={onClose}>Tutup</Button>
+            <Button onClick={onDownloadWord} disabled={isDownloadingWord}>
+                {isDownloadingWord ? <Loader2 className="mr-2 animate-spin"/> : <Download className="mr-2" />}
+                Download Word
+            </Button>
             <Button onClick={() => onPrint('all')}>
               <Files className="mr-2" />
               Cetak Semua
@@ -1308,8 +1316,8 @@ export default function ExportPage() {
     };
     
     const handleWordExport = async () => {
-        if (selectedNotaIds.length === 0) {
-            toast({ variant: "destructive", title: "Tidak ada laporan dipilih", description: "Silakan pilih setidaknya satu laporan untuk diunduh." });
+        if (reportPages.length === 0) {
+            toast({ variant: "destructive", title: "Tidak ada laporan untuk diunduh", description: "Silakan buat pratinjau laporan terlebih dahulu." });
             return;
         }
 
@@ -1317,14 +1325,7 @@ export default function ExportPage() {
         toast({ title: "Memulai Unduhan", description: "Mempersiapkan dokumen di server..." });
 
         try {
-            const pages = generatePages('all');
-            if (pages.length === 0) {
-                toast({ variant: "destructive", title: "Gagal Membuat Dokumen", description: "Tidak ada data untuk dibuatkan laporan." });
-                setIsDownloadingWord(false);
-                return;
-            }
-            
-            const rawHtml = pages.map(page => `<div style="page-break-after: always;">${page.html}</div>`).join('');
+            const rawHtml = reportPages.map(page => `<div style="page-break-after: always;">${page.html}</div>`).join('');
             
             const fullHtml = `
               <!DOCTYPE html>
@@ -1915,10 +1916,6 @@ export default function ExportPage() {
 
                     <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm py-3 mt-auto border-t -mx-6 px-6">
                         <div className="max-w-5xl mx-auto flex justify-around items-center gap-4">
-                             <Button variant="outline" size="lg" onClick={handleWordExport} disabled={isActionInProgress || selectedNotaIds.length === 0}>
-                                {isDownloadingWord ? <Loader2 className="mr-2 animate-spin"/> : <Download className="mr-2" />}
-                                Download Word
-                            </Button>
                              <Button variant="outline" size="lg" onClick={handleExcelExport} disabled={isActionInProgress || selectedNotaIds.length === 0}>
                                 {isExporting ? <Loader2 className="mr-2 animate-spin"/> : <FileSpreadsheet className="mr-2" />}
                                 Export Excel
@@ -1931,7 +1928,7 @@ export default function ExportPage() {
                     </div>
                 </div>
             </div>
-            {reportPages.length > 0 && <ReportPreview pages={reportPages} onClose={() => setReportPages([])} onPrint={handlePrint} />}
+            {reportPages.length > 0 && <ReportPreview pages={reportPages} onClose={() => setReportPages([])} onPrint={handlePrint} onDownloadWord={handleWordExport} isDownloadingWord={isDownloadingWord} />}
         </>
     );
 }
