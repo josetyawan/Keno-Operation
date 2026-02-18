@@ -1314,7 +1314,7 @@ export default function ExportPage() {
         }
 
         setIsDownloadingWord(true);
-        toast({ title: "Memulai Unduhan", description: "Mempersiapkan dokumen Word di server..." });
+        toast({ title: "Memulai Unduhan", description: "Mengonversi gambar dan mempersiapkan dokumen..." });
 
         try {
             const pages = generatePages('all');
@@ -1324,6 +1324,50 @@ export default function ExportPage() {
                 return;
             }
             
+            const rawHtml = pages.map(page => `<div style="page-break-after: always;">${page.html}</div>`).join('');
+
+            // Helper to convert image URLs to base64
+            const convertImagesToBase64 = async (html: string): Promise<string> => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const images = Array.from(doc.getElementsByTagName('img'));
+
+                const imagePromises = images.map(async (img) => {
+                    const src = img.getAttribute('src');
+                    // Only fetch and convert Firebase Storage images
+                    if (src && src.startsWith('https://firebasestorage.googleapis.com')) {
+                        try {
+                            const response = await fetch(src);
+                            if (!response.ok) {
+                                throw new Error(`Gagal mengambil gambar: ${response.statusText}`);
+                            }
+                            const blob = await response.blob();
+                            return new Promise<void>((resolve, reject) => {
+                                const reader = new FileReader();
+                                reader.onloadend = () => {
+                                    // The result is a Data URL (base64)
+                                    img.setAttribute('src', reader.result as string);
+                                    resolve();
+                                };
+                                reader.onerror = (error) => {
+                                    console.error("Kesalahan FileReader:", error);
+                                    reject(new Error("Kesalahan saat membaca file gambar."));
+                                };
+                                reader.readAsDataURL(blob);
+                            });
+                        } catch (error) {
+                            console.error(`Gagal mengubah gambar ke base64: ${src}`, error);
+                            // If fetching fails, we can either remove the image or replace it.
+                        }
+                    }
+                });
+            
+                await Promise.all(imagePromises);
+                return doc.body.innerHTML;
+            };
+
+            const bodyWithBase64Images = await convertImagesToBase64(rawHtml);
+            
             const fullHtml = `
               <!DOCTYPE html>
               <html lang="id">
@@ -1332,14 +1376,14 @@ export default function ExportPage() {
                   <title>Laporan Nota</title>
                 </head>
                 <body>
-                  ${pages.map(page => `<div style="page-break-after: always;">${page.html}</div>`).join('')}
+                  ${bodyWithBase64Images}
                 </body>
               </html>
             `;
             
             const documentOptions = {
                 margins: {
-                    top: 720, // 0.5 inch
+                    top: 720,
                     right: 720,
                     bottom: 720,
                     left: 720,
@@ -1351,6 +1395,10 @@ export default function ExportPage() {
 
             const base64 = await generateDocxAction(fullHtml, documentOptions);
 
+            if (!base64) {
+                throw new Error("Server tidak mengembalikan data file.");
+            }
+
             const byteCharacters = atob(base64);
             const byteNumbers = new Array(byteCharacters.length);
             for (let i = 0; i < byteCharacters.length; i++) {
@@ -1359,14 +1407,13 @@ export default function ExportPage() {
             const byteArray = new Uint8Array(byteNumbers);
             const blob = new Blob([byteArray], {type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
 
-
             saveAs(blob, `Laporan Nota - ${format(new Date(), 'yyyy-MM-dd')}.docx`);
             
             toast({ title: "Unduhan Berhasil!", description: "Dokumen Word Anda telah diunduh." });
 
-        } catch (error) {
-            console.error("Failed to export Word:", error);
-            toast({ variant: "destructive", title: 'Gagal Mengekspor', description: 'Terjadi kesalahan saat membuat dokumen Word.' });
+        } catch (error: any) {
+            console.error("Gagal mengekspor ke Word:", error);
+            toast({ variant: "destructive", title: 'Gagal Mengekspor', description: `Terjadi kesalahan saat membuat dokumen Word: ${error.message}` });
         } finally {
             setIsDownloadingWord(false);
         }
@@ -1934,6 +1981,7 @@ export default function ExportPage() {
     
 
     
+
 
 
 
