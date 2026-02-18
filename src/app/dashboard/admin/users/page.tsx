@@ -95,6 +95,7 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
   const [ukuranBaju, setUkuranBaju] = useState('');
   const [ukuranCelana, setUkuranCelana] = useState('');
   const [ukuranSepatu, setUkuranSepatu] = useState('');
+  const [paymentInfo, setPaymentInfo] = useState('');
   
   useEffect(() => {
     if (user) {
@@ -125,6 +126,7 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
         setUkuranBaju(user.ukuranBaju || '');
         setUkuranCelana(user.ukuranCelana || '');
         setUkuranSepatu(user.ukuranSepatu || '');
+        setPaymentInfo(user.paymentInfo || '');
     }
   }, [user]);
 
@@ -132,7 +134,7 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
     e.preventDefault();
     const updatedData: Partial<UserProfile> = {
       displayName, emailCorporate, nik: nikKaryawan, nikKtp, noHpTsel, jabatan,
-      jobDescHrmista, jobDescLapangan, alamat, tempatLahir, golonganDarah,
+      jobDescHrmista, jobDescLapangan, alamat, tempatLahir, golonganDarah, paymentInfo,
       statusPernikahan, noSimA, noSimC, labor, ukuranBaju, ukuranCelana, ukuranSepatu,
       noBpjsKetenagakerjaan, noBpjsKesehatan, pendidikanTerakhir,
       jumlahAnak: statusPernikahan === 'menikah' ? Number(jumlahAnak) || 0 : 0,
@@ -229,6 +231,7 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
                         </Popover>
                     </div>
                 )}
+                <div className="grid gap-2"><Label htmlFor="paymentInfo">No. Pembayaran (Gaji)</Label><Input id="paymentInfo" value={paymentInfo} onChange={e => setPaymentInfo(e.target.value)} placeholder="e.g., OVO 0812... / BCA 123..." /></div>
              </div>
              <div className="grid md:grid-cols-2 gap-4">
                 <div className="grid gap-2"><Label htmlFor="noBpjsKetenagakerjaan">No. BPJS Ketenagakerjaan</Label><Input id="noBpjsKetenagakerjaan" value={noBpjsKetenagakerjaan} onChange={e => setNoBpjsKetenagakerjaan(e.target.value)} /></div>
@@ -638,3 +641,4 @@ export default function AdminUsersPage() {
 
     
 
+    
