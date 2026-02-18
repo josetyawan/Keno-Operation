@@ -1,7 +1,12 @@
-
 'use server';
 
 import htmlToDocx from 'html-to-docx';
+
+// Helper to escape special characters in a string for use in a RegExp
+function escapeRegExp(string: string) {
+  // $& means the whole matched string
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
 // Helper function to fetch an image and convert it to a base64 data URI
 async function imageToBase64(url: string): Promise<string | null> {
@@ -44,7 +49,8 @@ export async function generateDocxAction(htmlString: string, documentOptions: an
     let htmlWithEmbeddedImages = htmlString;
     urlToBase64Map.forEach((base64, url) => {
         // Use a more specific regex for replacement to avoid replacing parts of other attributes or encoded URLs
-        const regex = new RegExp(`src="${url}"`, 'g');
+        // Crucially, escape the URL to handle special characters like '?' and '&'
+        const regex = new RegExp(`src="${escapeRegExp(url)}"`, 'g');
         htmlWithEmbeddedImages = htmlWithEmbeddedImages.replace(regex, `src="${base64}"`);
     });
 
