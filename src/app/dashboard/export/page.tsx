@@ -1535,30 +1535,54 @@ export default function ExportPage() {
         iframeDoc.write(htmlContent);
         iframeDoc.close();
 
+        // New robust image loading logic
         const images = Array.from(iframeDoc.getElementsByTagName('img'));
-        const imageLoadPromises = images.map(img => new Promise<void>(resolve => {
-            if (img.complete) resolve();
-            else {
+        const imageLoadPromises = images.map(img => {
+            return new Promise<void>((resolve) => {
+                // If the image is already loaded (e.g., from cache) and has valid dimensions, resolve immediately.
+                if (img.complete && img.naturalHeight !== 0) {
+                    resolve();
+                    return;
+                }
+                // Set up listeners for load and error events.
                 img.onload = () => resolve();
-                img.onerror = () => { console.warn(`Could not load image: ${img.src}`); resolve(); };
-            }
-        }));
-
-        Promise.all(imageLoadPromises).then(() => {
-            try {
-                printIframe.contentWindow?.focus();
-                printIframe.contentWindow?.print();
-            } catch (e) {
-                console.error('Print failed:', e);
-                toast({ variant: "destructive", title: "Gagal Mencetak" });
-            } finally {
-                setTimeout(() => {
-                    if (document.body.contains(printIframe)) {
-                        document.body.removeChild(printIframe);
-                    }
-                }, 1000);
-            }
+                // On error, we still resolve so that one broken image doesn't prevent printing the rest.
+                img.onerror = () => {
+                    console.warn(`Gagal memuat gambar untuk dicetak: ${img.src}`);
+                    resolve(); // Resolve anyway to not block printing.
+                };
+            });
         });
+
+        // This function will be called after all images have been processed (loaded or failed).
+        const triggerPrint = () => {
+             try {
+                const iw = printIframe.contentWindow;
+                if (!iw) throw new Error("Iframe window not found");
+                
+                iw.focus();
+                // A small timeout can sometimes help the browser's rendering engine catch up.
+                setTimeout(() => {
+                    iw.print();
+                    // Clean up the iframe after a delay.
+                     setTimeout(() => {
+                        if (document.body.contains(printIframe)) {
+                            document.body.removeChild(printIframe);
+                        }
+                    }, 2000);
+                }, 250); // 250ms buffer
+
+            } catch (e) {
+                console.error('Gagal memulai proses cetak:', e);
+                toast({ variant: "destructive", title: "Gagal Mencetak" });
+                 if (document.body.contains(printIframe)) {
+                    document.body.removeChild(printIframe);
+                 }
+            }
+        };
+
+        // Wait for all image promises to settle.
+        Promise.all(imageLoadPromises).then(triggerPrint);
     };
     
     const handleGenerateReport = (orientation: 'portrait' | 'landscape' | 'all') => {
@@ -1837,5 +1861,6 @@ export default function ExportPage() {
     
 
     
+
 
 
