@@ -473,8 +473,7 @@ export default function AdminUsersPage() {
       user.email?.toLowerCase().includes(lowercasedQuery) ||
       user.displayName?.toLowerCase().includes(lowercasedQuery) ||
       user.nik?.toLowerCase().includes(lowercasedQuery) ||
-      user.nikKtp?.toLowerCase().includes(lowercasedQuery) ||
-      user.noHpTsel?.toLowerCase().includes(lowercasedQuery) ||
+      user.paymentInfo?.toLowerCase().includes(lowercasedQuery) ||
       user.jabatan?.toLowerCase().includes(lowercasedQuery)
     );
   }, [users, searchQuery]);
@@ -545,7 +544,7 @@ export default function AdminUsersPage() {
           </CardDescription>
            <div className="pt-4">
             <Input
-              placeholder="Cari berdasarkan nama, email, NIK, No. HP, atau jabatan..."
+              placeholder="Cari berdasarkan nama, email, NIK, No. Pembayaran, atau jabatan..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="max-w-lg"
@@ -558,8 +557,7 @@ export default function AdminUsersPage() {
               <TableRow>
                 <TableHead>Nama / Email</TableHead>
                 <TableHead>NIK Karyawan</TableHead>
-                <TableHead>NIK KTP</TableHead>
-                <TableHead>No. HP</TableHead>
+                <TableHead>No. Pembayaran</TableHead>
                 <TableHead>Jabatan</TableHead>
                 <TableHead>Peran</TableHead>
                 <TableHead>Status</TableHead>
@@ -578,8 +576,7 @@ export default function AdminUsersPage() {
                         <div className="text-xs text-muted-foreground">{u.email}</div>
                     </TableCell>
                     <TableCell>{u.nik || '-'}</TableCell>
-                    <TableCell>{u.nikKtp || '-'}</TableCell>
-                    <TableCell>{u.noHpTsel || '-'}</TableCell>
+                    <TableCell>{u.paymentInfo || '-'}</TableCell>
                     <TableCell>{u.jabatan || '-'}</TableCell>
                      <TableCell className="capitalize">
                       <Badge variant={u.role === 'admin' ? 'destructive' : u.role === 'korlap' ? 'secondary' : 'outline'}>
@@ -612,7 +609,7 @@ export default function AdminUsersPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={9} className="h-24 text-center">
+                  <TableCell colSpan={8} className="h-24 text-center">
                     Tidak ada pengguna ditemukan.
                   </TableCell>
                 </TableRow>
@@ -640,3 +637,4 @@ export default function AdminUsersPage() {
 }
 
     
+
