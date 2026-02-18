@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -419,6 +420,9 @@ export default function RekapPage() {
                                 selected={verificationDateRange}
                                 onSelect={setVerificationDateRange}
                                 numberOfMonths={2}
+                                captionLayout="dropdown-buttons"
+                                fromYear={new Date().getFullYear() - 5}
+                                toYear={new Date().getFullYear()}
                             />
                         </PopoverContent>
                     </Popover>

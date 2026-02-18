@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -1675,6 +1674,9 @@ export default function ExportPage() {
                                                 selected={dateRange}
                                                 onSelect={setDateRange}
                                                 numberOfMonths={2}
+                                                captionLayout="dropdown-buttons"
+                                                fromYear={new Date().getFullYear() - 5}
+                                                toYear={new Date().getFullYear()}
                                             />
                                         </PopoverContent>
                                     </Popover>
@@ -1713,6 +1715,9 @@ export default function ExportPage() {
                                                 selected={verifiedDateRange}
                                                 onSelect={setVerifiedDateRange}
                                                 numberOfMonths={2}
+                                                captionLayout="dropdown-buttons"
+                                                fromYear={new Date().getFullYear() - 5}
+                                                toYear={new Date().getFullYear()}
                                             />
                                         </PopoverContent>
                                     </Popover>
@@ -1857,3 +1862,5 @@ export default function ExportPage() {
         </>
     );
 }
+
+    

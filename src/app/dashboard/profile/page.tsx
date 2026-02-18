@@ -119,14 +119,14 @@ export default function ProfilePage() {
     };
     
     // Handle conditional fields
-    if (statusPernikahan) updatedData.statusPernikahan = statusPernikahan;
+    if (statusPernikahan) updatedData.statusPernikahan = statusPernikahan; else updatedData.statusPernikahan = userProfile?.statusPernikahan;
     if (statusPernikahan === 'menikah' && jumlahAnak) updatedData.jumlahAnak = Number(jumlahAnak);
     if (tinggiBadan) updatedData.tinggiBadan = Number(tinggiBadan);
     if (beratBadan) updatedData.beratBadan = Number(beratBadan);
-    if (tanggalLahir) updatedData.tanggalLahir = Timestamp.fromDate(tanggalLahir);
-    if (masaBerlakuSimA) updatedData.masaBerlakuSimA = Timestamp.fromDate(masaBerlakuSimA);
-    if (masaBerlakuSimC) updatedData.masaBerlakuSimC = Timestamp.fromDate(masaBerlakuSimC);
-    if (tanggalMasukKerja) updatedData.tanggalMasukKerja = Timestamp.fromDate(tanggalMasukKerja);
+    if (tanggalLahir) updatedData.tanggalLahir = Timestamp.fromDate(tanggalLahir); else if (userProfile?.tanggalLahir) updatedData.tanggalLahir = userProfile.tanggalLahir;
+    if (masaBerlakuSimA) updatedData.masaBerlakuSimA = Timestamp.fromDate(masaBerlakuSimA); else if (userProfile?.masaBerlakuSimA) updatedData.masaBerlakuSimA = userProfile.masaBerlakuSimA;
+    if (masaBerlakuSimC) updatedData.masaBerlakuSimC = Timestamp.fromDate(masaBerlakuSimC); else if (userProfile?.masaBerlakuSimC) updatedData.masaBerlakuSimC = userProfile.masaBerlakuSimC;
+    if (tanggalMasukKerja) updatedData.tanggalMasukKerja = Timestamp.fromDate(tanggalMasukKerja); else if (userProfile?.tanggalMasukKerja) updatedData.tanggalMasukKerja = userProfile.tanggalMasukKerja;
     
     // Filter out undefined properties to prevent Firestore errors
     const dataToUpdate = Object.fromEntries(
@@ -307,3 +307,5 @@ export default function ProfilePage() {
     </form>
   );
 }
+
+    

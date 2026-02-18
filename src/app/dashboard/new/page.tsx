@@ -324,6 +324,9 @@ export default function NewNotaPage() {
                         selected={tanggal}
                         onSelect={setTanggal}
                         initialFocus
+                        captionLayout="dropdown-buttons"
+                        fromYear={new Date().getFullYear() - 5}
+                        toYear={new Date().getFullYear()}
                       />
                     </PopoverContent>
                   </Popover>
@@ -499,3 +502,5 @@ export default function NewNotaPage() {
     </div>
   );
 }
+
+    

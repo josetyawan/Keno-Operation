@@ -82,7 +82,17 @@ function ScheduleForm({ schedule, users, onFormSubmit }: { schedule?: Schedule |
                             {date ? format(date, 'dd MMMM yyyy') : <span>Pilih tanggal</span>}
                         </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={date} onSelect={setDate} initialFocus /></PopoverContent>
+                    <PopoverContent className="w-auto p-0">
+                        <Calendar 
+                            mode="single" 
+                            selected={date} 
+                            onSelect={setDate} 
+                            initialFocus 
+                            captionLayout="dropdown-buttons"
+                            fromYear={new Date().getFullYear() -1}
+                            toYear={new Date().getFullYear() + 1}
+                        />
+                    </PopoverContent>
                 </Popover>
             </div>
             <div className="grid gap-2">

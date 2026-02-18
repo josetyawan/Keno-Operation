@@ -60,7 +60,17 @@ function HolidayForm({ holiday, onFormSubmit }: { holiday?: Holiday | null, onFo
                             {date ? format(date, 'dd MMMM yyyy') : <span>Pilih tanggal</span>}
                         </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={date} onSelect={setDate} initialFocus /></PopoverContent>
+                    <PopoverContent className="w-auto p-0">
+                        <Calendar 
+                            mode="single" 
+                            selected={date} 
+                            onSelect={setDate} 
+                            initialFocus 
+                            captionLayout="dropdown-buttons"
+                            fromYear={new Date().getFullYear() - 5}
+                            toYear={new Date().getFullYear() + 5}
+                        />
+                    </PopoverContent>
                 </Popover>
             </div>
             <div className="grid gap-2">

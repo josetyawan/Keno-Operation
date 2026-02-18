@@ -311,7 +311,19 @@ function EditNotaForm({ nota, isAdmin }: { nota: Nota, isAdmin: boolean }) {
                                         <CalendarIcon className="mr-2 h-4 w-4" />
                                         {tanggal ? format(tanggal, 'dd/MM/yyyy') : <span>Pilih tanggal</span>}
                                     </Button>
-                                </PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={tanggal} onSelect={setTanggal} initialFocus /></PopoverContent></Popover>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0">
+                                    <Calendar 
+                                        mode="single" 
+                                        selected={tanggal} 
+                                        onSelect={setTanggal} 
+                                        initialFocus 
+                                        captionLayout="dropdown-buttons"
+                                        fromYear={new Date().getFullYear() - 5}
+                                        toYear={new Date().getFullYear()}
+                                    />
+                                </PopoverContent>
+                                </Popover>
                                 </div>
                                 <div className="grid gap-3"><Label htmlFor="serviceArea">Service Area *</Label>
                                 <Select onValueChange={setServiceArea} defaultValue={serviceArea} required><SelectTrigger><SelectValue placeholder="Pilih service area" /></SelectTrigger>
@@ -489,3 +501,5 @@ export default function EditNotaPage() {
 
     return <EditNotaForm nota={nota} isAdmin={isAdmin} />;
 }
+
+    

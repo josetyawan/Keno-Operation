@@ -1,3 +1,4 @@
+
 'use client';
 
 import { notFound, useRouter, useParams } from 'next/navigation';
@@ -438,6 +439,9 @@ export default function NotaDetailPage() {
                                       selected={verificationDate}
                                       onSelect={setVerificationDate}
                                       initialFocus
+                                      captionLayout="dropdown-buttons"
+                                      fromYear={new Date().getFullYear() - 1}
+                                      toYear={new Date().getFullYear()}
                                   />
                               </div>
                               <AlertDialogFooter>
