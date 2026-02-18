@@ -36,6 +36,7 @@ export default function ProfilePage() {
   const [nikKaryawan, setNikKaryawan] = useState('');
   const [nikKtp, setNikKtp] = useState('');
   const [noHpTsel, setNoHpTsel] = useState('');
+  const [paymentInfo, setPaymentInfo] = useState('');
   const [jabatan, setJabatan] = useState('');
   const [jobDescHrmista, setJobDescHrmista] = useState('');
   const [jobDescLapangan, setJobDescLapangan] = useState('');
@@ -70,6 +71,7 @@ export default function ProfilePage() {
       setNikKaryawan(userProfile.nik || '');
       setNikKtp(userProfile.nikKtp || '');
       setNoHpTsel(userProfile.noHpTsel || '');
+      setPaymentInfo(userProfile.paymentInfo || '');
       setJabatan(userProfile.jabatan || '');
       setJobDescHrmista(userProfile.jobDescHrmista || '');
       setJobDescLapangan(userProfile.jobDescLapangan || '');
@@ -104,7 +106,7 @@ export default function ProfilePage() {
     
     const updatedData: Partial<UserProfile> = {
       displayName, emailCorporate, nik: nikKaryawan, nikKtp, noHpTsel, jabatan,
-      jobDescHrmista, jobDescLapangan, alamat, tempatLahir, golonganDarah,
+      jobDescHrmista, jobDescLapangan, alamat, tempatLahir, golonganDarah, paymentInfo,
       statusPernikahan, noSimA, noSimC, labor, ukuranBaju, ukuranCelana, ukuranSepatu,
       noBpjsKetenagakerjaan, noBpjsKesehatan, pendidikanTerakhir,
       jumlahAnak: statusPernikahan === 'menikah' ? Number(jumlahAnak) || 0 : 0,
@@ -260,3 +262,4 @@ export default function ProfilePage() {
     </form>
   );
 }
+
