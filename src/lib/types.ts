@@ -43,6 +43,8 @@ export type UserProfile = {
     appAccess?: 'nota' | 'allpro' | 'all';
     
     // New HR Fields
+    telegramId?: string;
+    telegramUsername?: string;
     emailCorporate?: string;
     noHpTsel?: string;
     jobDescHrmista?: string;

@@ -18,6 +18,8 @@
         "role": { "type": "string", "description": "Peran pengguna dalam sistem.", "enum": ["admin", "korlap", "teknisi"] },
         "registrationStatus": { "type": "string", "description": "The registration status of the user's account.", "enum": ["pending", "approved"] },
         "appAccess": { "type": "string", "description": "Defines which application modules the user can access.", "enum": ["nota", "allpro", "all"] },
+        "telegramId": { "type": "string", "description": "User's Telegram Chat ID." },
+        "telegramUsername": { "type": "string", "description": "User's Telegram username (e.g., @username)." },
         "emailCorporate": { "type": "string", "description": "User's corporate email address.", "format": "email" },
         "noHpTsel": { "type": "string", "description": "User's active T-Sel phone number." },
         "jobDescHrmista": { "type": "string", "description": "User's job description in HRMISTA." },

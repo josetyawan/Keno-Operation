@@ -60,6 +60,8 @@ export default function ProfilePage() {
   const [ukuranBaju, setUkuranBaju] = useState('');
   const [ukuranCelana, setUkuranCelana] = useState('');
   const [ukuranSepatu, setUkuranSepatu] = useState('');
+  const [telegramId, setTelegramId] = useState('');
+  const [telegramUsername, setTelegramUsername] = useState('');
   
   const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
   const { data: userProfile, isLoading: isFirestoreLoading } = useDoc<UserProfile>(userDocRef);
@@ -96,6 +98,8 @@ export default function ProfilePage() {
       setUkuranBaju(userProfile.ukuranBaju || '');
       setUkuranCelana(userProfile.ukuranCelana || '');
       setUkuranSepatu(userProfile.ukuranSepatu || '');
+      setTelegramId(userProfile.telegramId || '');
+      setTelegramUsername(userProfile.telegramUsername || '');
     }
   }, [userProfile]);
 
@@ -109,23 +113,24 @@ export default function ProfilePage() {
     const updatedData: Partial<UserProfile> = {
       displayName, emailCorporate, nik: nikKaryawan, nikKtp, noHpTsel, jabatan,
       jobDescHrmista, jobDescLapangan, alamat, tempatLahir, golonganDarah, paymentInfo,
-      statusPernikahan, noSimA, noSimC, labor, ukuranBaju, ukuranCelana, ukuranSepatu,
+      noSimA, noSimC, labor, ukuranBaju, ukuranCelana, ukuranSepatu,
       noBpjsKetenagakerjaan, noBpjsKesehatan, pendidikanTerakhir,
+      telegramId, telegramUsername,
     };
     
-    // Handle numbers
+    // Handle conditional fields
+    if (statusPernikahan) updatedData.statusPernikahan = statusPernikahan;
     if (statusPernikahan === 'menikah' && jumlahAnak) updatedData.jumlahAnak = Number(jumlahAnak);
     if (tinggiBadan) updatedData.tinggiBadan = Number(tinggiBadan);
     if (beratBadan) updatedData.beratBadan = Number(beratBadan);
-    
-    // Handle dates
     if (tanggalLahir) updatedData.tanggalLahir = Timestamp.fromDate(tanggalLahir);
     if (masaBerlakuSimA) updatedData.masaBerlakuSimA = Timestamp.fromDate(masaBerlakuSimA);
     if (masaBerlakuSimC) updatedData.masaBerlakuSimC = Timestamp.fromDate(masaBerlakuSimC);
     if (tanggalMasukKerja) updatedData.tanggalMasukKerja = Timestamp.fromDate(tanggalMasukKerja);
     
+    // Filter out undefined properties to prevent Firestore errors
     const dataToUpdate = Object.fromEntries(
-        Object.entries(updatedData).filter(([_, value]) => value !== undefined)
+        Object.entries(updatedData).filter(([, value]) => value !== undefined)
     );
 
     try {
@@ -205,6 +210,10 @@ export default function ProfilePage() {
                 <div className="grid gap-2"><Label htmlFor="noHpTsel">No. HP Aktif TSEL</Label><Input id="noHpTsel" value={noHpTsel} onChange={e => setNoHpTsel(e.target.value)} /></div>
             </div>
             <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid gap-2"><Label htmlFor="telegramId">ID Telegram</Label><Input id="telegramId" value={telegramId} onChange={e => setTelegramId(e.target.value)} placeholder="Contoh: 123456789" /></div>
+              <div className="grid gap-2"><Label htmlFor="telegramUsername">Username Telegram</Label><Input id="telegramUsername" value={telegramUsername} onChange={e => setTelegramUsername(e.target.value)} placeholder="Contoh: @username" /></div>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
               <div className="grid gap-2"><Label htmlFor="tanggalMasukKerja">Tanggal Masuk Kerja</Label>
                 <Popover><PopoverTrigger asChild><Button variant={'outline'} className={cn('justify-start text-left font-normal', !tanggalMasukKerja && 'text-muted-foreground')}>
                   <CalendarIcon className="mr-2 h-4 w-4" />{tanggalMasukKerja ? format(tanggalMasukKerja, 'dd MMMM yyyy') : <span>Pilih tanggal</span>}</Button></PopoverTrigger>
@@ -224,11 +233,7 @@ export default function ProfilePage() {
           <CardContent className="space-y-6">
             <div className="grid md:grid-cols-2 gap-4">
               <div className="grid gap-2"><Label htmlFor="noSimA">No. SIM A</Label><Input id="noSimA" value={noSimA} onChange={e => setNoSimA(e.target.value)} /></div>
-              <div className="grid gap-2"><Label htmlFor="noSimC">No. SIM C</Label><Input id="noSimC" value={noSimC} onChange={e => setNoSimC(e.target.value)} /></div>
-            </div>
-            
-            <div className="grid md:grid-cols-2 gap-4">
-                {noSimA && (
+              {noSimA && (
                   <div className="grid gap-2">
                     <Label htmlFor="masaBerlakuSimA">Masa Berlaku SIM A</Label>
                     <Popover>
@@ -240,8 +245,11 @@ export default function ProfilePage() {
                         <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={masaBerlakuSimA} onSelect={setMasaBerlakuSimA} captionLayout="dropdown-buttons" fromYear={new Date().getFullYear()} toYear={new Date().getFullYear() + 10} initialFocus /></PopoverContent>
                     </Popover>
                   </div>
-                )}
-                {noSimC && (
+              )}
+            </div>
+             <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid gap-2"><Label htmlFor="noSimC">No. SIM C</Label><Input id="noSimC" value={noSimC} onChange={e => setNoSimC(e.target.value)} /></div>
+               {noSimC && (
                   <div className="grid gap-2">
                     <Label htmlFor="masaBerlakuSimC">Masa Berlaku SIM C</Label>
                     <Popover>

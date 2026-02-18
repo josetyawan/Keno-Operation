@@ -25,7 +25,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
   Dialog,
@@ -97,6 +96,8 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
   const [ukuranCelana, setUkuranCelana] = useState('');
   const [ukuranSepatu, setUkuranSepatu] = useState('');
   const [paymentInfo, setPaymentInfo] = useState('');
+  const [telegramId, setTelegramId] = useState('');
+  const [telegramUsername, setTelegramUsername] = useState('');
   
   useEffect(() => {
     if (user) {
@@ -129,6 +130,8 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
         setUkuranCelana(user.ukuranCelana || '');
         setUkuranSepatu(user.ukuranSepatu || '');
         setPaymentInfo(user.paymentInfo || '');
+        setTelegramId(user.telegramId || '');
+        setTelegramUsername(user.telegramUsername || '');
     }
   }, [user]);
 
@@ -137,14 +140,16 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
     const updatedData: Partial<UserProfile> = {
       displayName, emailCorporate, nik: nikKaryawan, nikKtp, noHpTsel, jabatan,
       jobDescHrmista, jobDescLapangan, alamat, tempatLahir, golonganDarah, paymentInfo,
-      statusPernikahan, noSimA, noSimC, labor, ukuranBaju, ukuranCelana, ukuranSepatu,
+      noSimA, noSimC, labor, ukuranBaju, ukuranCelana, ukuranSepatu,
       noBpjsKetenagakerjaan, noBpjsKesehatan, pendidikanTerakhir,
+      telegramId, telegramUsername,
     };
 
+    // Handle conditional fields
+    if (statusPernikahan) updatedData.statusPernikahan = statusPernikahan;
     if (statusPernikahan === 'menikah' && jumlahAnak) updatedData.jumlahAnak = Number(jumlahAnak);
     if (tinggiBadan) updatedData.tinggiBadan = Number(tinggiBadan);
     if (beratBadan) updatedData.beratBadan = Number(beratBadan);
-    
     if (tanggalLahir) updatedData.tanggalLahir = Timestamp.fromDate(tanggalLahir);
     if (masaBerlakuSimA) updatedData.masaBerlakuSimA = Timestamp.fromDate(masaBerlakuSimA);
     if (masaBerlakuSimC) updatedData.masaBerlakuSimC = Timestamp.fromDate(masaBerlakuSimC);
@@ -202,6 +207,10 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
                 </div>
             </div>
             <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid gap-2"><Label htmlFor="telegramId">ID Telegram</Label><Input id="telegramId" value={telegramId} onChange={e => setTelegramId(e.target.value)} placeholder="Contoh: 123456789" /></div>
+              <div className="grid gap-2"><Label htmlFor="telegramUsername">Username Telegram</Label><Input id="telegramUsername" value={telegramUsername} onChange={e => setTelegramUsername(e.target.value)} placeholder="Contoh: @username" /></div>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
               <div className="grid gap-2"><Label htmlFor="jabatan">Jabatan</Label><Input id="jabatan" value={jabatan} onChange={e => setJabatan(e.target.value)} /></div>
               <div className="grid gap-2"><Label htmlFor="labor">Labor</Label><Input id="labor" value={labor} onChange={e => setLabor(e.target.value)} /></div>
             </div>
@@ -226,11 +235,7 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
           <CardContent className="space-y-6">
             <div className="grid md:grid-cols-2 gap-4">
               <div className="grid gap-2"><Label htmlFor="noSimA">No. SIM A</Label><Input id="noSimA" value={noSimA} onChange={e => setNoSimA(e.target.value)} /></div>
-              <div className="grid gap-2"><Label htmlFor="noSimC">No. SIM C</Label><Input id="noSimC" value={noSimC} onChange={e => setNoSimC(e.target.value)} /></div>
-            </div>
-            
-            <div className="grid md:grid-cols-2 gap-4">
-                {noSimA && (
+              {noSimA && (
                   <div className="grid gap-2">
                     <Label htmlFor="masaBerlakuSimA">Masa Berlaku SIM A</Label>
                     <Popover>
@@ -242,7 +247,11 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
                         <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={masaBerlakuSimA} onSelect={setMasaBerlakuSimA} captionLayout="dropdown-buttons" fromYear={new Date().getFullYear()} toYear={new Date().getFullYear() + 10} initialFocus /></PopoverContent>
                     </Popover>
                   </div>
-                )}
+              )}
+            </div>
+            
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid gap-2"><Label htmlFor="noSimC">No. SIM C</Label><Input id="noSimC" value={noSimC} onChange={e => setNoSimC(e.target.value)} /></div>
                 {noSimC && (
                   <div className="grid gap-2">
                     <Label htmlFor="masaBerlakuSimC">Masa Berlaku SIM C</Label>
@@ -521,6 +530,7 @@ export default function AdminUsersPage() {
     
     const userDocRef = doc(firestore, 'users', userToEdit.id);
 
+    // Filter out undefined properties before sending to Firestore
     const dataToUpdate = Object.fromEntries(
         Object.entries(data).filter(([, value]) => value !== undefined)
     );
