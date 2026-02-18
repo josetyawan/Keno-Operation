@@ -42,7 +42,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { ArrowLeft, Edit, Trash2, Filter, FileArchive, Printer, Calendar as CalendarIcon, Loader2, Files, FileSpreadsheet } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Filter, FileArchive, Printer, Calendar as CalendarIcon, Loader2, Files, FileSpreadsheet, Download } from 'lucide-react';
 import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { format, getMonth, getYear, startOfDay, endOfDay, isValid } from 'date-fns';
@@ -59,6 +59,8 @@ import type { VariantProps } from 'class-variance-authority';
 import { useRouter } from 'next/navigation';
 import { AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
+import htmlToDocx from 'html-to-docx';
 
 
 type ProjectType = 'B2B IOAN' | 'PROVISIONING' | 'SPPG' | 'BBM GENSET' | 'Lainnya' | 'WAREHOUSE';
@@ -768,12 +770,12 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
         const evidenKmAkhirUrl = nota.fotoEvidenUrls?.[6] || undefined;
 
         const keperluanImagesHtml = keperluanImageUrls.map(url =>
-            `<img src="${url}" style="width: 60px; height: auto; object-fit: contain; border: 1px solid #eee;"/>`
+            `<img src="${url}" style="width: 80px; height: auto; object-fit: contain; border: 1px solid #eee;"/>`
         ).join('');
 
         const renderImageCell = (url: string | undefined) => {
-            if (!url) return '<div style="width: 60px; height: 60px;"></div>'; // Keep cell height consistent
-            return `<img src="${url}" style="width: 60px; height: auto; object-fit: contain; margin: auto;"/>`;
+            if (!url) return '<div style="width: 80px; height: 80px;"></div>'; // Keep cell height consistent
+            return `<img src="${url}" style="width: 80px; height: auto; object-fit: contain; margin: auto;"/>`;
         };
         
         const selisih = (nota.kmAkhir != null && nota.kmAwal != null && nota.kmAkhir > nota.kmAwal) ? (nota.kmAkhir - nota.kmAwal) : '';
@@ -819,14 +821,13 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
 const generateSimpleEvidenReport = (notas: Nota[], title: string): string => {
     const tableRows = notas.map((nota, index) => {
         const notaDate = safeToDate(nota.tanggal);
-        // Filter out nulls before creating img tags
         const evidenImagesHtml = (nota.fotoEvidenUrls || []).filter((url): url is string => !!url).map(url => 
-            `<img src="${url}" style="width: 100%; height: auto; object-fit: contain; border: 1px solid #eee; border-radius: 4px;"/>`
+             `<div style="width: 120px; margin: 2px; display: inline-block;">
+                <img src="${url}" style="width: 100%; height: auto; object-fit: contain; border: 1px solid #eee; border-radius: 4px;"/>
+              </div>`
         ).join('');
         
-        // Use a responsive grid that fits as many 140px columns as possible
-        const evidenCellContent = `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 4px; align-items: start;">${evidenImagesHtml}</div>`;
-
+        const evidenCellContent = `<div style="display: flex; flex-wrap: wrap; align-items: flex-start;">${evidenImagesHtml}</div>`;
 
         return `
         <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
@@ -961,6 +962,7 @@ export default function ExportPage() {
     const [reportPages, setReportPages] = useState<{html: string, orientation: 'portrait' | 'landscape'}[]>([]);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
+    const [isDownloadingWord, setIsDownloadingWord] = useState(false);
     
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -1304,6 +1306,51 @@ export default function ExportPage() {
             setIsExporting(false);
         }
     };
+    
+    const handleWordExport = async () => {
+        if (selectedNotaIds.length === 0) {
+            toast({ variant: "destructive", title: "Tidak ada laporan dipilih", description: "Silakan pilih setidaknya satu laporan untuk diunduh." });
+            return;
+        }
+
+        setIsDownloadingWord(true);
+        toast({ title: "Memulai Unduhan", description: "Mempersiapkan dokumen Word..." });
+
+        try {
+            const pages = generatePages('all');
+            if (pages.length === 0) {
+                toast({ variant: "destructive", title: "Gagal Membuat Dokumen", description: "Tidak ada data untuk dibuatkan laporan." });
+                setIsDownloadingWord(false);
+                return;
+            }
+            
+            const fullHtml = pages.map(page => {
+                return `<div style="page-break-after: always;">${page.html}</div>`;
+            }).join('');
+            
+            const blob = await htmlToDocx(fullHtml, undefined, {
+                margins: {
+                    top: 720, // 0.5 inch
+                    right: 720,
+                    bottom: 720,
+                    left: 720,
+                    header: 360,
+                    footer: 360,
+                    gutter: 0,
+                },
+            });
+
+            saveAs(blob, `Laporan Nota - ${format(new Date(), 'yyyy-MM-dd')}.docx`);
+            
+            toast({ title: "Unduhan Berhasil!", description: "Dokumen Word Anda telah diunduh." });
+
+        } catch (error) {
+            console.error("Failed to export Word:", error);
+            toast({ variant: "destructive", title: 'Gagal Mengekspor', description: 'Terjadi kesalahan saat membuat dokumen Word.' });
+        } finally {
+            setIsDownloadingWord(false);
+        }
+    };
 
 
     const generatePages = (orientation: 'portrait' | 'landscape' | 'all') => {
@@ -1593,6 +1640,8 @@ export default function ExportPage() {
         }
         setIsGenerating(false);
     };
+    
+    const isActionInProgress = isGenerating || isExporting || isDownloadingWord;
 
     return (
         <>
@@ -1840,12 +1889,16 @@ export default function ExportPage() {
                     </div>
 
                     <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm py-3 mt-auto border-t -mx-6 px-6">
-                        <div className="max-w-4xl mx-auto flex justify-around items-center gap-4">
-                             <Button variant="outline" size="lg" onClick={handleExcelExport} disabled={isGenerating || isExporting || selectedNotaIds.length === 0}>
+                        <div className="max-w-5xl mx-auto flex justify-around items-center gap-4">
+                             <Button variant="outline" size="lg" onClick={handleWordExport} disabled={isActionInProgress || selectedNotaIds.length === 0}>
+                                {isDownloadingWord ? <Loader2 className="mr-2 animate-spin"/> : <Download className="mr-2" />}
+                                Download Word
+                            </Button>
+                             <Button variant="outline" size="lg" onClick={handleExcelExport} disabled={isActionInProgress || selectedNotaIds.length === 0}>
                                 {isExporting ? <Loader2 className="mr-2 animate-spin"/> : <FileSpreadsheet className="mr-2" />}
                                 Export Excel
                             </Button>
-                            <Button variant="default" size="lg" onClick={() => handleGenerateReport('all')} disabled={isGenerating || isExporting || selectedNotaIds.length === 0}>
+                            <Button variant="default" size="lg" onClick={() => handleGenerateReport('all')} disabled={isActionInProgress || selectedNotaIds.length === 0}>
                                 {isGenerating ? <Loader2 className="mr-2 animate-spin"/> : <Files className="mr-2" />}
                                 Cetak Semua
                             </Button>
@@ -1861,6 +1914,7 @@ export default function ExportPage() {
     
 
     
+
 
 
 
