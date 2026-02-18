@@ -1,60 +1,19 @@
+
 'use server';
 
-import htmlToDocx from 'html-to-docx';
-
-// Helper to escape special characters in a string for use in a RegExp
-function escapeRegExp(string: string) {
-  // $& means the whole matched string
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-// Helper function to fetch an image and convert it to a base64 data URI
-async function imageToBase64(url: string): Promise<string | null> {
-  try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      console.error(`Failed to fetch image: ${response.statusText}`, url);
-      return null;
-    }
-    const contentType = response.headers.get('content-type') || 'image/jpeg';
-    const buffer = await response.arrayBuffer();
-    const base64 = Buffer.from(buffer).toString('base64');
-    return `data:${contentType};base64,${base64}`;
-  } catch (error) {
-    console.error(`Error fetching image ${url}:`, error);
-    return null;
-  }
-}
-
+// Library is dynamically imported below to ensure it's only loaded on the server.
 
 // This function will run on the server and has access to Node.js modules.
 export async function generateDocxAction(htmlString: string, documentOptions: any): Promise<string> {
-    // Find all image URLs in the HTML string
-    const imgRegex = /<img[^>]+src="([^">]+)"/g;
-    const imageUrls = [...htmlString.matchAll(imgRegex)].map(match => match[1]);
-    const uniqueImageUrls = [...new Set(imageUrls)].filter(url => url && url.startsWith('https://firebasestorage.googleapis.com'));
+    // Dynamically import the library INSIDE the server action.
+    // This prevents the module from being bundled into the client-side code.
+    const htmlToDocx = (await import('html-to-docx')).default;
 
-    // Create a map of URL to its base64 representation
-    const urlToBase64Map = new Map<string, string>();
-    const conversionPromises = uniqueImageUrls.map(async (url) => {
-        const dataUri = await imageToBase64(url);
-        if (dataUri) {
-            urlToBase64Map.set(url, dataUri);
-        }
+    const fileBuffer = await htmlToDocx(htmlString, undefined, {
+        ...documentOptions,
+        // The library running on Node.js will fetch these URLs itself.
+        // No need for complex client-side fetching or manual embedding.
     });
-
-    await Promise.all(conversionPromises);
-
-    // Replace all image URLs in the HTML with their base64 data URI
-    let htmlWithEmbeddedImages = htmlString;
-    urlToBase64Map.forEach((base64, url) => {
-        // Use a more specific regex for replacement to avoid replacing parts of other attributes or encoded URLs
-        // Crucially, escape the URL to handle special characters like '?' and '&'
-        const regex = new RegExp(`src="${escapeRegExp(url)}"`, 'g');
-        htmlWithEmbeddedImages = htmlWithEmbeddedImages.replace(regex, `src="${base64}"`);
-    });
-
-    const fileBuffer = await htmlToDocx(htmlWithEmbeddedImages, undefined, documentOptions, undefined);
     
     // On the server, htmlToDocx is expected to return a Buffer.
     if (Buffer.isBuffer(fileBuffer)) {
@@ -66,3 +25,4 @@ export async function generateDocxAction(htmlString: string, documentOptions: an
     const arrayBuffer = await (fileBuffer as Blob).arrayBuffer();
     return Buffer.from(arrayBuffer).toString('base64');
 }
+
