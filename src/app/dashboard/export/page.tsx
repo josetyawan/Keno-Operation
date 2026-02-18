@@ -42,7 +42,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { ArrowLeft, Edit, Trash2, Filter, FileArchive, Printer, Calendar as CalendarIcon, Loader2, Files, FileSpreadsheet, Download } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Filter, FileArchive, Printer, Calendar as CalendarIcon, Loader2, Files, FileSpreadsheet } from 'lucide-react';
 import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { format, getMonth, getYear, startOfDay, endOfDay, isValid } from 'date-fns';
@@ -59,8 +59,6 @@ import type { VariantProps } from 'class-variance-authority';
 import { useRouter } from 'next/navigation';
 import { AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
-import { generateDocxAction } from './actions';
 
 
 type ProjectType = 'B2B IOAN' | 'PROVISIONING' | 'SPPG' | 'BBM GENSET' | 'Lainnya' | 'WAREHOUSE';
@@ -862,14 +860,10 @@ function ReportPreview({
   pages,
   onClose,
   onPrint,
-  onDownloadWord,
-  isDownloadingWord,
 }: {
   pages: {html: string, orientation: 'portrait' | 'landscape'}[];
   onClose: () => void;
   onPrint: (orientation: 'portrait' | 'landscape' | 'all') => void;
-  onDownloadWord: () => void;
-  isDownloadingWord: boolean;
 }) {
 
   return (
@@ -879,10 +873,6 @@ function ReportPreview({
           <CardTitle>Pratinjau Laporan</CardTitle>
           <div className="flex gap-2 flex-wrap justify-end">
             <Button variant="outline" onClick={onClose}>Tutup</Button>
-            <Button onClick={onDownloadWord} disabled={isDownloadingWord}>
-                {isDownloadingWord ? <Loader2 className="mr-2 animate-spin"/> : <Download className="mr-2" />}
-                Download Word
-            </Button>
             <Button onClick={() => onPrint('all')}>
               <Files className="mr-2" />
               Cetak Semua
@@ -970,7 +960,6 @@ export default function ExportPage() {
     const [reportPages, setReportPages] = useState<{html: string, orientation: 'portrait' | 'landscape'}[]>([]);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
-    const [isDownloadingWord, setIsDownloadingWord] = useState(false);
     
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -1315,70 +1304,6 @@ export default function ExportPage() {
         }
     };
     
-    const handleWordExport = async () => {
-        if (reportPages.length === 0) {
-            toast({ variant: "destructive", title: "Tidak ada laporan untuk diunduh", description: "Silakan buat pratinjau laporan terlebih dahulu." });
-            return;
-        }
-
-        setIsDownloadingWord(true);
-        toast({ title: "Memulai Unduhan", description: "Mempersiapkan dokumen di server..." });
-
-        try {
-            const rawHtml = reportPages.map(page => `<div style="page-break-after: always;">${page.html}</div>`).join('');
-            
-            const fullHtml = `
-              <!DOCTYPE html>
-              <html lang="id">
-                <head>
-                  <meta charset="UTF-8">
-                  <title>Laporan Nota</title>
-                </head>
-                <body>
-                  ${rawHtml}
-                </body>
-              </html>
-            `;
-            
-            const documentOptions = {
-                margins: {
-                    top: 720,
-                    right: 720,
-                    bottom: 720,
-                    left: 720,
-                    header: 360,
-                    footer: 360,
-                    gutter: 0,
-                },
-            };
-
-            const base64 = await generateDocxAction(fullHtml, documentOptions);
-
-            if (!base64) {
-                throw new Error("Server tidak mengembalikan data file.");
-            }
-
-            const byteCharacters = atob(base64);
-            const byteNumbers = new Array(byteCharacters.length);
-            for (let i = 0; i < byteCharacters.length; i++) {
-                byteNumbers[i] = byteCharacters.charCodeAt(i);
-            }
-            const byteArray = new Uint8Array(byteNumbers);
-            const blob = new Blob([byteArray], {type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
-
-            saveAs(blob, `Laporan Nota - ${format(new Date(), 'yyyy-MM-dd')}.docx`);
-            
-            toast({ title: "Unduhan Berhasil!", description: "Dokumen Word Anda telah diunduh." });
-
-        } catch (error: any) {
-            console.error("Gagal mengekspor ke Word:", error);
-            toast({ variant: "destructive", title: 'Gagal Mengekspor', description: `Terjadi kesalahan saat membuat dokumen Word: ${error.message}` });
-        } finally {
-            setIsDownloadingWord(false);
-        }
-    };
-
-
     const generatePages = (orientation: 'portrait' | 'landscape' | 'all') => {
         if (selectedNotaIds.length === 0) {
             toast({
@@ -1667,7 +1592,7 @@ export default function ExportPage() {
         setIsGenerating(false);
     };
     
-    const isActionInProgress = isGenerating || isExporting || isDownloadingWord;
+    const isActionInProgress = isGenerating || isExporting;
 
     return (
         <>
@@ -1928,7 +1853,7 @@ export default function ExportPage() {
                     </div>
                 </div>
             </div>
-            {reportPages.length > 0 && <ReportPreview pages={reportPages} onClose={() => setReportPages([])} onPrint={handlePrint} onDownloadWord={handleWordExport} isDownloadingWord={isDownloadingWord} />}
+            {reportPages.length > 0 && <ReportPreview pages={reportPages} onClose={() => setReportPages([])} onPrint={handlePrint} />}
         </>
     );
 }
