@@ -54,7 +54,6 @@ export default function SignupPage() {
           nik: '',
           paymentInfo: '',
           jabatan: '',
-          alker: '',
       };
       
       // Await the database write to ensure it completes before proceeding

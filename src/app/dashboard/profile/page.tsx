@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
@@ -47,7 +48,8 @@ export default function ProfilePage() {
   const [jumlahAnak, setJumlahAnak] = useState('');
   const [noSimA, setNoSimA] = useState('');
   const [noSimC, setNoSimC] = useState('');
-  const [masaBerlakuSim, setMasaBerlakuSim] = useState<Date | undefined>();
+  const [masaBerlakuSimA, setMasaBerlakuSimA] = useState<Date | undefined>();
+  const [masaBerlakuSimC, setMasaBerlakuSimC] = useState<Date | undefined>();
   const [tanggalMasukKerja, setTanggalMasukKerja] = useState<Date | undefined>();
   const [tinggiBadan, setTinggiBadan] = useState('');
   const [beratBadan, setBeratBadan] = useState('');
@@ -82,7 +84,8 @@ export default function ProfilePage() {
       setJumlahAnak(userProfile.jumlahAnak?.toString() || '');
       setNoSimA(userProfile.noSimA || '');
       setNoSimC(userProfile.noSimC || '');
-      setMasaBerlakuSim(userProfile.masaBerlakuSim?.toDate());
+      setMasaBerlakuSimA(userProfile.masaBerlakuSimA?.toDate());
+      setMasaBerlakuSimC(userProfile.masaBerlakuSimC?.toDate());
       setTanggalMasukKerja(userProfile.tanggalMasukKerja?.toDate());
       setTinggiBadan(userProfile.tinggiBadan?.toString() || '');
       setBeratBadan(userProfile.beratBadan?.toString() || '');
@@ -108,17 +111,21 @@ export default function ProfilePage() {
       jobDescHrmista, jobDescLapangan, alamat, tempatLahir, golonganDarah, paymentInfo,
       statusPernikahan, noSimA, noSimC, labor, ukuranBaju, ukuranCelana, ukuranSepatu,
       noBpjsKetenagakerjaan, noBpjsKesehatan, pendidikanTerakhir,
-      jumlahAnak: statusPernikahan === 'menikah' ? Number(jumlahAnak) || undefined : undefined,
-      tinggiBadan: Number(tinggiBadan) || undefined,
-      beratBadan: Number(beratBadan) || undefined,
-      tanggalLahir: tanggalLahir ? Timestamp.fromDate(tanggalLahir) : undefined,
-      masaBerlakuSim: masaBerlakuSim ? Timestamp.fromDate(masaBerlakuSim) : undefined,
-      tanggalMasukKerja: tanggalMasukKerja ? Timestamp.fromDate(tanggalMasukKerja) : undefined,
     };
     
-    // Firestore does not accept `undefined` values. We must clean the object.
+    // Handle numbers
+    if (statusPernikahan === 'menikah' && jumlahAnak) updatedData.jumlahAnak = Number(jumlahAnak);
+    if (tinggiBadan) updatedData.tinggiBadan = Number(tinggiBadan);
+    if (beratBadan) updatedData.beratBadan = Number(beratBadan);
+    
+    // Handle dates
+    if (tanggalLahir) updatedData.tanggalLahir = Timestamp.fromDate(tanggalLahir);
+    if (masaBerlakuSimA) updatedData.masaBerlakuSimA = Timestamp.fromDate(masaBerlakuSimA);
+    if (masaBerlakuSimC) updatedData.masaBerlakuSimC = Timestamp.fromDate(masaBerlakuSimC);
+    if (tanggalMasukKerja) updatedData.tanggalMasukKerja = Timestamp.fromDate(tanggalMasukKerja);
+    
     const dataToUpdate = Object.fromEntries(
-        Object.entries(updatedData).filter(([, value]) => value !== undefined)
+        Object.entries(updatedData).filter(([_, value]) => value !== undefined)
     );
 
     try {
@@ -220,19 +227,34 @@ export default function ProfilePage() {
               <div className="grid gap-2"><Label htmlFor="noSimC">No. SIM C</Label><Input id="noSimC" value={noSimC} onChange={e => setNoSimC(e.target.value)} /></div>
             </div>
             
-            {(noSimA || noSimC) && (
-              <div className="grid gap-2">
-                <Label htmlFor="masaBerlakuSim">Masa Berlaku SIM</Label>
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <Button variant={'outline'} className={cn('justify-start text-left font-normal w-full md:w-1/2', !masaBerlakuSim && 'text-muted-foreground')}>
-                            <CalendarIcon className="mr-2 h-4 w-4" />{masaBerlakuSim ? format(masaBerlakuSim, 'dd MMMM yyyy') : <span>Pilih tanggal</span>}
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={masaBerlakuSim} onSelect={setMasaBerlakuSim} captionLayout="dropdown-buttons" fromYear={new Date().getFullYear()} toYear={new Date().getFullYear() + 10} initialFocus /></PopoverContent>
-                </Popover>
-              </div>
-            )}
+            <div className="grid md:grid-cols-2 gap-4">
+                {noSimA && (
+                  <div className="grid gap-2">
+                    <Label htmlFor="masaBerlakuSimA">Masa Berlaku SIM A</Label>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant={'outline'} className={cn('justify-start text-left font-normal w-full', !masaBerlakuSimA && 'text-muted-foreground')}>
+                                <CalendarIcon className="mr-2 h-4 w-4" />{masaBerlakuSimA ? format(masaBerlakuSimA, 'dd MMMM yyyy') : <span>Pilih tanggal</span>}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={masaBerlakuSimA} onSelect={setMasaBerlakuSimA} captionLayout="dropdown-buttons" fromYear={new Date().getFullYear()} toYear={new Date().getFullYear() + 10} initialFocus /></PopoverContent>
+                    </Popover>
+                  </div>
+                )}
+                {noSimC && (
+                  <div className="grid gap-2">
+                    <Label htmlFor="masaBerlakuSimC">Masa Berlaku SIM C</Label>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant={'outline'} className={cn('justify-start text-left font-normal w-full', !masaBerlakuSimC && 'text-muted-foreground')}>
+                                <CalendarIcon className="mr-2 h-4 w-4" />{masaBerlakuSimC ? format(masaBerlakuSimC, 'dd MMMM yyyy') : <span>Pilih tanggal</span>}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={masaBerlakuSimC} onSelect={setMasaBerlakuSimC} captionLayout="dropdown-buttons" fromYear={new Date().getFullYear()} toYear={new Date().getFullYear() + 10} initialFocus /></PopoverContent>
+                    </Popover>
+                  </div>
+                )}
+            </div>
             
             <div className="grid gap-2">
                 <Label htmlFor="paymentInfo">No. Pembayaran (Gaji)</Label>

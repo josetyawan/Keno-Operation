@@ -51,7 +51,8 @@ export type UserProfile = {
     nikKtp?: string;
     noSimA?: string;
     noSimC?: string;
-    masaBerlakuSim?: any; // Timestamp
+    masaBerlakuSimA?: any; // Timestamp for SIM A
+    masaBerlakuSimC?: any; // Timestamp for SIM C
     golonganDarah?: string;
     tanggalMasukKerja?: any; // Timestamp
     statusPernikahan?: 'menikah' | 'lajang';
