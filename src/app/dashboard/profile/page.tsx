@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
@@ -109,16 +108,21 @@ export default function ProfilePage() {
       jobDescHrmista, jobDescLapangan, alamat, tempatLahir, golonganDarah, paymentInfo,
       statusPernikahan, noSimA, noSimC, labor, ukuranBaju, ukuranCelana, ukuranSepatu,
       noBpjsKetenagakerjaan, noBpjsKesehatan, pendidikanTerakhir,
-      jumlahAnak: statusPernikahan === 'menikah' ? Number(jumlahAnak) || 0 : 0,
-      tinggiBadan: Number(tinggiBadan) || 0,
-      beratBadan: Number(beratBadan) || 0,
+      jumlahAnak: statusPernikahan === 'menikah' ? Number(jumlahAnak) || undefined : undefined,
+      tinggiBadan: Number(tinggiBadan) || undefined,
+      beratBadan: Number(beratBadan) || undefined,
       tanggalLahir: tanggalLahir ? Timestamp.fromDate(tanggalLahir) : undefined,
       masaBerlakuSim: masaBerlakuSim ? Timestamp.fromDate(masaBerlakuSim) : undefined,
       tanggalMasukKerja: tanggalMasukKerja ? Timestamp.fromDate(tanggalMasukKerja) : undefined,
     };
+    
+    // Firestore does not accept `undefined` values. We must clean the object.
+    const dataToUpdate = Object.fromEntries(
+        Object.entries(updatedData).filter(([, value]) => value !== undefined)
+    );
 
     try {
-      await updateDoc(userDocRef, updatedData);
+      await updateDoc(userDocRef, dataToUpdate);
       toast({ title: 'Profil Diperbarui', description: 'Informasi profil Anda telah berhasil disimpan.' });
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -273,5 +277,3 @@ export default function ProfilePage() {
     </form>
   );
 }
-
-    

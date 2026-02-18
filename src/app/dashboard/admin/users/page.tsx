@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -137,9 +136,9 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
       jobDescHrmista, jobDescLapangan, alamat, tempatLahir, golonganDarah, paymentInfo,
       statusPernikahan, noSimA, noSimC, labor, ukuranBaju, ukuranCelana, ukuranSepatu,
       noBpjsKetenagakerjaan, noBpjsKesehatan, pendidikanTerakhir,
-      jumlahAnak: statusPernikahan === 'menikah' ? Number(jumlahAnak) || 0 : 0,
-      tinggiBadan: Number(tinggiBadan) || 0,
-      beratBadan: Number(beratBadan) || 0,
+      jumlahAnak: statusPernikahan === 'menikah' ? Number(jumlahAnak) || undefined : undefined,
+      tinggiBadan: Number(tinggiBadan) || undefined,
+      beratBadan: Number(beratBadan) || undefined,
       tanggalLahir: tanggalLahir ? Timestamp.fromDate(tanggalLahir) : undefined,
       masaBerlakuSim: masaBerlakuSim ? Timestamp.fromDate(masaBerlakuSim) : undefined,
       tanggalMasukKerja: tanggalMasukKerja ? Timestamp.fromDate(tanggalMasukKerja) : undefined,
@@ -499,7 +498,13 @@ export default function AdminUsersPage() {
     setIsSaving(true);
     
     const userDocRef = doc(firestore, 'users', userToEdit.id);
-    updateDocumentNonBlocking(userDocRef, data);
+
+    // Firestore does not accept `undefined` values. We must clean the object.
+    const dataToUpdate = Object.fromEntries(
+        Object.entries(data).filter(([, value]) => value !== undefined)
+    );
+    
+    updateDocumentNonBlocking(userDocRef, dataToUpdate);
     
     toast({
       title: 'User Data Updated',
@@ -647,5 +652,3 @@ export default function AdminUsersPage() {
     </>
   );
 }
-
-    
