@@ -140,9 +140,9 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
       jumlahAnak: statusPernikahan === 'menikah' ? Number(jumlahAnak) || 0 : 0,
       tinggiBadan: Number(tinggiBadan) || 0,
       beratBadan: Number(beratBadan) || 0,
-      tanggalLahir: tanggalLahir ? Timestamp.fromDate(tanggalLahir) : undefined,
-      masaBerlakuSim: masaBerlakuSim ? Timestamp.fromDate(masaBerlakuSim) : undefined,
-      tanggalMasukKerja: tanggalMasukKerja ? Timestamp.fromDate(tanggalMasukKerja) : undefined,
+      tanggalLahir: tanggalLahir ? Timestamp.fromDate(tanggalLahir) : null,
+      masaBerlakuSim: masaBerlakuSim ? Timestamp.fromDate(masaBerlakuSim) : null,
+      tanggalMasukKerja: tanggalMasukKerja ? Timestamp.fromDate(tanggalMasukKerja) : null,
     };
     onFormSubmit(updatedData);
   };
@@ -222,17 +222,26 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
               <div className="grid gap-2"><Label htmlFor="noSimA">No. SIM A</Label><Input id="noSimA" value={noSimA} onChange={e => setNoSimA(e.target.value)} /></div>
               <div className="grid gap-2"><Label htmlFor="noSimC">No. SIM C</Label><Input id="noSimC" value={noSimC} onChange={e => setNoSimC(e.target.value)} /></div>
             </div>
-             <div className="grid md:grid-cols-2 gap-4">
-                {(noSimA || noSimC) && (
-                    <div className="grid gap-2"><Label htmlFor="masaBerlakuSim">Masa Berlaku SIM</Label>
-                        <Popover><PopoverTrigger asChild><Button variant={'outline'} className={cn('justify-start text-left font-normal', !masaBerlakuSim && 'text-muted-foreground')}>
-                        <CalendarIcon className="mr-2 h-4 w-4" />{masaBerlakuSim ? format(masaBerlakuSim, 'dd MMMM yyyy') : <span>Pilih tanggal</span>}</Button></PopoverTrigger>
+            
+            {(noSimA || noSimC) && (
+                <div className="grid gap-2">
+                    <Label htmlFor="masaBerlakuSim">Masa Berlaku SIM</Label>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant={'outline'} className={cn('justify-start text-left font-normal w-full md:w-1/2', !masaBerlakuSim && 'text-muted-foreground')}>
+                                <CalendarIcon className="mr-2 h-4 w-4" />{masaBerlakuSim ? format(masaBerlakuSim, 'dd MMMM yyyy') : <span>Pilih tanggal</span>}
+                            </Button>
+                        </PopoverTrigger>
                         <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={masaBerlakuSim} onSelect={setMasaBerlakuSim} captionLayout="dropdown-buttons" fromYear={new Date().getFullYear()} toYear={new Date().getFullYear() + 10} initialFocus /></PopoverContent>
-                        </Popover>
-                    </div>
-                )}
-                <div className="grid gap-2"><Label htmlFor="paymentInfo">No. Pembayaran (Gaji)</Label><Input id="paymentInfo" value={paymentInfo} onChange={e => setPaymentInfo(e.target.value)} placeholder="e.g., OVO 0812... / BCA 123..." /></div>
-             </div>
+                    </Popover>
+                </div>
+            )}
+            
+            <div className="grid gap-2">
+                <Label htmlFor="paymentInfo">No. Pembayaran (Gaji)</Label>
+                <Input id="paymentInfo" value={paymentInfo} onChange={e => setPaymentInfo(e.target.value)} placeholder="e.g., OVO 0812... / BCA 123..." />
+            </div>
+
              <div className="grid md:grid-cols-2 gap-4">
                 <div className="grid gap-2"><Label htmlFor="noBpjsKetenagakerjaan">No. BPJS Ketenagakerjaan</Label><Input id="noBpjsKetenagakerjaan" value={noBpjsKetenagakerjaan} onChange={e => setNoBpjsKetenagakerjaan(e.target.value)} /></div>
                 <div className="grid gap-2"><Label htmlFor="noBpjsKesehatan">No. BPJS Kesehatan</Label><Input id="noBpjsKesehatan" value={noBpjsKesehatan} onChange={e => setNoBpjsKesehatan(e.target.value)} /></div>
@@ -638,8 +647,3 @@ export default function AdminUsersPage() {
     </>
   );
 }
-
-    
-
-    
-
