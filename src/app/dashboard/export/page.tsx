@@ -60,7 +60,7 @@ import { useRouter } from 'next/navigation';
 import { AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
-import htmlToDocx from 'html-to-docx';
+import { generateDocxAction } from './actions';
 
 
 type ProjectType = 'B2B IOAN' | 'PROVISIONING' | 'SPPG' | 'BBM GENSET' | 'Lainnya' | 'WAREHOUSE';
@@ -1314,7 +1314,7 @@ export default function ExportPage() {
         }
 
         setIsDownloadingWord(true);
-        toast({ title: "Memulai Unduhan", description: "Mempersiapkan dokumen Word..." });
+        toast({ title: "Memulai Unduhan", description: "Mempersiapkan dokumen Word di server..." });
 
         try {
             const pages = generatePages('all');
@@ -1328,7 +1328,7 @@ export default function ExportPage() {
                 return `<div style="page-break-after: always;">${page.html}</div>`;
             }).join('');
             
-            const blob = await htmlToDocx(fullHtml, undefined, {
+            const documentOptions = {
                 margins: {
                     top: 720, // 0.5 inch
                     right: 720,
@@ -1338,7 +1338,18 @@ export default function ExportPage() {
                     footer: 360,
                     gutter: 0,
                 },
-            });
+            };
+
+            const base64 = await generateDocxAction(fullHtml, documentOptions);
+
+            const byteCharacters = atob(base64);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], {type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+
 
             saveAs(blob, `Laporan Nota - ${format(new Date(), 'yyyy-MM-dd')}.docx`);
             
@@ -1914,6 +1925,7 @@ export default function ExportPage() {
     
 
     
+
 
 
 
