@@ -220,12 +220,14 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
               <div className="grid gap-2"><Label htmlFor="noSimC">No. SIM C</Label><Input id="noSimC" value={noSimC} onChange={e => setNoSimC(e.target.value)} /></div>
             </div>
              <div className="grid md:grid-cols-2 gap-4">
-                <div className="grid gap-2"><Label htmlFor="masaBerlakuSim">Masa Berlaku SIM</Label>
-                    <Popover><PopoverTrigger asChild><Button variant={'outline'} className={cn('justify-start text-left font-normal', !masaBerlakuSim && 'text-muted-foreground')}>
-                    <CalendarIcon className="mr-2 h-4 w-4" />{masaBerlakuSim ? format(masaBerlakuSim, 'dd MMMM yyyy') : <span>Pilih tanggal</span>}</Button></PopoverTrigger>
-                    <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={masaBerlakuSim} onSelect={setMasaBerlakuSim} captionLayout="dropdown-buttons" fromYear={new Date().getFullYear()} toYear={new Date().getFullYear() + 10} initialFocus /></PopoverContent>
-                    </Popover>
-                </div>
+                {(noSimA || noSimC) && (
+                    <div className="grid gap-2"><Label htmlFor="masaBerlakuSim">Masa Berlaku SIM</Label>
+                        <Popover><PopoverTrigger asChild><Button variant={'outline'} className={cn('justify-start text-left font-normal', !masaBerlakuSim && 'text-muted-foreground')}>
+                        <CalendarIcon className="mr-2 h-4 w-4" />{masaBerlakuSim ? format(masaBerlakuSim, 'dd MMMM yyyy') : <span>Pilih tanggal</span>}</Button></PopoverTrigger>
+                        <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={masaBerlakuSim} onSelect={setMasaBerlakuSim} captionLayout="dropdown-buttons" fromYear={new Date().getFullYear()} toYear={new Date().getFullYear() + 10} initialFocus /></PopoverContent>
+                        </Popover>
+                    </div>
+                )}
              </div>
              <div className="grid md:grid-cols-2 gap-4">
                 <div className="grid gap-2"><Label htmlFor="noBpjsKetenagakerjaan">No. BPJS Ketenagakerjaan</Label><Input id="noBpjsKetenagakerjaan" value={noBpjsKetenagakerjaan} onChange={e => setNoBpjsKetenagakerjaan(e.target.value)} /></div>
