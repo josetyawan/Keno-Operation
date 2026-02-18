@@ -112,9 +112,9 @@ export default function ProfilePage() {
       jumlahAnak: statusPernikahan === 'menikah' ? Number(jumlahAnak) || 0 : 0,
       tinggiBadan: Number(tinggiBadan) || 0,
       beratBadan: Number(beratBadan) || 0,
-      tanggalLahir: tanggalLahir ? Timestamp.fromDate(tanggalLahir) : null,
-      masaBerlakuSim: masaBerlakuSim ? Timestamp.fromDate(masaBerlakuSim) : null,
-      tanggalMasukKerja: tanggalMasukKerja ? Timestamp.fromDate(tanggalMasukKerja) : null,
+      tanggalLahir: tanggalLahir ? Timestamp.fromDate(tanggalLahir) : undefined,
+      masaBerlakuSim: masaBerlakuSim ? Timestamp.fromDate(masaBerlakuSim) : undefined,
+      tanggalMasukKerja: tanggalMasukKerja ? Timestamp.fromDate(tanggalMasukKerja) : undefined,
     };
 
     try {
@@ -229,7 +229,7 @@ export default function ProfilePage() {
                 </Popover>
               </div>
             )}
-
+            
             <div className="grid gap-2">
                 <Label htmlFor="paymentInfo">No. Pembayaran (Gaji)</Label>
                 <Input id="paymentInfo" value={paymentInfo} onChange={e => setPaymentInfo(e.target.value)} placeholder="e.g., OVO 0812... / BCA 123..." />
@@ -273,3 +273,5 @@ export default function ProfilePage() {
     </form>
   );
 }
+
+    
