@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -32,7 +31,7 @@ import { MoreHorizontal, PlusCircle, Trash2 } from 'lucide-react';
 import { format, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, query, orderBy, doc, where, type QueryConstraint } from 'firebase/firestore';
+import { collection, query, doc, where, type QueryConstraint } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useMemo, useState } from 'react';
@@ -113,13 +112,26 @@ export default function AlkerListPage() {
     const isAdminOrKorlap = userProfile.role === 'admin' || userProfile.role === 'korlap';
 
     if (isAdminOrKorlap) {
-      return query(checklistsCollectionRef, orderBy('dateSubmitted', 'desc'));
+      // Bare query for admin/korlap. Sorting will be done on the client.
+      return query(checklistsCollectionRef);
     }
     
-    return query(checklistsCollectionRef, where('userId', '==', user.uid), orderBy('dateSubmitted', 'desc'));
+    // For regular users, query only their own checklists. Sorting also on client.
+    return query(checklistsCollectionRef, where('userId', '==', user.uid));
   }, [firestore, user, isProfileLoading, userProfile]);
 
   const { data: checklists, isLoading: areChecklistsLoading } = useCollection<AlkerChecklist>(checklistsQuery);
+
+  // Client-side sorting
+  const sortedChecklists = useMemo(() => {
+    if (!checklists) return [];
+    return [...checklists].sort((a, b) => {
+        const timeA = safeToDate(a.dateSubmitted)?.getTime() ?? 0;
+        const timeB = safeToDate(b.dateSubmitted)?.getTime() ?? 0;
+        return timeB - timeA; // Sort descending (newest first)
+    });
+  }, [checklists]);
+
 
   const isLoading = areChecklistsLoading || isProfileLoading || isUserLoading;
   const isAdminOrKorlap = userProfile?.role === 'admin' || userProfile?.role === 'korlap';
@@ -151,7 +163,7 @@ export default function AlkerListPage() {
               <Skeleton className="h-10 w-full mb-2" />
               <Skeleton className="h-10 w-full" />
             </div>
-          ) : checklists && checklists.length > 0 ? (
+          ) : sortedChecklists && sortedChecklists.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -163,7 +175,7 @@ export default function AlkerListPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {checklists.map(checklist => (
+                {sortedChecklists.map(checklist => (
                   <TableRow key={checklist.id}>
                     <TableCell className="font-medium pl-6">{checklist.userName}</TableCell>
                     <TableCell><Badge variant="secondary">{checklist.userJabatan || '-'}</Badge></TableCell>
