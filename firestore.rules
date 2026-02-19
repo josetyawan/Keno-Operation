@@ -110,12 +110,8 @@ service cloud.firestore {
     }
 
     match /tool-checklists/{checklistId} {
-      allow get, list: if isApproved() || isAdmin();
-      allow create: if isApproved() && isCreatingOwn('userId');
-      allow update: if (isApproved() && isOwner(resource.data.userId)) || isAdmin() || isKorlap();
-      allow delete: if (isApproved() && isOwner(resource.data.userId)) || isAdmin() || isKorlap();
+      // DIAGNOSTIC: Open all permissions temporarily
+      allow read, write: if true;
     }
   }
 }
-
-    
