@@ -114,11 +114,32 @@ export default function ProfilePage() {
     setIsSaving(true);
     
     const updatedData: { [key: string]: any } = {
-        displayName, emailCorporate, nik: nikKaryawan, nikKtp, noHpTsel, jabatan,
-        jobDescHrmista, jobDescLapangan, alamat, tempatLahir, golonganDarah, paymentInfo,
-        noSimA, noSimC, labor, ukuranBaju, ukuranCelana, ukuranSepatu,
-        noBpjsKetenagakerjaan, noBpjsKesehatan, pendidikanTerakhir,
-        telegramId, telegramUsername, devisi, unit, psa,
+        displayName,
+        emailCorporate,
+        nik: nikKaryawan,
+        nikKtp,
+        noHpTsel,
+        jabatan,
+        jobDescHrmista,
+        jobDescLapangan,
+        alamat,
+        tempatLahir,
+        golonganDarah,
+        paymentInfo,
+        noSimA,
+        noSimC,
+        labor,
+        ukuranBaju,
+        ukuranCelana,
+        ukuranSepatu,
+        noBpjsKetenagakerjaan,
+        noBpjsKesehatan,
+        pendidikanTerakhir,
+        telegramId,
+        telegramUsername,
+        devisi,
+        unit,
+        psa,
     };
     
     if (statusPernikahan) {

@@ -171,7 +171,6 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
         psa,
     };
     
-    // Only set the field if a value has been selected.
     if (statusPernikahan) {
       updatedData.statusPernikahan = statusPernikahan;
     }
@@ -183,11 +182,9 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
       updatedData.jumlahAnak = 0;
     }
     
-    // Only include numeric values if they are not empty strings.
     if (tinggiBadan) updatedData.tinggiBadan = Number(tinggiBadan);
     if (beratBadan) updatedData.beratBadan = Number(beratBadan);
     
-    // Only include dates if they are defined to avoid overwriting with null.
     if (tanggalLahir) updatedData.tanggalLahir = Timestamp.fromDate(tanggalLahir);
     if (masaBerlakuSimA) updatedData.masaBerlakuSimA = Timestamp.fromDate(masaBerlakuSimA);
     if (masaBerlakuSimC) updatedData.masaBerlakuSimC = Timestamp.fromDate(masaBerlakuSimC);
