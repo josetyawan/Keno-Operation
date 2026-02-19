@@ -110,7 +110,7 @@ service cloud.firestore {
     }
 
     match /tool-checklists/{checklistId} {
-      // READ: Simplified to allow any signed-in user to read, preventing inefficient cross-collection checks on list queries.
+      // READ: Allow any signed-in user to read, preventing inefficient cross-collection checks on list queries.
       allow get, list: if request.auth != null;
       
       // CREATE: An approved user can only create a checklist for themselves.

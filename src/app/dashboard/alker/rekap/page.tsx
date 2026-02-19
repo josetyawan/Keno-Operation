@@ -58,12 +58,11 @@ export default function AlkerRekapPage() {
     const { data: allUsers, isLoading: usersLoading } = useCollection<UserProfile>(usersQuery);
 
     const checklistsQuery = useMemoFirebase(() => {
-        // More robust sequential loading: only query for checklists if the user data has actually been loaded.
         if (!allUsers) {
             return null;
         }
         return query(collection(firestore, 'tool-checklists'));
-    }, [firestore, allUsers]); // Depends on the actual user data, not just the loading flag.
+    }, [firestore, allUsers]);
     const { data: allChecklists, isLoading: checklistsLoading } = useCollection<AlkerChecklist>(checklistsQuery);
 
     const jabatans = useMemo(() => {
@@ -178,7 +177,6 @@ export default function AlkerRekapPage() {
         XLSX.writeFile(workbook, `Rekap_Alker_${selectedJabatan}_${selectedMonth || 'Semua'}.xlsx`);
     };
     
-    // The page is loading if either the users haven't loaded, or the users have loaded but the checklists haven't.
     const isLoading = usersLoading || (allUsers && checklistsLoading);
 
     if (isLoading) {
