@@ -1,24 +1,22 @@
+
 'use client';
 
 import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, Timestamp } from 'firebase/firestore';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Calendar as CalendarIcon } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import type { UserProfile, Pendidikan } from '@/lib/types';
 import { useState, useEffect } from 'react';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { DatePickerDropdowns } from '@/components/ui/date-picker-dropdowns';
 
 export default function ProfilePage() {
   const { user, isUserLoading: isAuthLoading } = useUser();
@@ -109,31 +107,29 @@ export default function ProfilePage() {
     if (!userDocRef) return;
     setIsSaving(true);
     
-    const updatedData: Partial<UserProfile> = {
-      displayName, emailCorporate, nik: nikKaryawan, nikKtp, noHpTsel, jabatan,
-      jobDescHrmista, jobDescLapangan, alamat, tempatLahir, golonganDarah, paymentInfo,
-      noSimA, noSimC, labor, ukuranBaju, ukuranCelana, ukuranSepatu,
-      noBpjsKetenagakerjaan, noBpjsKesehatan, pendidikanTerakhir,
-      telegramId, telegramUsername,
+    const updatedData: { [key: string]: any } = {
+        displayName, emailCorporate, nik: nikKaryawan, nikKtp, noHpTsel, jabatan,
+        jobDescHrmista, jobDescLapangan, alamat, tempatLahir, golonganDarah, paymentInfo,
+        noSimA, noSimC, labor, ukuranBaju, ukuranCelana, ukuranSepatu,
+        noBpjsKetenagakerjaan, noBpjsKesehatan, pendidikanTerakhir,
+        telegramId, telegramUsername,
     };
     
-    // Handle conditional fields
     if (statusPernikahan) updatedData.statusPernikahan = statusPernikahan;
+    
     if (statusPernikahan === 'menikah' && jumlahAnak) updatedData.jumlahAnak = Number(jumlahAnak);
+    else if (statusPernikahan !== 'menikah') updatedData.jumlahAnak = 0;
+    
     if (tinggiBadan) updatedData.tinggiBadan = Number(tinggiBadan);
     if (beratBadan) updatedData.beratBadan = Number(beratBadan);
+    
     if (tanggalLahir) updatedData.tanggalLahir = Timestamp.fromDate(tanggalLahir);
     if (masaBerlakuSimA) updatedData.masaBerlakuSimA = Timestamp.fromDate(masaBerlakuSimA);
     if (masaBerlakuSimC) updatedData.masaBerlakuSimC = Timestamp.fromDate(masaBerlakuSimC);
     if (tanggalMasukKerja) updatedData.tanggalMasukKerja = Timestamp.fromDate(tanggalMasukKerja);
-    
-    // Filter out undefined properties to prevent Firestore errors
-    const dataToUpdate = Object.fromEntries(
-        Object.entries(updatedData).filter(([, value]) => value !== undefined)
-    );
 
     try {
-      await updateDoc(userDocRef, dataToUpdate);
+      await updateDoc(userDocRef, updatedData);
       toast({ title: 'Profil Diperbarui', description: 'Informasi profil Anda telah berhasil disimpan.' });
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -177,10 +173,12 @@ export default function ProfilePage() {
             <div className="grid md:grid-cols-2 gap-4">
               <div className="grid gap-2"><Label htmlFor="tempatLahir">Tempat Lahir</Label><Input id="tempatLahir" value={tempatLahir} onChange={e => setTempatLahir(e.target.value)} /></div>
               <div className="grid gap-2"><Label htmlFor="tanggalLahir">Tanggal Lahir</Label>
-                <Popover><PopoverTrigger asChild><Button variant={'outline'} className={cn('justify-start text-left font-normal', !tanggalLahir && 'text-muted-foreground')}>
-                  <CalendarIcon className="mr-2 h-4 w-4" />{tanggalLahir ? format(tanggalLahir, 'dd MMMM yyyy') : <span>Pilih tanggal</span>}</Button></PopoverTrigger>
-                  <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={tanggalLahir} onSelect={setTanggalLahir} captionLayout="dropdown-buttons" fromYear={1950} toYear={new Date().getFullYear()} initialFocus /></PopoverContent>
-                </Popover>
+                <DatePickerDropdowns
+                  value={tanggalLahir}
+                  onChange={setTanggalLahir}
+                  fromYear={1950}
+                  toYear={new Date().getFullYear()}
+                />
               </div>
             </div>
             <div className="grid gap-2"><Label htmlFor="alamat">Alamat Sesuai KTP</Label><Textarea id="alamat" value={alamat} onChange={e => setAlamat(e.target.value)} /></div>
@@ -214,10 +212,12 @@ export default function ProfilePage() {
             </div>
             <div className="grid md:grid-cols-2 gap-4">
               <div className="grid gap-2"><Label htmlFor="tanggalMasukKerja">Tanggal Masuk Kerja</Label>
-                <Popover><PopoverTrigger asChild><Button variant={'outline'} className={cn('justify-start text-left font-normal', !tanggalMasukKerja && 'text-muted-foreground')}>
-                  <CalendarIcon className="mr-2 h-4 w-4" />{tanggalMasukKerja ? format(tanggalMasukKerja, 'dd MMMM yyyy') : <span>Pilih tanggal</span>}</Button></PopoverTrigger>
-                  <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={tanggalMasukKerja} onSelect={setTanggalMasukKerja} captionLayout="dropdown-buttons" fromYear={2000} toYear={new Date().getFullYear()} initialFocus /></PopoverContent>
-                </Popover>
+                 <DatePickerDropdowns
+                    value={tanggalMasukKerja}
+                    onChange={setTanggalMasukKerja}
+                    fromYear={2000}
+                    toYear={new Date().getFullYear()}
+                  />
               </div>
               <div className="grid gap-2"><Label htmlFor="jabatan">Jabatan</Label><Input id="jabatan" value={jabatan} onChange={e => setJabatan(e.target.value)} /></div>
             </div>
@@ -239,14 +239,12 @@ export default function ProfilePage() {
               {noSimA && (
                   <div className="grid gap-2">
                     <Label htmlFor="masaBerlakuSimA">Masa Berlaku SIM A</Label>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button variant={'outline'} className={cn('justify-start text-left font-normal w-full', !masaBerlakuSimA && 'text-muted-foreground')}>
-                                <CalendarIcon className="mr-2 h-4 w-4" />{masaBerlakuSimA ? format(masaBerlakuSimA, 'dd MMMM yyyy') : <span>Pilih tanggal</span>}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={masaBerlakuSimA} onSelect={setMasaBerlakuSimA} captionLayout="dropdown-buttons" fromYear={new Date().getFullYear()} toYear={new Date().getFullYear() + 10} initialFocus /></PopoverContent>
-                    </Popover>
+                    <DatePickerDropdowns
+                        value={masaBerlakuSimA}
+                        onChange={setMasaBerlakuSimA}
+                        fromYear={new Date().getFullYear()}
+                        toYear={new Date().getFullYear() + 10}
+                    />
                   </div>
               )}
             </div>
@@ -255,14 +253,12 @@ export default function ProfilePage() {
                {noSimC && (
                   <div className="grid gap-2">
                     <Label htmlFor="masaBerlakuSimC">Masa Berlaku SIM C</Label>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button variant={'outline'} className={cn('justify-start text-left font-normal w-full', !masaBerlakuSimC && 'text-muted-foreground')}>
-                                <CalendarIcon className="mr-2 h-4 w-4" />{masaBerlakuSimC ? format(masaBerlakuSimC, 'dd MMMM yyyy') : <span>Pilih tanggal</span>}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={masaBerlakuSimC} onSelect={setMasaBerlakuSimC} captionLayout="dropdown-buttons" fromYear={new Date().getFullYear()} toYear={new Date().getFullYear() + 10} initialFocus /></PopoverContent>
-                    </Popover>
+                     <DatePickerDropdowns
+                        value={masaBerlakuSimC}
+                        onChange={setMasaBerlakuSimC}
+                        fromYear={new Date().getFullYear()}
+                        toYear={new Date().getFullYear() + 10}
+                    />
                   </div>
                 )}
             </div>
