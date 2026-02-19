@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 
 interface DatePickerDropdownsProps {
@@ -26,9 +26,9 @@ export function DatePickerDropdowns({
   const fromYear = fromYearProp || currentYear - 100;
   const toYear = toYearProp || currentYear;
 
-  const [day, setDay] = React.useState<string | undefined>(value ? String(value.getDate()) : undefined);
-  const [month, setMonth] = React.useState<string | undefined>(value ? String(value.getMonth()) : undefined);
-  const [year, setYear] = React.useState<string | undefined>(value ? String(value.getFullYear()) : undefined);
+  const [day, setDay] = React.useState<string | undefined>(value && isValid(value) ? String(value.getDate()) : undefined);
+  const [month, setMonth] = React.useState<string | undefined>(value && isValid(value) ? String(value.getMonth()) : undefined);
+  const [year, setYear] = React.useState<string | undefined>(value && isValid(value) ? String(value.getFullYear()) : undefined);
 
   // When the external value changes, update internal state
   React.useEffect(() => {
