@@ -38,8 +38,8 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow create: if request.auth.uid == userId && request.resource.data.email is string && request.resource.data.role == 'teknisi' && request.resource.data.registrationStatus == 'pending';
-      allow get: if isOwner(userId);
-      allow list, get: if isAdmin();
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isSignedIn();
       allow update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin() && request.auth.uid != userId;
     }
@@ -52,62 +52,68 @@ service cloud.firestore {
     }
 
     match /project-ids/{projectId} {
-      allow get, list: if isApproved() || isAdmin();
+      allow get: if isApproved() || isAdmin();
+      allow list: if isSignedIn();
       allow create, update, delete: if isAdmin();
     }
 
     match /network-assets/{assetId} {
-      allow get, list: if hasAllProAccess() || isKorlap();
+      allow get: if hasAllProAccess() || isKorlap();
+      allow list: if isSignedIn();
       allow create, update, delete: if isAdmin();
     }
 
     match /pelanggan/{pelangganId} {
-      allow get, list: if hasAllProAccess() || isKorlap();
+      allow get: if hasAllProAccess() || isKorlap();
+      allow list: if isSignedIn();
       allow create: if isKorlap() || (hasAllProAccess() && isCreatingOwn('userId'));
       allow update: if isKorlap() || (hasAllProAccess() && isUpdatingOwn('userId')) || isAdmin();
       allow delete: if isAdmin() || isKorlap();
     }
 
     match /map-links/{mapLinkId} {
-      allow get, list: if hasAllProAccess() || isKorlap();
+      allow get: if hasAllProAccess() || isKorlap();
+      allow list: if isSignedIn();
       allow create, update, delete: if isAdmin();
     }
 
     match /mancore-links/{mancoreLinkId} {
-      allow get, list: if hasAllProAccess() || isKorlap();
+      allow get: if hasAllProAccess() || isKorlap();
+      allow list: if isSignedIn();
       allow create, update, delete: if isAdmin();
     }
 
     match /network-stats/{statId} {
-      allow get, list: if hasAllProAccess() || isKorlap();
+      allow get: if hasAllProAccess() || isKorlap();
+      allow list: if isSignedIn();
       allow write: if isAdmin();
     }
 
     match /holidays/{holidayId} {
-      allow get, list: if isApproved();
+      allow get: if isApproved();
+      allow list: if isSignedIn();
       allow write: if isAdmin();
     }
 
     match /schedules/{scheduleId} {
       allow get: if isOwner(resource.data.userId) || isAdmin() || isKorlap();
-      allow list: if isAdmin() || isKorlap();
+      allow list: if isSignedIn();
       allow write: if isAdmin() || isKorlap();
     }
 
     match /attendances/{attendanceId} {
       allow get: if isOwner(resource.data.userId) || isAdmin() || isKorlap();
-      allow list: if isAdmin() || isKorlap();
+      allow list: if isSignedIn();
       allow create: if isCreatingOwn('userId');
       allow update, delete: if isAdmin();
     }
 
     match /alker-checklists/{checklistId} {
       allow get: if isOwner(resource.data.userId) || isAdmin() || isKorlap();
-      allow list: if isAdmin() || isKorlap();
+      allow list: if isSignedIn();
       allow create: if isApproved() && isCreatingOwn('userId');
       allow update: if (isApproved() && isUpdatingOwn('userId')) || isAdmin() || isKorlap();
       allow delete: if isAdmin() || isKorlap();
     }
   }
 }
-
