@@ -110,12 +110,9 @@ service cloud.firestore {
     }
 
     match /alker-checklists/{checklistId} {
-      // READ: Simplified rule to prevent query conflicts. Any authenticated user can read.
-      allow get, list: if isSignedIn();
-      
-      // WRITE rules remain secure
-      allow create: if isApproved() && isCreatingOwn('userId');
-      allow update, delete: if (isApproved() && isUpdatingOwn('userId')) || isAdmin() || isKorlap();
+      // DIAGNOSTIC STEP: Simplify all rules for this path to isolate the issue.
+      // This is temporarily insecure for testing purposes.
+      allow read, write: if isSignedIn();
     }
   }
 }
