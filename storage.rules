@@ -4,36 +4,16 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
   
-    // Default public read for all files to allow image display in the app
-    match /{allPaths=**} {
-      allow read: if true;
-    }
-    
-    // Secure write rules for specific folders.
-    // The check `request.auth.uid == userId` implicitly ensures request.auth is not null.
-    // This is a more concise and standard way to write this rule.
-    
-    match /profile-pictures/{userId}/{fileName} {
-      allow write: if request.auth.uid == userId;
-    }
-    
-    match /notas/{userId}/{fileName} {
-      allow write: if request.auth.uid == userId;
-    }
-    
-    match /pelanggan/{userId}/{fileName} {
+    // Generic rule for user-owned folders.
+    // This covers 'notas', 'profile-pictures', 'pelanggan', 'hr_attendance', 'alker-photos'.
+    match /{folder}/{userId}/{fileName}
+      where folder in ['notas', 'profile-pictures', 'pelanggan', 'hr_attendance', 'alker-photos'] {
       allow write: if request.auth.uid == userId;
     }
 
-    match /hr_attendance/{userId}/{fileName} {
-      allow write: if request.auth.uid == userId;
-    }
-    
-    match /alker-photos/{userId}/{fileName} {
-      // Allow any authenticated user to write to a user-specific folder.
-      // This is slightly less secure than checking for ownership, but it's a
-      // robust workaround for the persistent permission issues in this environment.
-      allow write: if request.auth != null;
+    // Default public read for all files to allow image display in the app.
+    match /{allPaths=**} {
+      allow read: if true;
     }
   }
 }
