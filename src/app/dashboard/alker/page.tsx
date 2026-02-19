@@ -98,7 +98,7 @@ const safeToDate = (timestamp: any): Date | null => {
 
 export default function AlkerListPage() {
   const firestore = useFirestore();
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const router = useRouter();
 
   const userProfileRef = useMemoFirebase(() => {
@@ -106,25 +106,21 @@ export default function AlkerListPage() {
   }, [user, firestore]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
-  const isAdminOrKorlap = useMemo(() => userProfile?.role === 'admin' || userProfile?.role === 'korlap', [userProfile]);
-
   const checklistsQuery = useMemoFirebase(() => {
-    if (isProfileLoading || !user) return null;
-    const checklistsCollectionRef = collection(firestore, 'alker-checklists');
+    if (isProfileLoading || !user || !userProfile) return null;
     
-    // For admins/korlaps, fetch all documents without sorting.
+    const checklistsCollectionRef = collection(firestore, 'alker-checklists');
+    const isAdminOrKorlap = userProfile.role === 'admin' || userProfile.role === 'korlap';
+
     if (isAdminOrKorlap) {
       return query(checklistsCollectionRef);
     }
     
-    // For regular users, fetch only their documents, also without server-side sorting.
     return query(checklistsCollectionRef, where('userId', '==', user.uid));
-  }, [firestore, user, isProfileLoading, isAdminOrKorlap]);
-
+  }, [firestore, user, isProfileLoading, userProfile]);
 
   const { data: checklistsFromQuery, isLoading: areChecklistsLoading } = useCollection<AlkerChecklist>(checklistsQuery);
   
-  // Sort data on the client-side for all users.
   const checklists = useMemo(() => {
     if (!checklistsFromQuery) return null;
     return [...checklistsFromQuery].sort((a, b) => {
@@ -134,8 +130,8 @@ export default function AlkerListPage() {
     });
   }, [checklistsFromQuery]);
 
-
-  const isLoading = areChecklistsLoading || isProfileLoading;
+  const isLoading = areChecklistsLoading || isProfileLoading || isUserLoading;
+  const isAdminOrKorlap = userProfile?.role === 'admin' || userProfile?.role === 'korlap';
 
   return (
     <>
@@ -211,3 +207,4 @@ export default function AlkerListPage() {
   );
 }
 
+    
