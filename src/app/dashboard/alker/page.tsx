@@ -120,8 +120,8 @@ export default function AlkerListPage() {
       return query(checklistsCollectionRef);
     }
     
-    // For regular users, fetch only their documents, sorted by date.
-    return query(checklistsCollectionRef, where('userId', '==', userProfile.id), orderBy('dateSubmitted', 'desc'));
+    // For regular users, fetch only their documents. Sorting is handled on the client.
+    return query(checklistsCollectionRef, where('userId', '==', userProfile.id));
   }, [firestore, userProfile, isProfileLoading]);
 
   const { data: checklists, isLoading: areChecklistsLoading } = useCollection<AlkerChecklist>(checklistsQuery);
