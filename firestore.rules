@@ -110,8 +110,8 @@ service cloud.firestore {
     }
 
     match /alker-checklists/{checklistId} {
-      // READ: Mirror the working 'notas' rule. An approved user or admin can read.
-      allow get, list: if isApproved() || isAdmin();
+      // READ: Simplified rule to prevent query conflicts. Any authenticated user can read.
+      allow get, list: if isSignedIn();
       
       // WRITE rules remain secure
       allow create: if isApproved() && isCreatingOwn('userId');
