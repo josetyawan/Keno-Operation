@@ -143,11 +143,32 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const updatedData: { [key: string]: any } = {
-        displayName, emailCorporate, nik: nikKaryawan, nikKtp, noHpTsel, jabatan,
-        jobDescHrmista, jobDescLapangan, alamat, tempatLahir, golonganDarah, paymentInfo,
-        noSimA, noSimC, labor, ukuranBaju, ukuranCelana, ukuranSepatu,
-        noBpjsKetenagakerjaan, noBpjsKesehatan, pendidikanTerakhir,
-        telegramId, telegramUsername, devisi, unit, psa,
+        displayName,
+        emailCorporate,
+        nik: nikKaryawan,
+        nikKtp,
+        noHpTsel,
+        jabatan,
+        jobDescHrmista,
+        jobDescLapangan,
+        alamat,
+        tempatLahir,
+        golonganDarah,
+        paymentInfo,
+        noSimA,
+        noSimC,
+        labor,
+        ukuranBaju,
+        ukuranCelana,
+        ukuranSepatu,
+        noBpjsKetenagakerjaan,
+        noBpjsKesehatan,
+        pendidikanTerakhir,
+        telegramId,
+        telegramUsername,
+        devisi,
+        unit,
+        psa,
     };
     
     // Only set the field if a value has been selected.
