@@ -111,23 +111,26 @@ export default function AlkerListPage() {
   const checklistsQuery = useMemoFirebase(() => {
     if (isProfileLoading || !user) return null;
     const checklistsCollectionRef = collection(firestore, 'alker-checklists');
+    
+    // For admins/korlaps, fetch all documents without sorting.
     if (isAdminOrKorlap) {
-      // Remove orderBy from server query to fix permission issue
       return query(checklistsCollectionRef);
     }
-    // Keep orderBy for user query as it's more specific and less likely to cause issues
-    return query(checklistsCollectionRef, where('userId', '==', user.uid), orderBy('dateSubmitted', 'desc'));
+    
+    // For regular users, fetch only their documents, also without server-side sorting.
+    return query(checklistsCollectionRef, where('userId', '==', user.uid));
   }, [firestore, user, isProfileLoading, isAdminOrKorlap]);
+
 
   const { data: checklistsFromQuery, isLoading: areChecklistsLoading } = useCollection<AlkerChecklist>(checklistsQuery);
   
-  // Sort data on the client-side
+  // Sort data on the client-side for all users.
   const checklists = useMemo(() => {
     if (!checklistsFromQuery) return null;
     return [...checklistsFromQuery].sort((a, b) => {
         const dateA = safeToDate(a.dateSubmitted)?.getTime() || 0;
         const dateB = safeToDate(b.dateSubmitted)?.getTime() || 0;
-        return dateB - dateA; // Sort descending
+        return dateB - dateA; // Sort descending (newest first)
     });
   }, [checklistsFromQuery]);
 
@@ -207,3 +210,4 @@ export default function AlkerListPage() {
     </>
   );
 }
+
