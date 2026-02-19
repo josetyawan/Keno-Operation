@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -11,8 +12,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Loader2, Upload, X, Wrench } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
-import { useFirestore, addDocumentNonBlocking, useUser, useStorage, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, serverTimestamp, query, orderBy, doc } from 'firebase/firestore';
+import { useFirestore, useUser, useStorage, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, serverTimestamp, query, orderBy, doc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import type { AlkerChecklist, AlkerTool, UserProfile } from '@/lib/types';
@@ -130,7 +131,6 @@ export default function NewAlkerPage() {
       const toolDataWithUrls: AlkerTool[] = [];
 
       const uploadPhoto = async (file: File) => {
-          // WORKAROUND: Save to 'notas' folder instead of 'alker-photos' to bypass permission issue.
           const filePath = `notas/${user.uid}/alker-${Date.now()}-${file.name}`;
           const storageRef = ref(storage, filePath);
           await uploadBytes(storageRef, file);
@@ -163,21 +163,26 @@ export default function NewAlkerPage() {
       }
 
       const selectedCrew = users?.find(u => u.id === data.crewUserId);
+      
+      // Use the user's UID as the document ID to ensure one document per user
+      const checklistDocRef = doc(firestore, 'tool-checklists', user.uid);
 
-      const newChecklist: Omit<AlkerChecklist, 'id'> = {
+      const checklistData: AlkerChecklist = {
+        id: user.uid,
         userId: user.uid,
         userEmail: user.email!,
         userName: currentUserProfile.displayName || user.email!,
         userJabatan: currentUserProfile.jabatan || 'N/A',
-        crewUserId: selectedCrew?.id || '',
+        crewUserId: data.crewUserId,
         crewUserName: selectedCrew?.displayName || '',
         dateSubmitted: serverTimestamp(),
         tools: toolDataWithUrls,
       };
 
-      await addDocumentNonBlocking(collection(firestore, 'tool-checklists'), newChecklist);
+      // Use setDoc with merge to create or update the document
+      await setDoc(checklistDocRef, checklistData, { merge: true });
 
-      toast({ title: 'Sukses', description: 'Laporan pengecekan alker berhasil disimpan.' });
+      toast({ title: 'Sukses', description: 'Laporan pengecekan alker berhasil disimpan/diperbarui.' });
       router.push('/dashboard/alker');
 
     } catch (error) {
@@ -326,3 +331,5 @@ export default function NewAlkerPage() {
     </div>
   );
 }
+
+    
