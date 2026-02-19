@@ -32,7 +32,7 @@
         "masaBerlakuSimC": { "type": "string", "description": "Expiration date of the SIM C driver's license.", "format": "date-time" },
         "golonganDarah": { "type": "string", "description": "User's blood type." },
         "tanggalMasukKerja": { "type": "string", "description": "User's start date of employment.", "format": "date-time" },
-        "statusPernikahan": { "type": "string", "description": "Marital status.", "enum": ["menikah", "lajang"] },
+        "statusPernikahan": { "type": "string", "description": "Marital status.", "enum": ["menikah", "lajang", "duda", "janda"] },
         "jumlahAnak": { "type": "number", "description": "Number of children." },
         "tempatLahir": { "type": "string", "description": "Place of birth." },
         "tanggalLahir": { "type": "string", "description": "Date of birth.", "format": "date-time" },

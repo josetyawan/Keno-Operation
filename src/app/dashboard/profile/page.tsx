@@ -41,7 +41,7 @@ export default function ProfilePage() {
   const [tempatLahir, setTempatLahir] = useState('');
   const [tanggalLahir, setTanggalLahir] = useState<Date | undefined>();
   const [golonganDarah, setGolonganDarah] = useState('');
-  const [statusPernikahan, setStatusPernikahan] = useState<'menikah' | 'lajang' | undefined>();
+  const [statusPernikahan, setStatusPernikahan] = useState<'menikah' | 'lajang' | 'duda' | 'janda' | undefined>();
   const [jumlahAnak, setJumlahAnak] = useState('');
   const [noSimA, setNoSimA] = useState('');
   const [noSimC, setNoSimC] = useState('');
@@ -116,9 +116,13 @@ export default function ProfilePage() {
     };
     
     if (statusPernikahan) updatedData.statusPernikahan = statusPernikahan;
-    
-    if (statusPernikahan === 'menikah' && jumlahAnak) updatedData.jumlahAnak = Number(jumlahAnak);
-    else if (statusPernikahan !== 'menikah') updatedData.jumlahAnak = 0;
+
+    const hasChildren = ['menikah', 'duda', 'janda'].includes(statusPernikahan || '');
+    if (hasChildren && jumlahAnak) {
+      updatedData.jumlahAnak = Number(jumlahAnak);
+    } else if (!hasChildren) {
+      updatedData.jumlahAnak = 0;
+    }
     
     if (tinggiBadan) updatedData.tinggiBadan = Number(tinggiBadan);
     if (beratBadan) updatedData.beratBadan = Number(beratBadan);
@@ -185,13 +189,15 @@ export default function ProfilePage() {
             <div className="grid md:grid-cols-2 gap-4">
               <div className="grid gap-2"><Label htmlFor="golonganDarah">Golongan Darah</Label><Input id="golonganDarah" value={golonganDarah} onChange={e => setGolonganDarah(e.target.value)} /></div>
               <div className="grid gap-2"><Label>Status Pernikahan</Label>
-                <RadioGroup value={statusPernikahan} onValueChange={(value: 'menikah' | 'lajang') => setStatusPernikahan(value)} className="flex items-center space-x-4">
+                <RadioGroup value={statusPernikahan} onValueChange={(value: any) => setStatusPernikahan(value)} className="flex items-center space-x-4 flex-wrap">
                   <div className="flex items-center space-x-2"><RadioGroupItem value="lajang" id="lajang" /><Label htmlFor="lajang">Lajang</Label></div>
                   <div className="flex items-center space-x-2"><RadioGroupItem value="menikah" id="menikah" /><Label htmlFor="menikah">Menikah</Label></div>
+                  <div className="flex items-center space-x-2"><RadioGroupItem value="duda" id="duda" /><Label htmlFor="duda">Duda</Label></div>
+                  <div className="flex items-center space-x-2"><RadioGroupItem value="janda" id="janda" /><Label htmlFor="janda">Janda</Label></div>
                 </RadioGroup>
               </div>
             </div>
-            {statusPernikahan === 'menikah' && <div className="grid gap-2"><Label htmlFor="jumlahAnak">Jumlah Anak</Label><Input id="jumlahAnak" type="number" value={jumlahAnak} onChange={e => setJumlahAnak(e.target.value)} /></div>}
+            {['menikah', 'duda', 'janda'].includes(statusPernikahan || '') && <div className="grid gap-2"><Label htmlFor="jumlahAnak">Jumlah Anak</Label><Input id="jumlahAnak" type="number" value={jumlahAnak} onChange={e => setJumlahAnak(e.target.value)} /></div>}
           </CardContent>
         </Card>
 

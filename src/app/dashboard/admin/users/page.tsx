@@ -77,7 +77,7 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
   const [tempatLahir, setTempatLahir] = useState('');
   const [tanggalLahir, setTanggalLahir] = useState<Date | undefined>();
   const [golonganDarah, setGolonganDarah] = useState('');
-  const [statusPernikahan, setStatusPernikahan] = useState<'menikah' | 'lajang' | undefined>();
+  const [statusPernikahan, setStatusPernikahan] = useState<'menikah' | 'lajang' | 'duda' | 'janda' | undefined>();
   const [jumlahAnak, setJumlahAnak] = useState('');
   const [noSimA, setNoSimA] = useState('');
   const [noSimC, setNoSimC] = useState('');
@@ -146,8 +146,12 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
     // Handle optional fields to avoid overwriting with undefined
     if (statusPernikahan) updatedData.statusPernikahan = statusPernikahan;
     
-    if (statusPernikahan === 'menikah' && jumlahAnak) updatedData.jumlahAnak = Number(jumlahAnak);
-    else if (statusPernikahan !== 'menikah') updatedData.jumlahAnak = 0; // Reset if not married
+    const hasChildren = ['menikah', 'duda', 'janda'].includes(statusPernikahan || '');
+    if (hasChildren && jumlahAnak) {
+      updatedData.jumlahAnak = Number(jumlahAnak);
+    } else if (!hasChildren) {
+      updatedData.jumlahAnak = 0;
+    }
     
     if (tinggiBadan) updatedData.tinggiBadan = Number(tinggiBadan);
     if (beratBadan) updatedData.beratBadan = Number(beratBadan);
@@ -185,13 +189,15 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
             <div className="grid md:grid-cols-2 gap-4">
               <div className="grid gap-2"><Label htmlFor="golonganDarah">Golongan Darah</Label><Input id="golonganDarah" value={golonganDarah} onChange={e => setGolonganDarah(e.target.value)} /></div>
               <div className="grid gap-2"><Label>Status Pernikahan</Label>
-                <RadioGroup value={statusPernikahan} onValueChange={(value: 'menikah' | 'lajang') => setStatusPernikahan(value)} className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-2"><RadioGroupItem value="lajang" id="lajang" /><Label htmlFor="lajang">Lajang</Label></div>
-                  <div className="flex items-center space-x-2"><RadioGroupItem value="menikah" id="menikah" /><Label htmlFor="menikah">Menikah</Label></div>
+                <RadioGroup value={statusPernikahan} onValueChange={(value: any) => setStatusPernikahan(value)} className="flex items-center space-x-4 flex-wrap">
+                  <div className="flex items-center space-x-2"><RadioGroupItem value="lajang" id="lajang-admin" /><Label htmlFor="lajang-admin">Lajang</Label></div>
+                  <div className="flex items-center space-x-2"><RadioGroupItem value="menikah" id="menikah-admin" /><Label htmlFor="menikah-admin">Menikah</Label></div>
+                  <div className="flex items-center space-x-2"><RadioGroupItem value="duda" id="duda-admin" /><Label htmlFor="duda-admin">Duda</Label></div>
+                  <div className="flex items-center space-x-2"><RadioGroupItem value="janda" id="janda-admin" /><Label htmlFor="janda-admin">Janda</Label></div>
                 </RadioGroup>
               </div>
             </div>
-            {statusPernikahan === 'menikah' && <div className="grid gap-2"><Label htmlFor="jumlahAnak">Jumlah Anak</Label><Input id="jumlahAnak" type="number" value={jumlahAnak} onChange={e => setJumlahAnak(e.target.value)} /></div>}
+            {['menikah', 'duda', 'janda'].includes(statusPernikahan || '') && <div className="grid gap-2"><Label htmlFor="jumlahAnak">Jumlah Anak</Label><Input id="jumlahAnak" type="number" value={jumlahAnak} onChange={e => setJumlahAnak(e.target.value)} /></div>}
           </CardContent>
         </Card>
 

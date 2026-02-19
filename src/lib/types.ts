@@ -57,7 +57,7 @@ export type UserProfile = {
     masaBerlakuSimC?: any; // Timestamp for SIM C
     golonganDarah?: string;
     tanggalMasukKerja?: any; // Timestamp
-    statusPernikahan?: 'menikah' | 'lajang';
+    statusPernikahan?: 'menikah' | 'lajang' | 'duda' | 'janda';
     jumlahAnak?: number;
     tempatLahir?: string;
     tanggalLahir?: any; // Timestamp
