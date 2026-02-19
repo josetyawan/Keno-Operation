@@ -33,7 +33,7 @@ import { MoreHorizontal, PlusCircle, Trash2 } from 'lucide-react';
 import { format, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { useUser, useFirestore, useMemoFirebase, useDoc, deleteDocumentNonBlocking, useCollection } from '@/firebase';
-import { collection, query, doc, where } from 'firebase/firestore';
+import { collection, query, doc, where, orderBy } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useMemo, useState } from 'react';
@@ -107,7 +107,6 @@ export default function AlkerListPage() {
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
   const checklistsQuery = useMemoFirebase(() => {
-    // Wait until the user profile is fully loaded before creating any query.
     if (isProfileLoading || !userProfile) {
         return null;
     }
@@ -116,25 +115,13 @@ export default function AlkerListPage() {
     const isAdminOrKorlap = userProfile.role === 'admin' || userProfile.role === 'korlap';
 
     if (isAdminOrKorlap) {
-      // Admins and Korlaps can see all checklists.
-      return query(checklistsCollectionRef);
+      return query(checklistsCollectionRef, orderBy('dateSubmitted', 'desc'));
     }
     
-    // Regular users can only see their own checklists.
-    return query(checklistsCollectionRef, where('userId', '==', userProfile.id));
+    return query(checklistsCollectionRef, where('userId', '==', userProfile.id), orderBy('dateSubmitted', 'desc'));
   }, [firestore, userProfile, isProfileLoading]);
 
   const { data: checklists, isLoading: areChecklistsLoading } = useCollection<AlkerChecklist>(checklistsQuery);
-  
-  const sortedChecklists = useMemo(() => {
-    if (!checklists) return [];
-    return [...checklists].sort((a, b) => {
-        const timeA = safeToDate(a.dateSubmitted)?.getTime() ?? 0;
-        const timeB = safeToDate(b.dateSubmitted)?.getTime() ?? 0;
-        return timeB - timeA;
-    });
-  }, [checklists]);
-
 
   const isLoading = areChecklistsLoading || isProfileLoading || isUserLoading;
   const isAdminOrKorlap = userProfile?.role === 'admin' || userProfile?.role === 'korlap';
@@ -166,7 +153,7 @@ export default function AlkerListPage() {
               <Skeleton className="h-10 w-full mb-2" />
               <Skeleton className="h-10 w-full" />
             </div>
-          ) : sortedChecklists && sortedChecklists.length > 0 ? (
+          ) : checklists && checklists.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -178,7 +165,7 @@ export default function AlkerListPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sortedChecklists.map(checklist => (
+                {checklists.map(checklist => (
                   <TableRow key={checklist.id}>
                     <TableCell className="font-medium pl-6">{checklist.userName}</TableCell>
                     <TableCell><Badge variant="secondary">{checklist.userJabatan || '-'}</Badge></TableCell>
@@ -212,5 +199,3 @@ export default function AlkerListPage() {
     </>
   );
 }
-
-    

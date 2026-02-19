@@ -110,8 +110,9 @@ service cloud.firestore {
     }
 
     match /tool-checklists/{checklistId} {
-      // DIAGNOSTIC: Open all permissions temporarily
-      allow read, write: if true;
+      allow get, list: if isApproved();
+      allow create: if isApproved() && isCreatingOwn('userId');
+      allow update, delete: if (isApproved() && isUpdatingOwn('userId')) || isAdmin() || isKorlap();
     }
   }
 }
