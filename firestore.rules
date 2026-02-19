@@ -110,9 +110,9 @@ service cloud.firestore {
     }
 
     match /alker-checklists/{checklistId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn() && isCreatingOwn('userId');
-      allow update, delete: if (isSignedIn() && isUpdatingOwn('userId')) || isAdmin() || isKorlap();
+      allow get, list: if isApproved() || isAdmin();
+      allow create: if isApproved() && isCreatingOwn('userId');
+      allow update, delete: if (isApproved() && isUpdatingOwn('userId')) || isAdmin() || isKorlap();
     }
   }
 }
