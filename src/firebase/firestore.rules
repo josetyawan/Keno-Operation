@@ -1,27 +1,4 @@
 
-/**
- * # Firestore Security Rules: NotaKu App
- *
- * ## Core Philosophy
- * This ruleset allows any authenticated user to view all public data ('notas'),
- * but strictly controls who can create, modify, or delete that data. This
- * facilitates a collaborative or admin-reviewed environment.
- *
- * ## Data Structure
- *   - `/users/{userId}`: Stores user profile information, including roles.
- *   - `/notas/{notaId}`: A global collection of all notas from all users.
- *
- * ## Key Security Decisions
- * - **Public Read, Private Write**: Any signed-in user can read any nota. This is
- *   a key business requirement. Write operations (create, update, delete) are
- *   restricted.
- * - **Strict Ownership for Writes**: A user can only create notas under their own
- *   ID. They can only update or delete notas they already own.
- * - **Admin Override**: Users with the 'admin' role (defined in their /users/
- *   document) have elevated privileges, specifically the ability to update any
- *   nota for verification purposes.
- * - **Default Deny**: Any path not explicitly defined is inaccessible.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -30,247 +7,120 @@ service cloud.firestore {
     // Helper Functions
     // -------------------------------------------------------------------------
 
-    /**
-     * Checks if the user is authenticated.
-     */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /**
-     * Checks if the user's registration has been approved by an admin.
-     */
     function isApproved() {
       return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.registrationStatus == 'approved';
     }
 
-    /**
-     * Checks if the authenticated user's UID matches the provided userId.
-     */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    /**
-     * Checks if the user has an 'admin' role by reading their profile document.
-     * This is used for granting elevated permissions.
-     * This check is now case-insensitive.
-     */
     function isAdmin() {
-      // This rule is safe from recursion because the ability to 'get' one's own
-      // document is granted separately without needing to check for admin status.
       return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.lower() == 'admin';
     }
     
-    /**
-     * Checks if the user has a 'korlap' role.
-     */
     function isKorlap() {
       return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.lower() == 'korlap';
     }
 
-    /**
-     * Validates that a user is creating a nota with their own userId.
-     */
-    function isCreatingOwnNota() {
-        return request.resource.data.userId == request.auth.uid;
+    function isCreatingOwn(docName) {
+      return request.resource.data[docName] == request.auth.uid;
     }
 
-    /**
-     * Validates that a user is updating a nota they own.
-     */
-    function isUpdatingOwnNota() {
-        return resource.data.userId == request.auth.uid;
+    function isUpdatingOwn(docName) {
+      return resource.data[docName] == request.auth.uid;
     }
     
-    /**
-     * Validates that a user is creating a pelanggan record with their own userId.
-     */
-    function isCreatingOwnPelanggan() {
-        return request.resource.data.userId == request.auth.uid;
+    function hasAllProAccess() {
+      let userProfile = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return isApproved() && (userProfile.role == 'admin' || userProfile.appAccess == 'allpro' || userProfile.appAccess == 'all');
     }
-    
-    /**
-     * Validates that a user is updating a pelanggan record they own.
-     */
-    function isUpdatingOwnPelanggan() {
-        return resource.data.userId == request.auth.uid;
-    }
-    
-    /**
-     * Validates that an approved technician or admin can access technical resources.
-     */
-     function hasAllProAccess() {
-        let userProfile = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-        return isApproved() && (userProfile.role == 'admin' || userProfile.appAccess == 'allpro' || userProfile.appAccess == 'all');
-     }
-
 
     // -------------------------------------------------------------------------
-    // Collection Rules
+    // Rules
     // -------------------------------------------------------------------------
-
-    /**
-     * @description Manages user profile documents.
-     * @path /users/{userId}
-     */
+    
     match /users/{userId} {
-      // CREATE: Allow a user to create their own document upon signup.
-      // This rule is simplified to be more robust.
-      allow create: if request.auth.uid == userId &&
-                      request.resource.data.email is string &&
-                      request.resource.data.role == 'teknisi' &&
-                      request.resource.data.registrationStatus == 'pending';
-      
-      // READ (OWNER): Any authenticated user can read their OWN document.
-      // This is CRITICAL for isAdmin() to work without causing a recursive loop.
-      allow get: if isOwner(userId);
-
-      // READ (ADMIN): An admin can list and get any user document. This now works because
-      // the 'get' inside isAdmin() is satisfied by the rule above for the admin's own document.
-      allow list, get: if isAdmin();
-      
-      // UPDATE (OWNER/ADMIN): An authenticated user can update their own document, or an admin can update any.
+      allow create: if request.auth.uid == userId && request.resource.data.email is string && request.resource.data.role == 'teknisi' && request.resource.data.registrationStatus == 'pending';
+      // READ: An approved user can get any single user profile (needed for PIC names etc).
+      // An admin or korlap can list all users.
+      allow get: if isApproved();
+      allow list: if isAdmin() || isKorlap();
       allow update: if isOwner(userId) || isAdmin();
-      
-      // DELETION: Deleting users is a server-side or console action, not allowed from the client.
       allow delete: if isAdmin() && request.auth.uid != userId;
     }
 
-    /**
-     * @description Global collection for all user notas.
-     * @path /notas/{notaId}
-     */
     match /notas/{notaId} {
-      // Only approved users can read notas.
       allow get, list: if isApproved() || isAdmin();
-      
-      // An approved user can only create a nota if the nota's userId matches their own.
-      allow create: if isApproved() && isCreatingOwnNota();
-
-      // An approved user can update their own nota. Admins can update any nota.
-      allow update: if (isApproved() && isUpdatingOwnNota()) || isAdmin();
-      
-      // An approved user can only delete a nota if they are the owner. Admins can delete any nota.
-      allow delete: if (isApproved() && isUpdatingOwnNota()) || isAdmin();
+      allow create: if isApproved() && isCreatingOwn('userId');
+      allow update: if (isApproved() && isUpdatingOwn('userId')) || isAdmin();
+      allow delete: if (isApproved() && isUpdatingOwn('userId')) || isAdmin();
     }
-    
-    /**
-     * @description Stores project ID mappings for reports.
-     * @path /project-ids/{projectId}
-     */
+
     match /project-ids/{projectId} {
-      // READ: Any approved user or admin can read the project IDs for report generation.
       allow get, list: if isApproved() || isAdmin();
-
-      // WRITE: Only admins can create, update, or delete Project IDs.
       allow create, update, delete: if isAdmin();
     }
-    
-    /**
-     * @description Stores all individual network assets.
-     * @path /network-assets/{assetId}
-     */
+
     match /network-assets/{assetId} {
-      // READ: Approved technicians, korlaps and admins can read asset data.
       allow get, list: if hasAllProAccess() || isKorlap();
-
-      // WRITE: Only admins can create, update, or delete network assets.
       allow create, update, delete: if isAdmin();
     }
 
-    /**
-     * @description Stores customer data.
-     * @path /pelanggan/{pelangganId}
-     */
     match /pelanggan/{pelangganId} {
-      // READ: Approved technicians, korlaps and admins can read customer data.
       allow get, list: if hasAllProAccess() || isKorlap();
-
-      // CREATE: Any approved user, korlap, or admin can create a customer record.
-      allow create: if isKorlap() || (hasAllProAccess() && isCreatingOwnPelanggan());
-
-      // UPDATE: An approved user can update their own record, or an admin/korlap can update any record.
-      allow update: if isKorlap() || (hasAllProAccess() && isUpdatingOwnPelanggan()) || isAdmin();
-
-      // DELETE: Only admins or korlaps can delete customer data.
+      allow create: if isKorlap() || (hasAllProAccess() && isCreatingOwn('userId'));
+      allow update: if isKorlap() || (hasAllProAccess() && isUpdatingOwn('userId')) || isAdmin();
       allow delete: if isAdmin() || isKorlap();
     }
 
-    /**
-     * @description Stores map links for service areas.
-     * @path /map-links/{mapLinkId}
-     */
     match /map-links/{mapLinkId} {
-      // READ: Any approved user can read the map links.
       allow get, list: if hasAllProAccess() || isKorlap();
-
-      // WRITE: Only admins can create, update, or delete map links.
       allow create, update, delete: if isAdmin();
     }
 
-    /**
-     * @description Stores Mancore links for service areas.
-     * @path /mancore-links/{mancoreLinkId}
-     */
     match /mancore-links/{mancoreLinkId} {
-      // READ: Any approved user can read the mancore links.
       allow get, list: if hasAllProAccess() || isKorlap();
-
-      // WRITE: Only admins can create, update, or delete mancore links.
       allow create, update, delete: if isAdmin();
     }
 
-    /**
-     * @description Stores aggregated network statistics.
-     * @path /network-stats/{statId}
-     */
     match /network-stats/{statId} {
-      // READ: Any approved user can read the summary for the dashboard.
       allow get, list: if hasAllProAccess() || isKorlap();
-      
-      // WRITE: Only admins can update the statistics.
       allow write: if isAdmin();
     }
-    
-    /**
-     * @description Stores national holidays.
-     * @path /holidays/{holidayId}
-     */
+
     match /holidays/{holidayId} {
-        // READ: Any approved user can see the list of holidays for scheduling.
-        allow get, list: if isApproved();
-        // WRITE: Only admins can manage the list of holidays.
-        allow write: if isAdmin();
+      allow get, list: if isApproved();
+      allow write: if isAdmin();
     }
 
-    /**
-     * @description Stores work schedules for weekends/holidays.
-     * @path /schedules/{scheduleId}
-     */
     match /schedules/{scheduleId} {
-        // READ: An admin or korlap can see all schedules. A user can only see their own.
-        allow get: if isOwner(resource.data.userId) || isAdmin() || isKorlap();
-        allow list: if isAdmin() || isKorlap();
-        
-        // WRITE: Only admins or korlaps can create, update, or delete schedules.
-        allow write: if isAdmin() || isKorlap();
+      allow get: if isOwner(resource.data.userId) || isAdmin() || isKorlap();
+      allow list: if isAdmin() || isKorlap();
+      allow write: if isAdmin() || isKorlap();
     }
-    
-    /**
-     * @description Stores attendance records.
-     * @path /attendances/{attendanceId}
-     */
-    match /attendances/{attendanceId} {
-         // READ: An admin or korlap can see all records. A user can only see their own.
-        allow get: if isOwner(resource.data.userId) || isAdmin() || isKorlap();
-        allow list: if isAdmin() || isKorlap();
 
-        // CREATE: A user can create their own attendance record.
-        allow create: if isCreatingOwnNota(); // Reuse nota helper as it just checks ownership
-        
-        // UPDATE/DELETE: Only admins can modify/delete attendance records.
-        allow update, delete: if isAdmin();
+    match /attendances/{attendanceId} {
+      allow get: if isOwner(resource.data.userId) || isAdmin() || isKorlap();
+      allow list: if isAdmin() || isKorlap();
+      allow create: if isCreatingOwn('userId');
+      allow update, delete: if isAdmin();
+    }
+
+    match /tool-checklists/{checklistId} {
+      // READ: An admin or korlap can list all checklists. A user can read their own.
+      allow get: if isOwner(resource.data.userId) || isAdmin() || isKorlap();
+      allow list: if isAdmin() || isKorlap();
+      
+      // CREATE: An approved user can only create a checklist for themselves.
+      allow create: if isApproved() && isCreatingOwn('userId');
+
+      // UPDATE/DELETE: Only the owner, an admin, or a korlap can modify/delete it.
+      allow update, delete: if (isApproved() && isUpdatingOwn('userId')) || isAdmin() || isKorlap();
     }
   }
 }

@@ -11,8 +11,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Loader2, Upload, X, Wrench } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
-import { useFirestore, addDocumentNonBlocking, useUser, useStorage, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { useFirestore, addDocumentNonBlocking, useUser, useStorage, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, serverTimestamp, query, orderBy, doc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import type { AlkerChecklist, AlkerTool, UserProfile } from '@/lib/types';
@@ -52,23 +52,39 @@ export default function NewAlkerPage() {
   const { user } = useUser();
   const storage = useStorage();
   const [isSaving, setIsSaving] = useState(false);
+  
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [areUsersLoading, setAreUsersLoading] = useState(true);
 
   // --- Data Fetching ---
-  const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users'), orderBy('displayName')), [firestore]);
+  const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
+  const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+
+  const canListUsers = useMemo(() => currentUserProfile?.role === 'admin' || currentUserProfile?.role === 'korlap', [currentUserProfile]);
+
+  const usersQuery = useMemoFirebase(() => {
+      // Only fetch all users if the current user has permission
+      if (!canListUsers) return null;
+      return query(collection(firestore, 'users'), orderBy('displayName'));
+  }, [firestore, canListUsers]);
+  
   const { data: allUsers, isLoading: isCollectionLoading } = useCollection<UserProfile>(usersQuery);
 
   useEffect(() => {
+    // If user cannot list others, the user list is empty.
+    if (!canListUsers && !isProfileLoading) {
+        setUsers([]);
+        setAreUsersLoading(false);
+        return;
+    }
+    // If user can list others, wait for the collection to load.
     if (allUsers) {
       const approvedUsers = allUsers.filter(u => u.registrationStatus === 'approved');
       setUsers(approvedUsers);
       setAreUsersLoading(false);
     }
-  }, [allUsers]);
+  }, [allUsers, canListUsers, isProfileLoading]);
 
-  const currentUserProfile = useMemo(() => users?.find(u => u.id === user?.uid), [users, user]);
-  
   const otherTeknisi = useMemo(() => {
     if (!users || !user) return [];
     return users.filter(u => u.role === 'teknisi' && u.id !== user.uid);
@@ -170,9 +186,11 @@ export default function NewAlkerPage() {
       setIsSaving(false);
     }
   };
+  
+  const pageIsLoading = isProfileLoading || areUsersLoading;
 
-  if (areUsersLoading) {
-    return <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin" /> Memuat data teknisi...</div>;
+  if (pageIsLoading) {
+    return <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin" /> Memuat data...</div>;
   }
 
   return (
@@ -214,8 +232,14 @@ export default function NewAlkerPage() {
                             name="crewUserId"
                             control={control}
                             render={({ field }) => (
-                                <Select onValueChange={(value) => field.onChange(value === 'none' ? '' : value)} value={field.value || 'none'}>
-                                    <SelectTrigger><SelectValue placeholder="Pilih rekan kerja..." /></SelectTrigger>
+                                <Select 
+                                    onValueChange={(value) => field.onChange(value === 'none' ? '' : value)} 
+                                    value={field.value || 'none'}
+                                    disabled={!canListUsers}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder={canListUsers ? "Pilih rekan kerja..." : "Hanya Admin/Korlap"} />
+                                    </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="none">Tidak Ada</SelectItem>
                                         {Object.entries(groupedTeknisi).map(([jabatan, teknisiList]) => (
