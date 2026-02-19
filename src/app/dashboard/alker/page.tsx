@@ -113,22 +113,13 @@ export default function AlkerListPage() {
     const isAdminOrKorlap = userProfile.role === 'admin' || userProfile.role === 'korlap';
 
     if (isAdminOrKorlap) {
-      return query(checklistsCollectionRef);
+      return query(checklistsCollectionRef, orderBy('dateSubmitted', 'desc'));
     }
     
-    return query(checklistsCollectionRef, where('userId', '==', user.uid));
+    return query(checklistsCollectionRef, where('userId', '==', user.uid), orderBy('dateSubmitted', 'desc'));
   }, [firestore, user, isProfileLoading, userProfile]);
 
-  const { data: checklistsFromQuery, isLoading: areChecklistsLoading } = useCollection<AlkerChecklist>(checklistsQuery);
-  
-  const checklists = useMemo(() => {
-    if (!checklistsFromQuery) return null;
-    return [...checklistsFromQuery].sort((a, b) => {
-        const dateA = safeToDate(a.dateSubmitted)?.getTime() || 0;
-        const dateB = safeToDate(b.dateSubmitted)?.getTime() || 0;
-        return dateB - dateA; // Sort descending (newest first)
-    });
-  }, [checklistsFromQuery]);
+  const { data: checklists, isLoading: areChecklistsLoading } = useCollection<AlkerChecklist>(checklistsQuery);
 
   const isLoading = areChecklistsLoading || isProfileLoading || isUserLoading;
   const isAdminOrKorlap = userProfile?.role === 'admin' || userProfile?.role === 'korlap';
@@ -206,5 +197,3 @@ export default function AlkerListPage() {
     </>
   );
 }
-
-    
