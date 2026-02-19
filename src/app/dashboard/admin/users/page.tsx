@@ -7,6 +7,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from '@/components/ui/card';
 import {
   Table,
@@ -49,8 +50,8 @@ import {
   DropdownMenuPortal,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Shield, User, CheckCircle, Trash2, KeyRound, Edit, Loader2 } from 'lucide-react';
-import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, deleteDocumentNonBlocking } from '@/firebase';
+import { MoreHorizontal, Shield, User, CheckCircle, Trash2, KeyRound, Edit, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, doc, Timestamp, updateDoc } from 'firebase/firestore';
 import type { UserProfile, Pendidikan } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -331,14 +332,23 @@ function UserActions({ userToManage, currentUserId, onEdit }: { userToManage: Us
     }
   };
   
-  const handleDeleteUser = () => {
+  const handleDeleteUser = async () => {
     const userDocRef = doc(firestore, 'users', userToManage.id);
-    deleteDocumentNonBlocking(userDocRef);
-     toast({
-      title: 'User Document Deleted',
-      description: `The profile for ${userToManage.email} has been deleted. Please delete the user from the Firebase Authentication console to fully remove them.`,
-      duration: 7000
-    });
+    try {
+        await updateDoc(userDocRef, { registrationStatus: 'deleted' }); // Soft delete
+        toast({
+         title: 'User Deactivated',
+         description: `The profile for ${userToManage.email} has been deactivated. They can no longer log in.`,
+         duration: 7000
+       });
+    } catch (error) {
+        console.error('Failed to delete user profile:', error);
+        toast({
+            variant: 'destructive',
+            title: 'Deactivation Failed',
+            description: 'Could not deactivate the user profile.'
+        });
+    }
   }
 
   const handleApprove = async () => {
@@ -408,14 +418,14 @@ function UserActions({ userToManage, currentUserId, onEdit }: { userToManage: Us
                   className="text-destructive focus:text-destructive focus:bg-destructive/10"
                 >
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Delete User
+                    Deactivate User
                 </DropdownMenuItem>
             </AlertDialogTrigger>
             <AlertDialogContent>
                 <AlertDialogHeader>
                 <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                 <AlertDialogDescription>
-                    This action only deletes the user's profile data from the application's database. The user's login account must be deleted manually from the Firebase Authentication console. This action cannot be undone.
+                    This action will deactivate the user account, preventing them from logging in. This is reversible by an admin. This is safer than permanent deletion.
                 </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -499,6 +509,8 @@ export default function AdminUsersPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 5;
   
   const [userToEdit, setUserToEdit] = useState<UserProfile | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -524,12 +536,18 @@ export default function AdminUsersPage() {
 
   const { data: users, isLoading: areUsersLoading } = useCollection<UserProfile>(usersQuery);
   
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
   const filteredUsers = useMemo(() => {
     if (!users) return [];
-    if (!searchQuery) return users;
+    const activeUsers = users.filter(u => u.registrationStatus !== 'deleted');
+
+    if (!searchQuery) return activeUsers;
 
     const lowercasedQuery = searchQuery.toLowerCase();
-    return users.filter(user => 
+    return activeUsers.filter(user => 
       user.email?.toLowerCase().includes(lowercasedQuery) ||
       user.displayName?.toLowerCase().includes(lowercasedQuery) ||
       user.nik?.toLowerCase().includes(lowercasedQuery) ||
@@ -537,6 +555,16 @@ export default function AdminUsersPage() {
       user.jabatan?.toLowerCase().includes(lowercasedQuery)
     );
   }, [users, searchQuery]);
+
+  const totalPages = useMemo(() => {
+    return Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
+  }, [filteredUsers]);
+
+  const paginatedUsers = useMemo(() => {
+      const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+      const endIndex = startIndex + ITEMS_PER_PAGE;
+      return filteredUsers.slice(startIndex, endIndex);
+  }, [filteredUsers, currentPage]);
   
   const handleEditUser = (user: UserProfile) => {
     setUserToEdit(user);
@@ -625,6 +653,7 @@ export default function AdminUsersPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nama / Email</TableHead>
+                <TableHead>NIK</TableHead>
                 <TableHead>No. Pembayaran</TableHead>
                 <TableHead>Jabatan</TableHead>
                 <TableHead>Peran</TableHead>
@@ -636,13 +665,14 @@ export default function AdminUsersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUsers && filteredUsers.length > 0 ? (
-                filteredUsers.map(u => (
+              {paginatedUsers && paginatedUsers.length > 0 ? (
+                paginatedUsers.map(u => (
                   <TableRow key={u.id}>
                     <TableCell className="font-medium">
                         <div className="font-semibold">{u.displayName || 'No Name'}</div>
                         <div className="text-xs text-muted-foreground">{u.email}</div>
                     </TableCell>
+                    <TableCell>{u.nik || '-'}</TableCell>
                     <TableCell>{u.paymentInfo || '-'}</TableCell>
                     <TableCell>{u.jabatan || '-'}</TableCell>
                      <TableCell className="capitalize">
@@ -676,7 +706,7 @@ export default function AdminUsersPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center">
+                  <TableCell colSpan={8} className="h-24 text-center">
                     Tidak ada pengguna ditemukan.
                   </TableCell>
                 </TableRow>
@@ -684,6 +714,31 @@ export default function AdminUsersPage() {
             </TableBody>
           </Table>
         </CardContent>
+         <CardFooter>
+            <div className="text-xs text-muted-foreground">
+                Halaman <strong>{totalPages > 0 ? currentPage : 0}</strong> dari <strong>{totalPages}</strong>
+            </div>
+            <div className="flex items-center gap-2 ml-auto">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1 || totalPages === 0}
+                >
+                    <ChevronLeft className="h-4 w-4" />
+                    Sebelumnya
+                </Button>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages || totalPages === 0}
+                >
+                    Berikutnya
+                    <ChevronRight className="h-4 w-4" />
+                </Button>
+            </div>
+        </CardFooter>
       </Card>
       
       {userToEdit && (
@@ -702,3 +757,5 @@ export default function AdminUsersPage() {
     </>
   );
 }
+
+    
