@@ -172,7 +172,7 @@ service cloud.firestore {
      * @path /network-assets/{assetId}
      */
     match /network-assets/{assetId} {
-      // READ: Any approved user or admin can read asset data.
+      // READ: Approved technicians, korlaps and admins can read asset data.
       allow get, list: if hasAllProAccess() || isKorlap();
 
       // WRITE: Only admins can create, update, or delete network assets.
@@ -249,9 +249,9 @@ service cloud.firestore {
      * @path /schedules/{scheduleId}
      */
     match /schedules/{scheduleId} {
-        // READ: An admin can see all schedules. A user can only see their own.
+        // READ: An admin or korlap can see all schedules. A user can only see their own.
         allow get: if isOwner(resource.data.userId) || isAdmin() || isKorlap();
-        allow list: if isAdmin() || isKorlap(); // Admins and Korlaps can list all schedules
+        allow list: if isAdmin() || isKorlap();
         
         // WRITE: Only admins or korlaps can create, update, or delete schedules.
         allow write: if isAdmin() || isKorlap();
@@ -262,7 +262,7 @@ service cloud.firestore {
      * @path /attendances/{attendanceId}
      */
     match /attendances/{attendanceId} {
-         // READ: An admin can see all records. A user can only see their own.
+         // READ: An admin or korlap can see all records. A user can only see their own.
         allow get: if isOwner(resource.data.userId) || isAdmin() || isKorlap();
         allow list: if isAdmin() || isKorlap();
 
