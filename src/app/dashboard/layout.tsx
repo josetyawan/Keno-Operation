@@ -1,7 +1,8 @@
+
 'use client';
 
 import Link from 'next/link';
-import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home, Network, Search, BarChart3, Map, FolderGit2, Contact, CalendarClock, ClipboardCheck, CalendarOff } from 'lucide-react';
+import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home, Network, Search, BarChart3, Map, FolderGit2, Contact, CalendarClock, ClipboardCheck, CalendarOff, UserCircle, Briefcase, Settings, Building } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -10,11 +11,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible"
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { UserNav } from '@/components/user-nav';
 import { Logo } from '@/components/logo';
@@ -35,16 +31,40 @@ const navLinks = [
   { href: '/dashboard/hr/attendance', label: 'Absensi Jaga', icon: ClipboardCheck, access: 'allpro' },
 ];
 
-const adminNavLinks = [
-  { href: '/dashboard/admin/users', label: 'Manajemen User', icon: Users, access: 'admin' },
-  { href: '/dashboard/admin/pelanggan', label: 'Manajemen Pelanggan', icon: Contact, access: 'korlap' },
-  { href: '/dashboard/admin/hr/schedules', label: 'Manajemen Jadwal', icon: CalendarClock, access: 'korlap' },
-  { href: '/dashboard/admin/hr/holidays', label: 'Manajemen Hari Libur', icon: CalendarOff, access: 'admin' },
-  { href: '/dashboard/admin/pids', label: 'Manajemen PID', icon: Tags, access: 'admin' },
-  { href: '/dashboard/admin/assets', label: 'Manajemen Aset Jaringan', icon: Network, access: 'admin' },
-  { href: '/dashboard/admin/map-links', label: 'Manajemen Peta', icon: Map, access: 'admin' },
-  { href: '/dashboard/admin/mancore', label: 'Manajemen Mancore', icon: FolderGit2, access: 'admin' },
-  { href: '/dashboard/rekap', label: 'Rekap Pembayaran', icon: Bot, access: 'admin' },
+const adminNavGroups = [
+  {
+    title: 'HR',
+    icon: UserCircle,
+    links: [
+      { href: '/dashboard/admin/users', label: 'Manajemen User', icon: Users, access: 'admin' },
+    ]
+  },
+  {
+    title: 'FINANCE',
+    icon: Briefcase,
+    links: [
+      { href: '/dashboard/admin/pids', label: 'Manajemen PID', icon: Tags, access: 'admin' },
+      { href: '/dashboard/rekap', label: 'Rekap Pembayaran', icon: Bot, access: 'admin' },
+    ]
+  },
+  {
+    title: 'NETWORK',
+    icon: Network,
+    links: [
+      { href: '/dashboard/admin/assets', label: 'Manajemen Aset', icon: Settings, access: 'admin' },
+      { href: '/dashboard/admin/map-links', label: 'Manajemen Peta', icon: Map, access: 'admin' },
+      { href: '/dashboard/admin/mancore', label: 'Manajemen Mancore', icon: FolderGit2, access: 'admin' },
+    ]
+  },
+  {
+    title: 'OPERATION',
+    icon: Building,
+    links: [
+      { href: '/dashboard/admin/pelanggan', label: 'Data Pelanggan', icon: Contact, access: 'korlap' },
+      { href: '/dashboard/admin/hr/schedules', label: 'Manajemen Jadwal', icon: CalendarClock, access: 'korlap' },
+      { href: '/dashboard/admin/hr/holidays', label: 'Manajemen Hari Libur', icon: CalendarOff, access: 'admin' },
+    ]
+  }
 ];
 
 
@@ -152,27 +172,22 @@ export default function DashboardLayout({
     }
   }, [auth, router, toast]);
 
-  // This robust effect ensures all authorization checks are complete before rendering the UI.
   useEffect(() => {
     const checkUserStatus = async () => {
-      // 1. Wait for auth and profile data to be definitively loaded.
       if (isUserLoading || isProfileLoading) {
-        return; // Still loading, wait for the next run.
+        return; 
       }
 
-      // 2. If no user is authenticated, redirect to login. This is a final state.
       if (!user) {
         router.push('/login');
         return;
       }
       
-      // 3. Handle the Super Admin case first. This is a special override.
       const isSuperAdmin = user.email === 'jokowahyusisnaker123@gmail.com';
       if (isSuperAdmin) {
         const userToUpgradeRef = doc(firestore, 'users', user.uid);
         
         if (!userProfile) {
-          // Profile doesn't exist, create it for the first time with defaults.
           console.log("Super admin profile not found. Creating new profile...");
           try {
             await setDoc(userToUpgradeRef, {
@@ -181,7 +196,7 @@ export default function DashboardLayout({
               role: 'admin',
               registrationStatus: 'approved',
               appAccess: 'all',
-              displayName: 'J. Wahyu Setyawan', // A sensible default that can be changed later
+              displayName: 'J. Wahyu Setyawan',
             }, { merge: true });
             
             toast({
@@ -192,14 +207,12 @@ export default function DashboardLayout({
              console.error("CRITICAL: Failed to create super admin profile.", err);
              handleSignOutAndRedirect('Gagal Membuat Profil Admin', 'Terjadi kesalahan kritis.');
           }
-          return; // Allow re-render with new data.
+          return; 
         } else {
-          // Profile exists, check if it needs correction without touching displayName.
           const needsCorrection = userProfile.role !== 'admin' || userProfile.registrationStatus !== 'approved' || userProfile.appAccess !== 'all';
           if (needsCorrection) {
             console.log("Correcting super admin privileges...");
             try {
-              // ONLY update the fields that need correction.
               await updateDoc(userToUpgradeRef, {
                 role: 'admin',
                 registrationStatus: 'approved',
@@ -217,7 +230,6 @@ export default function DashboardLayout({
           }
         }
       } else {
-        // 4. Handle regular users.
         if (!userProfile) {
           console.warn(`User profile for ${user.uid} is missing. Creating new default profile.`);
           const newUserDocRef = doc(firestore, 'users', user.uid);
@@ -228,11 +240,6 @@ export default function DashboardLayout({
             registrationStatus: 'pending',
             appAccess: 'nota',
             displayName: user.email?.split('@')[0] || 'New User',
-            firstName: '',
-            lastName: '',
-            nik: '',
-            paymentInfo: '',
-            jabatan: '',
           };
 
           try {
@@ -245,7 +252,7 @@ export default function DashboardLayout({
             console.error("CRITICAL: Failed to create missing user profile document.", err);
             handleSignOutAndRedirect('Gagal Membuat Profil', 'Terjadi kesalahan kritis saat membuat akun Anda.');
           }
-          return; // Stop further execution.
+          return;
         }
 
         if (userProfile.registrationStatus === 'pending') {
@@ -257,7 +264,6 @@ export default function DashboardLayout({
         }
       }
       
-      // 5. If all checks have passed, the user is authorized. Mark as ready to render.
       setIsReady(true);
     };
 
@@ -265,8 +271,6 @@ export default function DashboardLayout({
 
   }, [user, userProfile, isUserLoading, isProfileLoading, router, firestore, handleSignOutAndRedirect, toast]);
 
-  // This is the primary render guard. It shows a skeleton until the `useEffect` above
-  // explicitly sets `isReady` to true, preventing any premature rendering of child components.
   if (!isReady) {
     return <DashboardSkeleton />;
   }
@@ -296,26 +300,36 @@ export default function DashboardLayout({
   
   const getFilteredAdminLinks = (isMobile: boolean) => {
     const NavComponent = isMobile ? MobileNavLink : NavLink;
-    return adminNavLinks
-        .filter(link => {
+    return adminNavGroups.map(group => {
+        const filteredLinks = group.links.filter(link => {
             if (link.access === 'admin') return isAdmin;
             if (link.access === 'korlap') return isAdmin || isKorlap;
             return false;
-        })
-        .map(link => (
-             <NavComponent
-                key={link.href}
-                href={link.href}
-                label={link.label}
-                icon={link.icon}
-                isActive={pathname.startsWith(link.href)}
-            />
-        ));
+        });
+
+        if (filteredLinks.length === 0) return null;
+
+        return (
+            <div key={group.title} className="mt-4 first:mt-0">
+                <p className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                  <group.icon className="h-4 w-4" />
+                  {group.title}
+                </p>
+                {filteredLinks.map(link => (
+                    <NavComponent
+                        key={link.href}
+                        href={link.href}
+                        label={link.label}
+                        icon={link.icon}
+                        isActive={pathname.startsWith(link.href)}
+                    />
+                ))}
+            </div>
+        );
+    });
   };
 
 
-  // If we are ready, we can safely render the dashboard.
-  // userProfile is guaranteed to exist and have the correct role at this point.
   return (
     <div id="main-dashboard-layout" className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
       <div className="hidden border-r bg-secondary/50 md:block">
@@ -325,14 +339,13 @@ export default function DashboardLayout({
               <Logo />
             </Link>
           </div>
-          <div className="flex-1">
-            <nav className="grid items-start px-4 py-4 text-sm font-medium">
+          <div className="flex-1 overflow-y-auto">
+            <nav className="grid items-start px-2 py-4 text-sm font-medium">
                {getFilteredNavLinks(false)}
                {(isAdmin || isKorlap) && (
-                <>
-                    <p className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-4">Admin</p>
-                    {getFilteredAdminLinks(false)}
-                </>
+                <div className="mt-4 border-t pt-4">
+                  {getFilteredAdminLinks(false)}
+                </div>
                )}
             </nav>
           </div>
@@ -361,10 +374,9 @@ export default function DashboardLayout({
                 </Link>
                 {getFilteredNavLinks(true)}
                  {(isAdmin || isKorlap) && (
-                    <>
-                        <p className="px-3 py-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider mt-4">Admin</p>
+                    <div className="mt-4 border-t pt-4">
                         {getFilteredAdminLinks(true)}
-                    </>
+                    </div>
                 )}
               </nav>
               <div className="mt-auto">
@@ -372,7 +384,7 @@ export default function DashboardLayout({
                   <CardHeader>
                     <CardTitle>Log Out</CardTitle>
                     <CardDescription>
-                      Ready to leave? Click below to sign out.
+                      Siap untuk keluar? Klik di bawah untuk keluar dari sesi Anda.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -386,7 +398,6 @@ export default function DashboardLayout({
             </SheetContent>
           </Sheet>
           <div className="w-full flex-1">
-            {/* Can add a search bar here if needed */}
           </div>
           <UserNav />
         </header>
@@ -397,3 +408,4 @@ export default function DashboardLayout({
     </div>
   );
 }
+
