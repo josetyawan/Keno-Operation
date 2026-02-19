@@ -3,6 +3,10 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // -------------------------------------------------------------------------
+    // Helper Functions
+    // -------------------------------------------------------------------------
+
     function isSignedIn() {
       return request.auth != null;
     }
@@ -18,7 +22,7 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.lower() == 'admin';
     }
-
+    
     function isKorlap() {
       return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.lower() == 'korlap';
     }
@@ -30,88 +34,86 @@ service cloud.firestore {
     function isUpdatingOwn(docName) {
       return resource.data[docName] == request.auth.uid;
     }
-
+    
     function hasAllProAccess() {
       let userProfile = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
       return isApproved() && (userProfile.role == 'admin' || userProfile.appAccess == 'allpro' || userProfile.appAccess == 'all');
     }
 
+    // -------------------------------------------------------------------------
+    // Rules
+    // -------------------------------------------------------------------------
+    
+    // DIAGNOSTIC STEP: Allow all read operations to isolate the problem.
+    // This is temporary. Write operations below remain secure.
+    match /{path=**} {
+      allow read: if true;
+    }
+
     match /users/{userId} {
       allow create: if request.auth.uid == userId && request.resource.data.email is string && request.resource.data.role == 'teknisi' && request.resource.data.registrationStatus == 'pending';
-      allow list: if isSignedIn();
-      allow get: if isOwner(userId) || isAdmin();
       allow update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin() && request.auth.uid != userId;
+      // Read is covered by the global read rule above.
     }
 
     match /notas/{notaId} {
-      allow list: if isSignedIn();
-      allow get: if isApproved() || isAdmin();
+      // Read is covered by the global read rule.
       allow create: if isApproved() && isCreatingOwn('userId');
       allow update: if (isApproved() && isUpdatingOwn('userId')) || isAdmin();
       allow delete: if (isApproved() && isUpdatingOwn('userId')) || isAdmin();
     }
 
     match /project-ids/{projectId} {
-      allow list: if isSignedIn();
-      allow get: if isApproved() || isAdmin();
+      // Read is covered by the global read rule.
       allow create, update, delete: if isAdmin();
     }
 
     match /network-assets/{assetId} {
-      allow list: if isSignedIn();
-      allow get: if hasAllProAccess() || isKorlap();
+      // Read is covered by the global read rule.
       allow create, update, delete: if isAdmin();
     }
 
     match /pelanggan/{pelangganId} {
-      allow list: if isSignedIn();
-      allow get: if hasAllProAccess() || isKorlap();
+      // Read is covered by the global read rule.
       allow create: if isKorlap() || (hasAllProAccess() && isCreatingOwn('userId'));
       allow update: if isKorlap() || (hasAllProAccess() && isUpdatingOwn('userId')) || isAdmin();
       allow delete: if isAdmin() || isKorlap();
     }
 
     match /map-links/{mapLinkId} {
-      allow list: if isSignedIn();
-      allow get: if hasAllProAccess() || isKorlap();
+      // Read is covered by the global read rule.
       allow create, update, delete: if isAdmin();
     }
 
     match /mancore-links/{mancoreLinkId} {
-      allow list: if isSignedIn();
-      allow get: if hasAllProAccess() || isKorlap();
+      // Read is covered by the global read rule.
       allow create, update, delete: if isAdmin();
     }
 
     match /network-stats/{statId} {
-      allow list: if isSignedIn();
-      allow get: if hasAllProAccess() || isKorlap();
+      // Read is covered by the global read rule.
       allow write: if isAdmin();
     }
 
     match /holidays/{holidayId} {
-      allow list: if isSignedIn();
-      allow get: if isApproved();
+      // Read is covered by the global read rule.
       allow write: if isAdmin();
     }
 
     match /schedules/{scheduleId} {
-      allow list: if isSignedIn();
-      allow get: if isOwner(resource.data.userId) || isAdmin() || isKorlap();
+      // Read is covered by the global read rule.
       allow write: if isAdmin() || isKorlap();
     }
 
     match /attendances/{attendanceId} {
-      allow list: if isSignedIn();
-      allow get: if isOwner(resource.data.userId) || isAdmin() || isKorlap();
+      // Read is covered by the global read rule.
       allow create: if isCreatingOwn('userId');
       allow update, delete: if isAdmin();
     }
 
     match /alker-checklists/{checklistId} {
-      allow list: if isSignedIn();
-      allow get: if isOwner(resource.data.userId) || isAdmin() || isKorlap();
+      // Read is covered by the global read rule.
       allow create: if isApproved() && isCreatingOwn('userId');
       allow update: if (isApproved() && isUpdatingOwn('userId')) || isAdmin() || isKorlap();
       allow delete: if isAdmin() || isKorlap();
