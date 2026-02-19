@@ -110,8 +110,8 @@ service cloud.firestore {
     }
 
     match /alker-checklists/{checklistId} {
-      // DIAGNOSTIC: Open read access for everyone to test permissions issue.
-      allow read: if true;
+      // READ: Mirror the working 'notas' rule. An approved user or admin can read.
+      allow get, list: if isApproved() || isAdmin();
       
       // WRITE rules remain secure
       allow create: if isApproved() && isCreatingOwn('userId');

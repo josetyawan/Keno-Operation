@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -106,17 +107,23 @@ export default function AlkerListPage() {
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
   const checklistsQuery = useMemoFirebase(() => {
-    if (isProfileLoading || !user || !userProfile) return null;
+    // Wait until the user profile is fully loaded before creating any query.
+    // This is a more robust way to handle the dependency.
+    if (!userProfile) {
+        return null;
+    }
     
     const checklistsCollectionRef = collection(firestore, 'alker-checklists');
     const isAdminOrKorlap = userProfile.role === 'admin' || userProfile.role === 'korlap';
 
     if (isAdminOrKorlap) {
+      // Admins and Korlaps can see all checklists.
       return query(checklistsCollectionRef);
     }
     
-    return query(checklistsCollectionRef, where('userId', '==', user.uid));
-  }, [firestore, user, isProfileLoading, userProfile]);
+    // Regular users can only see their own checklists.
+    return query(checklistsCollectionRef, where('userId', '==', userProfile.id));
+  }, [firestore, userProfile]);
 
   // Replace useCollection with manual getDocs
   const [checklists, setChecklists] = useState<AlkerChecklist[] | null>(null);
