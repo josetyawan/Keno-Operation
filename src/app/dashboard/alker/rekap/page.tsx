@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, Timestamp } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -10,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FileSpreadsheet } from 'lucide-react';
-import { format, getMonth, getYear } from 'date-fns';
+import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import type { AlkerChecklist, UserProfile } from '@/lib/types';
 import * as XLSX from 'xlsx';
@@ -57,13 +58,12 @@ export default function AlkerRekapPage() {
     const { data: allUsers, isLoading: usersLoading } = useCollection<UserProfile>(usersQuery);
 
     const checklistsQuery = useMemoFirebase(() => {
-        // Sequentially load checklists only after users are available
-        // to avoid potential concurrent query conflicts on the backend.
-        if (usersLoading) {
+        // More robust sequential loading: only query for checklists if the user data has actually been loaded.
+        if (!allUsers) {
             return null;
         }
         return query(collection(firestore, 'tool-checklists'));
-    }, [firestore, usersLoading]);
+    }, [firestore, allUsers]); // Depends on the actual user data, not just the loading flag.
     const { data: allChecklists, isLoading: checklistsLoading } = useCollection<AlkerChecklist>(checklistsQuery);
 
     const jabatans = useMemo(() => {
@@ -178,7 +178,8 @@ export default function AlkerRekapPage() {
         XLSX.writeFile(workbook, `Rekap_Alker_${selectedJabatan}_${selectedMonth || 'Semua'}.xlsx`);
     };
     
-    const isLoading = usersLoading || checklistsLoading;
+    // The page is loading if either the users haven't loaded, or the users have loaded but the checklists haven't.
+    const isLoading = usersLoading || (allUsers && checklistsLoading);
 
     if (isLoading) {
         return (
