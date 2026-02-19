@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home, Network, Search, BarChart3, Map, FolderGit2, Contact, CalendarClock, ClipboardCheck, CalendarOff, UserCircle, Briefcase, Settings, Building } from 'lucide-react';
+import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home, Network, Search, BarChart3, Map, FolderGit2, Contact, CalendarClock, ClipboardCheck, CalendarOff, UserCircle, Briefcase, Settings, Building, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -29,6 +29,7 @@ const navLinks = [
   { href: '/dashboard/search-assets', label: 'Network Cek', icon: Search, access: 'allpro' },
   { href: '/dashboard/allpro', label: 'Network Service Area', icon: BarChart3, access: 'allpro' },
   { href: '/dashboard/hr/attendance', label: 'Absensi Jaga', icon: ClipboardCheck, access: 'allpro' },
+  { href: '/dashboard/alker', label: 'Pengecekan Alker', icon: Wrench, access: 'allpro' },
 ];
 
 const adminNavGroups = [
@@ -233,7 +234,7 @@ export default function DashboardLayout({
         if (!userProfile) {
           console.warn(`User profile for ${user.uid} is missing. Creating new default profile.`);
           const newUserDocRef = doc(firestore, 'users', user.uid);
-          const newUserProfileData: UserProfile = {
+          const newUserProfileData: Partial<UserProfile> = {
             id: user.uid,
             email: user.email!,
             role: 'teknisi',
@@ -284,7 +285,7 @@ export default function DashboardLayout({
       .filter(link => {
         const appAccess = userProfile?.appAccess;
         if (isAdmin || isKorlap || link.access === 'public') return true;
-        if (appAccess === 'all') return link.access === 'nota' || link.access === 'allpro';
+        if (appAccess === 'all') return true;
         return link.access === appAccess;
       })
       .map(link => (

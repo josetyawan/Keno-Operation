@@ -35,11 +35,12 @@ export type UserProfile = {
     firstName?: string;
     lastName?: string;
     displayName?: string;
+    photoURL?: string;
     role: 'admin' | 'korlap' | 'teknisi';
     nik?: string; // NIK Karyawan
     paymentInfo?: string;
     jabatan?: string;
-    registrationStatus: 'pending' | 'approved';
+    registrationStatus: 'pending' | 'approved' | 'deleted';
     appAccess?: 'nota' | 'allpro' | 'all';
     
     // New HR Fields
@@ -169,3 +170,25 @@ export type Attendance = {
     checkInCoordinates: string;
     status: 'present' | 'absent';
 };
+
+export type AlkerTool = {
+  toolName: string;
+  condition: 'baik' | 'rusak';
+  serialNumber?: string;
+  brand?: string;
+  photoUrl1?: string;
+  photoUrl2?: string;
+};
+
+export type AlkerChecklist = {
+  id: string;
+  userId: string;
+  userEmail: string;
+  userName: string;
+  userJabatan: string;
+  crewUserId?: string;
+  crewUserName?: string;
+  dateSubmitted: any; // Timestamp
+  tools: AlkerTool[];
+};
+

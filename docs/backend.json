@@ -12,6 +12,7 @@
         "firstName": { "type": "string", "description": "User's first name." },
         "lastName": { "type": "string", "description": "User's last name." },
         "displayName": { "type": "string", "description": "User's full display name." },
+        "photoURL": { "type": "string", "description": "URL of the user's profile picture.", "format": "uri" },
         "nik": { "type": "string", "description": "User's NIK (Nomor Induk Pegawai - Employee ID Number)." },
         "paymentInfo": { "type": "string", "description": "Nomor pembayaran pengguna (e-wallet atau rekening bank)." },
         "jabatan": { "type": "string", "description": "Jabatan atau posisi karyawan, misal: 'Teknisi Fiber Optik'." },
@@ -219,6 +220,41 @@
             "type": {"type": "string", "enum": ["national-holiday", "collective-leave"]}
         },
         "required": ["id", "date", "name", "type"]
+    },
+    "AlkerTool": {
+      "title": "Alker Tool",
+      "type": "object",
+      "description": "Represents a single piece of work equipment (Alat Kerja).",
+      "properties": {
+        "toolName": { "type": "string", "description": "The name of the tool, e.g., 'Splicer'." },
+        "condition": { "type": "string", "description": "The condition of the tool.", "enum": ["baik", "rusak"] },
+        "serialNumber": { "type": "string", "description": "Serial number of the tool." },
+        "brand": { "type": "string", "description": "Brand/manufacturer of the tool." },
+        "photoUrl1": { "type": "string", "description": "URL for the main photo of the tool.", "format": "uri" },
+        "photoUrl2": { "type": "string", "description": "URL for the serial number photo, if applicable.", "format": "uri" }
+      },
+      "required": ["toolName", "condition"]
+    },
+    "AlkerChecklist": {
+      "title": "Alker Checklist",
+      "type": "object",
+      "description": "A checklist submission for a technician's work tools.",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string", "description": "The ID of the technician submitting the checklist." },
+        "userEmail": { "type": "string" },
+        "userName": { "type": "string" },
+        "userJabatan": { "type": "string" },
+        "crewUserId": { "type": "string", "description": "The ID of the crew partner, if any." },
+        "crewUserName": { "type": "string" },
+        "dateSubmitted": { "type": "string", "format": "date-time" },
+        "tools": {
+          "type": "array",
+          "description": "A list of tools checked by the technician.",
+          "items": { "$ref": "#/backend/entities/AlkerTool" }
+        }
+      },
+      "required": ["id", "userId", "userName", "userJabatan", "dateSubmitted", "tools"]
     }
   },
   "auth": { "providers": ["password", "anonymous"] },
@@ -234,8 +270,10 @@
       { "path": "/network-stats/{statId}", "definition": { "entityName": "NetworkStats", "schema": { "$ref": "#/backend/entities/NetworkStats" }, "description": "Stores a single document with aggregated network asset statistics.", "params": [{ "name": "statId", "description": "The unique identifier for the summary document, typically 'summary'." }] } },
       { "path": "/schedules/{scheduleId}", "definition": { "entityName": "Schedule", "schema": {"$ref": "#/backend/entities/Schedule"}, "description": "Stores work schedules for users.", "params": [{"name": "scheduleId", "description": "The unique ID for the schedule."}] } },
       { "path": "/attendances/{attendanceId}", "definition": { "entityName": "Attendance", "schema": {"$ref": "#/backend/entities/Attendance"}, "description": "Stores attendance records for scheduled shifts.", "params": [{"name": "attendanceId", "description": "The unique ID for the attendance record."}] } },
-      { "path": "/holidays/{holidayId}", "definition": { "entityName": "Holiday", "schema": {"$ref": "#/backend/entities/Holiday"}, "description": "Stores national holidays and collective leave dates.", "params": [{"name": "holidayId", "description": "The unique ID for the holiday."}] } }
+      { "path": "/holidays/{holidayId}", "definition": { "entityName": "Holiday", "schema": {"$ref": "#/backend/entities/Holiday"}, "description": "Stores national holidays and collective leave dates.", "params": [{"name": "holidayId", "description": "The unique ID for the holiday."}] } },
+      { "path": "/alker-checklists/{checklistId}", "definition": { "entityName": "AlkerChecklist", "schema": { "$ref": "#/backend/entities/AlkerChecklist" }, "description": "Stores tool checklist submissions from technicians.", "params": [{ "name": "checklistId", "description": "The unique ID for the checklist." }] } }
     ],
     "reasoning": "The data is structured with a top-level `users` collection for profiles and a top-level `notas` collection for all user-generated notes. This flat structure for `notas` simplifies querying, allowing all users to view all notes easily, which aligns with the application's requirements. Security is enforced within the rules: while reads are permissive, writes (create, update, delete) are strictly controlled. A user can only create a nota with their own `userId`, and can only update or delete notas they own. Admins are granted special privileges to update any nota for verification purposes. A `network-assets` collection is added for managing network equipment, with admin-only write access. This design is efficient and secure for the specified use case."
   }
 }
+
