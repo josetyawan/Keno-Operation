@@ -25,6 +25,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
   Dialog,
@@ -146,16 +147,22 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
     };
 
     // Handle conditional fields
-    if (statusPernikahan) updatedData.statusPernikahan = statusPernikahan;
+    if (statusPernikahan) updatedData.statusPernikahan = statusPernikahan; else if (user.statusPernikahan) updatedData.statusPernikahan = user.statusPernikahan;
     if (statusPernikahan === 'menikah' && jumlahAnak) updatedData.jumlahAnak = Number(jumlahAnak);
     if (tinggiBadan) updatedData.tinggiBadan = Number(tinggiBadan);
     if (beratBadan) updatedData.beratBadan = Number(beratBadan);
-    if (tanggalLahir) updatedData.tanggalLahir = Timestamp.fromDate(tanggalLahir);
-    if (masaBerlakuSimA) updatedData.masaBerlakuSimA = Timestamp.fromDate(masaBerlakuSimA);
-    if (masaBerlakuSimC) updatedData.masaBerlakuSimC = Timestamp.fromDate(masaBerlakuSimC);
-    if (tanggalMasukKerja) updatedData.tanggalMasukKerja = Timestamp.fromDate(tanggalMasukKerja);
     
-    onFormSubmit(updatedData);
+    if (tanggalLahir) updatedData.tanggalLahir = Timestamp.fromDate(tanggalLahir); else if (user.tanggalLahir) updatedData.tanggalLahir = user.tanggalLahir;
+    if (masaBerlakuSimA) updatedData.masaBerlakuSimA = Timestamp.fromDate(masaBerlakuSimA); else if (user.masaBerlakuSimA) updatedData.masaBerlakuSimA = user.masaBerlakuSimA;
+    if (masaBerlakuSimC) updatedData.masaBerlakuSimC = Timestamp.fromDate(masaBerlakuSimC); else if (user.masaBerlakuSimC) updatedData.masaBerlakuSimC = user.masaBerlakuSimC;
+    if (tanggalMasukKerja) updatedData.tanggalMasukKerja = Timestamp.fromDate(tanggalMasukKerja); else if (user.tanggalMasukKerja) updatedData.tanggalMasukKerja = user.tanggalMasukKerja;
+    
+    // Filter out undefined properties to prevent Firestore errors
+    const dataToUpdate = Object.fromEntries(
+        Object.entries(updatedData).filter(([, value]) => value !== undefined)
+    );
+
+    onFormSubmit(dataToUpdate);
   };
 
   return (
@@ -233,6 +240,10 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
         {/* Data Pelengkap */}
         <Card><CardHeader><CardTitle>Data Pelengkap</CardTitle></CardHeader>
           <CardContent className="space-y-6">
+             <div className="grid gap-2">
+                <Label htmlFor="paymentInfo">No. Pembayaran (Gaji)</Label>
+                <Input id="paymentInfo" value={paymentInfo} onChange={e => setPaymentInfo(e.target.value)} placeholder="e.g., OVO 0812... / BCA 123..." />
+            </div>
             <div className="grid md:grid-cols-2 gap-4">
               <div className="grid gap-2"><Label htmlFor="noSimA">No. SIM A</Label><Input id="noSimA" value={noSimA} onChange={e => setNoSimA(e.target.value)} /></div>
               {noSimA && (
@@ -249,7 +260,6 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
                   </div>
               )}
             </div>
-            
             <div className="grid md:grid-cols-2 gap-4">
               <div className="grid gap-2"><Label htmlFor="noSimC">No. SIM C</Label><Input id="noSimC" value={noSimC} onChange={e => setNoSimC(e.target.value)} /></div>
                 {noSimC && (
@@ -266,12 +276,6 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
                   </div>
                 )}
             </div>
-            
-            <div className="grid gap-2">
-                <Label htmlFor="paymentInfo">No. Pembayaran (Gaji)</Label>
-                <Input id="paymentInfo" value={paymentInfo} onChange={e => setPaymentInfo(e.target.value)} placeholder="e.g., OVO 0812... / BCA 123..." />
-            </div>
-
              <div className="grid md:grid-cols-2 gap-4">
                 <div className="grid gap-2"><Label htmlFor="noBpjsKetenagakerjaan">No. BPJS Ketenagakerjaan</Label><Input id="noBpjsKetenagakerjaan" value={noBpjsKetenagakerjaan} onChange={e => setNoBpjsKetenagakerjaan(e.target.value)} /></div>
                 <div className="grid gap-2"><Label htmlFor="noBpjsKesehatan">No. BPJS Kesehatan</Label><Input id="noBpjsKesehatan" value={noBpjsKesehatan} onChange={e => setNoBpjsKesehatan(e.target.value)} /></div>
@@ -529,13 +533,8 @@ export default function AdminUsersPage() {
     setIsSaving(true);
     
     const userDocRef = doc(firestore, 'users', userToEdit.id);
-
-    // Filter out undefined properties before sending to Firestore
-    const dataToUpdate = Object.fromEntries(
-        Object.entries(data).filter(([, value]) => value !== undefined)
-    );
     
-    updateDocumentNonBlocking(userDocRef, dataToUpdate);
+    updateDocumentNonBlocking(userDocRef, data);
     
     toast({
       title: 'User Data Updated',
@@ -604,7 +603,6 @@ export default function AdminUsersPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nama / Email</TableHead>
-                <TableHead>NIK Karyawan</TableHead>
                 <TableHead>No. Pembayaran</TableHead>
                 <TableHead>Jabatan</TableHead>
                 <TableHead>Peran</TableHead>
@@ -623,7 +621,6 @@ export default function AdminUsersPage() {
                         <div className="font-semibold">{u.displayName || 'No Name'}</div>
                         <div className="text-xs text-muted-foreground">{u.email}</div>
                     </TableCell>
-                    <TableCell>{u.nik || '-'}</TableCell>
                     <TableCell>{u.paymentInfo || '-'}</TableCell>
                     <TableCell>{u.jabatan || '-'}</TableCell>
                      <TableCell className="capitalize">
@@ -657,7 +654,7 @@ export default function AdminUsersPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-24 text-center">
+                  <TableCell colSpan={7} className="h-24 text-center">
                     Tidak ada pengguna ditemukan.
                   </TableCell>
                 </TableRow>
