@@ -114,8 +114,8 @@ service cloud.firestore {
 
     match /alker-checklists/{checklistId} {
       // Read is covered by the global read rule.
-      allow create: if isApproved() && isCreatingOwn('userId');
-      allow update: if (isApproved() && isUpdatingOwn('userId')) || isAdmin() || isKorlap();
+      allow create: if isSignedIn() && isCreatingOwn('userId');
+      allow update: if (isSignedIn() && isUpdatingOwn('userId')) || isAdmin() || isKorlap();
       allow delete: if isAdmin() || isKorlap();
     }
   }
