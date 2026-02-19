@@ -70,6 +70,9 @@ export type UserProfile = {
     ukuranBaju?: string;
     ukuranCelana?: string;
     ukuranSepatu?: string;
+    devisi?: string;
+    unit?: string;
+    psa?: string;
 };
 
 export type ProjectID = {

@@ -59,6 +59,9 @@ export default function ProfilePage() {
   const [ukuranSepatu, setUkuranSepatu] = useState('');
   const [telegramId, setTelegramId] = useState('');
   const [telegramUsername, setTelegramUsername] = useState('');
+  const [devisi, setDevisi] = useState('');
+  const [unit, setUnit] = useState('');
+  const [psa, setPsa] = useState('');
   
   const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
   const { data: userProfile, isLoading: isFirestoreLoading } = useDoc<UserProfile>(userDocRef);
@@ -97,6 +100,9 @@ export default function ProfilePage() {
       setUkuranSepatu(userProfile.ukuranSepatu || '');
       setTelegramId(userProfile.telegramId || '');
       setTelegramUsername(userProfile.telegramUsername || '');
+      setDevisi(userProfile.devisi || '');
+      setUnit(userProfile.unit || '');
+      setPsa(userProfile.psa || '');
     }
   }, [userProfile]);
 
@@ -112,7 +118,7 @@ export default function ProfilePage() {
         jobDescHrmista, jobDescLapangan, alamat, tempatLahir, golonganDarah, paymentInfo,
         noSimA, noSimC, labor, ukuranBaju, ukuranCelana, ukuranSepatu,
         noBpjsKetenagakerjaan, noBpjsKesehatan, pendidikanTerakhir,
-        telegramId, telegramUsername,
+        telegramId, telegramUsername, devisi, unit, psa,
     };
     
     if (statusPernikahan) {
@@ -232,6 +238,11 @@ export default function ProfilePage() {
             <div className="grid gap-2"><Label htmlFor="jobDescHrmista">Job Desk di HRMISTA</Label><Textarea id="jobDescHrmista" value={jobDescHrmista} onChange={e => setJobDescHrmista(e.target.value)} /></div>
             <div className="grid gap-2"><Label htmlFor="jobDescLapangan">Job Desk Lapangan</Label><Textarea id="jobDescLapangan" value={jobDescLapangan} onChange={e => setJobDescLapangan(e.target.value)} /></div>
             <div className="grid gap-2"><Label htmlFor="labor">Labor</Label><Input id="labor" value={labor} onChange={e => setLabor(e.target.value)} /></div>
+             <div className="grid md:grid-cols-3 gap-4">
+                <div className="grid gap-2"><Label htmlFor="devisi">DEVISI</Label><Input id="devisi" value={devisi} onChange={e => setDevisi(e.target.value)} /></div>
+                <div className="grid gap-2"><Label htmlFor="unit">UNIT</Label><Input id="unit" value={unit} onChange={e => setUnit(e.target.value)} /></div>
+                <div className="grid gap-2"><Label htmlFor="psa">PSA</Label><Input id="psa" value={psa} onChange={e => setPsa(e.target.value)} /></div>
+            </div>
           </CardContent>
         </Card>
 

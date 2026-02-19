@@ -97,6 +97,9 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
   const [paymentInfo, setPaymentInfo] = useState('');
   const [telegramId, setTelegramId] = useState('');
   const [telegramUsername, setTelegramUsername] = useState('');
+  const [devisi, setDevisi] = useState('');
+  const [unit, setUnit] = useState('');
+  const [psa, setPsa] = useState('');
   
   useEffect(() => {
     if (user) {
@@ -131,6 +134,9 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
         setPaymentInfo(user.paymentInfo || '');
         setTelegramId(user.telegramId || '');
         setTelegramUsername(user.telegramUsername || '');
+        setDevisi(user.devisi || '');
+        setUnit(user.unit || '');
+        setPsa(user.psa || '');
     }
   }, [user]);
 
@@ -141,7 +147,7 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
         jobDescHrmista, jobDescLapangan, alamat, tempatLahir, golonganDarah, paymentInfo,
         noSimA, noSimC, labor, ukuranBaju, ukuranCelana, ukuranSepatu,
         noBpjsKetenagakerjaan, noBpjsKesehatan, pendidikanTerakhir,
-        telegramId, telegramUsername,
+        telegramId, telegramUsername, devisi, unit, psa,
     };
     
     // Only set the field if a value has been selected.
@@ -230,6 +236,11 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
             <div className="grid md:grid-cols-2 gap-4">
               <div className="grid gap-2"><Label htmlFor="jabatan">Jabatan</Label><Input id="jabatan" value={jabatan} onChange={e => setJabatan(e.target.value)} /></div>
               <div className="grid gap-2"><Label htmlFor="labor">Labor</Label><Input id="labor" value={labor} onChange={e => setLabor(e.target.value)} /></div>
+            </div>
+             <div className="grid md:grid-cols-3 gap-4">
+                <div className="grid gap-2"><Label htmlFor="devisi-admin">DEVISI</Label><Input id="devisi-admin" value={devisi} onChange={e => setDevisi(e.target.value)} /></div>
+                <div className="grid gap-2"><Label htmlFor="unit-admin">UNIT</Label><Input id="unit-admin" value={unit} onChange={e => setUnit(e.target.value)} /></div>
+                <div className="grid gap-2"><Label htmlFor="psa-admin">PSA</Label><Input id="psa-admin" value={psa} onChange={e => setPsa(e.target.value)} /></div>
             </div>
             <div className="grid gap-2"><Label htmlFor="jobDescHrmista">Job Desk di HRMISTA</Label><Textarea id="jobDescHrmista" value={jobDescHrmista} onChange={e => setJobDescHrmista(e.target.value)} /></div>
             <div className="grid gap-2"><Label htmlFor="jobDescLapangan">Job Desk Lapangan</Label><Textarea id="jobDescLapangan" value={jobDescLapangan} onChange={e => setJobDescLapangan(e.target.value)} /></div>

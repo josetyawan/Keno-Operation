@@ -52,7 +52,10 @@
         "labor": { "type": "string", "description": "Labor information." },
         "ukuranBaju": { "type": "string", "description": "Shirt size." },
         "ukuranCelana": { "type": "string", "description": "Pants size." },
-        "ukuranSepatu": { "type": "string", "description": "Shoe size." }
+        "ukuranSepatu": { "type": "string", "description": "Shoe size." },
+        "devisi": { "type": "string", "description": "User's devisi (division)." },
+        "unit": { "type": "string", "description": "User's unit." },
+        "psa": { "type": "string", "description": "User's PSA." }
       },
       "required": [ "id", "email", "role", "registrationStatus" ]
     },
