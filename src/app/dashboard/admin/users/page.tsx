@@ -50,8 +50,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, Shield, User, CheckCircle, Trash2, KeyRound, Edit, Loader2 } from 'lucide-react';
-import { useUser, useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, useDoc, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, query, doc, Timestamp } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, deleteDocumentNonBlocking } from '@/firebase';
+import { collection, query, doc, Timestamp, updateDoc } from 'firebase/firestore';
 import type { UserProfile, Pendidikan } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -143,8 +143,10 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
         telegramId, telegramUsername,
     };
     
-    // Handle optional fields to avoid overwriting with undefined
-    if (statusPernikahan) updatedData.statusPernikahan = statusPernikahan;
+    // Only set the field if a value has been selected.
+    if (statusPernikahan) {
+      updatedData.statusPernikahan = statusPernikahan;
+    }
     
     const hasChildren = ['menikah', 'duda', 'janda'].includes(statusPernikahan || '');
     if (hasChildren && jumlahAnak) {
@@ -153,10 +155,11 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
       updatedData.jumlahAnak = 0;
     }
     
+    // Only include numeric values if they are not empty strings.
     if (tinggiBadan) updatedData.tinggiBadan = Number(tinggiBadan);
     if (beratBadan) updatedData.beratBadan = Number(beratBadan);
     
-    // Only include dates if they are defined
+    // Only include dates if they are defined to avoid overwriting with null.
     if (tanggalLahir) updatedData.tanggalLahir = Timestamp.fromDate(tanggalLahir);
     if (masaBerlakuSimA) updatedData.masaBerlakuSimA = Timestamp.fromDate(masaBerlakuSimA);
     if (masaBerlakuSimC) updatedData.masaBerlakuSimC = Timestamp.fromDate(masaBerlakuSimC);
@@ -310,13 +313,22 @@ function UserActions({ userToManage, currentUserId, onEdit }: { userToManage: Us
   const [isAccessDialogOpen, setIsAccessDialogOpen] = useState(false);
   const [selectedAccess, setSelectedAccess] = useState<'nota' | 'allpro' | 'all'>('nota');
 
-  const handleUpdate = (data: Partial<UserProfile>) => {
+  const handleUpdate = async (data: Partial<UserProfile>) => {
     const userDocRef = doc(firestore, 'users', userToManage.id);
-    updateDocumentNonBlocking(userDocRef, data);
-    toast({
-      title: 'User Updated',
-      description: `User ${userToManage.email} has been updated.`,
-    });
+    try {
+      await updateDoc(userDocRef, data);
+      toast({
+        title: 'User Updated',
+        description: `User ${userToManage.email} has been updated.`,
+      });
+    } catch(error) {
+        console.error("Failed to update user from actions:", error);
+        toast({
+            variant: 'destructive',
+            title: 'Update Failed',
+            description: 'Could not update user. Please try again.'
+        });
+    }
   };
   
   const handleDeleteUser = () => {
@@ -329,13 +341,13 @@ function UserActions({ userToManage, currentUserId, onEdit }: { userToManage: Us
     });
   }
 
-  const handleApprove = () => {
-    handleUpdate({ registrationStatus: 'approved', appAccess: selectedAccess });
+  const handleApprove = async () => {
+    await handleUpdate({ registrationStatus: 'approved', appAccess: selectedAccess });
     setIsApproveDialogOpen(false);
   }
 
-  const handleChangeAccess = () => {
-    handleUpdate({ appAccess: selectedAccess });
+  const handleChangeAccess = async () => {
+    await handleUpdate({ appAccess: selectedAccess });
     setIsAccessDialogOpen(false);
   }
   
@@ -530,21 +542,29 @@ export default function AdminUsersPage() {
     setUserToEdit(user);
   };
   
-  const handleFormSubmit = (data: Partial<UserProfile>) => {
+  const handleFormSubmit = async (data: Partial<UserProfile>) => {
     if (!userToEdit) return;
     setIsSaving(true);
     
     const userDocRef = doc(firestore, 'users', userToEdit.id);
     
-    updateDocumentNonBlocking(userDocRef, data);
-    
-    toast({
-      title: 'User Data Updated',
-      description: `Data untuk ${userToEdit.email} telah diperbarui.`,
-    });
-    
-    setIsSaving(false);
-    setUserToEdit(null);
+    try {
+      await updateDoc(userDocRef, data);
+      toast({
+        title: 'User Data Updated',
+        description: `Data untuk ${userToEdit.email} telah diperbarui.`,
+      });
+      setUserToEdit(null);
+    } catch (error) {
+      console.error("Failed to update user:", error);
+      toast({
+        variant: "destructive",
+        title: "Update Gagal",
+        description: "Gagal memperbarui data pengguna. Silakan coba lagi."
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const isLoading = isUserLoading || isProfileLoading || areUsersLoading;
