@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -61,15 +60,14 @@ export default function NewAlkerPage() {
   const currentUserProfile = useMemo(() => users?.find(u => u.id === user?.uid), [users, user]);
   
   const otherTeknisi = useMemo(() => {
-      if (!users || !user) return [];
-      return users
-          .filter(u => u.role === 'teknisi' && u.id !== user.uid)
-          .sort((a, b) => (a.displayName || '').localeCompare(b.displayName || ''));
+    if (!users || !user) return [];
+    return users.filter(u => u.role === 'teknisi' && u.id !== user.uid);
   }, [users, user]);
 
   const groupedTeknisi = useMemo(() => {
     if (!otherTeknisi) return {};
-    return otherTeknisi.reduce((acc, teknisi) => {
+    const sortedTeknisi = [...otherTeknisi].sort((a, b) => (a.displayName || '').localeCompare(b.displayName || ''));
+    return sortedTeknisi.reduce((acc, teknisi) => {
       const jabatan = teknisi.jabatan || 'Lainnya';
       if (!acc[jabatan]) {
         acc[jabatan] = [];
@@ -203,7 +201,7 @@ export default function NewAlkerPage() {
                             name="crewUserId"
                             control={control}
                             render={({ field }) => (
-                                <Select onValueChange={(value) => field.onChange(value === 'none' ? '' : value)} value={field.value}>
+                                <Select onValueChange={(value) => field.onChange(value === 'none' ? '' : value)} value={field.value || 'none'}>
                                     <SelectTrigger><SelectValue placeholder="Pilih rekan kerja..." /></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="none">Tidak Ada</SelectItem>
@@ -231,6 +229,7 @@ export default function NewAlkerPage() {
                     <Accordion type="single" collapsible className="w-full">
                         {fields.map((item, index) => {
                             const needsTwoPhotos = toolsWithTwoPhotos.some(t => item.toolName.startsWith(t));
+                            const isKbmR2 = item.toolName === 'KBM Roda 2';
                             return (
                                 <AccordionItem value={`item-${index}`} key={item.id}>
                                     <AccordionTrigger>{index + 1}. {item.toolName}</AccordionTrigger>
@@ -250,8 +249,8 @@ export default function NewAlkerPage() {
                                                 />
                                             </div>
                                              <div className="grid gap-2">
-                                                <Label htmlFor={`sn-${index}`}>Serial Number (SN)</Label>
-                                                <Input id={`sn-${index}`} {...register(`tools.${index}.serialNumber`)} placeholder="Masukkan SN..." />
+                                                <Label htmlFor={`sn-${index}`}>{isKbmR2 ? 'Plat Nomor' : 'Serial Number (SN)'}</Label>
+                                                <Input id={`sn-${index}`} {...register(`tools.${index}.serialNumber`)} placeholder={isKbmR2 ? 'Contoh: K 1234 AB' : 'Masukkan SN...'} />
                                             </div>
                                              <div className="grid gap-2">
                                                 <Label htmlFor={`brand-${index}`}>Merek / Tipe</Label>
