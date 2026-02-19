@@ -22,10 +22,8 @@ service firebase.storage {
       allow write: if request.auth.uid == userId;
     }
 
-    // !!!!! DEBUGGING ONLY !!!!!
-    // This rule is temporarily wide open to diagnose the storage issue.
     match /alker-photos/{userId}/{fileName} {
-      allow write: if true;
+      allow write: if request.auth.uid == userId;
     }
 
     // Default public read for all files to allow image display in the app.
