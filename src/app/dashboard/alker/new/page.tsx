@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Loader2, Upload, X, Wrench } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { useFirestore, addDocumentNonBlocking, useUser, useStorage, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, serverTimestamp, query, where, orderBy } from 'firebase/firestore';
+import { collection, serverTimestamp, query, orderBy } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import type { AlkerChecklist, AlkerTool, UserProfile } from '@/lib/types';
@@ -52,10 +52,20 @@ export default function NewAlkerPage() {
   const { user } = useUser();
   const storage = useStorage();
   const [isSaving, setIsSaving] = useState(false);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [areUsersLoading, setAreUsersLoading] = useState(true);
 
   // --- Data Fetching ---
-  const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users'), where('registrationStatus', '==', 'approved')), [firestore]);
-  const { data: users, isLoading: areUsersLoading } = useCollection<UserProfile>(usersQuery);
+  const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users'), orderBy('displayName')), [firestore]);
+  const { data: allUsers, isLoading: isCollectionLoading } = useCollection<UserProfile>(usersQuery);
+
+  useEffect(() => {
+    if (allUsers) {
+      const approvedUsers = allUsers.filter(u => u.registrationStatus === 'approved');
+      setUsers(approvedUsers);
+      setAreUsersLoading(false);
+    }
+  }, [allUsers]);
 
   const currentUserProfile = useMemo(() => users?.find(u => u.id === user?.uid), [users, user]);
   
@@ -139,8 +149,8 @@ export default function NewAlkerPage() {
         userEmail: user.email!,
         userName: currentUserProfile.displayName || user.email!,
         userJabatan: currentUserProfile.jabatan || 'N/A',
-        crewUserId: selectedCrew?.id,
-        crewUserName: selectedCrew?.displayName,
+        crewUserId: selectedCrew?.id || '',
+        crewUserName: selectedCrew?.displayName || '',
         dateSubmitted: serverTimestamp(),
         tools: toolDataWithUrls,
       };
