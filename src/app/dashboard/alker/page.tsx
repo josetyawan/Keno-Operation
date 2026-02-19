@@ -115,13 +115,33 @@ export default function AlkerListPage() {
     const isAdminOrKorlap = userProfile.role === 'admin' || userProfile.role === 'korlap';
 
     if (isAdminOrKorlap) {
-      return query(checklistsCollectionRef, orderBy('dateSubmitted', 'desc'));
+      // For admins, fetch all documents without server-side sorting to avoid index/permission issues.
+      // Sorting will be done on the client.
+      return query(checklistsCollectionRef);
     }
     
+    // For regular users, fetch only their documents, sorted by date.
     return query(checklistsCollectionRef, where('userId', '==', userProfile.id), orderBy('dateSubmitted', 'desc'));
   }, [firestore, userProfile, isProfileLoading]);
 
   const { data: checklists, isLoading: areChecklistsLoading } = useCollection<AlkerChecklist>(checklistsQuery);
+
+  const sortedChecklists = useMemo(() => {
+    if (!checklists) return [];
+    
+    // Make a mutable copy
+    const processedChecklists = [...checklists];
+    
+    // Sort client-side. This is always safe and consistent.
+    processedChecklists.sort((a, b) => {
+      const timeA = safeToDate(a.dateSubmitted)?.getTime() ?? 0;
+      const timeB = safeToDate(b.dateSubmitted)?.getTime() ?? 0;
+      return timeB - timeA; // Descending
+    });
+    
+    return processedChecklists;
+  }, [checklists]);
+
 
   const isLoading = areChecklistsLoading || isProfileLoading || isUserLoading;
   const isAdminOrKorlap = userProfile?.role === 'admin' || userProfile?.role === 'korlap';
@@ -153,7 +173,7 @@ export default function AlkerListPage() {
               <Skeleton className="h-10 w-full mb-2" />
               <Skeleton className="h-10 w-full" />
             </div>
-          ) : checklists && checklists.length > 0 ? (
+          ) : sortedChecklists && sortedChecklists.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -165,7 +185,7 @@ export default function AlkerListPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {checklists.map(checklist => (
+                {sortedChecklists.map(checklist => (
                   <TableRow key={checklist.id}>
                     <TableCell className="font-medium pl-6">{checklist.userName}</TableCell>
                     <TableCell><Badge variant="secondary">{checklist.userJabatan || '-'}</Badge></TableCell>
