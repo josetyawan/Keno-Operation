@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -57,7 +56,14 @@ export default function AlkerRekapPage() {
     const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
     const { data: allUsers, isLoading: usersLoading } = useCollection<UserProfile>(usersQuery);
 
-    const checklistsQuery = useMemoFirebase(() => query(collection(firestore, 'tool-checklists')), [firestore]);
+    const checklistsQuery = useMemoFirebase(() => {
+        // Sequentially load checklists only after users are available
+        // to avoid potential concurrent query conflicts on the backend.
+        if (usersLoading) {
+            return null;
+        }
+        return query(collection(firestore, 'tool-checklists'));
+    }, [firestore, usersLoading]);
     const { data: allChecklists, isLoading: checklistsLoading } = useCollection<AlkerChecklist>(checklistsQuery);
 
     const jabatans = useMemo(() => {

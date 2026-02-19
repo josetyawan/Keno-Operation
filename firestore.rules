@@ -46,7 +46,7 @@ service cloud.firestore {
     
     match /users/{userId} {
       allow create: if request.auth.uid == userId && request.resource.data.email is string && request.resource.data.role == 'teknisi' && request.resource.data.registrationStatus == 'pending';
-      // Any signed-in user can read any other user's profile. This is safe for an internal app and necessary to avoid recursive rule errors.
+      // Any signed-in user can read any other user's profile. This is safe for an internal app.
       allow get, list: if isSignedIn();
       allow update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin() && request.auth.uid != userId;
