@@ -50,7 +50,7 @@ import {
   DropdownMenuPortal,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Shield, User, CheckCircle, Trash2, KeyRound, Edit, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MoreHorizontal, Shield, User, CheckCircle, Trash2, KeyRound, Edit, Loader2, ChevronLeft, ChevronRight, FileSpreadsheet } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, doc, Timestamp, updateDoc } from 'firebase/firestore';
 import type { UserProfile, Pendidikan } from '@/lib/types';
@@ -63,6 +63,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { DatePickerDropdowns } from '@/components/ui/date-picker-dropdowns';
+import * as XLSX from 'xlsx';
+import { format } from 'date-fns';
 
 
 function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onFormSubmit: (data: Partial<UserProfile>) => void, isSaving: boolean }) {
@@ -176,14 +178,14 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
     }
     
     const hasChildren = ['menikah', 'duda', 'janda'].includes(statusPernikahan || '');
-    if (hasChildren && jumlahAnak) {
-      updatedData.jumlahAnak = Number(jumlahAnak);
-    } else if (!hasChildren) {
-      updatedData.jumlahAnak = 0;
+    if (hasChildren) {
+        updatedData.jumlahAnak = Number(jumlahAnak) || 0;
+    } else {
+        updatedData.jumlahAnak = 0;
     }
     
-    if (tinggiBadan) updatedData.tinggiBadan = Number(tinggiBadan);
-    if (beratBadan) updatedData.beratBadan = Number(beratBadan);
+    if (tinggiBadan) updatedData.tinggiBadan = Number(tinggiBadan) || 0;
+    if (beratBadan) updatedData.beratBadan = Number(beratBadan) || 0;
     
     if (tanggalLahir) updatedData.tanggalLahir = Timestamp.fromDate(tanggalLahir);
     if (masaBerlakuSimA) updatedData.masaBerlakuSimA = Timestamp.fromDate(masaBerlakuSimA);
@@ -569,6 +571,91 @@ export default function AdminUsersPage() {
     setCurrentPage(1);
   }, [searchQuery]);
 
+  const handleExportToExcel = () => {
+    if (!users || users.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Tidak Ada Data",
+        description: "Tidak ada data pengguna untuk diekspor.",
+      });
+      return;
+    }
+
+    const safeFormatDate = (timestamp: any): string => {
+      if (!timestamp) return '';
+      try {
+        const date = timestamp.toDate();
+        return format(date, 'yyyy-MM-dd');
+      } catch (e) {
+        try {
+          return format(new Date(timestamp), 'yyyy-MM-dd');
+        } catch (err) {
+          return '';
+        }
+      }
+    };
+
+    const dataToExport = users.map(user => ({
+      'NIK Karyawan': user.nik || '',
+      'Nama Lengkap': user.displayName || '',
+      'Email Login': user.email || '',
+      'Email Corporate': user.emailCorporate || '',
+      'No. HP T-Sel': user.noHpTsel || '',
+      'No. Pembayaran (Gaji)': user.paymentInfo || (user as any).phone || '',
+      'Jabatan': user.jabatan || '',
+      'Role': user.role || '',
+      'Status Registrasi': user.registrationStatus || '',
+      'Akses Aplikasi': user.appAccess || '',
+      'NIK KTP': user.nikKtp || '',
+      'Alamat': user.alamat || '',
+      'Tempat Lahir': user.tempatLahir || '',
+      'Tanggal Lahir': safeFormatDate(user.tanggalLahir),
+      'Golongan Darah': user.golonganDarah || '',
+      'Status Pernikahan': user.statusPernikahan || '',
+      'Jumlah Anak': user.jumlahAnak ?? '',
+      'No. SIM A': user.noSimA || '',
+      'Masa Berlaku SIM A': safeFormatDate(user.masaBerlakuSimA),
+      'No. SIM C': user.noSimC || '',
+      'Masa Berlaku SIM C': safeFormatDate(user.masaBerlakuSimC),
+      'Tanggal Masuk Kerja': safeFormatDate(user.tanggalMasukKerja),
+      'Tinggi Badan (cm)': user.tinggiBadan ?? '',
+      'Berat Badan (kg)': user.beratBadan ?? '',
+      'No. BPJS Ketenagakerjaan': user.noBpjsKetenagakerjaan || '',
+      'No. BPJS Kesehatan': user.noBpjsKesehatan || '',
+      'Institusi Pendidikan': user.pendidikanTerakhir?.institusi || '',
+      'Jurusan Pendidikan': user.pendidikanTerakhir?.jurusan || '',
+      'Tahun Lulus': user.pendidikanTerakhir?.tahunLulus || '',
+      'Labor': user.labor || '',
+      'Ukuran Baju': user.ukuranBaju || '',
+      'Ukuran Celana': user.ukuranCelana || '',
+      'Ukuran Sepatu': user.ukuranSepatu || '',
+      'Devisi': user.devisi || '',
+      'Unit': user.unit || '',
+      'PSA': user.psa || '',
+      'ID Telegram': user.telegramId || '',
+      'Username Telegram': user.telegramUsername || '',
+      'Job Desk HRMISTA': user.jobDescHrmista || '',
+      'Job Desk Lapangan': user.jobDescLapangan || '',
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Data HR');
+    
+    // Auto-fit columns
+    const objectMaxLength: any[] = [];
+    dataToExport.forEach(row => {
+      Object.entries(row).forEach(([key, value], colIndex) => {
+        const headerLength = key.length;
+        const cellLength = value ? String(value).length : 0;
+        objectMaxLength[colIndex] = Math.max(objectMaxLength[colIndex] || headerLength, cellLength);
+      });
+    });
+    worksheet['!cols'] = objectMaxLength.map(w => ({ width: w + 2 }));
+
+    XLSX.writeFile(workbook, `Data_HR_NotaKu_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+  };
+
   const filteredUsers = useMemo(() => {
     if (!users) return [];
     const activeUsers = users.filter(u => u.registrationStatus !== 'deleted');
@@ -662,6 +749,10 @@ export default function AdminUsersPage() {
             Setujui pengguna baru, kelola peran, dan perbarui data HR di sini.
           </p>
         </div>
+         <Button onClick={handleExportToExcel}>
+          <FileSpreadsheet className="mr-2 h-4 w-4" />
+          Download Excel
+        </Button>
       </div>
       <Card>
         <CardHeader>
@@ -787,5 +878,3 @@ export default function AdminUsersPage() {
     </>
   );
 }
-
-    
