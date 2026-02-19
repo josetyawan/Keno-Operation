@@ -4,10 +4,25 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
   
-    // Generic rule for user-owned folders.
-    // This covers 'notas', 'profile-pictures', 'pelanggan', 'hr_attendance', 'alker-photos'.
-    match /{folder}/{userId}/{fileName}
-      where folder in ['notas', 'profile-pictures', 'pelanggan', 'hr_attendance', 'alker-photos'] {
+    // --- Aturan Eksplisit per Folder ---
+
+    match /notas/{userId}/{fileName} {
+      allow write: if request.auth.uid == userId;
+    }
+
+    match /profile-pictures/{userId}/{fileName} {
+      allow write: if request.auth.uid == userId;
+    }
+    
+    match /pelanggan/{userId}/{fileName} {
+      allow write: if request.auth.uid == userId;
+    }
+
+    match /hr_attendance/{userId}/{fileName} {
+      allow write: if request.auth.uid == userId;
+    }
+
+    match /alker-photos/{userId}/{fileName} {
       allow write: if request.auth.uid == userId;
     }
 
