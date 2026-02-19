@@ -55,11 +55,17 @@ export default function NewAlkerPage() {
   const [isSaving, setIsSaving] = useState(false);
 
   // --- Data Fetching ---
-  const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users'), where('registrationStatus', '==', 'approved'), orderBy('displayName')), [firestore]);
+  const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users'), where('registrationStatus', '==', 'approved')), [firestore]);
   const { data: users, isLoading: areUsersLoading } = useCollection<UserProfile>(usersQuery);
 
   const currentUserProfile = useMemo(() => users?.find(u => u.id === user?.uid), [users, user]);
-  const otherTeknisi = useMemo(() => users?.filter(u => u.role === 'teknisi' && u.id !== user?.uid), [users, user]);
+  
+  const otherTeknisi = useMemo(() => {
+      if (!users || !user) return [];
+      return users
+          .filter(u => u.role === 'teknisi' && u.id !== user.uid)
+          .sort((a, b) => (a.displayName || '').localeCompare(b.displayName || ''));
+  }, [users, user]);
 
   const groupedTeknisi = useMemo(() => {
     if (!otherTeknisi) return {};
