@@ -109,10 +109,13 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
-    match /alker-checklists/{checklistId} {
-      // DIAGNOSTIC STEP: Simplify all rules for this path to isolate the issue.
-      // This is temporarily insecure for testing purposes.
-      allow read, write: if isSignedIn();
+    match /tool-checklists/{checklistId} {
+      allow get, list: if isApproved() || isAdmin();
+      allow create: if isApproved() && isCreatingOwn('userId');
+      allow update: if (isApproved() && isOwner(resource.data.userId)) || isAdmin() || isKorlap();
+      allow delete: if (isApproved() && isOwner(resource.data.userId)) || isAdmin() || isKorlap();
     }
   }
 }
+
+    

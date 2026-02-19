@@ -32,11 +32,11 @@ import { Button } from '@/components/ui/button';
 import { MoreHorizontal, PlusCircle, Trash2 } from 'lucide-react';
 import { format, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
-import { useUser, useFirestore, useMemoFirebase, useDoc, deleteDocumentNonBlocking, FirestorePermissionError, errorEmitter } from '@/firebase';
-import { collection, query, doc, where, getDocs, type QueryConstraint } from 'firebase/firestore';
+import { useUser, useFirestore, useMemoFirebase, useDoc, deleteDocumentNonBlocking, useCollection } from '@/firebase';
+import { collection, query, doc, where } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { AlkerChecklist, UserProfile } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
@@ -48,7 +48,7 @@ function AlkerActions({ checklist, isAdminOrKorlap }: { checklist: AlkerChecklis
 
   const handleDelete = () => {
     setIsDeleting(true);
-    const docRef = doc(firestore, 'alker-checklists', checklist.id);
+    const docRef = doc(firestore, 'tool-checklists', checklist.id);
     deleteDocumentNonBlocking(docRef);
     toast({
       title: 'Pengecekan Dihapus',
@@ -108,12 +108,11 @@ export default function AlkerListPage() {
 
   const checklistsQuery = useMemoFirebase(() => {
     // Wait until the user profile is fully loaded before creating any query.
-    // This is a more robust way to handle the dependency.
-    if (!userProfile) {
+    if (isProfileLoading || !userProfile) {
         return null;
     }
     
-    const checklistsCollectionRef = collection(firestore, 'alker-checklists');
+    const checklistsCollectionRef = collection(firestore, 'tool-checklists');
     const isAdminOrKorlap = userProfile.role === 'admin' || userProfile.role === 'korlap';
 
     if (isAdminOrKorlap) {
@@ -123,43 +122,10 @@ export default function AlkerListPage() {
     
     // Regular users can only see their own checklists.
     return query(checklistsCollectionRef, where('userId', '==', userProfile.id));
-  }, [firestore, userProfile]);
+  }, [firestore, userProfile, isProfileLoading]);
 
-  // Replace useCollection with manual getDocs
-  const [checklists, setChecklists] = useState<AlkerChecklist[] | null>(null);
-  const [areChecklistsLoading, setAreChecklistsLoading] = useState(true);
-
-  useEffect(() => {
-    if (!checklistsQuery) {
-        setChecklists([]);
-        setAreChecklistsLoading(false);
-        return;
-    }
-
-    setAreChecklistsLoading(true);
-    getDocs(checklistsQuery)
-        .then(snapshot => {
-            const results: AlkerChecklist[] = [];
-            snapshot.forEach(doc => {
-                results.push({ ...(doc.data() as Omit<AlkerChecklist, 'id'>), id: doc.id });
-            });
-            setChecklists(results);
-        })
-        .catch(error => {
-            console.error("getDocs failed for alker-checklists:", error);
-            const contextualError = new FirestorePermissionError({
-              operation: 'list',
-              path: 'alker-checklists',
-            }, error);
-            errorEmitter.emit('permission-error', contextualError);
-            setChecklists([]); // Set to empty array on error
-        })
-        .finally(() => {
-            setAreChecklistsLoading(false);
-        });
-  }, [checklistsQuery]);
-  // End of replacement
-
+  const { data: checklists, isLoading: areChecklistsLoading } = useCollection<AlkerChecklist>(checklistsQuery);
+  
   const sortedChecklists = useMemo(() => {
     if (!checklists) return [];
     return [...checklists].sort((a, b) => {
@@ -246,3 +212,5 @@ export default function AlkerListPage() {
     </>
   );
 }
+
+    

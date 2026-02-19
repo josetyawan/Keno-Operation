@@ -141,7 +141,7 @@ export default function NewAlkerPage() {
         tools: toolDataWithUrls,
       };
 
-      await addDocumentNonBlocking(collection(firestore, 'alker-checklists'), newChecklist);
+      await addDocumentNonBlocking(collection(firestore, 'tool-checklists'), newChecklist);
 
       toast({ title: 'Sukses', description: 'Laporan pengecekan alker berhasil disimpan.' });
       router.push('/dashboard/alker');
@@ -284,3 +284,4 @@ export default function NewAlkerPage() {
   );
 }
 
+    

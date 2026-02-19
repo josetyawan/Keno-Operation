@@ -58,7 +58,7 @@ export default function AlkerDetailPage() {
   const { user } = useUser();
   const firestore = useFirestore();
 
-  const checklistRef = useMemoFirebase(() => doc(firestore, 'alker-checklists', id), [firestore, id]);
+  const checklistRef = useMemoFirebase(() => doc(firestore, 'tool-checklists', id), [firestore, id]);
   const { data: checklist, isLoading } = useDoc<AlkerChecklist>(checklistRef);
 
   const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
@@ -166,3 +166,4 @@ export default function AlkerDetailPage() {
   );
 }
 
+    
