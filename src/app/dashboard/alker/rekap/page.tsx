@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FileSpreadsheet } from 'lucide-react';
-import { format, id as idLocale, startOfMonth, endOfMonth } from 'date-fns';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { id as idLocale } from 'date-fns/locale';
 import type { AlkerChecklist, UserProfile } from '@/lib/types';
 import * as XLSX from 'xlsx';
 import { useRouter } from 'next/navigation';
