@@ -112,7 +112,7 @@ export default function AlkerListPage() {
     const isAdminOrKorlap = userProfile.role === 'admin' || userProfile.role === 'korlap';
 
     if (isAdminOrKorlap) {
-      // Bare query for admin/korlap. Sorting will be done on the client.
+      // For admin/korlap, fetch all checklists. Sorting will be done on the client.
       return query(checklistsCollectionRef);
     }
     
