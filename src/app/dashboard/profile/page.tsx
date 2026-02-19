@@ -84,47 +84,6 @@ export default function ProfilePage() {
       setGolonganDarah(userProfile.golonganDarah || '');
       setStatusPernikahan(userProfile.statusPernikahan);
       setJumlahAnak(userProfile.jumlahAnak?.toString() || '');
-      setNoSimA, setNoSimA] = useState('');
-  const [noSimC, setNoSimC] = useState('');
-  const [masaBerlakuSimA, setMasaBerlakuSimA] = useState<Date | undefined>();
-  const [masaBerlakuSimC, setMasaBerlakuSimC] = useState<Date | undefined>();
-  const [tanggalMasukKerja, setTanggalMasukKerja] = useState<Date | undefined>();
-  const [tinggiBadan, setTinggiBadan] = useState('');
-  const [beratBadan, setBeratBadan] = useState('');
-  const [noBpjsKetenagakerjaan, setNoBpjsKetenagakerjaan] = useState('');
-  const [noBpjsKesehatan, setNoBpjsKesehatan] = useState('');
-  const [pendidikanTerakhir, setPendidikanTerakhir] = useState<Pendidikan>({ institusi: '', jurusan: '', tahunLulus: '' });
-  const [labor, setLabor] = useState('');
-  const [ukuranBaju, setUkuranBaju] = useState('');
-  const [ukuranCelana, setUkuranCelana] = useState('');
-  const [ukuranSepatu, setUkuranSepatu] = useState('');
-  const [telegramId, setTelegramId] = useState('');
-  const [telegramUsername, setTelegramUsername] = useState('');
-  const [devisi, setDevisi] = useState('');
-  const [unit, setUnit] = useState('');
-  const [psa, setPsa] = useState('');
-  
-  const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
-  const { data: userProfile, isLoading: isFirestoreLoading } = useDoc<UserProfile>(userDocRef);
-
-  useEffect(() => {
-    if (userProfile) {
-      setDisplayName(userProfile.displayName || '');
-      setEmail(userProfile.email || '');
-      setEmailCorporate(userProfile.emailCorporate || '');
-      setNikKaryawan(userProfile.nik || '');
-      setNikKtp(userProfile.nikKtp || '');
-      setNoHpTsel(userProfile.noHpTsel || '');
-      setPaymentInfo(userProfile.paymentInfo || (userProfile as any).phone || '');
-      setJabatan(userProfile.jabatan || '');
-      setJobDescHrmista(userProfile.jobDescHrmista || '');
-      setJobDescLapangan(userProfile.jobDescLapangan || '');
-      setAlamat(userProfile.alamat || '');
-      setTempatLahir(userProfile.tempatLahir || '');
-      setTanggalLahir(userProfile.tanggalLahir?.toDate());
-      setGolonganDarah(userProfile.golonganDarah || '');
-      setStatusPernikahan(userProfile.statusPernikahan);
-      setJumlahAnak(userProfile.jumlahAnak?.toString() || '');
       setNoSimA(userProfile.noSimA || '');
       setNoSimC(userProfile.noSimC || '');
       setMasaBerlakuSimA(userProfile.masaBerlakuSimA?.toDate());
@@ -188,14 +147,14 @@ export default function ProfilePage() {
     }
     
     const hasChildren = ['menikah', 'duda', 'janda'].includes(statusPernikahan || '');
-    if (hasChildren && jumlahAnak) {
-      updatedData.jumlahAnak = Number(jumlahAnak);
-    } else if (!hasChildren) {
-      updatedData.jumlahAnak = 0;
+    if (hasChildren) {
+        updatedData.jumlahAnak = Number(jumlahAnak) || 0;
+    } else {
+        updatedData.jumlahAnak = 0;
     }
     
-    if (tinggiBadan) updatedData.tinggiBadan = Number(tinggiBadan);
-    if (beratBadan) updatedData.beratBadan = Number(beratBadan);
+    if (tinggiBadan) updatedData.tinggiBadan = Number(tinggiBadan) || 0;
+    if (beratBadan) updatedData.beratBadan = Number(beratBadan) || 0;
     
     if (tanggalLahir) updatedData.tanggalLahir = Timestamp.fromDate(tanggalLahir);
     if (masaBerlakuSimA) updatedData.masaBerlakuSimA = Timestamp.fromDate(masaBerlakuSimA);
