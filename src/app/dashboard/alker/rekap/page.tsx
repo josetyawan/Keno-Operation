@@ -2,8 +2,8 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
+import { collection, query, doc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import type { AlkerChecklist, UserProfile } from '@/lib/types';
 import * as XLSX from 'xlsx';
+import { useRouter } from 'next/navigation';
 
 const toolBenchmarks = [
     { name: "Splicer (Asuransi dan pajak, Maintenance Service, SUCA dan elektroda)", satuan: "Unit", tolokUkur: "Per-2 Teknisi" },
@@ -50,27 +51,31 @@ const getMonthYearOptions = (checklists: AlkerChecklist[] | null) => {
 
 export default function AlkerRekapPage() {
     const firestore = useFirestore();
+    const { user, isUserLoading } = useUser();
+    const router = useRouter();
 
-    const [selectedJabatan, setSelectedJabatan] = useState('all');
     const [selectedMonth, setSelectedMonth] = useState('');
 
-    const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
-    const { data: allUsers, isLoading: usersLoading } = useCollection<UserProfile>(usersQuery);
+    const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
+    const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+
+    useEffect(() => {
+        if (!isUserLoading && !isProfileLoading) {
+            if (!userProfile || (userProfile.role !== 'admin' && userProfile.role !== 'korlap')) {
+                router.push('/dashboard');
+            }
+        }
+    }, [userProfile, isUserLoading, isProfileLoading, router]);
 
     const checklistsQuery = useMemoFirebase(() => {
-        if (!allUsers) {
+        if (!userProfile || (userProfile.role !== 'admin' && userProfile.role !== 'korlap')) {
             return null;
         }
         return query(collection(firestore, 'tool-checklists'));
-    }, [firestore, allUsers]);
+    }, [firestore, userProfile]);
+
     const { data: allChecklists, isLoading: checklistsLoading } = useCollection<AlkerChecklist>(checklistsQuery);
-
-    const jabatans = useMemo(() => {
-        if (!allUsers) return [];
-        const jabatanSet = new Set(allUsers.map(u => u.jabatan).filter(Boolean));
-        return Array.from(jabatanSet).sort();
-    }, [allUsers]);
-
+    
     const monthOptions = useMemo(() => getMonthYearOptions(allChecklists), [allChecklists]);
 
     useEffect(() => {
@@ -79,27 +84,23 @@ export default function AlkerRekapPage() {
         }
     }, [monthOptions, selectedMonth]);
 
-    const { filteredUsers, filteredChecklists, numTeknisi } = useMemo(() => {
-        if (!allUsers || !allChecklists) {
-            return { filteredUsers: [], filteredChecklists: [], numTeknisi: 0 };
+    const { filteredChecklists, numTeknisi } = useMemo(() => {
+        if (!allChecklists) {
+            return { filteredChecklists: [], numTeknisi: 0 };
         }
-
-        const usersByJabatan = selectedJabatan === 'all'
-            ? allUsers.filter(u => u.role === 'teknisi')
-            : allUsers.filter(u => u.jabatan === selectedJabatan);
-        
-        const userIds = new Set(usersByJabatan.map(u => u.id));
-        const count = userIds.size;
 
         const checklistsInMonth = selectedMonth
             ? allChecklists.filter(c => {
                 const date = c.dateSubmitted?.toDate();
-                return date && format(date, 'yyyy-MM') === selectedMonth && userIds.has(c.userId);
+                return date && format(date, 'yyyy-MM') === selectedMonth;
               })
-            : allChecklists.filter(c => userIds.has(c.userId));
+            : allChecklists;
+        
+        const uniqueUserIds = new Set(checklistsInMonth.map(c => c.userId));
+        const count = uniqueUserIds.size;
 
-        return { filteredUsers: usersByJabatan, filteredChecklists: checklistsInMonth, numTeknisi: count };
-    }, [allUsers, allChecklists, selectedJabatan, selectedMonth]);
+        return { filteredChecklists: checklistsInMonth, numTeknisi: count };
+    }, [allChecklists, selectedMonth]);
 
     const summaryData = useMemo(() => {
         if (numTeknisi === 0) return [];
@@ -111,7 +112,21 @@ export default function AlkerRekapPage() {
             const pemenuhan = relevantTools.length;
             const gap = pemenuhan - target;
             
-            const ketMerk = relevantTools.map(t => `${t.brand || ''} ${t.serialNumber || ''}`.trim()).filter(Boolean).join('; ');
+            const toolsByUser = relevantTools.reduce((acc, t) => {
+                const checklist = filteredChecklists.find(c => c.tools.some(toolInChecklist => toolInChecklist === t));
+                 if (checklist) {
+                    const userName = checklist.userName || 'Unknown';
+                    if (!acc[userName]) {
+                        acc[userName] = [];
+                    }
+                    acc[userName].push(`${t.brand || ''} ${t.serialNumber || ''}`.trim());
+                 }
+                return acc;
+            }, {} as Record<string, string[]>);
+            
+            const ketMerk = Object.entries(toolsByUser)
+                .map(([userName, details]) => `${userName}: ${details.filter(Boolean).join(', ')}`)
+                .join('; ');
 
             let keterangan;
             if (gap >= 0) {
@@ -149,7 +164,7 @@ export default function AlkerRekapPage() {
             'Target': item.target,
             'Pemenuhan': item.pemenuhan,
             'GAP': item.gap,
-            'Ket Merk/Type': item.ketMerk,
+            'Ket Merk/Type/PIC': item.ketMerk,
             'KETERANGAN': item.keterangan,
         }));
         
@@ -174,10 +189,10 @@ export default function AlkerRekapPage() {
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Rekap Alker');
 
-        XLSX.writeFile(workbook, `Rekap_Alker_${selectedJabatan}_${selectedMonth || 'Semua'}.xlsx`);
+        XLSX.writeFile(workbook, `Rekap_Alker_Bulan_${selectedMonth || 'Semua'}.xlsx`);
     };
     
-    const isLoading = usersLoading || (allUsers && checklistsLoading);
+    const isLoading = isUserLoading || isProfileLoading || checklistsLoading;
 
     if (isLoading) {
         return (
@@ -208,16 +223,6 @@ export default function AlkerRekapPage() {
                 </CardHeader>
                 <CardContent className="grid md:grid-cols-2 gap-4">
                     <div className="grid gap-2">
-                        <Label htmlFor="jabatan-filter">Jabatan Teknisi</Label>
-                        <Select value={selectedJabatan} onValueChange={setSelectedJabatan}>
-                            <SelectTrigger id="jabatan-filter"><SelectValue placeholder="Pilih jabatan..." /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Semua Teknisi</SelectItem>
-                                {jabatans.map(j => <SelectItem key={j} value={j}>{j}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div className="grid gap-2">
                         <Label htmlFor="month-filter">Bulan Pekerjaan</Label>
                          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
                             <SelectTrigger id="month-filter"><SelectValue placeholder="Pilih bulan..." /></SelectTrigger>
@@ -237,8 +242,7 @@ export default function AlkerRekapPage() {
                 <CardHeader>
                     <CardTitle>Tabel Rekapitulasi</CardTitle>
                     <CardDescription>
-                        Menampilkan rekap untuk <strong>{numTeknisi}</strong> teknisi
-                        {selectedJabatan !== 'all' && ` dengan jabatan "${selectedJabatan}"`}
+                        Menampilkan rekap untuk <strong>{numTeknisi}</strong> teknisi yang mengirim laporan
                         {selectedMonth && ` pada bulan ${format(new Date(selectedMonth + '-02'), 'MMMM yyyy', {locale: idLocale})}`}.
                     </CardDescription>
                 </CardHeader>
@@ -254,7 +258,7 @@ export default function AlkerRekapPage() {
                                     <TableHead>Target</TableHead>
                                     <TableHead>Pemenuhan</TableHead>
                                     <TableHead>GAP</TableHead>
-                                    <TableHead className="min-w-[200px]">Ket Merk/Type</TableHead>
+                                    <TableHead className="min-w-[200px]">Ket Merk/Type/PIC</TableHead>
                                     <TableHead>Keterangan</TableHead>
                                 </TableRow>
                             </TableHeader>
