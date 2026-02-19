@@ -110,7 +110,7 @@ service cloud.firestore {
     }
 
     match /alker-checklists/{checklistId} {
-      allow get, list: if isApproved() || isAdmin();
+      allow get, list: if isApproved();
       allow create: if isApproved() && isCreatingOwn('userId');
       allow update, delete: if (isApproved() && isUpdatingOwn('userId')) || isAdmin() || isKorlap();
     }
