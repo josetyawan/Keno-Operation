@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
@@ -119,14 +118,14 @@ export default function ProfilePage() {
     };
     
     // Handle conditional fields
-    if (statusPernikahan) updatedData.statusPernikahan = statusPernikahan; else updatedData.statusPernikahan = userProfile?.statusPernikahan;
+    if (statusPernikahan) updatedData.statusPernikahan = statusPernikahan;
     if (statusPernikahan === 'menikah' && jumlahAnak) updatedData.jumlahAnak = Number(jumlahAnak);
     if (tinggiBadan) updatedData.tinggiBadan = Number(tinggiBadan);
     if (beratBadan) updatedData.beratBadan = Number(beratBadan);
-    if (tanggalLahir) updatedData.tanggalLahir = Timestamp.fromDate(tanggalLahir); else if (userProfile?.tanggalLahir) updatedData.tanggalLahir = userProfile.tanggalLahir;
-    if (masaBerlakuSimA) updatedData.masaBerlakuSimA = Timestamp.fromDate(masaBerlakuSimA); else if (userProfile?.masaBerlakuSimA) updatedData.masaBerlakuSimA = userProfile.masaBerlakuSimA;
-    if (masaBerlakuSimC) updatedData.masaBerlakuSimC = Timestamp.fromDate(masaBerlakuSimC); else if (userProfile?.masaBerlakuSimC) updatedData.masaBerlakuSimC = userProfile.masaBerlakuSimC;
-    if (tanggalMasukKerja) updatedData.tanggalMasukKerja = Timestamp.fromDate(tanggalMasukKerja); else if (userProfile?.tanggalMasukKerja) updatedData.tanggalMasukKerja = userProfile.tanggalMasukKerja;
+    if (tanggalLahir) updatedData.tanggalLahir = Timestamp.fromDate(tanggalLahir);
+    if (masaBerlakuSimA) updatedData.masaBerlakuSimA = Timestamp.fromDate(masaBerlakuSimA);
+    if (masaBerlakuSimC) updatedData.masaBerlakuSimC = Timestamp.fromDate(masaBerlakuSimC);
+    if (tanggalMasukKerja) updatedData.tanggalMasukKerja = Timestamp.fromDate(tanggalMasukKerja);
     
     // Filter out undefined properties to prevent Firestore errors
     const dataToUpdate = Object.fromEntries(
@@ -231,6 +230,10 @@ export default function ProfilePage() {
         {/* Data Pelengkap */}
         <Card><CardHeader><CardTitle>Data Pelengkap</CardTitle></CardHeader>
           <CardContent className="space-y-6">
+            <div className="grid gap-2">
+                <Label htmlFor="paymentInfo">No. Pembayaran (Gaji)</Label>
+                <Input id="paymentInfo" value={paymentInfo} onChange={e => setPaymentInfo(e.target.value)} placeholder="e.g., OVO 0812... / BCA 123..." />
+            </div>
             <div className="grid md:grid-cols-2 gap-4">
               <div className="grid gap-2"><Label htmlFor="noSimA">No. SIM A</Label><Input id="noSimA" value={noSimA} onChange={e => setNoSimA(e.target.value)} /></div>
               {noSimA && (
@@ -264,11 +267,6 @@ export default function ProfilePage() {
                 )}
             </div>
             
-            <div className="grid gap-2">
-                <Label htmlFor="paymentInfo">No. Pembayaran (Gaji)</Label>
-                <Input id="paymentInfo" value={paymentInfo} onChange={e => setPaymentInfo(e.target.value)} placeholder="e.g., OVO 0812... / BCA 123..." />
-            </div>
-
              <div className="grid md:grid-cols-2 gap-4">
                 <div className="grid gap-2"><Label htmlFor="noBpjsKetenagakerjaan">No. BPJS Ketenagakerjaan</Label><Input id="noBpjsKetenagakerjaan" value={noBpjsKetenagakerjaan} onChange={e => setNoBpjsKetenagakerjaan(e.target.value)} /></div>
                 <div className="grid gap-2"><Label htmlFor="noBpjsKesehatan">No. BPJS Kesehatan</Label><Input id="noBpjsKesehatan" value={noBpjsKesehatan} onChange={e => setNoBpjsKesehatan(e.target.value)} /></div>
@@ -307,5 +305,3 @@ export default function ProfilePage() {
     </form>
   );
 }
-
-    

@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -147,15 +146,15 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
     };
 
     // Handle conditional fields
-    if (statusPernikahan) updatedData.statusPernikahan = statusPernikahan; else if (user.statusPernikahan) updatedData.statusPernikahan = user.statusPernikahan;
+    if (statusPernikahan) updatedData.statusPernikahan = statusPernikahan;
     if (statusPernikahan === 'menikah' && jumlahAnak) updatedData.jumlahAnak = Number(jumlahAnak);
     if (tinggiBadan) updatedData.tinggiBadan = Number(tinggiBadan);
     if (beratBadan) updatedData.beratBadan = Number(beratBadan);
     
-    if (tanggalLahir) updatedData.tanggalLahir = Timestamp.fromDate(tanggalLahir); else if (user.tanggalLahir) updatedData.tanggalLahir = user.tanggalLahir;
-    if (masaBerlakuSimA) updatedData.masaBerlakuSimA = Timestamp.fromDate(masaBerlakuSimA); else if (user.masaBerlakuSimA) updatedData.masaBerlakuSimA = user.masaBerlakuSimA;
-    if (masaBerlakuSimC) updatedData.masaBerlakuSimC = Timestamp.fromDate(masaBerlakuSimC); else if (user.masaBerlakuSimC) updatedData.masaBerlakuSimC = user.masaBerlakuSimC;
-    if (tanggalMasukKerja) updatedData.tanggalMasukKerja = Timestamp.fromDate(tanggalMasukKerja); else if (user.tanggalMasukKerja) updatedData.tanggalMasukKerja = user.tanggalMasukKerja;
+    if (tanggalLahir) updatedData.tanggalLahir = Timestamp.fromDate(tanggalLahir);
+    if (masaBerlakuSimA) updatedData.masaBerlakuSimA = Timestamp.fromDate(masaBerlakuSimA);
+    if (masaBerlakuSimC) updatedData.masaBerlakuSimC = Timestamp.fromDate(masaBerlakuSimC);
+    if (tanggalMasukKerja) updatedData.tanggalMasukKerja = Timestamp.fromDate(tanggalMasukKerja);
     
     // Filter out undefined properties to prevent Firestore errors
     const dataToUpdate = Object.fromEntries(

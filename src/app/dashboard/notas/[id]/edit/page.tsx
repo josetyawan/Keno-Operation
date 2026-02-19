@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useRouter, useParams } from 'next/navigation';
@@ -501,5 +500,3 @@ export default function EditNotaPage() {
 
     return <EditNotaForm nota={nota} isAdmin={isAdmin} />;
 }
-
-    

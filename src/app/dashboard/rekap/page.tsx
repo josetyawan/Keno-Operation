@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -158,7 +157,7 @@ export default function RekapPage() {
             userNotas.forEach(nota => {
                 const notaDate = safeToDate(nota.tanggal);
                 finalRekapData.push({
-                    phone: user?.phone || 'No-Pembayaran',
+                    phone: user?.paymentInfo || 'No-Pembayaran',
                     name: userName,
                     segmen: nota.segmen,
                     tanggal: notaDate ? format(notaDate, 'dd/MM/yy') : '??/??/??',
@@ -171,7 +170,7 @@ export default function RekapPage() {
             // Add user subtotal item if there are items for this user
             if (userNotas.length > 0) {
                 finalRekapData.push({
-                    phone: user?.phone || 'No-Pembayaran',
+                    phone: user?.paymentInfo || 'No-Pembayaran',
                     name: `TOTAL ${userName}`,
                     segmen: '', // Indicate this is a total row
                     tanggal: '', // Indicate this is a total row
@@ -518,5 +517,3 @@ export default function RekapPage() {
         </div>
     );
 }
-
-    
