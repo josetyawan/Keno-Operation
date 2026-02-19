@@ -112,9 +112,11 @@ service cloud.firestore {
     match /alker-checklists/{checklistId} {
       // Diagnostic step: Make reads public to isolate the problem.
       allow read: if true;
-      // Write rules remain secure.
-      allow create: if isApproved() && isCreatingOwn('userId');
-      allow update, delete: if (isApproved() && isUpdatingOwn('userId')) || isAdmin() || isKorlap();
+
+      // TEMPORARY DIAGNOSTIC: Simplified write rules to remove all `get()` calls.
+      // This is to test if complex write rules are interfering with reads.
+      allow create: if isCreatingOwn('userId');
+      allow update, delete: if isUpdatingOwn('userId');
     }
   }
 }
