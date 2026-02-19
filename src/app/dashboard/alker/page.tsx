@@ -112,12 +112,25 @@ export default function AlkerListPage() {
     if (isProfileLoading || !user) return null;
     const checklistsCollectionRef = collection(firestore, 'alker-checklists');
     if (isAdminOrKorlap) {
-      return query(checklistsCollectionRef, orderBy('dateSubmitted', 'desc'));
+      // Remove orderBy from server query to fix permission issue
+      return query(checklistsCollectionRef);
     }
+    // Keep orderBy for user query as it's more specific and less likely to cause issues
     return query(checklistsCollectionRef, where('userId', '==', user.uid), orderBy('dateSubmitted', 'desc'));
   }, [firestore, user, isProfileLoading, isAdminOrKorlap]);
 
-  const { data: checklists, isLoading: areChecklistsLoading } = useCollection<AlkerChecklist>(checklistsQuery);
+  const { data: checklistsFromQuery, isLoading: areChecklistsLoading } = useCollection<AlkerChecklist>(checklistsQuery);
+  
+  // Sort data on the client-side
+  const checklists = useMemo(() => {
+    if (!checklistsFromQuery) return null;
+    return [...checklistsFromQuery].sort((a, b) => {
+        const dateA = safeToDate(a.dateSubmitted)?.getTime() || 0;
+        const dateB = safeToDate(b.dateSubmitted)?.getTime() || 0;
+        return dateB - dateA; // Sort descending
+    });
+  }, [checklistsFromQuery]);
+
 
   const isLoading = areChecklistsLoading || isProfileLoading;
 
@@ -194,4 +207,3 @@ export default function AlkerListPage() {
     </>
   );
 }
-
