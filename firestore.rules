@@ -110,9 +110,8 @@ service cloud.firestore {
     }
 
     match /alker-checklists/{checklistId} {
-      // Diagnostic Rule: Simplify read access to isolate the permission issue.
-      // This allows any authenticated user to read, bypassing complex checks for listing.
-      allow read: if isSignedIn();
+      // Diagnostic Rule: Replace function call with direct condition to eliminate all variables.
+      allow read: if request.auth != null;
       
       // Write rules remain secure and unchanged.
       allow create: if isApproved() && isCreatingOwn('userId');
