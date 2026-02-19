@@ -29,7 +29,7 @@ const navLinks = [
   { href: '/dashboard/search-assets', label: 'Network Cek', icon: Search, access: 'allpro' },
   { href: '/dashboard/allpro', label: 'Network Service Area', icon: BarChart3, access: 'allpro' },
   { href: '/dashboard/hr/attendance', label: 'Absensi Jaga', icon: ClipboardCheck, access: 'allpro' },
-  { href: '/dashboard/alker', label: 'Pengecekan Alker', icon: Wrench, access: 'allpro' },
+  { href: '/dashboard/alker/new', label: 'Input Pengecekan Alker', icon: Wrench, access: 'allpro' },
 ];
 
 const adminNavGroups = [
@@ -409,4 +409,5 @@ export default function DashboardLayout({
     </div>
   );
 }
+
 
