@@ -197,10 +197,10 @@ export default function NewAlkerPage() {
                             name="crewUserId"
                             control={control}
                             render={({ field }) => (
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <Select onValueChange={(value) => field.onChange(value === 'none' ? '' : value)} value={field.value}>
                                     <SelectTrigger><SelectValue placeholder="Pilih rekan kerja..." /></SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">Tidak Ada</SelectItem>
+                                        <SelectItem value="none">Tidak Ada</SelectItem>
                                         {Object.entries(groupedTeknisi).map(([jabatan, teknisiList]) => (
                                             <SelectGroup key={jabatan}>
                                                 <Label className="px-2 py-1.5 text-xs font-semibold">{jabatan}</Label>
@@ -283,5 +283,3 @@ export default function NewAlkerPage() {
     </div>
   );
 }
-
-    
