@@ -38,8 +38,9 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow create: if request.auth.uid == userId && request.resource.data.email is string && request.resource.data.role == 'teknisi' && request.resource.data.registrationStatus == 'pending';
-      allow get: if isOwner(userId) || isAdmin();
-      allow list: if isSignedIn();
+      // Allow any signed-in user to read user profiles. This is necessary to break
+      // the recursive loop in helper functions like isAdmin() and allow queries to work.
+      allow get, list: if isSignedIn();
       allow update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin() && request.auth.uid != userId;
     }
