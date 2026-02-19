@@ -110,8 +110,8 @@ service cloud.firestore {
     }
 
     match /tool-checklists/{checklistId} {
-      // READ: Any approved user can see the list. Admins/Korlaps can also see it.
-      allow get, list: if isApproved();
+      // READ: Admins and Korlaps can list all. Other approved users can also see checklists.
+      allow get, list: if isAdmin() || isKorlap() || isApproved();
       
       // CREATE: An approved user can only create a checklist for themselves.
       allow create: if isApproved() && isCreatingOwn('userId');
