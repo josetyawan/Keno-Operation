@@ -112,14 +112,9 @@ service cloud.firestore {
     }
 
     match /tool-checklists/{checklistId} {
-      // READ: An admin or korlap can list all checklists. A user can read their own.
       allow get: if isOwner(resource.data.userId) || isAdmin() || isKorlap();
-      allow list: if isAdmin() || isKorlap();
-      
-      // CREATE: An approved user can only create a checklist for themselves.
+      allow list: if isApproved();
       allow create: if isApproved() && isCreatingOwn('userId');
-
-      // UPDATE/DELETE: Only the owner, an admin, or a korlap can modify/delete it.
       allow update, delete: if (isApproved() && isUpdatingOwn('userId')) || isAdmin() || isKorlap();
     }
   }
