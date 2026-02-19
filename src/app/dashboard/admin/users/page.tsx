@@ -547,13 +547,14 @@ export default function AdminUsersPage() {
     if (!searchQuery) return activeUsers;
 
     const lowercasedQuery = searchQuery.toLowerCase();
-    return activeUsers.filter(user => 
-      user.email?.toLowerCase().includes(lowercasedQuery) ||
-      user.displayName?.toLowerCase().includes(lowercasedQuery) ||
-      user.nik?.toLowerCase().includes(lowercasedQuery) ||
-      user.paymentInfo?.toLowerCase().includes(lowercasedQuery) ||
-      user.jabatan?.toLowerCase().includes(lowercasedQuery)
-    );
+    return activeUsers.filter(user => {
+      const paymentValue = user.paymentInfo || (user as any).phone;
+      return user.email?.toLowerCase().includes(lowercasedQuery) ||
+        user.displayName?.toLowerCase().includes(lowercasedQuery) ||
+        user.nik?.toLowerCase().includes(lowercasedQuery) ||
+        (paymentValue && paymentValue.toLowerCase().includes(lowercasedQuery)) ||
+        user.jabatan?.toLowerCase().includes(lowercasedQuery);
+    });
   }, [users, searchQuery]);
 
   const totalPages = useMemo(() => {
@@ -673,7 +674,7 @@ export default function AdminUsersPage() {
                         <div className="text-xs text-muted-foreground">{u.email}</div>
                     </TableCell>
                     <TableCell>{u.nik || '-'}</TableCell>
-                    <TableCell>{u.paymentInfo || '-'}</TableCell>
+                    <TableCell>{u.paymentInfo || (u as any).phone || '-'}</TableCell>
                     <TableCell>{u.jabatan || '-'}</TableCell>
                      <TableCell className="capitalize">
                       <Badge variant={u.role === 'admin' ? 'destructive' : u.role === 'korlap' ? 'secondary' : 'outline'}>
