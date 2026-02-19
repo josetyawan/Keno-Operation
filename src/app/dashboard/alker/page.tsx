@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -8,6 +7,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from '@/components/ui/card';
 import {
   Table,
@@ -29,14 +29,16 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, PlusCircle, Trash2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { MoreHorizontal, PlusCircle, Trash2, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { format, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { useUser, useFirestore, useMemoFirebase, useDoc, deleteDocumentNonBlocking, useCollection } from '@/firebase';
 import { collection, query, doc, where, orderBy } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import type { AlkerChecklist, UserProfile } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
@@ -101,6 +103,10 @@ export default function AlkerListPage() {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 5;
+
   const userProfileRef = useMemoFirebase(() => {
     return user ? doc(firestore, 'users', user.uid) : null;
   }, [user, firestore]);
@@ -115,12 +121,9 @@ export default function AlkerListPage() {
     const isAdminOrKorlap = userProfile.role === 'admin' || userProfile.role === 'korlap';
 
     if (isAdminOrKorlap) {
-      // For admins, fetch all documents without server-side sorting to avoid index/permission issues.
-      // Sorting will be done on the client.
       return query(checklistsCollectionRef);
     }
     
-    // For regular users, fetch only their documents. Sorting is handled on the client.
     return query(checklistsCollectionRef, where('userId', '==', userProfile.id));
   }, [firestore, userProfile, isProfileLoading]);
 
@@ -129,18 +132,38 @@ export default function AlkerListPage() {
   const sortedChecklists = useMemo(() => {
     if (!checklists) return [];
     
-    // Make a mutable copy
     const processedChecklists = [...checklists];
     
-    // Sort client-side. This is always safe and consistent.
     processedChecklists.sort((a, b) => {
       const timeA = safeToDate(a.dateSubmitted)?.getTime() ?? 0;
       const timeB = safeToDate(b.dateSubmitted)?.getTime() ?? 0;
-      return timeB - timeA; // Descending
+      return timeB - timeA;
     });
     
     return processedChecklists;
   }, [checklists]);
+
+  const filteredChecklists = useMemo(() => {
+    if (!sortedChecklists) return [];
+    if (!searchQuery) return sortedChecklists;
+
+    const lowercasedQuery = searchQuery.toLowerCase();
+    return sortedChecklists.filter(checklist =>
+      checklist.userName?.toLowerCase().includes(lowercasedQuery)
+    );
+  }, [sortedChecklists, searchQuery]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  const totalPages = Math.ceil(filteredChecklists.length / ITEMS_PER_PAGE);
+
+  const paginatedChecklists = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return filteredChecklists.slice(startIndex, endIndex);
+  }, [filteredChecklists, currentPage]);
 
 
   const isLoading = areChecklistsLoading || isProfileLoading || isUserLoading;
@@ -165,6 +188,27 @@ export default function AlkerListPage() {
         </div>
       </div>
 
+       {isAdminOrKorlap && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Search className="h-5 w-5" /> Filter Laporan
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid max-w-sm gap-2">
+              <Label htmlFor="search-teknisi">Cari Nama Teknisi</Label>
+              <Input
+                id="search-teknisi"
+                placeholder="Ketik nama teknisi..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardContent className="p-0">
           {isLoading ? (
@@ -173,7 +217,7 @@ export default function AlkerListPage() {
               <Skeleton className="h-10 w-full mb-2" />
               <Skeleton className="h-10 w-full" />
             </div>
-          ) : sortedChecklists && sortedChecklists.length > 0 ? (
+          ) : paginatedChecklists && paginatedChecklists.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -185,7 +229,7 @@ export default function AlkerListPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sortedChecklists.map(checklist => (
+                {paginatedChecklists.map(checklist => (
                   <TableRow key={checklist.id}>
                     <TableCell className="font-medium pl-6">{checklist.userName}</TableCell>
                     <TableCell><Badge variant="secondary">{checklist.userJabatan || '-'}</Badge></TableCell>
@@ -204,7 +248,7 @@ export default function AlkerListPage() {
             <div className="text-center py-16 px-6">
               <h2 className="text-xl font-semibold">Belum Ada Pengecekan</h2>
               <p className="text-muted-foreground mt-2">
-                Mulai buat laporan pengecekan alat kerja pertama Anda.
+                {searchQuery ? "Tidak ada teknisi yang cocok dengan pencarian Anda." : "Mulai buat laporan pengecekan alat kerja pertama Anda."}
               </p>
               <Link href="/dashboard/alker/new" className="mt-4 inline-block">
                 <Button>
@@ -215,6 +259,33 @@ export default function AlkerListPage() {
             </div>
           )}
         </CardContent>
+         {totalPages > 1 && (
+          <CardFooter>
+            <div className="text-xs text-muted-foreground">
+              Halaman <strong>{currentPage}</strong> dari <strong>{totalPages}</strong>
+            </div>
+            <div className="flex items-center gap-2 ml-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Sebelumnya
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+              >
+                Berikutnya
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardFooter>
+        )}
       </Card>
     </>
   );
