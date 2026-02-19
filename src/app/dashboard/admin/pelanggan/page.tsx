@@ -227,7 +227,7 @@ export default function AdminPelangganPage() {
   useEffect(() => {
     if (!isUserLoading && !isProfileLoading) {
       const isApproved = currentUserProfile?.registrationStatus === 'approved';
-      const hasAccess = currentUserProfile?.role === 'admin' || currentUserProfile?.appAccess === 'allpro' || currentUserProfile?.appAccess === 'all';
+      const hasAccess = currentUserProfile?.role === 'admin' || currentUserProfile?.role === 'korlap' || currentUserProfile?.appAccess === 'allpro' || currentUserProfile?.appAccess === 'all';
       if (!user || !isApproved || !hasAccess) {
         router.push('/dashboard');
       }
@@ -235,7 +235,7 @@ export default function AdminPelangganPage() {
   }, [user, currentUserProfile, isUserLoading, isProfileLoading, router]);
 
   const pelangganQuery = useMemoFirebase(() => {
-      const hasAccess = currentUserProfile?.role === 'admin' || currentUserProfile?.appAccess === 'allpro' || currentUserProfile?.appAccess === 'all';
+      const hasAccess = currentUserProfile?.role === 'admin' || currentUserProfile?.role === 'korlap' || currentUserProfile?.appAccess === 'allpro' || currentUserProfile?.appAccess === 'all';
       if (hasAccess) {
           return query(collection(firestore, 'pelanggan'), orderBy('dateAdded', 'desc'));
       }
@@ -313,6 +313,8 @@ export default function AdminPelangganPage() {
   }
 
   const isLoading = isUserLoading || isProfileLoading || arePelangganLoading;
+  const isAdmin = currentUserProfile?.role === 'admin';
+  const isKorlap = currentUserProfile?.role === 'korlap';
 
   if (isLoading && !pelangganList) {
       return (
@@ -345,7 +347,6 @@ export default function AdminPelangganPage() {
                 pelangganList.map(p => {
                     const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${p.koordinat}`;
                     const isOwner = p.userId === user?.uid;
-                    const isAdmin = currentUserProfile?.role === 'admin';
                     return (
                         <TableRow key={p.id}>
                             <TableCell className="font-medium">{p.namaPelanggan}</TableCell>
@@ -354,8 +355,8 @@ export default function AdminPelangganPage() {
                             <TableCell>{p.koordinat}</TableCell>
                             <TableCell className="text-right">
                                 <Button asChild variant="ghost" size="icon" title="Lihat di Google Maps"><Link href={googleMapsUrl} target="_blank" rel="noopener noreferrer"><MapPin className="h-4 w-4 text-blue-600" /></Link></Button>
-                                {(isOwner || isAdmin) && <Button variant="ghost" size="icon" onClick={() => handleEdit(p)}><Edit className="h-4 w-4" /></Button>}
-                                {isAdmin && <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDelete(p)}><Trash2 className="h-4 w-4" /></Button>}
+                                {(isOwner || isAdmin || isKorlap) && <Button variant="ghost" size="icon" onClick={() => handleEdit(p)}><Edit className="h-4 w-4" /></Button>}
+                                {(isAdmin || isKorlap) && <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDelete(p)}><Trash2 className="h-4 w-4" /></Button>}
                             </TableCell>
                         </TableRow>
                     )

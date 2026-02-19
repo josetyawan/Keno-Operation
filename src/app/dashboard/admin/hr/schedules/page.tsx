@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -131,13 +132,13 @@ export default function AdminSchedulesPage() {
     );
 
     useEffect(() => {
-        if (!isUserLoading && !isProfileLoading && (!user || currentUserProfile?.role !== 'admin')) {
+        if (!isUserLoading && !isProfileLoading && (!user || (currentUserProfile?.role !== 'admin' && currentUserProfile?.role !== 'korlap'))) {
             router.push('/dashboard');
         }
     }, [user, currentUserProfile, isUserLoading, isProfileLoading, router]);
 
     const usersQuery = useMemoFirebase(() => {
-        if (currentUserProfile?.role === 'admin') {
+        if (currentUserProfile?.role === 'admin' || currentUserProfile?.role === 'korlap') {
             return query(collection(firestore, 'users'), orderBy('displayName'));
         }
         return null;
@@ -145,7 +146,7 @@ export default function AdminSchedulesPage() {
     const { data: users, isLoading: areUsersLoading } = useCollection<UserProfile>(usersQuery);
 
     const schedulesQuery = useMemoFirebase(() => {
-        if (currentUserProfile?.role === 'admin') {
+        if (currentUserProfile?.role === 'admin' || currentUserProfile?.role === 'korlap') {
             return query(collection(firestore, 'schedules'), orderBy('date', 'desc'));
         }
         return null;

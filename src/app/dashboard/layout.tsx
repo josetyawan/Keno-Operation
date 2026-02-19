@@ -33,19 +33,19 @@ const navLinks = [
   { href: '/dashboard/nota', label: 'Laporan Nota', icon: LayoutGrid, access: 'nota' },
   { href: '/dashboard/search-assets', label: 'Network Cek', icon: Search, access: 'allpro' },
   { href: '/dashboard/allpro', label: 'Network Service Area', icon: BarChart3, access: 'allpro' },
-  { href: '/dashboard/admin/pelanggan', label: 'Manajemen Pelanggan', icon: Contact, access: 'allpro' }, // Changed access
   { href: '/dashboard/hr/attendance', label: 'Absensi Jaga', icon: ClipboardCheck, access: 'allpro' },
 ];
 
 const adminNavLinks = [
-  { href: '/dashboard/admin/users', label: 'Manajemen User', icon: Users },
-  { href: '/dashboard/admin/pids', label: 'Manajemen PID', icon: Tags },
-  { href: '/dashboard/admin/assets', label: 'Manajemen Aset Jaringan', icon: Network },
-  { href: '/dashboard/admin/map-links', label: 'Manajemen Peta', icon: Map },
-  { href: '/dashboard/admin/mancore', label: 'Manajemen Mancore', icon: FolderGit2 },
-  { href: '/dashboard/rekap', label: 'Rekap Pembayaran', icon: Bot },
-  { href: '/dashboard/admin/hr/schedules', label: 'Manajemen Jadwal', icon: CalendarClock },
-  { href: '/dashboard/admin/hr/holidays', label: 'Manajemen Hari Libur', icon: CalendarOff },
+  { href: '/dashboard/admin/users', label: 'Manajemen User', icon: Users, access: 'admin' },
+  { href: '/dashboard/admin/pelanggan', label: 'Manajemen Pelanggan', icon: Contact, access: 'korlap' },
+  { href: '/dashboard/admin/hr/schedules', label: 'Manajemen Jadwal', icon: CalendarClock, access: 'korlap' },
+  { href: '/dashboard/admin/hr/holidays', label: 'Manajemen Hari Libur', icon: CalendarOff, access: 'admin' },
+  { href: '/dashboard/admin/pids', label: 'Manajemen PID', icon: Tags, access: 'admin' },
+  { href: '/dashboard/admin/assets', label: 'Manajemen Aset Jaringan', icon: Network, access: 'admin' },
+  { href: '/dashboard/admin/map-links', label: 'Manajemen Peta', icon: Map, access: 'admin' },
+  { href: '/dashboard/admin/mancore', label: 'Manajemen Mancore', icon: FolderGit2, access: 'admin' },
+  { href: '/dashboard/rekap', label: 'Rekap Pembayaran', icon: Bot, access: 'admin' },
 ];
 
 
@@ -215,7 +215,6 @@ export default function DashboardLayout({
             nik: '',
             paymentInfo: '',
             jabatan: '',
-            alker: '',
           };
 
           try {
@@ -255,13 +254,14 @@ export default function DashboardLayout({
   }
   
   const isAdmin = userProfile?.role === 'admin';
+  const isKorlap = userProfile?.role === 'korlap';
 
   const getFilteredNavLinks = (isMobile: boolean) => {
     const NavComponent = isMobile ? MobileNavLink : NavLink;
     return navLinks
       .filter(link => {
         const appAccess = userProfile?.appAccess;
-        if (isAdmin || link.access === 'public') return true;
+        if (isAdmin || isKorlap || link.access === 'public') return true;
         if (appAccess === 'all') return link.access === 'nota' || link.access === 'allpro';
         return link.access === appAccess;
       })
@@ -274,6 +274,25 @@ export default function DashboardLayout({
           isActive={pathname.startsWith(link.href) && (link.href !== '/dashboard' || pathname === '/dashboard')}
         />
       ));
+  };
+  
+  const getFilteredAdminLinks = (isMobile: boolean) => {
+    const NavComponent = isMobile ? MobileNavLink : NavLink;
+    return adminNavLinks
+        .filter(link => {
+            if (link.access === 'admin') return isAdmin;
+            if (link.access === 'korlap') return isAdmin || isKorlap;
+            return false;
+        })
+        .map(link => (
+             <NavComponent
+                key={link.href}
+                href={link.href}
+                label={link.label}
+                icon={link.icon}
+                isActive={pathname.startsWith(link.href)}
+            />
+        ));
   };
 
 
@@ -291,18 +310,10 @@ export default function DashboardLayout({
           <div className="flex-1">
             <nav className="grid items-start px-4 py-4 text-sm font-medium">
                {getFilteredNavLinks(false)}
-               {isAdmin && (
+               {(isAdmin || isKorlap) && (
                 <>
                     <p className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-4">Admin</p>
-                    {adminNavLinks.map(link => (
-                         <NavLink
-                            key={link.href}
-                            href={link.href}
-                            label={link.label}
-                            icon={link.icon}
-                            isActive={pathname.startsWith(link.href)}
-                        />
-                    ))}
+                    {getFilteredAdminLinks(false)}
                 </>
                )}
             </nav>
@@ -331,18 +342,10 @@ export default function DashboardLayout({
                   <Logo />
                 </Link>
                 {getFilteredNavLinks(true)}
-                 {isAdmin && (
+                 {(isAdmin || isKorlap) && (
                     <>
                         <p className="px-3 py-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider mt-4">Admin</p>
-                        {adminNavLinks.map(link => (
-                            <MobileNavLink
-                                key={link.href}
-                                href={link.href}
-                                label={link.label}
-                                icon={link.icon}
-                                isActive={pathname.startsWith(link.href)}
-                            />
-                        ))}
+                        {getFilteredAdminLinks(true)}
                     </>
                 )}
               </nav>
