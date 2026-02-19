@@ -241,7 +241,7 @@ export default function DashboardLayout({
             email: user.email!,
             role: 'teknisi',
             registrationStatus: 'pending',
-            appAccess: 'nota',
+            appAccess: 'nota', // Default access level
             displayName: user.email?.split('@')[0] || 'New User',
           };
 
@@ -411,7 +411,3 @@ export default function DashboardLayout({
     </div>
   );
 }
-
-
-
-

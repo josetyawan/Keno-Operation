@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -31,7 +32,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { MoreHorizontal, PlusCircle, Trash2, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Trash2, ChevronLeft, ChevronRight, Search, ClipboardCheck } from 'lucide-react';
 import { format, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { useUser, useFirestore, useMemoFirebase, useDoc, deleteDocumentNonBlocking, useCollection } from '@/firebase';
@@ -121,9 +122,12 @@ export default function AlkerListPage() {
     const isAdminOrKorlap = userProfile.role === 'admin' || userProfile.role === 'korlap';
 
     if (isAdminOrKorlap) {
+      // For admins/korlaps, fetch all documents without ordering on the server
       return query(checklistsCollectionRef);
     }
     
+    // For regular technicians, fetch only their own document.
+    // The ID of the document is the user's UID.
     return query(checklistsCollectionRef, where('userId', '==', userProfile.id));
   }, [firestore, userProfile, isProfileLoading]);
 
@@ -132,6 +136,7 @@ export default function AlkerListPage() {
   const sortedChecklists = useMemo(() => {
     if (!checklists) return [];
     
+    // Always sort on the client-side for consistent ordering
     const processedChecklists = [...checklists];
     
     processedChecklists.sort((a, b) => {
@@ -179,6 +184,14 @@ export default function AlkerListPage() {
           </p>
         </div>
         <div className="flex gap-2 shrink-0">
+          {isAdminOrKorlap && (
+            <Link href="/dashboard/alker/rekap">
+              <Button variant="outline">
+                <ClipboardCheck className="mr-2 h-4 w-4" />
+                Lihat Rekapitulasi
+              </Button>
+            </Link>
+          )}
           <Link href="/dashboard/alker/new">
             <Button>
               <PlusCircle className="mr-2 h-4 w-4" />
