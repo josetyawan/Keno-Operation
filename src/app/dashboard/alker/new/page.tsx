@@ -132,14 +132,17 @@ export default function NewAlkerPage() {
           photoUrl2 = await uploadPhoto(tool.photo2[0]);
         }
         
-        toolDataWithUrls.push({
-            toolName: tool.toolName,
-            condition: tool.condition,
-            serialNumber: tool.serialNumber,
-            brand: tool.brand,
-            photoUrl1,
-            photoUrl2,
-        });
+        const toolEntry: AlkerTool = {
+          toolName: tool.toolName,
+          condition: tool.condition,
+          serialNumber: tool.serialNumber || '',
+          brand: tool.brand || '',
+        };
+
+        if (photoUrl1) toolEntry.photoUrl1 = photoUrl1;
+        if (photoUrl2) toolEntry.photoUrl2 = photoUrl2;
+        
+        toolDataWithUrls.push(toolEntry);
       }
 
       const selectedCrew = users?.find(u => u.id === data.crewUserId);
