@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -23,7 +22,7 @@ import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from '@/fireb
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useCallback, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -170,33 +169,52 @@ export default function DashboardLayout({
       // 3. Handle the Super Admin case first. This is a special override.
       const isSuperAdmin = user.email === 'jokowahyusisnaker123@gmail.com';
       if (isSuperAdmin) {
-        const needsFixing = !userProfile || userProfile.role !== 'admin' || userProfile.registrationStatus !== 'approved';
+        const userToUpgradeRef = doc(firestore, 'users', user.uid);
         
-        if (needsFixing) {
-            console.log("Super admin account requires setup or correction. Applying admin privileges...");
-            const userToUpgradeRef = doc(firestore, 'users', user.uid);
+        if (!userProfile) {
+          // Profile doesn't exist, create it for the first time with defaults.
+          console.log("Super admin profile not found. Creating new profile...");
+          try {
+            await setDoc(userToUpgradeRef, {
+              id: user.uid,
+              email: user.email,
+              role: 'admin',
+              registrationStatus: 'approved',
+              appAccess: 'all',
+              displayName: 'J. Wahyu Setyawan', // A sensible default that can be changed later
+            }, { merge: true });
+            
+            toast({
+              title: "Profil Admin Dibuat",
+              description: "Profil super admin Anda telah dibuat. Silakan muat ulang jika perlu.",
+            });
+          } catch (err) {
+             console.error("CRITICAL: Failed to create super admin profile.", err);
+             handleSignOutAndRedirect('Gagal Membuat Profil Admin', 'Terjadi kesalahan kritis.');
+          }
+          return; // Allow re-render with new data.
+        } else {
+          // Profile exists, check if it needs correction without touching displayName.
+          const needsCorrection = userProfile.role !== 'admin' || userProfile.registrationStatus !== 'approved' || userProfile.appAccess !== 'all';
+          if (needsCorrection) {
+            console.log("Correcting super admin privileges...");
             try {
-                // Use setDoc with merge:true to either create or update the document.
-                await setDoc(userToUpgradeRef, { 
-                    id: user.uid,
-                    email: user.email,
-                    role: 'admin', 
-                    registrationStatus: 'approved',
-                    displayName: user.email?.split('@')[0] || 'Super Admin',
-                }, { merge: true });
-
-                toast({
-                    title: "Sinkronisasi Akun Admin",
-                    description: "Hak akses admin Anda telah dikonfigurasi ulang. Halaman akan dimuat ulang.",
-                });
-                 // We don't log out the admin. We let the hooks re-fetch the updated profile.
-                // The component will re-render with correct permissions.
-                // setIsReady(true) will be hit on the next re-render cycle.
+              // ONLY update the fields that need correction.
+              await updateDoc(userToUpgradeRef, {
+                role: 'admin',
+                registrationStatus: 'approved',
+                appAccess: 'all'
+              });
+              toast({
+                  title: "Hak Akses Admin Diperbarui",
+                  description: "Hak akses super admin Anda telah dikembalikan ke default.",
+              });
             } catch (err) {
-                console.error("CRITICAL: Failed to create or promote super admin.", err);
-                handleSignOutAndRedirect('Gagal Konfigurasi Admin', 'Gagal mengatur hak akses admin Anda.');
+              console.error("CRITICAL: Failed to correct super admin privileges.", err);
+              handleSignOutAndRedirect('Gagal Memperbarui Hak Akses', 'Terjadi kesalahan kritis.');
+              return;
             }
-            return; // Important: Return to allow re-running the effect with new profile data.
+          }
         }
       } else {
         // 4. Handle regular users.
