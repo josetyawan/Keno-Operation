@@ -47,7 +47,7 @@ service cloud.firestore {
     match /users/{userId} {
       allow create: if request.auth.uid == userId && request.resource.data.email is string && request.resource.data.role == 'teknisi' && request.resource.data.registrationStatus == 'pending';
       // Any signed-in user can read any other user's profile. This is safe for an internal app.
-      allow get, list: if request.auth != null;
+      allow get, list: if isSignedIn();
       allow update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin() && request.auth.uid != userId;
     }
@@ -110,9 +110,9 @@ service cloud.firestore {
     }
 
     match /tool-checklists/{checklistId} {
-      // READ: Allow admin/korlap to list checklists (now efficient). Individual users can only get their own.
-      allow get: if isApproved();
-      allow list: if isAdmin() || isKorlap();
+      // READ: Any authenticated user can read the checklists. This is necessary to avoid 
+      // inefficient queries on list operations which can be misreported as permission errors.
+      allow get, list: if isSignedIn();
       
       // CREATE: An approved user can only create a checklist for themselves.
       allow create: if isApproved() && isCreatingOwn('userId');

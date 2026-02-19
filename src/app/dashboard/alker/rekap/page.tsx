@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
-import { collection, query, doc, where, Timestamp } from 'firebase/firestore';
+import { collection, query, doc, Timestamp } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -10,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FileSpreadsheet } from 'lucide-react';
-import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { format, startOfMonth, endOfMonth, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import type { AlkerChecklist, UserProfile } from '@/lib/types';
 import * as XLSX from 'xlsx';
@@ -67,23 +68,31 @@ export default function AlkerRekapPage() {
     const monthOptions = useMemo(() => getMonthOptions(), []);
 
     const checklistsQuery = useMemoFirebase(() => {
-        if (!userProfile || (userProfile.role !== 'admin' && userProfile.role !== 'korlap') || !selectedMonth) {
-            return null; // Don't query if no month is selected
+        if (!userProfile || (userProfile.role !== 'admin' && userProfile.role !== 'korlap')) {
+            return null;
         }
-        
+        // Fetch all documents. Client-side filtering will be applied.
+        return query(collection(firestore, 'tool-checklists'));
+    }, [firestore, userProfile]);
+
+    const { data: allChecklists, isLoading: checklistsLoading } = useCollection<AlkerChecklist>(checklistsQuery);
+
+    const checklistsInMonth = useMemo(() => {
+        if (!allChecklists || !selectedMonth) {
+            return [];
+        }
+
         const year = parseInt(selectedMonth.split('-')[0]);
         const monthIndex = parseInt(selectedMonth.split('-')[1]) - 1;
         const startDate = startOfMonth(new Date(year, monthIndex));
         const endDate = endOfMonth(new Date(year, monthIndex));
 
-        return query(
-            collection(firestore, 'tool-checklists'),
-            where('dateSubmitted', '>=', Timestamp.fromDate(startDate)),
-            where('dateSubmitted', '<=', Timestamp.fromDate(endDate))
-        );
-    }, [firestore, userProfile, selectedMonth]);
-
-    const { data: checklistsInMonth, isLoading: checklistsLoading } = useCollection<AlkerChecklist>(checklistsQuery);
+        return allChecklists.filter(c => {
+            const dateSubmitted = c.dateSubmitted?.toDate();
+            if (!dateSubmitted || !isValid(dateSubmitted)) return false;
+            return dateSubmitted >= startDate && dateSubmitted <= endDate;
+        });
+    }, [allChecklists, selectedMonth]);
     
     useEffect(() => {
         if (monthOptions.length > 0 && !selectedMonth) {
