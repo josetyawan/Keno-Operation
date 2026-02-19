@@ -110,7 +110,7 @@ service cloud.firestore {
     }
 
     match /tool-checklists/{checklistId} {
-      // READ: Allow admin/korlap to list all checklists. Individual users can only get their own.
+      // READ: Allow admin/korlap to list checklists (now efficient). Individual users can only get their own.
       allow get: if isApproved();
       allow list: if isAdmin() || isKorlap();
       

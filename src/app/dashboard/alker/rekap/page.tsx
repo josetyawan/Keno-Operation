@@ -1,9 +1,8 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
-import { collection, query, doc } from 'firebase/firestore';
+import { collection, query, doc, where, Timestamp } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -11,8 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FileSpreadsheet } from 'lucide-react';
-import { format } from 'date-fns';
-import { id as idLocale } from 'date-fns/locale';
+import { format, id as idLocale, startOfMonth, endOfMonth } from 'date-fns';
 import type { AlkerChecklist, UserProfile } from '@/lib/types';
 import * as XLSX from 'xlsx';
 import { useRouter } from 'next/navigation';
@@ -37,16 +35,14 @@ const toolBenchmarks = [
     { name: "KBM Roda 2", satuan: "Unit", tolokUkur: "Per-1 Teknisi" },
 ];
 
-const getMonthYearOptions = (checklists: AlkerChecklist[] | null) => {
-    if (!checklists) return [];
-    const monthYears = new Set<string>();
-    checklists.forEach(c => {
-        const date = c.dateSubmitted?.toDate();
-        if (date) {
-            monthYears.add(format(date, 'yyyy-MM'));
-        }
-    });
-    return Array.from(monthYears).sort().reverse();
+const getMonthOptions = () => {
+    const options: string[] = [];
+    const now = new Date();
+    for (let i = 0; i < 12; i++) {
+        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        options.push(format(date, 'yyyy-MM'));
+    }
+    return options;
 };
 
 export default function AlkerRekapPage() {
@@ -67,17 +63,27 @@ export default function AlkerRekapPage() {
         }
     }, [userProfile, isUserLoading, isProfileLoading, router]);
 
+    const monthOptions = useMemo(() => getMonthOptions(), []);
+
     const checklistsQuery = useMemoFirebase(() => {
-        if (!userProfile || (userProfile.role !== 'admin' && userProfile.role !== 'korlap')) {
-            return null;
+        if (!userProfile || (userProfile.role !== 'admin' && userProfile.role !== 'korlap') || !selectedMonth) {
+            return null; // Don't query if no month is selected
         }
-        return query(collection(firestore, 'tool-checklists'));
-    }, [firestore, userProfile]);
+        
+        const year = parseInt(selectedMonth.split('-')[0]);
+        const monthIndex = parseInt(selectedMonth.split('-')[1]) - 1;
+        const startDate = startOfMonth(new Date(year, monthIndex));
+        const endDate = endOfMonth(new Date(year, monthIndex));
 
-    const { data: allChecklists, isLoading: checklistsLoading } = useCollection<AlkerChecklist>(checklistsQuery);
+        return query(
+            collection(firestore, 'tool-checklists'),
+            where('dateSubmitted', '>=', Timestamp.fromDate(startDate)),
+            where('dateSubmitted', '<=', Timestamp.fromDate(endDate))
+        );
+    }, [firestore, userProfile, selectedMonth]);
+
+    const { data: checklistsInMonth, isLoading: checklistsLoading } = useCollection<AlkerChecklist>(checklistsQuery);
     
-    const monthOptions = useMemo(() => getMonthYearOptions(allChecklists), [allChecklists]);
-
     useEffect(() => {
         if (monthOptions.length > 0 && !selectedMonth) {
             setSelectedMonth(monthOptions[0]);
@@ -85,22 +91,15 @@ export default function AlkerRekapPage() {
     }, [monthOptions, selectedMonth]);
 
     const { filteredChecklists, numTeknisi } = useMemo(() => {
-        if (!allChecklists) {
+        if (!checklistsInMonth) {
             return { filteredChecklists: [], numTeknisi: 0 };
         }
-
-        const checklistsInMonth = selectedMonth
-            ? allChecklists.filter(c => {
-                const date = c.dateSubmitted?.toDate();
-                return date && format(date, 'yyyy-MM') === selectedMonth;
-              })
-            : allChecklists;
         
         const uniqueUserIds = new Set(checklistsInMonth.map(c => c.userId));
         const count = uniqueUserIds.size;
-
+        
         return { filteredChecklists: checklistsInMonth, numTeknisi: count };
-    }, [allChecklists, selectedMonth]);
+    }, [checklistsInMonth]);
 
     const summaryData = useMemo(() => {
         if (numTeknisi === 0) return [];
@@ -181,7 +180,6 @@ export default function AlkerRekapPage() {
         XLSX.utils.sheet_add_aoa(worksheet, [Object.keys(dataToExport[0])], { origin: 'A7' });
         XLSX.utils.sheet_add_json(worksheet, headerInfo, { skipHeader: true, origin: 'A1' });
         
-        // Add summary row
         XLSX.utils.sheet_add_aoa(worksheet, [
             ["", "Nilai Kelengkapan (%)", "", "", "", "", "", "", `${nilaiKelengkapan.toFixed(2)}%`]
         ], { origin: -1 });
@@ -194,7 +192,7 @@ export default function AlkerRekapPage() {
     
     const isLoading = isUserLoading || isProfileLoading || checklistsLoading;
 
-    if (isLoading) {
+    if (isUserLoading || isProfileLoading) {
         return (
             <div className="space-y-4">
                 <Skeleton className="h-8 w-64 mb-4" />
@@ -242,8 +240,10 @@ export default function AlkerRekapPage() {
                 <CardHeader>
                     <CardTitle>Tabel Rekapitulasi</CardTitle>
                     <CardDescription>
-                        Menampilkan rekap untuk <strong>{numTeknisi}</strong> teknisi yang mengirim laporan
-                        {selectedMonth && ` pada bulan ${format(new Date(selectedMonth + '-02'), 'MMMM yyyy', {locale: idLocale})}`}.
+                        {selectedMonth ? 
+                         `Menampilkan rekap untuk ${numTeknisi} teknisi yang mengirim laporan pada bulan ${format(new Date(selectedMonth + '-02'), 'MMMM yyyy', {locale: idLocale})}.`
+                         : 'Pilih bulan untuk melihat data.'
+                        }
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -263,7 +263,11 @@ export default function AlkerRekapPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {summaryData.length > 0 ? (
+                                {isLoading && selectedMonth ? (
+                                    <TableRow>
+                                        <TableCell colSpan={9} className="h-24 text-center">Memuat data...</TableCell>
+                                    </TableRow>
+                                ) : summaryData.length > 0 ? (
                                     summaryData.map((item, index) => (
                                         <TableRow key={index}>
                                             <TableCell>{index + 1}</TableCell>
@@ -280,7 +284,7 @@ export default function AlkerRekapPage() {
                                 ) : (
                                     <TableRow>
                                         <TableCell colSpan={9} className="h-24 text-center">
-                                            Tidak ada data laporan ditemukan untuk filter yang dipilih.
+                                            {selectedMonth ? 'Tidak ada data laporan ditemukan untuk bulan yang dipilih.' : 'Silakan pilih bulan untuk memulai.'}
                                         </TableCell>
                                     </TableRow>
                                 )}
