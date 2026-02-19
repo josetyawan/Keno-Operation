@@ -131,7 +131,7 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
         setUkuranBaju(user.ukuranBaju || '');
         setUkuranCelana(user.ukuranCelana || '');
         setUkuranSepatu(user.ukuranSepatu || '');
-        setPaymentInfo(user.paymentInfo || '');
+        setPaymentInfo(user.paymentInfo || (user as any).phone || '');
         setTelegramId(user.telegramId || '');
         setTelegramUsername(user.telegramUsername || '');
         setDevisi(user.devisi || '');
@@ -787,3 +787,5 @@ export default function AdminUsersPage() {
     </>
   );
 }
+
+    

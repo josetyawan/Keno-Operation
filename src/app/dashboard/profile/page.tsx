@@ -74,7 +74,48 @@ export default function ProfilePage() {
       setNikKaryawan(userProfile.nik || '');
       setNikKtp(userProfile.nikKtp || '');
       setNoHpTsel(userProfile.noHpTsel || '');
-      setPaymentInfo(userProfile.paymentInfo || '');
+      setPaymentInfo(userProfile.paymentInfo || (userProfile as any).phone || '');
+      setJabatan(userProfile.jabatan || '');
+      setJobDescHrmista(userProfile.jobDescHrmista || '');
+      setJobDescLapangan(userProfile.jobDescLapangan || '');
+      setAlamat(userProfile.alamat || '');
+      setTempatLahir(userProfile.tempatLahir || '');
+      setTanggalLahir(userProfile.tanggalLahir?.toDate());
+      setGolonganDarah(userProfile.golonganDarah || '');
+      setStatusPernikahan(userProfile.statusPernikahan);
+      setJumlahAnak(userProfile.jumlahAnak?.toString() || '');
+      setNoSimA, setNoSimA] = useState('');
+  const [noSimC, setNoSimC] = useState('');
+  const [masaBerlakuSimA, setMasaBerlakuSimA] = useState<Date | undefined>();
+  const [masaBerlakuSimC, setMasaBerlakuSimC] = useState<Date | undefined>();
+  const [tanggalMasukKerja, setTanggalMasukKerja] = useState<Date | undefined>();
+  const [tinggiBadan, setTinggiBadan] = useState('');
+  const [beratBadan, setBeratBadan] = useState('');
+  const [noBpjsKetenagakerjaan, setNoBpjsKetenagakerjaan] = useState('');
+  const [noBpjsKesehatan, setNoBpjsKesehatan] = useState('');
+  const [pendidikanTerakhir, setPendidikanTerakhir] = useState<Pendidikan>({ institusi: '', jurusan: '', tahunLulus: '' });
+  const [labor, setLabor] = useState('');
+  const [ukuranBaju, setUkuranBaju] = useState('');
+  const [ukuranCelana, setUkuranCelana] = useState('');
+  const [ukuranSepatu, setUkuranSepatu] = useState('');
+  const [telegramId, setTelegramId] = useState('');
+  const [telegramUsername, setTelegramUsername] = useState('');
+  const [devisi, setDevisi] = useState('');
+  const [unit, setUnit] = useState('');
+  const [psa, setPsa] = useState('');
+  
+  const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
+  const { data: userProfile, isLoading: isFirestoreLoading } = useDoc<UserProfile>(userDocRef);
+
+  useEffect(() => {
+    if (userProfile) {
+      setDisplayName(userProfile.displayName || '');
+      setEmail(userProfile.email || '');
+      setEmailCorporate(userProfile.emailCorporate || '');
+      setNikKaryawan(userProfile.nik || '');
+      setNikKtp(userProfile.nikKtp || '');
+      setNoHpTsel(userProfile.noHpTsel || '');
+      setPaymentInfo(userProfile.paymentInfo || (userProfile as any).phone || '');
       setJabatan(userProfile.jabatan || '');
       setJobDescHrmista(userProfile.jobDescHrmista || '');
       setJobDescLapangan(userProfile.jobDescLapangan || '');
@@ -341,3 +382,5 @@ export default function ProfilePage() {
     </form>
   );
 }
+
+    
