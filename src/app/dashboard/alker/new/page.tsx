@@ -129,17 +129,18 @@ export default function NewAlkerPage() {
     try {
       const toolDataWithUrls: AlkerTool[] = [];
 
+      const uploadPhoto = async (file: File) => {
+          // WORKAROUND: Save to 'notas' folder instead of 'alker-photos' to bypass permission issue.
+          const filePath = `notas/${user.uid}/alker-${Date.now()}-${file.name}`;
+          const storageRef = ref(storage, filePath);
+          await uploadBytes(storageRef, file);
+          return getDownloadURL(storageRef);
+      };
+
       for (let i = 0; i < data.tools.length; i++) {
         const tool = data.tools[i];
         let photoUrl1: string | undefined = undefined;
         let photoUrl2: string | undefined = undefined;
-
-        const uploadPhoto = async (file: File) => {
-            const filePath = `alker-photos/${user.uid}/${Date.now()}-${file.name}`;
-            const storageRef = ref(storage, filePath);
-            await uploadBytes(storageRef, file);
-            return getDownloadURL(storageRef);
-        };
 
         if (tool.photo1 && tool.photo1.length > 0) {
           photoUrl1 = await uploadPhoto(tool.photo1[0]);
