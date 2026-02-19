@@ -110,7 +110,10 @@ service cloud.firestore {
     }
 
     match /alker-checklists/{checklistId} {
-      allow get: if isOwner(resource.data.userId) || isAdmin() || isKorlap();
+      // Any approved user can get any checklist. This is a pragmatic change to
+      // allow admins/korlaps to LIST all documents, as query rules cannot
+      // use get() on other documents to check for roles. Write rules remain secure.
+      allow get: if isApproved();
       allow list: if isSignedIn();
       allow create: if isApproved() && isCreatingOwn('userId');
       allow update: if (isApproved() && isUpdatingOwn('userId')) || isAdmin() || isKorlap();
