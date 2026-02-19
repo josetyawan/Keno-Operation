@@ -25,16 +25,17 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import { MoreHorizontal, PlusCircle, Trash2 } from 'lucide-react';
 import { format, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
-import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, query, doc, where, type QueryConstraint } from 'firebase/firestore';
+import { useUser, useFirestore, useMemoFirebase, useDoc, deleteDocumentNonBlocking, FirestorePermissionError, errorEmitter } from '@/firebase';
+import { collection, query, doc, where, getDocs, type QueryConstraint } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import type { AlkerChecklist, UserProfile } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
@@ -52,7 +53,6 @@ function AlkerActions({ checklist, isAdminOrKorlap }: { checklist: AlkerChecklis
       title: 'Pengecekan Dihapus',
       description: 'Laporan pengecekan alker telah berhasil dihapus.',
     });
-    // No need to set isDeleting to false as the component will unmount
   };
 
   return (
@@ -112,23 +112,53 @@ export default function AlkerListPage() {
     const isAdminOrKorlap = userProfile.role === 'admin' || userProfile.role === 'korlap';
 
     if (isAdminOrKorlap) {
-      // For admin/korlap, fetch all checklists. Sorting will be done on the client.
       return query(checklistsCollectionRef);
     }
     
-    // For regular users, query only their own checklists. Sorting also on client.
     return query(checklistsCollectionRef, where('userId', '==', user.uid));
   }, [firestore, user, isProfileLoading, userProfile]);
 
-  const { data: checklists, isLoading: areChecklistsLoading } = useCollection<AlkerChecklist>(checklistsQuery);
+  // Replace useCollection with manual getDocs
+  const [checklists, setChecklists] = useState<AlkerChecklist[] | null>(null);
+  const [areChecklistsLoading, setAreChecklistsLoading] = useState(true);
 
-  // Client-side sorting
+  useEffect(() => {
+    if (!checklistsQuery) {
+        setChecklists([]);
+        setAreChecklistsLoading(false);
+        return;
+    }
+
+    setAreChecklistsLoading(true);
+    getDocs(checklistsQuery)
+        .then(snapshot => {
+            const results: AlkerChecklist[] = [];
+            snapshot.forEach(doc => {
+                results.push({ ...(doc.data() as Omit<AlkerChecklist, 'id'>), id: doc.id });
+            });
+            setChecklists(results);
+        })
+        .catch(error => {
+            console.error("getDocs failed for alker-checklists:", error);
+            const contextualError = new FirestorePermissionError({
+              operation: 'list',
+              path: 'alker-checklists',
+            }, error);
+            errorEmitter.emit('permission-error', contextualError);
+            setChecklists([]); // Set to empty array on error
+        })
+        .finally(() => {
+            setAreChecklistsLoading(false);
+        });
+  }, [checklistsQuery]);
+  // End of replacement
+
   const sortedChecklists = useMemo(() => {
     if (!checklists) return [];
     return [...checklists].sort((a, b) => {
         const timeA = safeToDate(a.dateSubmitted)?.getTime() ?? 0;
         const timeB = safeToDate(b.dateSubmitted)?.getTime() ?? 0;
-        return timeB - timeA; // Sort descending (newest first)
+        return timeB - timeA;
     });
   }, [checklists]);
 

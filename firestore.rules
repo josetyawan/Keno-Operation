@@ -110,9 +110,14 @@ service cloud.firestore {
     }
 
     match /alker-checklists/{checklistId} {
-      // DIAGNOSTIC STEP: Open up all access temporarily to isolate the problem.
-      // This is insecure and for testing only.
-      allow read, write: if true;
+      // Any approved user can read any checklist to see history.
+      allow get, list: if isApproved();
+      
+      // An approved user can only create a checklist under their own user ID.
+      allow create: if isApproved() && isCreatingOwn('userId');
+      
+      // The owner of the checklist, an admin, or a korlap can update or delete it.
+      allow update, delete: if (isApproved() && isUpdatingOwn('userId')) || isAdmin() || isKorlap();
     }
   }
 }
