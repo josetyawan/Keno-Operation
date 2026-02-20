@@ -316,7 +316,7 @@ export default function AdminSchedulesPage() {
             const firstRow = jsonData[0];
             const firstRowKeys = Object.keys(firstRow);
             const dateColumns = firstRowKeys.filter(key => !isNaN(parseInt(key, 10)) && parseInt(key, 10) >= 1 && parseInt(key, 10) <= 31);
-            const nikHeader = findColumn(firstRowKeys, ['nik', 'nik karyawan', 'nomor induk']);
+            const nikHeader = findColumn(firstRowKeys, ['nik', 'nomor induk karyawan', 'nomor induk']);
 
             if (!nikHeader) {
                 throw new Error("Kolom NIK tidak ditemukan. Pastikan file Excel Anda memiliki kolom dengan nama 'NIK'.");
@@ -325,7 +325,7 @@ export default function AdminSchedulesPage() {
             for (const row of jsonData) {
                 const nik = row[nikHeader]?.toString().trim();
                 if (!nik) {
-                    errorCount++;
+                    // Skip empty NIK rows silently
                     continue;
                 }
     
@@ -376,10 +376,9 @@ export default function AdminSchedulesPage() {
             
             let description = `Berhasil memproses ${createdCount} data jadwal.`;
             if (errorCount > 0) {
-                description += ` ${errorCount} baris dilewati karena NIK tidak ditemukan atau data tidak valid.`;
-                if (skippedUsers.size > 0) {
-                     console.warn("NIK yang dilewati:", Array.from(skippedUsers));
-                }
+                const skippedNikList = Array.from(skippedUsers).slice(0, 5).join(', ');
+                description += ` ${errorCount} baris dilewati karena NIK tidak ditemukan. Contoh NIK yang tidak ditemukan: ${skippedNikList}${skippedUsers.size > 5 ? '...' : ''}. Mohon periksa kembali NIK di file Excel dan pastikan sudah terdaftar di halaman Manajemen User.`;
+                console.warn("NIK yang dilewati:", Array.from(skippedUsers));
             }
     
             toast({
