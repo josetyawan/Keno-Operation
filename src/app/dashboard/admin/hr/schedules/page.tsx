@@ -287,7 +287,7 @@ export default function AdminSchedulesPage() {
             const workbook = XLSX.read(data, { type: 'binary' });
             const sheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[sheetName];
-            const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { raw: true });
+            const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { raw: false });
     
             if (jsonData.length === 0) {
                 throw new Error("Sheet Excel kosong.");
@@ -303,7 +303,11 @@ export default function AdminSchedulesPage() {
                 return undefined;
             };
     
-            const userMapByNik = new Map(activeUsers.filter(u => u.nik).map(u => [u.nik!.trim(), u]));
+            const userMapByNik = new Map(activeUsers.map(u => [String(u.nik || '').trim(), u]));
+             if (userMapByNik.has('')) {
+                userMapByNik.delete('');
+             }
+
             const shiftCodeMap: Record<string, ValidShiftType> = {
                 'smc': 'siang-malam', 's/mc': 'siang-malam', 'sm': 'siang-malam',
                 'm': 'malam',
@@ -329,15 +333,15 @@ export default function AdminSchedulesPage() {
             }
     
             for (const row of jsonData) {
-                const nik = row[nikHeader]?.toString().trim();
-                if (!nik) {
+                const nikFromExcel = String(row[nikHeader] || '').trim();
+                if (!nikFromExcel) {
                     continue;
                 }
     
-                const user = userMapByNik.get(nik);
+                const user = userMapByNik.get(nikFromExcel);
                 if (!user) {
                     errorCount++;
-                    skippedUsers.add(nik);
+                    skippedUsers.add(nikFromExcel);
                     continue;
                 }
 
