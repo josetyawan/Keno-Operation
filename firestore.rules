@@ -46,9 +46,8 @@ service cloud.firestore {
     
     match /users/{userId} {
       allow create: if request.auth.uid == userId && request.resource.data.email is string && request.resource.data.role == 'teknisi' && request.resource.data.registrationStatus == 'pending';
-      // READ: An approved user can get any single user profile (needed for PIC names etc).
-      // An admin or korlap can list all users.
-      allow get: if isApproved();
+      // READ: A user can get their own profile. Admins/Korlaps can get any profile.
+      allow get: if isOwner(userId) || isAdmin() || isKorlap();
       allow list: if isAdmin() || isKorlap();
       allow update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin() && request.auth.uid != userId;
@@ -100,13 +99,13 @@ service cloud.firestore {
 
     match /schedules/{scheduleId} {
       allow get: if isOwner(resource.data.userId) || isAdmin() || isKorlap();
-      allow list: if isAdmin() || isKorlap();
+      allow list: if isApproved();
       allow write: if isAdmin() || isKorlap();
     }
 
     match /attendances/{attendanceId} {
       allow get: if isOwner(resource.data.userId) || isAdmin() || isKorlap();
-      allow list: if isAdmin() || isKorlap();
+      allow list: if isApproved();
       allow create: if isCreatingOwn('userId');
       allow update, delete: if isAdmin();
     }
