@@ -179,21 +179,16 @@ export default function DashboardPage() {
       if (selectedStatus !== 'all') {
         constraints.push(where('status', '==', selectedStatus));
       }
-      // Removed orderBy('dateCreated', 'desc') to prevent index error for admins.
-      // Sorting will be handled client-side.
       return query(notasCollectionRef, ...constraints);
     }
     
-    // For regular users, we still fetch all their notes, as the number is expected to be manageable.
-    // Server-side filtering is applied on top of this smaller set.
-    return query(notasCollectionRef, where('userId', '==', user.uid), orderBy('dateCreated', 'desc'));
+    return query(notasCollectionRef, where('userId', '==', user.uid));
 
   }, [firestore, user, isProfileLoading, isAdmin, selectedSA, selectedStatus]);
 
   const { data: notas, isLoading: isNotasLoading } = useCollection<Nota>(notasQuery);
   
   const usersQuery = useMemoFirebase(() => {
-    // Only admins are allowed to fetch all users.
     if (isProfileLoading) {
         return null;
     }
@@ -221,19 +216,15 @@ export default function DashboardPage() {
       
       const processedNotas = [...notas];
 
-      // For admins, sort client-side to avoid composite indexes.
-      // For non-admins, the data is already sorted by the Firestore query.
-      if (isAdmin) {
-        processedNotas.sort((a, b) => {
-          const timeA = safeToDate(a.dateCreated)?.getTime() ?? 0;
-          const timeB = safeToDate(b.dateCreated)?.getTime() ?? 0;
-          return timeB - timeA; // Descending
-        });
-      }
+      // Sort client-side for all users to avoid composite indexes.
+      processedNotas.sort((a, b) => {
+        const timeA = safeToDate(a.dateCreated)?.getTime() ?? 0;
+        const timeB = safeToDate(b.dateCreated)?.getTime() ?? 0;
+        return timeB - timeA; // Descending
+      });
 
       let clientFiltered = processedNotas;
 
-      // For non-admins, apply client-side filters since the base query is broad (all their notes).
       if (!isAdmin) {
           clientFiltered = clientFiltered.filter(nota => {
               if (selectedSA !== 'all' && nota.serviceArea !== selectedSA) return false;
@@ -242,7 +233,6 @@ export default function DashboardPage() {
           });
       }
       
-      // The search query filter always runs on the client for all users on the (now smaller) dataset.
       if (searchQuery) {
           const lowercasedQuery = searchQuery.toLowerCase();
           clientFiltered = clientFiltered.filter(nota => {
