@@ -246,6 +246,17 @@ export default function AdminAssetsPage() {
         return;
     }
 
+    const mapStoToServiceArea = (sto: string): NetworkAsset['serviceArea'] => {
+        const upperSto = sto.toUpperCase().trim();
+        if (['PWB', 'WRO', 'TRO', 'GBU', 'GDO'].some(code => upperSto.includes(code))) return 'SA PURWODADI';
+        if (['CEP', 'BLO', 'NGA', 'RDB'].some(code => upperSto.includes(code))) return 'SA BLORA';
+        if (['KMJ', 'BAN', 'KEL', 'PEC'].some(code => upperSto.includes(code))) return 'SA JEPARA';
+        if (['KUD', 'DMA'].some(code => upperSto.includes(code))) return 'SA KUDUS';
+        if (['PAT', 'TAY', 'JWN'].some(code => upperSto.includes(code))) return 'SA PATI';
+        if (['LSE', 'RBN'].some(code => upperSto.includes(code))) return 'SA REMBANG';
+        return 'SA KUDUS';
+    };
+
     setIsImporting(true);
     setProgress(0);
     const file = event.target.files[0];
@@ -253,17 +264,6 @@ export default function AdminAssetsPage() {
 
     reader.onload = async (e) => {
         try {
-            const mapStoToServiceArea = (sto: string): NetworkAsset['serviceArea'] => {
-                const upperSto = sto.toUpperCase().trim();
-                if (['PWB', 'WRO', 'TRO', 'GBU', 'GDO'].some(code => upperSto.includes(code))) return 'SA PURWODADI';
-                if (['CEP', 'BLO', 'NGA', 'RDB'].some(code => upperSto.includes(code))) return 'SA BLORA';
-                if (['KMJ', 'BAN', 'KEL', 'PEC'].some(code => upperSto.includes(code))) return 'SA JEPARA';
-                if (['KUD', 'DMA'].some(code => upperSto.includes(code))) return 'SA KUDUS';
-                if (['PAT', 'TAY', 'JWN'].some(code => upperSto.includes(code))) return 'SA PATI';
-                if (['LSE', 'RBN'].some(code => upperSto.includes(code))) return 'SA REMBANG';
-                return 'SA KUDUS';
-            };
-
             const data = e.target?.result;
             const workbook = XLSX.read(data, { type: 'binary' });
 
@@ -523,6 +523,18 @@ export default function AdminAssetsPage() {
             }
 
             if (importAssetType === 'NODE-B') {
+                const mapNodeBToServiceArea = (siteId: string): string => {
+                    const upperSiteId = (siteId || '').toUpperCase();
+                    if (upperSiteId.includes('BLA')) return 'SA BLORA';
+                    if (upperSiteId.includes('JPA')) return 'SA JEPARA';
+                    if (upperSiteId.includes('DMK')) return 'SA KUDUS';
+                    if (upperSiteId.includes('KDS')) return 'SA KUDUS';
+                    if (upperSiteId.includes('GRO')) return 'SA PURWODADI';
+                    if (upperSiteId.includes('PAT')) return 'SA PATI';
+                    if (upperSiteId.includes('RBG')) return 'SA REMBANG';
+                    return 'Unmap';
+                };
+
                 const siteIdCol = findColumn(firstRowKeys, ['site id', 'site_id']);
                 const siteNameCol = findColumn(firstRowKeys, ['site name', 'site_name']);
                 const oltMerkCol = findColumn(firstRowKeys, ['olt merk']);
@@ -585,7 +597,7 @@ export default function AdminAssetsPage() {
                                 name: row[siteNameCol!]?.toString().trim() || siteId,
                                 assetType: 'NODE-B',
                                 subType: 'N/A',
-                                serviceArea: sto ? mapStoToServiceArea(sto) : 'SA KUDUS',
+                                serviceArea: mapNodeBToServiceArea(siteId),
                                 sto: sto,
                                 coordinates: latValue && longValue ? `${latValue}, ${longValue}` : undefined,
                                 siteId: siteId,
