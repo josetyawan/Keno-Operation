@@ -288,15 +288,25 @@ export default function AdminAssetsPage() {
             const data = e.target?.result;
             const workbook = XLSX.read(data, { type: 'binary' });
 
-            let sheetName = workbook.SheetNames.find(
-                name => name.toLowerCase().trim() === importAssetType.toLowerCase().trim()
-            );
+            let sheetName: string | undefined;
+
+            if (importAssetType === 'NODE-B') {
+                const possibleSheetNames = ['node-b', 'nodeb'];
+                sheetName = workbook.SheetNames.find(
+                    name => possibleSheetNames.includes(name.toLowerCase().trim())
+                );
+            } else {
+                 sheetName = workbook.SheetNames.find(
+                    name => name.toLowerCase().trim() === importAssetType.toLowerCase().trim()
+                );
+            }
             
             if (!sheetName) {
-                sheetName = workbook.SheetNames[0];
+                const firstSheet = workbook.SheetNames[0];
+                sheetName = firstSheet; // Fallback to the first sheet
                  toast({
                     title: "Sheet Tidak Sesuai",
-                    description: `Tidak ditemukan sheet untuk "${importAssetType}". Membaca sheet pertama: "${sheetName}".`,
+                    description: `Tidak ditemukan sheet untuk "${importAssetType}". Membaca sheet pertama: "${firstSheet}".`,
                     duration: 7000
                 });
             }
