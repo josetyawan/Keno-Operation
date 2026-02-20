@@ -152,8 +152,8 @@ export default function AdminAssetsPage() {
         let specificMatch = false;
         if (asset.assetType === 'NODE-B') {
             const siteIdMatch = asset.siteId?.toLowerCase().includes(lowercasedSearchName);
-            const siteNameMatch = asset.siteName?.toLowerCase().includes(lowercasedSearchName);
-            specificMatch = !!(siteIdMatch || siteNameMatch);
+            // As requested, siteId is the primary identifier, not siteName.
+            specificMatch = !!(siteIdMatch);
         }
 
         const fullMatch = nameMatch || specificMatch;
@@ -179,23 +179,6 @@ export default function AdminAssetsPage() {
   const isNodeBSearch = useMemo(() => paginatedAssets?.[0]?.assetType === 'NODE-B', [paginatedAssets]);
   const isMitratelSearch = useMemo(() => paginatedAssets?.[0]?.assetType === 'MITRATEL', [paginatedAssets]);
 
-
-  // Reset to page 1 when filters change
-  useEffect(() => {
-      setCurrentPage(1);
-  }, [searchName, searchServiceArea]);
-
-
-  const handleDeleteAsset = (assetId: string, assetName: string) => {
-    if (!firestore) return;
-    const assetDocRef = doc(firestore, 'network-assets', assetId);
-    deleteDocumentNonBlocking(assetDocRef);
-    toast({
-      title: 'Aset Dihapus',
-      description: `Aset "${assetName}" telah dihapus.`,
-    });
-  };
-  
   const mapNodeBToServiceArea = (siteId: string): string => {
         const upperSiteId = (siteId || '').toUpperCase();
         if (upperSiteId.includes('BLA')) return 'SA BLORA';
@@ -219,6 +202,23 @@ export default function AdminAssetsPage() {
         return 'SA KUDUS';
     };
 
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+      setCurrentPage(1);
+  }, [searchName, searchServiceArea]);
+
+
+  const handleDeleteAsset = (assetId: string, assetName: string) => {
+    if (!firestore) return;
+    const assetDocRef = doc(firestore, 'network-assets', assetId);
+    deleteDocumentNonBlocking(assetDocRef);
+    toast({
+      title: 'Aset Dihapus',
+      description: `Aset "${assetName}" telah dihapus.`,
+    });
+  };
+  
 
   const confirmDeleteAll = async () => {
     if (!firestore) return;
@@ -929,8 +929,8 @@ export default function AdminAssetsPage() {
                     </Select>
                 </div>
                 <div className="grid gap-1.5 md:col-span-2">
-                    <Label htmlFor="search-name">2. Cari Nama Aset</Label>
-                    <Input id="search-name" placeholder="Ketik nama aset (e.g., ODP-KDS-FA/001)..." value={searchName} onChange={(e) => setSearchName(e.target.value)} disabled={!canSearch}/>
+                    <Label htmlFor="search-name">2. Cari Nama atau ID Aset</Label>
+                    <Input id="search-name" placeholder="Ketik nama aset (e.g., ODP-KDS-FA/001) atau Site ID..." value={searchName} onChange={(e) => setSearchName(e.target.value)} disabled={!canSearch}/>
                 </div>
             </div>
         </CardContent>

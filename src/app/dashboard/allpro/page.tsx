@@ -57,7 +57,7 @@ const SA_CODE_MAPPING: Record<string, NetworkAsset['serviceArea']> = {
     'LSE': 'SA REMBANG', 'LASEM': 'SA REMBANG', 'RBN': 'SA REMBANG', 'REMBANG': 'SA REMBANG'
 };
 
-const getAssetServiceArea = (asset: NetworkAsset): NetworkAsset['serviceArea'] => {
+const getAssetServiceArea = (asset: NetworkAsset): NetworkAsset['serviceArea'] | 'Unmap' => {
     if (asset.assetType === 'NODE-B' && asset.siteId) {
         const upperSiteId = asset.siteId.toUpperCase();
         if (upperSiteId.includes('BLA')) return 'SA BLORA';
@@ -67,7 +67,7 @@ const getAssetServiceArea = (asset: NetworkAsset): NetworkAsset['serviceArea'] =
         if (upperSiteId.includes('GRO')) return 'SA PURWODADI';
         if (upperSiteId.includes('PAT')) return 'SA PATI';
         if (upperSiteId.includes('RBG')) return 'SA REMBANG';
-        return 'SA KUDUS'; // Fallback
+        return 'Unmap'; // Fallback for unmapped site IDs
     }
     
     if (asset.assetType === 'MITRATEL' && asset.serviceArea) {
@@ -158,7 +158,7 @@ export default function AllproPage() {
                         break;
                     case 'FTM':
                         if (subTypeUpper === 'EA') acc[correctAssetSA].ftm.ea++;
-                        else acc[correctAssetSA].ftm.oa++;
+                        else if (subTypeUpper === 'OA') acc[correctAssetSA].ftm.oa++;
                         break;
                     case 'ODC': acc[correctAssetSA].odc.jumlah++; break;
                     case 'ODP': acc[correctAssetSA].odp.jumlah++; break;
@@ -602,5 +602,3 @@ export default function AllproPage() {
     </div>
   );
 }
-
-    
