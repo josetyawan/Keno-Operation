@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -7,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -214,6 +215,10 @@ export default function AdminSchedulesPage() {
         const endIndex = startIndex + ITEMS_PER_PAGE;
         return sortedSchedules.slice(startIndex, endIndex);
     }, [sortedSchedules, currentPage]);
+    
+    useEffect(() => {
+        setCurrentPage(1);
+    }, []);
 
 
     const handleCreate = () => {
@@ -354,18 +359,28 @@ export default function AdminSchedulesPage() {
         reader.onload = async (e) => {
           try {
             const data = e.target?.result;
-            const workbook = XLSX.read(data, { type: 'binary' });
+            const workbook = XLSX.read(data, { type: 'binary', cellText: false, cellDates: true });
             const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { raw: true });
+            const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false, defval: null });
     
             if (jsonData.length === 0) {
                 throw new Error("Sheet Excel kosong.");
             }
             
-            const userMapByNik = new Map(activeUsers.map(u => {
+            const headerRow = jsonData[0];
+            const nikHeaderIndex = headerRow.findIndex((cell: string) => ['nik', 'nik karyawan', 'nomor induk'].includes(String(cell || '').trim().toLowerCase()));
+
+            if (nikHeaderIndex === -1) {
+                throw new Error("Kolom 'NIK' tidak ditemukan. Pastikan file Excel Anda memiliki kolom dengan nama 'NIK', 'NIK Karyawan', atau 'Nomor Induk'.");
+            }
+            
+            const userMapByNik = new Map<string, UserProfile>();
+            activeUsers.forEach(u => {
                 const cleanNik = String(u.nik || '').trim();
-                return cleanNik ? [cleanNik, u] : null;
-            }).filter(Boolean) as [string, UserProfile][]);
+                if (cleanNik) {
+                    userMapByNik.set(cleanNik, u);
+                }
+            });
 
             const shiftCodeMap: Record<string, ValidShiftType> = {
                 'smc': 'siang-malam', 's/mc': 'siang-malam', 'sm': 'siang-malam',
@@ -381,19 +396,12 @@ export default function AdminSchedulesPage() {
             let skippedUsers = new Set<string>();
             const chunkSize = 200;
             let batch = writeBatch(firestore);
-
-            const firstRow = jsonData[0];
-            const firstRowKeys = Object.keys(firstRow);
-            const nikHeader = firstRowKeys.find(key => ['nik', 'nik karyawan', 'nomor induk'].includes(key.trim().toLowerCase()));
             
-            if (!nikHeader) {
-                throw new Error("Kolom 'NIK' tidak ditemukan. Pastikan file Excel Anda memiliki kolom dengan nama 'NIK', 'NIK Karyawan', atau 'Nomor Induk'.");
-            }
-            
-            const dateColumns = firstRowKeys.filter(key => !isNaN(parseInt(key, 10)) && parseInt(key, 10) >= 1 && parseInt(key, 10) <= 31);
+            const dateColumns = headerRow.map((header: string, index: number) => ({ header: String(header).trim(), index })).filter((col: {header: string, index: number}) => !isNaN(parseInt(col.header, 10)) && parseInt(col.header, 10) >= 1 && parseInt(col.header, 10) <= 31);
     
-            for (const row of jsonData) {
-                const nikFromExcel = String(row[nikHeader] || '').trim();
+            for (let i = 1; i < jsonData.length; i++) {
+                const row = jsonData[i];
+                const nikFromExcel = String(row[nikHeaderIndex] || '').trim();
                 if (!nikFromExcel) {
                     continue;
                 }
@@ -405,12 +413,13 @@ export default function AdminSchedulesPage() {
                     continue;
                 }
 
-                for (const day of dateColumns) {
-                    const shiftCode = String(row[day] || '').trim().toLowerCase();
+                for (const col of dateColumns) {
+                    const day = parseInt(col.header);
+                    const shiftCode = String(row[col.index] || '').trim().toLowerCase();
                     const mappedShift = shiftCodeMap[shiftCode];
 
                     if (mappedShift) {
-                        const date = new Date(parseInt(selectedYear), parseInt(selectedMonth), parseInt(day));
+                        const date = new Date(parseInt(selectedYear), parseInt(selectedMonth), day);
                         if (!isValid(date)) continue;
 
                         const scheduleId = `${user.id}_${format(date, 'yyyy-MM-dd')}`;
@@ -436,7 +445,7 @@ export default function AdminSchedulesPage() {
                 }
                 
                 processedRows++;
-                setImportProgress((processedRows / jsonData.length) * 100);
+                setImportProgress((processedRows / (jsonData.length - 1)) * 100);
             }
     
             if (createdCount > 0 && createdCount % chunkSize !== 0) {
