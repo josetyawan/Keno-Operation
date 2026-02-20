@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -161,8 +162,8 @@ export default function WorkSchedulePage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="sticky left-0 bg-card z-20 w-[120px] border border-slate-300">NIK</TableHead>
-                  <TableHead className="sticky left-[120px] bg-card z-20 w-[200px] border border-slate-300">Nama</TableHead>
-                  <TableHead className="sticky left-[320px] bg-card z-20 w-[150px] border border-slate-300">No. Telepon</TableHead>
+                  <TableHead className="sticky left-[120px] bg-card z-20 w-[150px] border border-slate-300">No. Telepon</TableHead>
+                  <TableHead className="sticky left-[270px] bg-card z-20 w-[200px] border border-slate-300">Nama</TableHead>
                   {daysArray.map(day => (
                     <TableHead key={day.toString()} className={cn("text-center p-2 border border-slate-300", (isWeekend(day) || holidaysMap.has(format(day, 'yyyy-MM-dd'))) && 'bg-red-100')}>
                       <div>{format(day, 'E', { locale: idLocale }).slice(0,2)}</div>
@@ -177,7 +178,7 @@ export default function WorkSchedulePage() {
                         <TableRow key={i}>
                             <TableCell className="sticky left-0 bg-card z-10 border border-slate-300"><Skeleton className="h-5 w-full"/></TableCell>
                             <TableCell className="sticky left-[120px] bg-card z-10 border border-slate-300"><Skeleton className="h-5 w-full"/></TableCell>
-                            <TableCell className="sticky left-[320px] bg-card z-10 border border-slate-300"><Skeleton className="h-5 w-full"/></TableCell>
+                            <TableCell className="sticky left-[270px] bg-card z-10 border border-slate-300"><Skeleton className="h-5 w-full"/></TableCell>
                             {Array.from({ length: daysInMonth }).map((_, j) => (
                                 <TableCell key={j} className="border border-slate-300"><Skeleton className="h-5 w-full"/></TableCell>
                             ))}
@@ -187,8 +188,8 @@ export default function WorkSchedulePage() {
                     filteredUsers.map(user => (
                         <TableRow key={user.id}>
                         <TableCell className="sticky left-0 bg-card z-10 font-mono text-xs border border-slate-300">{user.nik || '-'}</TableCell>
-                        <TableCell className="sticky left-[120px] bg-card z-10 font-medium border border-slate-300">{user.displayName}</TableCell>
-                        <TableCell className="sticky left-[320px] bg-card z-10 font-mono text-xs border border-slate-300">{user.noHpTsel || '-'}</TableCell>
+                        <TableCell className="sticky left-[120px] bg-card z-10 font-mono text-xs border border-slate-300">{user.noHpTsel || '-'}</TableCell>
+                        <TableCell className="sticky left-[270px] bg-card z-10 font-medium border border-slate-300">{user.displayName}</TableCell>
                         {daysArray.map(day => {
                             const status = getDayStatus(user.id, day);
                             return (
