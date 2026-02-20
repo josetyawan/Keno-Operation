@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -15,11 +14,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, PlusCircle, Edit, Trash2, Calendar as CalendarIcon, Loader2 } from 'lucide-react';
+import { Upload, PlusCircle, Edit, Trash2, Calendar as CalendarIcon, Loader2, Download } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { format, isValid } from 'date-fns';
+import { format, isValid, getDaysInMonth } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import type { Schedule, UserProfile } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -220,6 +219,43 @@ export default function AdminSchedulesPage() {
         }
         setIsFormDialogOpen(false);
     };
+
+    const handleExportTemplate = () => {
+        const year = parseInt(selectedYear);
+        const monthIndex = parseInt(selectedMonth);
+        const daysInSelectedMonth = getDaysInMonth(new Date(year, monthIndex));
+        
+        const headers = ["NIK", "Nama"];
+        for(let i = 1; i <= daysInSelectedMonth; i++) {
+            headers.push(String(i));
+        }
+
+        const dataToExport = activeUsers.map(user => {
+            const row: Record<string, string> = {
+                "NIK": user.nik || '',
+                "Nama": user.displayName || user.email || ''
+            };
+            return row;
+        });
+
+        const worksheet = XLSX.utils.json_to_sheet(dataToExport, { header: headers });
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, `Jadwal ${format(new Date(year, monthIndex), 'MMMM yyyy')}`);
+
+        // Auto-fit columns
+        const colWidths = headers.map((header, i) => {
+            const dataLength = Math.max(...dataToExport.map(row => row[header]?.length || 0), header.length);
+            return { wch: i < 2 ? dataLength + 5 : 5 }; // Wider for NIK/Name, narrow for dates
+        });
+        worksheet['!cols'] = colWidths;
+        
+        XLSX.writeFile(workbook, `Template_Jadwal_${selectedYear}-${String(monthIndex + 1).padStart(2, '0')}.xlsx`);
+
+        toast({
+            title: "Template Diunduh",
+            description: "Silakan isi file Excel dan unggah kembali.",
+        });
+    };
     
     const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
         if (!event.target.files || event.target.files.length === 0) {
@@ -284,7 +320,7 @@ export default function AdminSchedulesPage() {
             const nikHeader = findColumn(firstRowKeys, ['nik', 'nik karyawan', 'nomor induk']);
 
             if (!nikHeader) {
-                throw new Error("Kolom NIK tidak ditemukan. Pastikan ada kolom dengan nama 'NIK', 'NIK Karyawan', atau 'Nomor Induk'.");
+                throw new Error("Kolom NIK tidak ditemukan. Pastikan file Excel Anda memiliki kolom dengan nama 'NIK'.");
             }
     
             for (const row of jsonData) {
@@ -396,7 +432,9 @@ export default function AdminSchedulesPage() {
                             <DialogHeader>
                                 <DialogTitle>Import Jadwal dari Excel</DialogTitle>
                                 <DialogDescription>
-                                    Format file: Baris untuk setiap teknisi, kolom untuk setiap tanggal (1-31). Pastikan ada kolom `NIK`. Sistem akan membaca kode shift seperti `S/MC`, `M`, `PT/BD`, dll.
+                                    1. Pilih Bulan dan Tahun.
+                                    2. Download template yang sudah terisi NIK dan Nama.
+                                    3. Isi jadwal di Excel, lalu unggah kembali file tersebut.
                                 </DialogDescription>
                             </DialogHeader>
                             <div className="py-4 space-y-4">
@@ -420,6 +458,11 @@ export default function AdminSchedulesPage() {
                                         </Select>
                                     </div>
                                 </div>
+                                <Button onClick={handleExportTemplate} variant="secondary" className="w-full" disabled={!selectedMonth || !selectedYear}>
+                                    <Download className="mr-2 h-4 w-4" /> Download Template Jadwal
+                                </Button>
+                                <hr />
+                                <Label htmlFor="excel-file-schedules">3. Unggah File yang Sudah Diisi</Label>
                                 <Input id="excel-file-schedules" type="file" accept=".xlsx, .xls, .csv" onChange={handleFileImport} disabled={isImporting || !selectedMonth || !selectedYear} />
                                 {isImporting && (
                                     <div className="flex flex-col gap-2 text-sm text-muted-foreground">
@@ -479,6 +522,4 @@ export default function AdminSchedulesPage() {
             </AlertDialog>
         </>
     );
-
     
-
