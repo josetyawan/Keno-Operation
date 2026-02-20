@@ -256,6 +256,18 @@ export default function AdminAssetsPage() {
         if (['LSE', 'RBN'].some(code => upperSto.includes(code))) return 'SA REMBANG';
         return 'SA KUDUS';
     };
+    
+    const mapNodeBToServiceArea = (siteId: string): string => {
+        const upperSiteId = (siteId || '').toUpperCase();
+        if (upperSiteId.includes('BLA')) return 'SA BLORA';
+        if (upperSiteId.includes('JPA')) return 'SA JEPARA';
+        if (upperSiteId.includes('DMK')) return 'SA KUDUS';
+        if (upperSiteId.includes('KDS')) return 'SA KUDUS';
+        if (upperSiteId.includes('GRO')) return 'SA PURWODADI';
+        if (upperSiteId.includes('PAT')) return 'SA PATI';
+        if (upperSiteId.includes('RBG')) return 'SA REMBANG';
+        return 'Unmap';
+    };
 
     setIsImporting(true);
     setProgress(0);
@@ -523,18 +535,6 @@ export default function AdminAssetsPage() {
             }
 
             if (importAssetType === 'NODE-B') {
-                const mapNodeBToServiceArea = (siteId: string): string => {
-                    const upperSiteId = (siteId || '').toUpperCase();
-                    if (upperSiteId.includes('BLA')) return 'SA BLORA';
-                    if (upperSiteId.includes('JPA')) return 'SA JEPARA';
-                    if (upperSiteId.includes('DMK')) return 'SA KUDUS';
-                    if (upperSiteId.includes('KDS')) return 'SA KUDUS';
-                    if (upperSiteId.includes('GRO')) return 'SA PURWODADI';
-                    if (upperSiteId.includes('PAT')) return 'SA PATI';
-                    if (upperSiteId.includes('RBG')) return 'SA REMBANG';
-                    return 'Unmap';
-                };
-
                 const siteIdCol = findColumn(firstRowKeys, ['site id', 'site_id']);
                 const siteNameCol = findColumn(firstRowKeys, ['site name', 'site_name']);
                 const oltMerkCol = findColumn(firstRowKeys, ['olt merk']);
@@ -599,20 +599,21 @@ export default function AdminAssetsPage() {
                                 subType: 'N/A',
                                 serviceArea: mapNodeBToServiceArea(siteId),
                                 sto: sto,
-                                coordinates: latValue && longValue ? `${latValue}, ${longValue}` : undefined,
                                 siteId: siteId,
                                 siteName: row[siteNameCol!]?.toString().trim(),
-                                oltMerk: row[oltMerkCol!]?.toString(),
-                                splitterOlt: row[splitterOltCol!]?.toString(),
-                                snOnt: row[snOntCol!]?.toString(),
-                                eqpPort: row[eqpPortCol!]?.toString(),
-                                cascade: row[cascadeCol!]?.toString(),
-                                cascadeAt: row[cascadeAtCol!]?.toString(),
-                                catbts: row[catbtsCol!]?.toString(),
-                                rncBsc: row[rncBscCol!]?.toString(),
-                                routerRan: row[routerRanCol!]?.toString(),
-                                alamat: row[alamatCol!]?.toString(),
                             };
+
+                            if (latValue && longValue) assetData.coordinates = `${latValue}, ${longValue}`;
+                            if (row[oltMerkCol!] != null) assetData.oltMerk = String(row[oltMerkCol!]);
+                            if (row[splitterOltCol!] != null) assetData.splitterOlt = String(row[splitterOltCol!]);
+                            if (row[snOntCol!] != null) assetData.snOnt = String(row[snOntCol!]);
+                            if (row[eqpPortCol!] != null) assetData.eqpPort = String(row[eqpPortCol!]);
+                            if (row[cascadeCol!] != null) assetData.cascade = String(row[cascadeCol!]);
+                            if (row[cascadeAtCol!] != null) assetData.cascadeAt = String(row[cascadeAtCol!]);
+                            if (row[catbtsCol!] != null) assetData.catbts = String(row[catbtsCol!]);
+                            if (row[rncBscCol!] != null) assetData.rncBsc = String(row[rncBscCol!]);
+                            if (row[routerRanCol!] != null) assetData.routerRan = String(row[routerRanCol!]);
+                            if (row[alamatCol!] != null) assetData.alamat = String(row[alamatCol!]);
 
                             const existingAsset = existingAssetsMap.get(siteId);
                             if (existingAsset) {
