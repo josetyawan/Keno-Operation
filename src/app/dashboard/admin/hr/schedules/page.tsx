@@ -3,8 +3,8 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, query, doc, orderBy, Timestamp, writeBatch, setDoc } from 'firebase/firestore';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { collection, query, doc, orderBy, Timestamp, writeBatch, setDoc, getDocs, limit } from 'firebase/firestore';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
@@ -15,7 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, PlusCircle, Edit, Trash2, Calendar as CalendarIcon, Loader2, Download } from 'lucide-react';
+import { Upload, PlusCircle, Edit, Trash2, Calendar as CalendarIcon, Loader2, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
@@ -147,6 +147,11 @@ export default function AdminSchedulesPage() {
     const [selectedMonth, setSelectedMonth] = useState<string>(String(new Date().getMonth()));
     const [selectedYear, setSelectedYear] = useState<string>(String(new Date().getFullYear()));
 
+    const [isDeletingAll, setIsDeletingAll] = useState(false);
+    const [isDeleteAllDialogOpen, setIsDeleteAllDialogOpen] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 5;
+
     const shiftTypeLabels: Record<string, string> = {
         'piket-demak': 'Piket Demak (PDM)',
         'siang-malam': 'Piket Siang-Malam (SM)',
@@ -199,10 +204,22 @@ export default function AdminSchedulesPage() {
             const nameB = userMap.get(b.userId) || b.userEmail;
             if (nameA < nameB) return -1;
             if (nameA > nameB) return 1;
-            // If names are the same, sort by date descending
             return b.date.toDate().getTime() - a.date.toDate().getTime();
         });
     }, [schedules, userMap]);
+
+    const totalPages = Math.ceil(sortedSchedules.length / ITEMS_PER_PAGE);
+
+    const paginatedSchedules = useMemo(() => {
+        const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+        const endIndex = startIndex + ITEMS_PER_PAGE;
+        return sortedSchedules.slice(startIndex, endIndex);
+    }, [sortedSchedules, currentPage]);
+    
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [selectedUnit]);
+
 
     const handleCreate = () => {
         setScheduleToEdit(null);
@@ -224,6 +241,50 @@ export default function AdminSchedulesPage() {
         toast({ title: 'Jadwal Dihapus' });
         setScheduleToDelete(null);
     };
+
+    const confirmDeleteAll = async () => {
+        if (!firestore) return;
+        setIsDeletingAll(true);
+        toast({ title: "Menghapus Semua Jadwal...", description: "Ini mungkin butuh beberapa saat." });
+
+        try {
+            const schedulesCollection = collection(firestore, 'schedules');
+            const batchSize = 400; // Firestore write batch limit is 500
+            let schedulesDeleted = 0;
+
+            // eslint-disable-next-line no-constant-condition
+            while (true) {
+                const q = query(schedulesCollection, limit(batchSize));
+                const querySnapshot = await getDocs(q);
+
+                if (querySnapshot.size === 0) {
+                    break; // No more documents to delete
+                }
+
+                const batch = writeBatch(firestore);
+                querySnapshot.docs.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+                await batch.commit();
+                schedulesDeleted += querySnapshot.size;
+
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            toast({
+                title: 'Semua Jadwal Dihapus',
+                description: `Total ${schedulesDeleted} data jadwal telah berhasil dihapus.`,
+            });
+
+        } catch (error) {
+            console.error("Failed to delete all schedules:", error);
+            toast({ variant: "destructive", title: "Gagal Menghapus", description: "Terjadi kesalahan saat proses penghapusan massal." });
+        } finally {
+            setIsDeletingAll(false);
+            setIsDeleteAllDialogOpen(false);
+        }
+    };
+
 
     const handleFormSubmit = (data: Partial<Schedule>) => {
         if (!firestore) return;
@@ -248,9 +309,7 @@ export default function AdminSchedulesPage() {
         }
 
         const dataToExport = activeUsers.map(user => {
-            const row: Record<string, string> = {
-                "NIK": user.nik || ''
-            };
+            const row: Record<string, string> = { "NIK": user.nik || '' };
             return row;
         });
 
@@ -258,10 +317,9 @@ export default function AdminSchedulesPage() {
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, `Jadwal ${format(new Date(year, monthIndex), 'MMMM yyyy')}`);
 
-        // Auto-fit columns
         const colWidths = headers.map((header, i) => {
             const dataLength = Math.max(...dataToExport.map(row => row[header]?.length || 0), header.length);
-            return { wch: i < 1 ? dataLength + 5 : 5 }; // Wider for NIK, narrow for dates
+            return { wch: i < 1 ? dataLength + 5 : 5 };
         });
         worksheet['!cols'] = colWidths;
         
@@ -281,7 +339,7 @@ export default function AdminSchedulesPage() {
           return;
         }
 
-        if (!firestore || !activeUsers || activeUsers.length === 0) {
+        if (areUsersLoading || !activeUsers || activeUsers.length === 0) {
             toast({ variant: "destructive", title: "Data Pengguna Belum Siap", description: "Data pengguna sedang dimuat. Silakan tunggu beberapa saat dan coba lagi." });
             if (fileInput) fileInput.value = '';
             return;
@@ -331,10 +389,10 @@ export default function AdminSchedulesPage() {
 
             const firstRow = jsonData[0];
             const firstRowKeys = Object.keys(firstRow);
-            const nikHeader = firstRowKeys.find(key => key.trim().toLowerCase() === 'nik');
+            const nikHeader = firstRowKeys.find(key => ['nik', 'nik karyawan', 'nomor induk'].includes(key.trim().toLowerCase()));
             
             if (!nikHeader) {
-                throw new Error("Kolom 'NIK' tidak ditemukan. Pastikan file Excel Anda memiliki kolom dengan nama 'NIK'.");
+                throw new Error("Kolom 'NIK' tidak ditemukan. Pastikan file Excel Anda memiliki kolom dengan nama 'NIK', 'NIK Karyawan', atau 'Nomor Induk'.");
             }
             
             const dateColumns = firstRowKeys.filter(key => !isNaN(parseInt(key, 10)) && parseInt(key, 10) >= 1 && parseInt(key, 10) <= 31);
@@ -433,19 +491,36 @@ export default function AdminSchedulesPage() {
                     <h1 className="text-3xl font-bold tracking-tight">Manajemen Jadwal & Status</h1>
                     <p className="text-muted-foreground mt-1">Buat, edit, dan hapus jadwal jaga, ijin, atau cuti untuk teknisi.</p>
                 </div>
-                 <Dialog open={isFormDialogOpen} onOpenChange={setIsFormDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button onClick={handleCreate} disabled={activeUsers.length === 0}>
-                            <PlusCircle className="mr-2 h-4 w-4" />Buat Jadwal Manual
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>{scheduleToEdit ? 'Edit' : 'Buat'} Jadwal atau Status</DialogTitle>
-                        </DialogHeader>
-                        <ScheduleForm schedule={scheduleToEdit} users={activeUsers} onFormSubmit={handleFormSubmit} />
-                    </DialogContent>
-                </Dialog>
+                 <div className="flex gap-2">
+                    <AlertDialog open={isDeleteAllDialogOpen} onOpenChange={setIsDeleteAllDialogOpen}>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive"><Trash2 className="mr-2 h-4 w-4" /> Hapus Semua Jadwal</Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader><AlertDialogTitle>Anda yakin?</AlertDialogTitle><AlertDialogDescription>Tindakan ini akan menghapus semua jadwal secara permanen dari database. Ini tidak dapat dibatalkan.</AlertDialogDescription></AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Batal</AlertDialogCancel>
+                                <AlertDialogAction onClick={confirmDeleteAll} disabled={isDeletingAll} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                                    {isDeletingAll ? <Loader2 className="mr-2 animate-spin" /> : null}
+                                    {isDeletingAll ? 'Menghapus...' : 'Ya, Hapus Semua'}
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                    <Dialog open={isFormDialogOpen} onOpenChange={setIsFormDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button onClick={handleCreate} disabled={activeUsers.length === 0}>
+                                <PlusCircle className="mr-2 h-4 w-4" />Buat Jadwal Manual
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>{scheduleToEdit ? 'Edit' : 'Buat'} Jadwal atau Status</DialogTitle>
+                            </DialogHeader>
+                            <ScheduleForm schedule={scheduleToEdit} users={activeUsers} onFormSubmit={handleFormSubmit} />
+                        </DialogContent>
+                    </Dialog>
+                </div>
             </div>
 
             <Card className="mb-6">
@@ -504,8 +579,8 @@ export default function AdminSchedulesPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {sortedSchedules && sortedSchedules.length > 0 ? (
-                                sortedSchedules.map(schedule => (
+                            {paginatedSchedules && paginatedSchedules.length > 0 ? (
+                                paginatedSchedules.map(schedule => (
                                     <TableRow key={schedule.id}>
                                         <TableCell className="font-medium">{userMap.get(schedule.userId) || schedule.userEmail}</TableCell>
                                         <TableCell>{format(schedule.date.toDate(), 'eeee, dd MMMM yyyy', { locale: idLocale })}</TableCell>
@@ -523,6 +598,31 @@ export default function AdminSchedulesPage() {
                         </TableBody>
                     </Table>
                 </CardContent>
+                <CardFooter>
+                    <div className="text-xs text-muted-foreground">
+                        Halaman <strong>{totalPages > 0 ? currentPage : 0}</strong> dari <strong>{totalPages}</strong>
+                    </div>
+                    <div className="flex items-center gap-2 ml-auto">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                            disabled={currentPage === 1 || totalPages === 0}
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                            Sebelumnya
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                            disabled={currentPage === totalPages || totalPages === 0}
+                        >
+                            Berikutnya
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </CardFooter>
             </Card>
 
             <AlertDialog open={!!scheduleToDelete} onOpenChange={(open) => !open && setScheduleToDelete(null)}>
