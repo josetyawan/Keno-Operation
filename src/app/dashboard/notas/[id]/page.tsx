@@ -1,4 +1,3 @@
-
 'use client';
 
 import { notFound, useRouter, useParams } from 'next/navigation';
@@ -326,7 +325,7 @@ export default function NotaDetailPage() {
               <div>
                   <p className="text-muted-foreground text-sm mb-2">Foto Bukti</p>
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                      {nota.fotoEvidenUrls.map((url, index) => (
+                      {nota.fotoEvidenUrls.filter((url): url is string => !!url).map((url, index) => (
                           <div key={index} className="relative group aspect-square w-full rounded-md overflow-hidden border">
                               <button type="button" className="absolute inset-0 z-20 cursor-zoom-in" onClick={() => setZoomedImageUrl(url)}>
                                   <span className="sr-only">Perbesar gambar {index + 1}</span>
@@ -507,5 +506,3 @@ export default function NotaDetailPage() {
     </>
   );
 }
-
-    
