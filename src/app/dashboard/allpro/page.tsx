@@ -206,36 +206,44 @@ export default function AllproPage() {
         if (!data) continue;
         
         // OLT
-        const oltRow = { serviceArea: sa, miniOlt: data.olt.miniOlt, olt: data.olt.olt, grandTotal: data.olt.miniOlt + data.olt.olt };
+        const oltMiniOlt = data.olt?.miniOlt || 0;
+        const oltOlt = data.olt?.olt || 0;
+        const oltRow = { serviceArea: sa, miniOlt: oltMiniOlt, olt: oltOlt, grandTotal: oltMiniOlt + oltOlt };
         results.olt.rows.push(oltRow);
         results.olt.totals.miniOlt += oltRow.miniOlt;
         results.olt.totals.olt += oltRow.olt;
         results.olt.totals.grandTotal += oltRow.grandTotal;
 
         // FTM
-        const ftmRow = { serviceArea: sa, ea: data.ftm.ea, oa: data.ftm.oa, grandTotal: data.ftm.ea + data.ftm.oa };
+        const ftmEa = data.ftm?.ea || 0;
+        const ftmOa = data.ftm?.oa || 0;
+        const ftmRow = { serviceArea: sa, ea: ftmEa, oa: ftmOa, grandTotal: ftmEa + ftmOa };
         results.ftm.rows.push(ftmRow);
         results.ftm.totals.ea += ftmRow.ea;
         results.ftm.totals.oa += ftmRow.oa;
         results.ftm.totals.grandTotal += ftmRow.grandTotal;
         
         // ODC
-        const odcRow = { serviceArea: sa, jumlah: data.odc.jumlah };
+        const odcJumlah = data.odc?.jumlah || 0;
+        const odcRow = { serviceArea: sa, jumlah: odcJumlah };
         results.odc.rows.push(odcRow);
         results.odc.totals.jumlah += odcRow.jumlah;
         
         // ODP
-        const odpRow = { serviceArea: sa, jumlah: data.odp.jumlah };
+        const odpJumlah = data.odp?.jumlah || 0;
+        const odpRow = { serviceArea: sa, jumlah: odpJumlah };
         results.odp.rows.push(odpRow);
         results.odp.totals.jumlah += odpRow.jumlah;
 
         // Mitratel
-        const mitratelRow = { serviceArea: sa, jumlah: data.mitratel.jumlah };
+        const mitratelJumlah = data.mitratel?.jumlah || 0;
+        const mitratelRow = { serviceArea: sa, jumlah: mitratelJumlah };
         results.mitratel.rows.push(mitratelRow);
         results.mitratel.totals.jumlah += mitratelRow.jumlah;
 
         // NODE-B
-        const nodeBRow = { serviceArea: sa, jumlah: data.nodeB.jumlah };
+        const nodeBJumlah = data.nodeB?.jumlah || 0;
+        const nodeBRow = { serviceArea: sa, jumlah: nodeBJumlah };
         results.nodeB.rows.push(nodeBRow);
         results.nodeB.totals.jumlah += nodeBRow.jumlah;
     }
@@ -594,3 +602,5 @@ export default function AllproPage() {
     </div>
   );
 }
+
+    
