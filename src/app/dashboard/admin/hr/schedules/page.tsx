@@ -143,6 +143,8 @@ export default function AdminSchedulesPage() {
     const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
     const [importProgress, setImportProgress] = useState(0);
+    const [selectedMonth, setSelectedMonth] = useState<string>(String(new Date().getMonth()));
+    const [selectedYear, setSelectedYear] = useState<string>(String(new Date().getFullYear()));
 
     const shiftTypeLabels: Record<string, string> = {
         'piket-demak': 'Piket Demak (PDM)',
@@ -150,8 +152,8 @@ export default function AdminSchedulesPage() {
         'malam': 'Piket Malam (M)',
         'ijin': 'Ijin (i)',
         'cuti': 'Cuti (C)',
-        'weekend-duty': 'Jaga Akhir Pekan (Lama)',
-        'holiday-duty': 'Jaga Hari Libur (Lama)',
+        'weekend-duty': 'Jaga Akhir Pekan',
+        'holiday-duty': 'Jaga Hari Libur',
         'H': 'Masuk',
         'L': 'Libur',
     };
@@ -226,6 +228,10 @@ export default function AdminSchedulesPage() {
           toast({ variant: "destructive", title: "Data Error", description: "Data pengguna belum siap." });
           return;
         }
+        if (!selectedMonth || !selectedYear) {
+            toast({ variant: "destructive", title: "Bulan & Tahun Diperlukan", description: "Silakan pilih bulan dan tahun jadwal sebelum mengunggah file." });
+            return;
+        }
     
         setIsImporting(true);
         setImportProgress(0);
@@ -235,31 +241,49 @@ export default function AdminSchedulesPage() {
         reader.onload = async (e) => {
           try {
             const data = e.target?.result;
-            const workbook = XLSX.read(data, { type: 'binary', cellDates: true });
+            const workbook = XLSX.read(data, { type: 'binary' });
             const sheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[sheetName];
-            const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
+            // Using { raw: false } helps parse formatted text over raw values
+            const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { raw: false });
     
             if (jsonData.length === 0) {
                 throw new Error("Sheet Excel kosong.");
             }
     
             const userMapByNik = new Map(activeUsers.map(u => [u.nik, u]));
-            const validShiftTypes: ValidShiftType[] = ['piket-demak', 'siang-malam', 'malam', 'ijin', 'cuti'];
+            const shiftCodeMap: Record<string, ValidShiftType> = {
+                'smc': 'siang-malam',
+                's/mc': 'siang-malam',
+                'sm': 'siang-malam',
+                'm': 'malam',
+                'pt/bd': 'piket-demak',
+                'pdm': 'piket-demak',
+                'ptm': 'piket-demak',
+                'pu': 'piket-demak',
+                'pb': 'piket-demak',
+                'i': 'ijin',
+                'c': 'cuti',
+            };
             
             let processedRows = 0;
             let createdCount = 0;
             let errorCount = 0;
-            const chunkSize = 400; // Commit batch every 400 writes
+            let skippedUsers = new Set<string>();
+            const chunkSize = 200;
             let batch = writeBatch(firestore);
+
+            const firstRow = jsonData[0];
+            const dateColumns = Object.keys(firstRow).filter(key => !isNaN(parseInt(key, 10)) && parseInt(key, 10) >= 1 && parseInt(key, 10) <= 31);
+            const nikHeader = Object.keys(firstRow).find(key => key.toLowerCase().trim() === 'nik');
+
+            if (!nikHeader) {
+                throw new Error("Kolom 'NIK' tidak ditemukan di file Excel. Pastikan nama kolom sudah benar.");
+            }
     
             for (const row of jsonData) {
-                const nik = row.nik?.toString().trim();
-                const date = row.date instanceof Date && isValid(row.date) ? row.date : null;
-                const shiftType = row.shiftType?.toString().trim().toLowerCase();
-                const notes = row.notes?.toString() || '';
-    
-                if (!nik || !date || !shiftType || !validShiftTypes.includes(shiftType)) {
+                const nik = row[nikHeader]?.toString().trim();
+                if (!nik) {
                     errorCount++;
                     continue;
                 }
@@ -267,41 +291,60 @@ export default function AdminSchedulesPage() {
                 const user = userMapByNik.get(nik);
                 if (!user) {
                     errorCount++;
+                    skippedUsers.add(nik);
                     continue;
                 }
-                
-                const scheduleId = `${user.id}_${format(date, 'yyyy-MM-dd')}`;
-                const scheduleDocRef = doc(firestore, "schedules", scheduleId);
-    
-                const scheduleData: Omit<Schedule, 'id'> = {
-                    userId: user.id,
-                    userEmail: user.email,
-                    date: Timestamp.fromDate(date),
-                    shiftType: shiftType,
-                    notes: notes,
-                    createdAt: Timestamp.now(),
-                };
-    
-                batch.set(scheduleDocRef, scheduleData, { merge: true });
-                createdCount++;
-                processedRows++;
-                
-                if (processedRows > 0 && processedRows % chunkSize === 0) {
-                    await batch.commit();
-                    batch = writeBatch(firestore);
+
+                for (const day of dateColumns) {
+                    const shiftCode = row[day]?.toString().trim().toLowerCase();
+                    const mappedShift = shiftCodeMap[shiftCode];
+
+                    if (mappedShift) {
+                        const date = new Date(parseInt(selectedYear), parseInt(selectedMonth), parseInt(day));
+                        if (!isValid(date)) continue;
+
+                        const scheduleId = `${user.id}_${format(date, 'yyyy-MM-dd')}`;
+                        const scheduleDocRef = doc(firestore, "schedules", scheduleId);
+        
+                        const scheduleData: Omit<Schedule, 'id'> = {
+                            userId: user.id,
+                            userEmail: user.email,
+                            date: Timestamp.fromDate(date),
+                            shiftType: mappedShift,
+                            notes: '',
+                            createdAt: Timestamp.now(),
+                        };
+        
+                        batch.set(scheduleDocRef, scheduleData, { merge: true });
+                        createdCount++;
+
+                         if (createdCount > 0 && createdCount % chunkSize === 0) {
+                            await batch.commit();
+                            batch = writeBatch(firestore);
+                        }
+                    }
                 }
                 
+                processedRows++;
                 setImportProgress((processedRows / jsonData.length) * 100);
             }
     
-            if (jsonData.length > 0 && jsonData.length % chunkSize !== 0) {
+            if (createdCount > 0 && createdCount % chunkSize !== 0) {
               await batch.commit();
+            }
+            
+            let description = `Berhasil memproses ${createdCount} data jadwal.`;
+            if (errorCount > 0) {
+                description += ` ${errorCount} baris dilewati karena NIK tidak ditemukan atau data tidak valid.`;
+                if (skippedUsers.size > 0) {
+                     console.warn("NIK yang dilewati:", Array.from(skippedUsers));
+                }
             }
     
             toast({
                 title: "Impor Selesai",
-                description: `Berhasil membuat/memperbarui ${createdCount} jadwal. ${errorCount > 0 ? `${errorCount} baris dilewati karena data tidak valid.` : ''}`,
-                duration: 7000,
+                description: description,
+                duration: 9000,
             });
     
           } catch (error: any) {
@@ -327,6 +370,9 @@ export default function AdminSchedulesPage() {
             </div>
         );
     }
+    
+    const yearOptions = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
+    const monthOptions = Array.from({ length: 12 }, (_, i) => ({ value: String(i), label: format(new Date(2000, i), 'MMMM', { locale: idLocale }) }));
 
     return (
         <>
@@ -344,11 +390,31 @@ export default function AdminSchedulesPage() {
                             <DialogHeader>
                                 <DialogTitle>Import Jadwal dari Excel</DialogTitle>
                                 <DialogDescription>
-                                    Upload file Excel dengan kolom: `nik` (NIK Karyawan), `date` (format YYYY-MM-DD), `shiftType`. Pastikan `shiftType` berisi: piket-demak, siang-malam, malam, ijin, atau cuti.
+                                    Format file: Baris untuk setiap teknisi, kolom untuk setiap tanggal (1-31). Pastikan ada kolom `NIK`. Sistem akan membaca kode shift seperti `S/MC`, `M`, `PT/BD`, dll.
                                 </DialogDescription>
                             </DialogHeader>
                             <div className="py-4 space-y-4">
-                                <Input id="excel-file-schedules" type="file" accept=".xlsx, .xls" onChange={handleFileImport} disabled={isImporting} />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="import-month">Bulan</Label>
+                                        <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                                            <SelectTrigger id="import-month"><SelectValue placeholder="Pilih..." /></SelectTrigger>
+                                            <SelectContent>
+                                                {monthOptions.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="import-year">Tahun</Label>
+                                        <Select value={selectedYear} onValueChange={setSelectedYear}>
+                                            <SelectTrigger id="import-year"><SelectValue placeholder="Pilih..." /></SelectTrigger>
+                                            <SelectContent>
+                                                {yearOptions.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                                <Input id="excel-file-schedules" type="file" accept=".xlsx, .xls, .csv" onChange={handleFileImport} disabled={isImporting || !selectedMonth || !selectedYear} />
                                 {isImporting && (
                                     <div className="flex flex-col gap-2 text-sm text-muted-foreground">
                                         <p>Mengimpor {importProgress.toFixed(0)}%... Ini mungkin memakan waktu sejenak.</p>
@@ -407,4 +473,5 @@ export default function AdminSchedulesPage() {
             </AlertDialog>
         </>
     );
-}
+
+    
