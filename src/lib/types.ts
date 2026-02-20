@@ -156,7 +156,7 @@ export type Schedule = {
     userId: string;
     userEmail: string;
     date: any; // Firestore Timestamp
-    shiftType: 'weekend-duty' | 'holiday-duty';
+    shiftType: 'piket-hari' | 'piket-demak' | 'siang-malam' | 'malam' | 'ijin' | 'cuti' | 'weekend-duty' | 'holiday-duty';
     notes?: string;
     createdAt: any; // Firestore Timestamp
 };
@@ -192,4 +192,3 @@ export type AlkerChecklist = {
   dateSubmitted: any; // Timestamp
   tools: AlkerTool[];
 };
-

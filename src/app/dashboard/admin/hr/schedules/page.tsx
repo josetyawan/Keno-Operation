@@ -24,25 +24,33 @@ import { id as idLocale } from 'date-fns/locale';
 import type { Schedule, UserProfile } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
+type ValidShiftType = 'piket-hari' | 'piket-demak' | 'siang-malam' | 'malam' | 'ijin' | 'cuti';
+
 function ScheduleForm({ schedule, users, onFormSubmit }: { schedule?: Schedule | null, users: UserProfile[], onFormSubmit: (data: Partial<Schedule>) => void }) {
     const [userId, setUserId] = useState('');
     const [date, setDate] = useState<Date | undefined>();
-    const [shiftType, setShiftType] = useState<'weekend-duty' | 'holiday-duty'>('weekend-duty');
+    const [shiftType, setShiftType] = useState<ValidShiftType>('piket-hari');
     const [notes, setNotes] = useState('');
+    
+    const validShiftTypes: ValidShiftType[] = ['piket-hari', 'piket-demak', 'siang-malam', 'malam', 'ijin', 'cuti'];
 
     useEffect(() => {
         if (schedule) {
             setUserId(schedule.userId);
             setDate(schedule.date.toDate());
-            setShiftType(schedule.shiftType);
+            if (validShiftTypes.includes(schedule.shiftType as any)) {
+                setShiftType(schedule.shiftType as ValidShiftType);
+            } else {
+                setShiftType('piket-hari'); // Default for old data
+            }
             setNotes(schedule.notes || '');
         } else {
             setUserId('');
             setDate(undefined);
-            setShiftType('weekend-duty');
+            setShiftType('piket-hari');
             setNotes('');
         }
-    }, [schedule]);
+    }, [schedule, validShiftTypes]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -71,7 +79,7 @@ function ScheduleForm({ schedule, users, onFormSubmit }: { schedule?: Schedule |
                 </Select>
             </div>
             <div className="grid gap-2">
-                <Label htmlFor="date">Tanggal Jaga</Label>
+                <Label htmlFor="date">Tanggal</Label>
                 <Popover>
                     <PopoverTrigger asChild>
                         <Button
@@ -96,12 +104,16 @@ function ScheduleForm({ schedule, users, onFormSubmit }: { schedule?: Schedule |
                 </Popover>
             </div>
             <div className="grid gap-2">
-                <Label htmlFor="shiftType">Jenis Jaga</Label>
+                <Label htmlFor="shiftType">Jenis Jadwal/Status</Label>
                 <Select value={shiftType} onValueChange={(value) => setShiftType(value as any)}>
                     <SelectTrigger><SelectValue placeholder="Pilih jenis" /></SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="weekend-duty">Jaga Akhir Pekan</SelectItem>
-                        <SelectItem value="holiday-duty">Jaga Hari Libur</SelectItem>
+                        <SelectItem value="piket-hari">Piket Hari (P)</SelectItem>
+                        <SelectItem value="piket-demak">Piket Demak (PDM)</SelectItem>
+                        <SelectItem value="siang-malam">Piket Siang-Malam (SM)</SelectItem>
+                        <SelectItem value="malam">Piket Malam (M)</SelectItem>
+                        <SelectItem value="ijin">Ijin (i)</SelectItem>
+                        <SelectItem value="cuti">Cuti (C)</SelectItem>
                     </SelectContent>
                 </Select>
             </div>
@@ -126,6 +138,17 @@ export default function AdminSchedulesPage() {
     const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
     const [scheduleToEdit, setScheduleToEdit] = useState<Schedule | null>(null);
     const [scheduleToDelete, setScheduleToDelete] = useState<Schedule | null>(null);
+
+    const shiftTypeLabels: Record<Schedule['shiftType'], string> = {
+        'piket-hari': 'Piket Hari (P)',
+        'piket-demak': 'Piket Demak (PDM)',
+        'siang-malam': 'Piket Siang-Malam (SM)',
+        'malam': 'Piket Malam (M)',
+        'ijin': 'Ijin (i)',
+        'cuti': 'Cuti (C)',
+        'weekend-duty': 'Jaga Akhir Pekan (Lama)',
+        'holiday-duty': 'Jaga Hari Libur (Lama)',
+    };
 
     const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
         useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
@@ -202,22 +225,22 @@ export default function AdminSchedulesPage() {
         <>
             <div className="flex items-center justify-between mb-8">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Manajemen Jadwal Jaga</h1>
-                    <p className="text-muted-foreground mt-1">Buat, edit, dan hapus jadwal jaga untuk teknisi.</p>
+                    <h1 className="text-3xl font-bold tracking-tight">Manajemen Jadwal & Status</h1>
+                    <p className="text-muted-foreground mt-1">Buat, edit, dan hapus jadwal jaga, ijin, atau cuti untuk teknisi.</p>
                 </div>
                 <Dialog open={isFormDialogOpen} onOpenChange={setIsFormDialogOpen}>
                     <DialogTrigger asChild><Button onClick={handleCreate} disabled={activeUsers.length === 0}><PlusCircle className="mr-2 h-4 w-4" />Buat Jadwal</Button></DialogTrigger>
-                    <DialogContent><DialogHeader><DialogTitle>{scheduleToEdit ? 'Edit' : 'Buat'} Jadwal Jaga</DialogTitle></DialogHeader><ScheduleForm schedule={scheduleToEdit} users={activeUsers} onFormSubmit={handleFormSubmit} /></DialogContent>
+                    <DialogContent><DialogHeader><DialogTitle>{scheduleToEdit ? 'Edit' : 'Buat'} Jadwal atau Status</DialogTitle></DialogHeader><ScheduleForm schedule={scheduleToEdit} users={activeUsers} onFormSubmit={handleFormSubmit} /></DialogContent>
                 </Dialog>
             </div>
             <Card>
-                <CardHeader><CardTitle>Daftar Jadwal</CardTitle><CardDescription>Semua jadwal jaga yang telah dibuat.</CardDescription></CardHeader>
+                <CardHeader><CardTitle>Daftar Jadwal</CardTitle><CardDescription>Semua jadwal & status yang telah dibuat.</CardDescription></CardHeader>
                 <CardContent>
                     <Table>
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Teknisi</TableHead>
-                                <TableHead>Tanggal Jaga</TableHead>
+                                <TableHead>Tanggal</TableHead>
                                 <TableHead>Jenis</TableHead>
                                 <TableHead>Catatan</TableHead>
                                 <TableHead className="text-right">Aksi</TableHead>
@@ -229,7 +252,7 @@ export default function AdminSchedulesPage() {
                                     <TableRow key={schedule.id}>
                                         <TableCell className="font-medium">{schedule.userEmail}</TableCell>
                                         <TableCell>{format(schedule.date.toDate(), 'eeee, dd MMMM yyyy', { locale: idLocale })}</TableCell>
-                                        <TableCell>{schedule.shiftType === 'weekend-duty' ? 'Akhir Pekan' : 'Libur Nasional'}</TableCell>
+                                        <TableCell>{shiftTypeLabels[schedule.shiftType] ?? schedule.shiftType}</TableCell>
                                         <TableCell>{schedule.notes || '-'}</TableCell>
                                         <TableCell className="text-right">
                                             <Button variant="ghost" size="icon" onClick={() => handleEdit(schedule)}><Edit className="h-4 w-4" /></Button>

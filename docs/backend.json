@@ -182,13 +182,16 @@
     "Schedule": {
         "title": "Schedule",
         "type": "object",
-        "description": "Represents a work schedule for a user on a specific day.",
+        "description": "Represents a work schedule for a user on a specific day. This can also be used to log leave (Ijin, Cuti).",
         "properties": {
             "id": {"type": "string"},
             "userId": {"type": "string"},
             "userEmail": {"type": "string"},
             "date": {"type": "string", "format": "date"},
-            "shiftType": {"type": "string", "enum": ["weekend-duty", "holiday-duty"]},
+            "shiftType": {
+                "type": "string", 
+                "enum": ["piket-hari", "piket-demak", "siang-malam", "malam", "ijin", "cuti", "weekend-duty", "holiday-duty"]
+            },
             "notes": {"type": "string"},
             "createdAt": {"type": "string", "format": "date-time"}
         },
