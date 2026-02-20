@@ -53,9 +53,7 @@ export default function SearchAssetsPage() {
 
   const canSearch = searchServiceArea !== 'all';
   const hasSearched = canSearch && searchName.trim() !== '';
-  const isMitratelSearch = useMemo(() => searchName.toUpperCase().trim().startsWith('MITRATEL'), [searchName]);
-
-
+  
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
     useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
   );
@@ -125,7 +123,6 @@ export default function SearchAssetsPage() {
   }, [user, currentUserProfile, isUserLoading, isProfileLoading, router]);
 
   const assetsQuery = useMemoFirebase(() => {
-    // Only query if a service area is selected AND a search term is entered
     if (!canSearch || !currentUserProfile || searchName.trim() === '') {
       return null;
     }
@@ -134,9 +131,8 @@ export default function SearchAssetsPage() {
     
     constraints.push(where('serviceArea', '==', searchServiceArea));
     
-    // Infer asset type from search query to make Firestore query more efficient
     const upperSearch = searchName.toUpperCase().trim();
-    const assetPrefixes = ['ODP', 'ODC', 'OLT', 'FTM', 'MITRATEL'];
+    const assetPrefixes = ['ODP', 'ODC', 'OLT', 'FTM', 'MITRATEL', 'NODE-B'];
     let inferredType: string | null = null;
     
     for (const prefix of assetPrefixes) {
@@ -158,10 +154,13 @@ export default function SearchAssetsPage() {
   const filteredAssets = useMemo(() => {
     if (!queriedAssets) return [];
     
-    // Client-side filtering for the full name match after getting the narrowed down list from server
     const lowercasedSearchName = searchName.toLowerCase().trim();
     if (lowercasedSearchName) {
-        return queriedAssets.filter(asset => asset.name.toLowerCase().includes(lowercasedSearchName));
+        return queriedAssets.filter(asset => {
+            const nameMatch = asset.name.toLowerCase().includes(lowercasedSearchName);
+            const siteIdMatch = asset.siteId?.toLowerCase().includes(lowercasedSearchName);
+            return nameMatch || !!siteIdMatch;
+        });
     }
     
     return queriedAssets;
@@ -174,6 +173,20 @@ export default function SearchAssetsPage() {
       const endIndex = startIndex + ITEMS_PER_PAGE;
       return filteredAssets.slice(startIndex, endIndex);
   }, [filteredAssets, currentPage]);
+  
+  const isNodeBSearch = useMemo(() => {
+    if (!hasSearched || paginatedAssets.length === 0) return false;
+    const firstAssetType = paginatedAssets[0].assetType;
+    // If the first asset is NODE-B, we can be pretty sure it's a NODE-B search.
+    if (firstAssetType === 'NODE-B') return true;
+    // If not, check if the search term matches a siteId pattern, as assetType might be missing on some results.
+    const siteIdPatterns = ['JPA', 'KDS', 'DMK', 'PAT', 'RBG', 'GRO', 'BLA'];
+    const upperSearch = searchName.toUpperCase();
+    return siteIdPatterns.some(p => upperSearch.includes(p));
+  }, [paginatedAssets, hasSearched, searchName]);
+  
+  const isMitratelSearch = useMemo(() => paginatedAssets?.[0]?.assetType === 'MITRATEL', [paginatedAssets]);
+
 
   useEffect(() => {
       setCurrentPage(1);
@@ -220,8 +233,8 @@ export default function SearchAssetsPage() {
                     </Select>
                 </div>
                 <div className="grid gap-1.5 md:col-span-2">
-                    <Label htmlFor="search-name">2. Cari Nama Aset</Label>
-                    <Input id="search-name" placeholder="Ketik nama aset (e.g., ODP-KUD-FA/001)..." value={searchName} onChange={(e) => setSearchName(e.target.value)} disabled={!canSearch}/>
+                    <Label htmlFor="search-name">2. Cari Nama Aset atau Site ID</Label>
+                    <Input id="search-name" placeholder="Ketik nama aset (e.g., ODP-KUD-FA/001) atau Site ID..." value={searchName} onChange={(e) => setSearchName(e.target.value)} disabled={!canSearch}/>
                 </div>
             </div>
              {(currentMancoreLinks.length > 0 || currentMapUrl || (isMitratelSearch && mitratelMapUrl)) && (
@@ -270,30 +283,72 @@ export default function SearchAssetsPage() {
         <CardContent>
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
-                {!isMitratelSearch && <TableHead>Sub-Type</TableHead>}
-                <TableHead>Service Area</TableHead>
-                {!isMitratelSearch && <TableHead>STO</TableHead>}
-                <TableHead>Coordinates</TableHead>
-                {isMitratelSearch && <TableHead>Mitratel ID</TableHead>}
-                {isMitratelSearch && <TableHead>Tenant ID</TableHead>}
-                {!isMitratelSearch && <TableHead>Avail</TableHead>}
-                {!isMitratelSearch && <TableHead>Used</TableHead>}
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
+               {isNodeBSearch ? (
+                     <TableRow>
+                        <TableHead>Site ID</TableHead>
+                        <TableHead>Site Name</TableHead>
+                        <TableHead>OLT Merk</TableHead>
+                        <TableHead>Splitter OLT</TableHead>
+                        <TableHead>SN ONT</TableHead>
+                        <TableHead>EQP Port</TableHead>
+                        <TableHead>Cascade</TableHead>
+                        <TableHead>Cascade At</TableHead>
+                        <TableHead>CATBTS</TableHead>
+                        <TableHead>RNC/BSC</TableHead>
+                        <TableHead>Router/RAN</TableHead>
+                        <TableHead>Alamat</TableHead>
+                        <TableHead className="text-right">Lokasi</TableHead>
+                    </TableRow>
+                ) : (
+                    <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Type</TableHead>
+                        {!isMitratelSearch && <TableHead>Sub-Type</TableHead>}
+                        <TableHead>Service Area</TableHead>
+                        {!isMitratelSearch && <TableHead>STO</TableHead>}
+                        <TableHead>Coordinates</TableHead>
+                        {isMitratelSearch && <TableHead>Mitratel ID</TableHead>}
+                        {isMitratelSearch && <TableHead>Tenant ID</TableHead>}
+                        {!isMitratelSearch && <TableHead>Avail</TableHead>}
+                        {!isMitratelSearch && <TableHead>Used</TableHead>}
+                        <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                )}
             </TableHeader>
             <TableBody>
               {areAssetsLoading && hasSearched ? (
                  Array.from({ length: 5 }).map((_, index) => (
-                    <TableRow key={index}><TableCell colSpan={11}><Skeleton className="h-6 w-full" /></TableCell></TableRow>
+                    <TableRow key={index}><TableCell colSpan={isNodeBSearch ? 13 : 11}><Skeleton className="h-6 w-full" /></TableCell></TableRow>
                 ))
               ) : paginatedAssets.length > 0 && hasSearched ? (
                 paginatedAssets.map(a => {
                   const coords = a.coordinates?.split(',').map(c => c.trim());
                   const googleMapsUrl = coords && coords.length === 2 ? `https://www.google.com/maps/search/?api=1&amp;query=${coords[0]},${coords[1]}` : null;
-                  return (
+                  return isNodeBSearch ? (
+                     <TableRow key={a.id}>
+                        <TableCell>{a.siteId}</TableCell>
+                        <TableCell>{a.siteName}</TableCell>
+                        <TableCell>{a.oltMerk}</TableCell>
+                        <TableCell>{a.splitterOlt}</TableCell>
+                        <TableCell>{a.snOnt}</TableCell>
+                        <TableCell>{a.eqpPort}</TableCell>
+                        <TableCell>{a.cascade}</TableCell>
+                        <TableCell>{a.cascadeAt}</TableCell>
+                        <TableCell>{a.catbts}</TableCell>
+                        <TableCell>{a.rncBsc}</TableCell>
+                        <TableCell>{a.routerRan}</TableCell>
+                        <TableCell>{a.alamat}</TableCell>
+                        <TableCell className="text-right">
+                           {googleMapsUrl && (
+                            <Button asChild variant="ghost" size="icon" title="Lihat di Google Maps">
+                              <Link href={googleMapsUrl} target="_blank" rel="noopener noreferrer">
+                                <MapPin className="h-4 w-4 text-blue-600" />
+                              </Link>
+                            </Button>
+                          )}
+                        </TableCell>
+                    </TableRow>
+                  ) : (
                   <TableRow key={a.id}>
                     <TableCell className="font-medium">{a.name}</TableCell>
                     <TableCell>{a.assetType}</TableCell>
@@ -316,11 +371,11 @@ export default function SearchAssetsPage() {
                 )})
               ) : (
                 <TableRow>
-                  <TableCell colSpan={11} className="h-24 text-center">
+                  <TableCell colSpan={isNodeBSearch ? 13 : 11} className="h-24 text-center">
                     {!canSearch 
                       ? "Silakan pilih Service Area untuk memulai." 
                       : !hasSearched 
-                      ? "Ketik nama aset di atas untuk mencari." 
+                      ? "Ketik nama aset atau Site ID di atas untuk mencari." 
                       : "Tidak ada aset yang cocok dengan filter Anda."}
                   </TableCell>
                 </TableRow>
@@ -343,3 +398,5 @@ export default function SearchAssetsPage() {
     </>
   );
 }
+
+    
