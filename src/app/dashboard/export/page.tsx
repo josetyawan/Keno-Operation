@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -765,9 +766,20 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
         const evidenKmAwalUrl = nota.fotoEvidenUrls?.[5] || undefined;
         const evidenKmAkhirUrl = nota.fotoEvidenUrls?.[6] || undefined;
 
-        const keperluanImagesHtml = keperluanImageUrls.map(url =>
-            `<img src="${url}" style="width: 80px; height: auto; object-fit: contain; border: 1px solid #eee;"/>`
-        ).join('');
+        let keperluanCellHtml = '';
+        if (keperluanImageUrls.length === 1) {
+            keperluanCellHtml = `
+                <div style="display: flex; justify-content: center; align-items: center; min-height: 80px;">
+                    <img src="${keperluanImageUrls[0]}" style="width: 120px; height: auto; object-fit: contain; border: 1px solid #eee;" />
+                </div>
+            `;
+        } else if (keperluanImageUrls.length > 1) {
+            const imagesHtml = keperluanImageUrls.map(url =>
+                `<img src="${url}" style="width: 80px; height: auto; object-fit: contain; border: 1px solid #eee;"/>`
+            ).join('');
+            keperluanCellHtml = `<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; align-items: start;">${imagesHtml}</div>`;
+        }
+
 
         const renderImageCell = (url: string | undefined) => {
             if (!url) return '<div style="width: 80px; height: 80px;"></div>'; // Keep cell height consistent
@@ -788,7 +800,7 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
             <td style="border: 1px solid black; padding: 4px; text-align: center; vertical-align: top;">${selisih}</td>
             <td style="border: 1px solid black; padding: 4px; text-align: center; vertical-align: top;">${nota.kmAwal ?? '-'}</td>
             <td style="border: 1px solid black; padding: 4px; text-align: center; vertical-align: top;">${nota.kmAkhir ?? '-'}</td>
-            <td style="border: 1px solid black; padding: 4px; vertical-align: top;"><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">${keperluanImagesHtml}</div></td>
+            <td style="border: 1px solid black; padding: 4px; vertical-align: top;">${keperluanCellHtml}</td>
             <td style="border: 1px solid black; padding: 4px; text-align: center; vertical-align: top;">${renderImageCell(evidenKmUrl)}</td>
             <td style="border: 1px solid black; padding: 4px; text-align: center; vertical-align: top;">${renderImageCell(evidenKmAwalUrl)}</td>
             <td style="border: 1px solid black; padding: 4px; text-align: center; vertical-align: top;">${renderImageCell(evidenKmAkhirUrl)}</td>
@@ -1861,3 +1873,5 @@ export default function ExportPage() {
         </>
     );
 }
+
+    
