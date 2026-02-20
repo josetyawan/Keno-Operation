@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, query, doc, orderBy, Timestamp, writeBatch } from 'firebase/firestore';
+import { collection, query, doc, orderBy, Timestamp, writeBatch, setDoc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -181,11 +181,28 @@ export default function AdminSchedulesPage() {
 
     const schedulesQuery = useMemoFirebase(() => {
         if (currentUserProfile?.role === 'admin' || currentUserProfile?.role === 'korlap') {
-            return query(collection(firestore, 'schedules'), orderBy('date', 'desc'));
+            return query(collection(firestore, 'schedules'));
         }
         return null;
     }, [firestore, currentUserProfile]);
     const { data: schedules, isLoading: areSchedulesLoading } = useCollection<Schedule>(schedulesQuery);
+
+    const userMap = useMemo(() => {
+        if (!users) return new Map<string, string>();
+        return new Map(users.map(u => [u.id, u.displayName || u.email]));
+    }, [users]);
+    
+    const sortedSchedules = useMemo(() => {
+        if (!schedules) return [];
+        return [...schedules].sort((a, b) => {
+            const nameA = userMap.get(a.userId) || a.userEmail;
+            const nameB = userMap.get(b.userId) || b.userEmail;
+            if (nameA < nameB) return -1;
+            if (nameA > nameB) return 1;
+            // If names are the same, sort by date descending
+            return b.date.toDate().getTime() - a.date.toDate().getTime();
+        });
+    }, [schedules, userMap]);
 
     const handleCreate = () => {
         setScheduleToEdit(null);
@@ -259,14 +276,14 @@ export default function AdminSchedulesPage() {
     const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const fileInput = event.target as HTMLInputElement;
 
-        if (!event.target.files || event.target.files.length === 0) {
+        if (!fileInput.files || fileInput.files.length === 0) {
           toast({ variant: "destructive", title: "Tidak ada file dipilih." });
           return;
         }
 
         if (!firestore || !activeUsers || activeUsers.length === 0) {
             toast({ variant: "destructive", title: "Data Pengguna Belum Siap", description: "Data pengguna sedang dimuat. Silakan tunggu beberapa saat dan coba lagi." });
-            if (fileInput) fileInput.value = ''; // Reset file input
+            if (fileInput) fileInput.value = '';
             return;
         }
 
@@ -278,35 +295,24 @@ export default function AdminSchedulesPage() {
     
         setIsImporting(true);
         setImportProgress(0);
-        const file = event.target.files[0];
+        const file = fileInput.files[0];
         const reader = new FileReader();
     
         reader.onload = async (e) => {
           try {
             const data = e.target?.result;
             const workbook = XLSX.read(data, { type: 'binary' });
-            const sheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[sheetName];
-            const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { raw: false });
+            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { raw: true });
     
             if (jsonData.length === 0) {
                 throw new Error("Sheet Excel kosong.");
             }
             
-            const findColumn = (keys: string[], aliases: string[]): string | undefined => {
-                const lowerCaseAliases = aliases.map(a => a.toLowerCase().trim());
-                for (const key of keys) {
-                    if (lowerCaseAliases.includes(key.toLowerCase().trim())) {
-                        return key;
-                    }
-                }
-                return undefined;
-            };
-    
-            const userMapByNik = new Map(activeUsers.map(u => [String(u.nik || '').trim(), u]));
-             if (userMapByNik.has('')) {
-                userMapByNik.delete('');
-             }
+            const userMapByNik = new Map(activeUsers.map(u => {
+                const cleanNik = String(u.nik || '').trim();
+                return cleanNik ? [cleanNik, u] : null;
+            }).filter(Boolean) as [string, UserProfile][]);
 
             const shiftCodeMap: Record<string, ValidShiftType> = {
                 'smc': 'siang-malam', 's/mc': 'siang-malam', 'sm': 'siang-malam',
@@ -325,12 +331,13 @@ export default function AdminSchedulesPage() {
 
             const firstRow = jsonData[0];
             const firstRowKeys = Object.keys(firstRow);
-            const dateColumns = firstRowKeys.filter(key => !isNaN(parseInt(key, 10)) && parseInt(key, 10) >= 1 && parseInt(key, 10) <= 31);
-            const nikHeader = findColumn(firstRowKeys, ['nik', 'nomor induk karyawan', 'nomor induk']);
-
+            const nikHeader = firstRowKeys.find(key => key.trim().toLowerCase() === 'nik');
+            
             if (!nikHeader) {
-                throw new Error("Kolom NIK tidak ditemukan. Pastikan file Excel Anda memiliki kolom dengan nama 'NIK'.");
+                throw new Error("Kolom 'NIK' tidak ditemukan. Pastikan file Excel Anda memiliki kolom dengan nama 'NIK'.");
             }
+            
+            const dateColumns = firstRowKeys.filter(key => !isNaN(parseInt(key, 10)) && parseInt(key, 10) >= 1 && parseInt(key, 10) <= 31);
     
             for (const row of jsonData) {
                 const nikFromExcel = String(row[nikHeader] || '').trim();
@@ -346,7 +353,7 @@ export default function AdminSchedulesPage() {
                 }
 
                 for (const day of dateColumns) {
-                    const shiftCode = row[day]?.toString().trim().toLowerCase();
+                    const shiftCode = String(row[day] || '').trim().toLowerCase();
                     const mappedShift = shiftCodeMap[shiftCode];
 
                     if (mappedShift) {
@@ -385,8 +392,8 @@ export default function AdminSchedulesPage() {
             
             let description = `Impor berhasil! ${createdCount} data jadwal telah disimpan/diperbarui.`;
             if (errorCount > 0) {
-                const skippedNikList = Array.from(skippedUsers).slice(0, 3).join(', ');
-                description += ` ${errorCount} baris dilewati karena NIK tidak terdaftar atau belum disetujui (contoh NIK: ${skippedNikList}${skippedUsers.size > 3 ? '...' : ''}).`;
+                const skippedNikList = Array.from(skippedUsers).slice(0, 5).join(', ');
+                description += ` ${errorCount} baris dilewati karena NIK tidak terdaftar atau belum disetujui (contoh NIK: ${skippedNikList}${skippedUsers.size > 5 ? '...' : ''}).`;
             }
     
             toast({
@@ -467,7 +474,7 @@ export default function AdminSchedulesPage() {
                      <div className="space-y-2">
                         <Label className="font-semibold">2. Unduh dan Isi Template</Label>
                         <Button onClick={handleExportTemplate} variant="secondary" className="w-full max-w-sm" disabled={areUsersLoading || !selectedMonth || !selectedYear}>
-                            <Download className="mr-2 h-4 w-4" /> Download Template
+                            <Download className="mr-2 h-4 w-4" /> Download Template (Hanya NIK)
                         </Button>
                     </div>
                      <div className="space-y-2">
@@ -484,7 +491,7 @@ export default function AdminSchedulesPage() {
             </Card>
 
             <Card>
-                <CardHeader><CardTitle>Daftar Jadwal</CardTitle><CardDescription>Semua jadwal & status yang telah dibuat.</CardDescription></CardHeader>
+                <CardHeader><CardTitle>Daftar Jadwal</CardTitle><CardDescription>Semua jadwal & status yang telah dibuat, diurutkan berdasarkan nama.</CardDescription></CardHeader>
                 <CardContent>
                     <Table>
                         <TableHeader>
@@ -497,10 +504,10 @@ export default function AdminSchedulesPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {schedules && schedules.length > 0 ? (
-                                schedules.map(schedule => (
+                            {sortedSchedules && sortedSchedules.length > 0 ? (
+                                sortedSchedules.map(schedule => (
                                     <TableRow key={schedule.id}>
-                                        <TableCell className="font-medium">{schedule.userEmail}</TableCell>
+                                        <TableCell className="font-medium">{userMap.get(schedule.userId) || schedule.userEmail}</TableCell>
                                         <TableCell>{format(schedule.date.toDate(), 'eeee, dd MMMM yyyy', { locale: idLocale })}</TableCell>
                                         <TableCell>{shiftTypeLabels[schedule.shiftType] ?? schedule.shiftType}</TableCell>
                                         <TableCell>{schedule.notes || '-'}</TableCell>
@@ -520,7 +527,7 @@ export default function AdminSchedulesPage() {
 
             <AlertDialog open={!!scheduleToDelete} onOpenChange={(open) => !open && setScheduleToDelete(null)}>
                 <AlertDialogContent>
-                    <AlertDialogHeader><AlertDialogTitle>Anda yakin?</AlertDialogTitle><AlertDialogDescription>Tindakan ini akan menghapus jadwal untuk {scheduleToDelete?.userEmail} pada {scheduleToDelete?.date ? format(scheduleToDelete.date.toDate(), 'dd MMM yyyy', {locale: idLocale}) : ''}.</AlertDialogDescription></AlertDialogHeader>
+                    <AlertDialogHeader><AlertDialogTitle>Anda yakin?</AlertDialogTitle><AlertDialogDescription>Tindakan ini akan menghapus jadwal untuk {userMap.get(scheduleToDelete?.userId || '')} pada {scheduleToDelete?.date ? format(scheduleToDelete.date.toDate(), 'dd MMM yyyy', {locale: idLocale}) : ''}.</AlertDialogDescription></AlertDialogHeader>
                     <AlertDialogFooter><AlertDialogCancel>Batal</AlertDialogCancel><AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Hapus</AlertDialogAction></AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
