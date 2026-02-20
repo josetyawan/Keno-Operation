@@ -253,6 +253,17 @@ export default function AdminAssetsPage() {
 
     reader.onload = async (e) => {
         try {
+            const mapStoToServiceArea = (sto: string): NetworkAsset['serviceArea'] => {
+                const upperSto = sto.toUpperCase().trim();
+                if (['PWB', 'WRO', 'TRO', 'GBU', 'GDO'].some(code => upperSto.includes(code))) return 'SA PURWODADI';
+                if (['CEP', 'BLO', 'NGA', 'RDB'].some(code => upperSto.includes(code))) return 'SA BLORA';
+                if (['KMJ', 'BAN', 'KEL', 'PEC'].some(code => upperSto.includes(code))) return 'SA JEPARA';
+                if (['KUD', 'DMA'].some(code => upperSto.includes(code))) return 'SA KUDUS';
+                if (['PAT', 'TAY', 'JWN'].some(code => upperSto.includes(code))) return 'SA PATI';
+                if (['LSE', 'RBN'].some(code => upperSto.includes(code))) return 'SA REMBANG';
+                return 'SA KUDUS';
+            };
+
             const data = e.target?.result;
             const workbook = XLSX.read(data, { type: 'binary' });
 
@@ -638,17 +649,6 @@ export default function AdminAssetsPage() {
             const assetsCollection = collection(firestore, 'network-assets');
             let totalCreated = 0;
             let totalUpdated = 0;
-            
-            const mapStoToServiceArea = (sto: string): NetworkAsset['serviceArea'] => {
-                const upperSto = sto.toUpperCase().trim();
-                if (['PWB', 'WRO', 'TRO', 'GBU', 'GDO'].some(code => upperSto.includes(code))) return 'SA PURWODADI';
-                if (['CEP', 'BLO', 'NGA', 'RDB'].some(code => upperSto.includes(code))) return 'SA BLORA';
-                if (['KMJ', 'BAN', 'KEL', 'PEC'].some(code => upperSto.includes(code))) return 'SA JEPARA';
-                if (['KUD', 'DMA'].some(code => upperSto.includes(code))) return 'SA KUDUS';
-                if (['PAT', 'TAY', 'JWN'].some(code => upperSto.includes(code))) return 'SA PATI';
-                if (['LSE', 'RBN'].some(code => upperSto.includes(code))) return 'SA REMBANG';
-                return 'SA KUDUS';
-            };
 
             const processChunk = async () => {
                 try {
