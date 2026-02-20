@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -215,10 +214,6 @@ export default function AdminSchedulesPage() {
         const endIndex = startIndex + ITEMS_PER_PAGE;
         return sortedSchedules.slice(startIndex, endIndex);
     }, [sortedSchedules, currentPage]);
-    
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [selectedUnit]);
 
 
     const handleCreate = () => {
