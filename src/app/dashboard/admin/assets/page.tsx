@@ -149,16 +149,20 @@ export default function AdminAssetsPage() {
     return queriedAssets.filter(asset => {
         const nameMatch = asset.name.toLowerCase().includes(lowercasedSearchName);
         
-        // If a type is inferred from the search prefix (e.g., "ODP-XXX"),
-        // then we only show assets of that type that also match the name.
+        let specificMatch = false;
+        if (asset.assetType === 'NODE-B') {
+            const siteIdMatch = asset.siteId?.toLowerCase().includes(lowercasedSearchName);
+            const siteNameMatch = asset.siteName?.toLowerCase().includes(lowercasedSearchName);
+            specificMatch = !!(siteIdMatch || siteNameMatch);
+        }
+
+        const fullMatch = nameMatch || specificMatch;
+
         if (inferredType) {
-            return asset.assetType === inferredType && nameMatch;
+            return asset.assetType === inferredType && fullMatch;
         }
         
-        // If no type is inferred (e.g., a search for "JPA001"),
-        // we search the name across all asset types returned for the service area.
-        // This will find NODE-B by its siteName, or any other asset by its name.
-        return nameMatch;
+        return fullMatch;
     });
     
   }, [queriedAssets, searchName]);
@@ -191,6 +195,30 @@ export default function AdminAssetsPage() {
       description: `Aset "${assetName}" telah dihapus.`,
     });
   };
+  
+  const mapNodeBToServiceArea = (siteId: string): string => {
+        const upperSiteId = (siteId || '').toUpperCase();
+        if (upperSiteId.includes('BLA')) return 'SA BLORA';
+        if (upperSiteId.includes('JPA')) return 'SA JEPARA';
+        if (upperSiteId.includes('DMK')) return 'SA KUDUS';
+        if (upperSiteId.includes('KDS')) return 'SA KUDUS';
+        if (upperSiteId.includes('GRO')) return 'SA PURWODADI';
+        if (upperSiteId.includes('PAT')) return 'SA PATI';
+        if (upperSiteId.includes('RBG')) return 'SA REMBANG';
+        return 'Unmap';
+    };
+
+    const mapStoToServiceArea = (sto: string): NetworkAsset['serviceArea'] => {
+        const upperSto = sto.toUpperCase().trim();
+        if (['PWB', 'WRO', 'TRO', 'GBU', 'GDO'].some(code => upperSto.includes(code))) return 'SA PURWODADI';
+        if (['CEP', 'BLO', 'NGA', 'RDB'].some(code => upperSto.includes(code))) return 'SA BLORA';
+        if (['KMJ', 'BAN', 'KEL', 'PEC'].some(code => upperSto.includes(code))) return 'SA JEPARA';
+        if (['KUD', 'DMA'].some(code => upperSto.includes(code))) return 'SA KUDUS';
+        if (['PAT', 'TAY', 'JWN'].some(code => upperSto.includes(code))) return 'SA PATI';
+        if (['LSE', 'RBN'].some(code => upperSto.includes(code))) return 'SA REMBANG';
+        return 'SA KUDUS';
+    };
+
 
   const confirmDeleteAll = async () => {
     if (!firestore) return;
@@ -240,30 +268,6 @@ export default function AdminAssetsPage() {
     }
   };
 
-    const mapNodeBToServiceArea = (siteId: string): string => {
-        const upperSiteId = (siteId || '').toUpperCase();
-        if (upperSiteId.includes('BLA')) return 'SA BLORA';
-        if (upperSiteId.includes('JPA')) return 'SA JEPARA';
-        if (upperSiteId.includes('DMK')) return 'SA KUDUS';
-        if (upperSiteId.includes('KDS')) return 'SA KUDUS';
-        if (upperSiteId.includes('GRO')) return 'SA PURWODADI';
-        if (upperSiteId.includes('PAT')) return 'SA PATI';
-        if (upperSiteId.includes('RBG')) return 'SA REMBANG';
-        return 'Unmap';
-    };
-
-    const mapStoToServiceArea = (sto: string): NetworkAsset['serviceArea'] => {
-        const upperSto = sto.toUpperCase().trim();
-        if (['PWB', 'WRO', 'TRO', 'GBU', 'GDO'].some(code => upperSto.includes(code))) return 'SA PURWODADI';
-        if (['CEP', 'BLO', 'NGA', 'RDB'].some(code => upperSto.includes(code))) return 'SA BLORA';
-        if (['KMJ', 'BAN', 'KEL', 'PEC'].some(code => upperSto.includes(code))) return 'SA JEPARA';
-        if (['KUD', 'DMA'].some(code => upperSto.includes(code))) return 'SA KUDUS';
-        if (['PAT', 'TAY', 'JWN'].some(code => upperSto.includes(code))) return 'SA PATI';
-        if (['LSE', 'RBN'].some(code => upperSto.includes(code))) return 'SA REMBANG';
-        return 'SA KUDUS';
-    };
-
-
   const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!importAssetType) {
         toast({ variant: "destructive", title: "Pilih Jenis Aset", description: "Anda harus memilih jenis aset sebelum mengunggah file." });
@@ -289,17 +293,17 @@ export default function AdminAssetsPage() {
             const workbook = XLSX.read(data, { type: 'binary' });
 
             let sheetName: string | undefined;
+            const possibleSheetNames: Record<string, string[]> = {
+              'NODE-B': ['node-b', 'nodeb'],
+              // ... add other mappings if needed
+            };
 
-            if (importAssetType === 'NODE-B') {
-                const possibleSheetNames = ['node-b', 'nodeb'];
-                sheetName = workbook.SheetNames.find(
-                    name => possibleSheetNames.includes(name.toLowerCase().trim())
-                );
-            } else {
-                 sheetName = workbook.SheetNames.find(
-                    name => name.toLowerCase().trim() === importAssetType.toLowerCase().trim()
-                );
-            }
+            const sheetToFind = importAssetType.toLowerCase().trim();
+            const sheetAliases = possibleSheetNames[importAssetType] || [sheetToFind];
+
+            sheetName = workbook.SheetNames.find(
+                name => sheetAliases.includes(name.toLowerCase().trim())
+            );
             
             if (!sheetName) {
                 const firstSheet = workbook.SheetNames[0];
