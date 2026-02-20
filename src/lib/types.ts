@@ -186,6 +186,7 @@ export type AlkerChecklist = {
   userEmail: string;
   userName: string;
   userJabatan: string;
+  userUnit?: string;
   crewUserId?: string;
   crewUserName?: string;
   dateSubmitted: any; // Timestamp

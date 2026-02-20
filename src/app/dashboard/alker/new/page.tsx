@@ -173,6 +173,7 @@ export default function NewAlkerPage() {
         userEmail: user.email!,
         userName: currentUserProfile.displayName || user.email!,
         userJabatan: currentUserProfile.jabatan || 'N/A',
+        userUnit: currentUserProfile.unit || '',
         crewUserId: data.crewUserId,
         crewUserName: selectedCrew?.displayName || '',
         dateSubmitted: serverTimestamp(),
@@ -223,7 +224,7 @@ export default function NewAlkerPage() {
                 <CardHeader>
                     <CardTitle>Informasi Teknisi</CardTitle>
                 </CardHeader>
-                <CardContent className="grid md:grid-cols-3 gap-6">
+                <CardContent className="grid md:grid-cols-4 gap-6">
                     <div className="grid gap-2">
                         <Label>Nama Teknisi Utama</Label>
                         <Input value={currentUserProfile?.displayName || user?.email || ''} disabled />
@@ -231,6 +232,10 @@ export default function NewAlkerPage() {
                     <div className="grid gap-2">
                         <Label>Jabatan</Label>
                         <Input value={currentUserProfile?.jabatan || 'N/A'} disabled />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label>Unit</Label>
+                        <Input value={currentUserProfile?.unit || 'N/A'} disabled />
                     </div>
                     <div className="grid gap-2">
                         <Label htmlFor="crewUserId">Rekan Kerja (Crew)</Label>
@@ -332,4 +337,3 @@ export default function NewAlkerPage() {
   );
 }
 
-    

@@ -112,9 +112,10 @@ export default function AlkerDetailPage() {
         <CardHeader>
           <CardTitle>Informasi Teknisi</CardTitle>
         </CardHeader>
-        <CardContent className="grid md:grid-cols-3 gap-4 text-sm">
+        <CardContent className="grid md:grid-cols-4 gap-4 text-sm">
           <div><p className="text-muted-foreground">Teknisi Utama</p><p className="font-medium">{checklist.userName}</p></div>
           <div><p className="text-muted-foreground">Jabatan</p><p><Badge variant="secondary">{checklist.userJabatan}</Badge></p></div>
+          <div><p className="text-muted-foreground">Unit</p><p>{checklist.userUnit || '-'}</p></div>
           <div><p className="text-muted-foreground">Rekan Kerja (Crew)</p><p className="font-medium">{checklist.crewUserName || '-'}</p></div>
         </CardContent>
       </Card>

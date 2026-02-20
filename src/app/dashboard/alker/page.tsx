@@ -236,6 +236,7 @@ export default function AlkerListPage() {
                 <TableRow>
                   <TableHead className="w-[200px] pl-6">Teknisi Utama</TableHead>
                   <TableHead>Jabatan</TableHead>
+                  <TableHead>Unit</TableHead>
                   <TableHead>Rekan Kerja</TableHead>
                   <TableHead className="w-[160px]">Tanggal Laporan</TableHead>
                   <TableHead className="w-[150px] text-center pr-6">Aksi</TableHead>
@@ -246,6 +247,7 @@ export default function AlkerListPage() {
                   <TableRow key={checklist.id}>
                     <TableCell className="font-medium pl-6">{checklist.userName}</TableCell>
                     <TableCell><Badge variant="secondary">{checklist.userJabatan || '-'}</Badge></TableCell>
+                    <TableCell>{checklist.userUnit || '-'}</TableCell>
                     <TableCell className="text-muted-foreground">{checklist.crewUserName || '-'}</TableCell>
                     <TableCell>
                       {safeToDate(checklist.dateSubmitted) ? format(safeToDate(checklist.dateSubmitted)!, 'dd MMM yyyy, HH:mm') : '-'}
