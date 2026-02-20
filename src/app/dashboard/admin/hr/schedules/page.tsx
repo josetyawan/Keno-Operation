@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -224,15 +225,14 @@ export default function AdminSchedulesPage() {
         const monthIndex = parseInt(selectedMonth);
         const daysInSelectedMonth = getDaysInMonth(new Date(year, monthIndex));
         
-        const headers = ["NIK", "Nama"];
+        const headers = ["NIK"];
         for(let i = 1; i <= daysInSelectedMonth; i++) {
             headers.push(String(i));
         }
 
         const dataToExport = activeUsers.map(user => {
             const row: Record<string, string> = {
-                "NIK": user.nik || '',
-                "Nama": user.displayName || user.email || ''
+                "NIK": user.nik || ''
             };
             return row;
         });
@@ -244,7 +244,7 @@ export default function AdminSchedulesPage() {
         // Auto-fit columns
         const colWidths = headers.map((header, i) => {
             const dataLength = Math.max(...dataToExport.map(row => row[header]?.length || 0), header.length);
-            return { wch: i < 2 ? dataLength + 5 : 5 }; // Wider for NIK/Name, narrow for dates
+            return { wch: i < 1 ? dataLength + 5 : 5 }; // Wider for NIK, narrow for dates
         });
         worksheet['!cols'] = colWidths;
         
@@ -521,3 +521,5 @@ export default function AdminSchedulesPage() {
         </>
     );
 }
+
+    
