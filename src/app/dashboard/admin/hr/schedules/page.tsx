@@ -361,7 +361,9 @@ export default function AdminSchedulesPage() {
             const data = e.target?.result;
             const workbook = XLSX.read(data, { type: 'binary' });
             const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: true, defval: null });
+            // IMPORTANT CHANGE: Set `raw` to `false` to get the formatted string text from cells,
+            // which prevents Excel from auto-converting NIKs to numbers.
+            const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false, defval: null });
     
             if (jsonData.length === 0) {
                 throw new Error("Sheet Excel kosong.");
@@ -371,7 +373,7 @@ export default function AdminSchedulesPage() {
             const nikHeaderIndex = headerRow.findIndex((cell: string) => ['nik', 'nik karyawan', 'nomor induk'].includes(String(cell || '').trim().toLowerCase()));
 
             if (nikHeaderIndex === -1) {
-                throw new Error("Kolom 'NIK' tidak ditemukan. Pastikan file Excel Anda memiliki kolom dengan nama 'NIK', 'NIK Karyawan', atau 'Nomor Induk'.");
+                throw new Error("Kolom 'NIK' tidak ditemukan. Pastikan file Excel Anda memiliki kolom dengan nama 'NIK'.");
             }
             
             const userMapByNik = new Map<string, UserProfile>();
@@ -455,7 +457,7 @@ export default function AdminSchedulesPage() {
             let description = `Impor berhasil! ${createdCount} data jadwal telah disimpan/diperbarui.`;
             if (errorCount > 0) {
                 const skippedNikList = Array.from(skippedUsers).slice(0, 5).join(', ');
-                description += ` ${errorCount} baris dilewati karena NIK tidak terdaftar atau belum disetujui (contoh NIK: ${skippedNikList}${skippedUsers.size > 5 ? '...' : ''}).`;
+                description += ` ${errorCount} baris dilewati karena NIK tidak terdaftar atau belum disetujui (contoh NIK: ${skippedNikList}${skippedUsers.size > 5 ? '...' : ''}). Periksa apakah NIK ini ada di halaman 'Manajemen User' dan telah disetujui.`;
             }
     
             toast({
