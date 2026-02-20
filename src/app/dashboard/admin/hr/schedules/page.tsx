@@ -24,33 +24,32 @@ import { id as idLocale } from 'date-fns/locale';
 import type { Schedule, UserProfile } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
-type ValidShiftType = 'piket-hari' | 'piket-demak' | 'siang-malam' | 'malam' | 'ijin' | 'cuti';
+type ValidShiftType = 'piket-demak' | 'siang-malam' | 'malam' | 'ijin' | 'cuti';
 
 function ScheduleForm({ schedule, users, onFormSubmit }: { schedule?: Schedule | null, users: UserProfile[], onFormSubmit: (data: Partial<Schedule>) => void }) {
     const [userId, setUserId] = useState('');
     const [date, setDate] = useState<Date | undefined>();
-    const [shiftType, setShiftType] = useState<ValidShiftType>('piket-hari');
+    const [shiftType, setShiftType] = useState<ValidShiftType>('piket-demak');
     const [notes, setNotes] = useState('');
-    
-    const validShiftTypes: ValidShiftType[] = ['piket-hari', 'piket-demak', 'siang-malam', 'malam', 'ijin', 'cuti'];
 
     useEffect(() => {
         if (schedule) {
             setUserId(schedule.userId);
             setDate(schedule.date.toDate());
-            if (validShiftTypes.includes(schedule.shiftType as any)) {
+            const validTypes: ValidShiftType[] = ['piket-demak', 'siang-malam', 'malam', 'ijin', 'cuti'];
+            if (validTypes.includes(schedule.shiftType as any)) {
                 setShiftType(schedule.shiftType as ValidShiftType);
             } else {
-                setShiftType('piket-hari'); // Default for old data
+                setShiftType('piket-demak');
             }
             setNotes(schedule.notes || '');
         } else {
             setUserId('');
             setDate(undefined);
-            setShiftType('piket-hari');
+            setShiftType('piket-demak');
             setNotes('');
         }
-    }, [schedule, validShiftTypes]);
+    }, [schedule]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -108,7 +107,6 @@ function ScheduleForm({ schedule, users, onFormSubmit }: { schedule?: Schedule |
                 <Select value={shiftType} onValueChange={(value) => setShiftType(value as any)}>
                     <SelectTrigger><SelectValue placeholder="Pilih jenis" /></SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="piket-hari">Piket Hari (P)</SelectItem>
                         <SelectItem value="piket-demak">Piket Demak (PDM)</SelectItem>
                         <SelectItem value="siang-malam">Piket Siang-Malam (SM)</SelectItem>
                         <SelectItem value="malam">Piket Malam (M)</SelectItem>
@@ -140,7 +138,7 @@ export default function AdminSchedulesPage() {
     const [scheduleToDelete, setScheduleToDelete] = useState<Schedule | null>(null);
 
     const shiftTypeLabels: Record<Schedule['shiftType'], string> = {
-        'piket-hari': 'Piket Hari (P)',
+        'piket-hari': 'Piket Hari',
         'piket-demak': 'Piket Demak (PDM)',
         'siang-malam': 'Piket Siang-Malam (SM)',
         'malam': 'Piket Malam (M)',

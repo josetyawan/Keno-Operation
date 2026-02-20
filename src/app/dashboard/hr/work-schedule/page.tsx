@@ -110,21 +110,18 @@ export default function WorkSchedulePage() {
 
     if (shift) {
         switch (shift) {
-            case 'piket-hari': return 'P';
             case 'piket-demak': return 'PDM';
             case 'siang-malam': return 'SM';
             case 'malam': return 'M';
             case 'ijin': return 'i';
             case 'cuti': return 'C';
-            // Fallback for old data
-            case 'weekend-duty':
-            case 'holiday-duty':
-                return 'P'; // Map old duty to 'P' for Piket
             default: break;
         }
     }
 
     if (holidaysMap.has(dateKey) || isWeekend(day)) {
+        // A scheduled shift (like weekend-duty) overrides the holiday/weekend 'L' status
+        if (shift) return 'H';
         return 'L';
     }
     
@@ -207,7 +204,7 @@ export default function WorkSchedulePage() {
                                 'bg-red-500 text-white': status === 'L',
                                 'bg-yellow-400 text-black': status === 'i',
                                 'bg-blue-500 text-white': status === 'C',
-                                'bg-green-200 text-black': ['P', 'PDM', 'SM', 'M'].includes(status),
+                                'bg-green-200 text-black': ['PDM', 'SM', 'M'].includes(status),
                             })}>
                                 {status}
                             </TableCell>
@@ -228,14 +225,14 @@ export default function WorkSchedulePage() {
            <div className="mt-4 flex flex-col gap-2 text-sm">
                 <div className="flex flex-wrap gap-x-6 gap-y-2">
                     <div className="flex items-center gap-2"><div className="w-4 h-4 bg-white border"></div><span>H: Masuk</span></div>
-                    <div className="flex items-center gap-2"><div className="w-4 h-4 bg-green-200 border"></div><span>P/PDM/SM/M: Piket</span></div>
+                    <div className="flex items-center gap-2"><div className="w-4 h-4 bg-green-200 border"></div><span>PDM/SM/M: Piket</span></div>
                     <div className="flex items-center gap-2"><div className="w-4 h-4 bg-red-500 border"></div><span>L: Libur</span></div>
                     <div className="flex items-center gap-2"><div className="w-4 h-4 bg-yellow-400 border"></div><span>i: Ijin</span></div>
                     <div className="flex items-center gap-2"><div className="w-4 h-4 bg-blue-500 border"></div><span>C: Cuti</span></div>
                 </div>
                 <div className="mt-2 text-xs text-muted-foreground space-y-1">
                     <p>H: Masuk Pagi Biasa | L: Libur / Weekend / Hari Libur Nasional</p>
-                    <p>P: Piket Hari | PDM: Piket Demak | SM: Piket Siang-Malam (14:00-08:00) | M: Piket Malam (22:00-07:00)</p>
+                    <p>PDM: Piket Demak | SM: Piket Siang-Malam (14:00-08:00) | M: Piket Malam (22:00-07:00)</p>
                 </div>
            </div>
         </CardContent>

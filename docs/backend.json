@@ -190,7 +190,7 @@
             "date": {"type": "string", "format": "date"},
             "shiftType": {
                 "type": "string", 
-                "enum": ["piket-hari", "piket-demak", "siang-malam", "malam", "ijin", "cuti", "weekend-duty", "holiday-duty"]
+                "enum": ["piket-demak", "siang-malam", "malam", "ijin", "cuti", "weekend-duty", "holiday-duty"]
             },
             "notes": {"type": "string"},
             "createdAt": {"type": "string", "format": "date-time"}
