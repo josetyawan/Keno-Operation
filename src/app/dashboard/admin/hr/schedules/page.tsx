@@ -141,7 +141,6 @@ export default function AdminSchedulesPage() {
     const [scheduleToEdit, setScheduleToEdit] = useState<Schedule | null>(null);
     const [scheduleToDelete, setScheduleToDelete] = useState<Schedule | null>(null);
     
-    const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
     const [importProgress, setImportProgress] = useState(0);
     const [selectedMonth, setSelectedMonth] = useState<string>(String(new Date().getMonth()));
@@ -393,8 +392,6 @@ export default function AdminSchedulesPage() {
             toast({ variant: "destructive", title: "Impor Gagal", description: error.message });
           } finally {
             setIsImporting(false);
-            setIsImportDialogOpen(false);
-            setImportProgress(0);
             const fileInput = document.getElementById('excel-file-schedules') as HTMLInputElement;
             if (fileInput) fileInput.value = '';
           }
@@ -423,62 +420,63 @@ export default function AdminSchedulesPage() {
                     <h1 className="text-3xl font-bold tracking-tight">Manajemen Jadwal & Status</h1>
                     <p className="text-muted-foreground mt-1">Buat, edit, dan hapus jadwal jaga, ijin, atau cuti untuk teknisi.</p>
                 </div>
-                <div className="flex gap-2">
-                    <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
-                        <DialogTrigger asChild>
-                             <Button variant="outline"><Upload className="mr-2 h-4 w-4" /> Import dari Excel</Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>Import Jadwal dari Excel</DialogTitle>
-                                <DialogDescription>
-                                    1. Pilih Bulan dan Tahun.
-                                    2. Download template yang sudah terisi NIK dan Nama.
-                                    3. Isi jadwal di Excel, lalu unggah kembali file tersebut.
-                                </DialogDescription>
-                            </DialogHeader>
-                            <div className="py-4 space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="import-month">Bulan</Label>
-                                        <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                                            <SelectTrigger id="import-month"><SelectValue placeholder="Pilih..." /></SelectTrigger>
-                                            <SelectContent>
-                                                {monthOptions.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="import-year">Tahun</Label>
-                                        <Select value={selectedYear} onValueChange={setSelectedYear}>
-                                            <SelectTrigger id="import-year"><SelectValue placeholder="Pilih..." /></SelectTrigger>
-                                            <SelectContent>
-                                                {yearOptions.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                </div>
-                                <Button onClick={handleExportTemplate} variant="secondary" className="w-full" disabled={!selectedMonth || !selectedYear}>
-                                    <Download className="mr-2 h-4 w-4" /> Download Template Jadwal
-                                </Button>
-                                <hr />
-                                <Label htmlFor="excel-file-schedules">3. Unggah File yang Sudah Diisi</Label>
-                                <Input id="excel-file-schedules" type="file" accept=".xlsx, .xls, .csv" onChange={handleFileImport} disabled={isImporting || !selectedMonth || !selectedYear} />
-                                {isImporting && (
-                                    <div className="flex flex-col gap-2 text-sm text-muted-foreground">
-                                        <p>Mengimpor {importProgress.toFixed(0)}%... Ini mungkin memakan waktu sejenak.</p>
-                                        <Progress value={importProgress} className="w-full" />
-                                    </div>
-                                )}
-                            </div>
-                        </DialogContent>
-                    </Dialog>
-                    <Dialog open={isFormDialogOpen} onOpenChange={setIsFormDialogOpen}>
-                        <DialogTrigger asChild><Button onClick={handleCreate} disabled={activeUsers.length === 0}><PlusCircle className="mr-2 h-4 w-4" />Buat Jadwal</Button></DialogTrigger>
-                        <DialogContent><DialogHeader><DialogTitle>{scheduleToEdit ? 'Edit' : 'Buat'} Jadwal atau Status</DialogTitle></DialogHeader><ScheduleForm schedule={scheduleToEdit} users={activeUsers} onFormSubmit={handleFormSubmit} /></DialogContent>
-                    </Dialog>
-                </div>
+                 <Dialog open={isFormDialogOpen} onOpenChange={setIsFormDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button onClick={handleCreate} disabled={activeUsers.length === 0}>
+                            <PlusCircle className="mr-2 h-4 w-4" />Buat Jadwal Manual
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>{scheduleToEdit ? 'Edit' : 'Buat'} Jadwal atau Status</DialogTitle>
+                        </DialogHeader>
+                        <ScheduleForm schedule={scheduleToEdit} users={activeUsers} onFormSubmit={handleFormSubmit} />
+                    </DialogContent>
+                </Dialog>
             </div>
+
+            <Card className="mb-6">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Upload className="h-5 w-5" /> Impor Jadwal Massal</CardTitle>
+                    <CardDescription>Unduh template, isi, lalu unggah untuk membuat jadwal secara massal.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="space-y-2">
+                        <Label className="font-semibold">1. Pilih Periode Jadwal</Label>
+                        <div className="grid grid-cols-2 gap-4 max-w-sm">
+                            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                                <SelectTrigger id="import-month"><SelectValue placeholder="Pilih Bulan..." /></SelectTrigger>
+                                <SelectContent>
+                                    {monthOptions.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            <Select value={selectedYear} onValueChange={setSelectedYear}>
+                                <SelectTrigger id="import-year"><SelectValue placeholder="Pilih Tahun..." /></SelectTrigger>
+                                <SelectContent>
+                                    {yearOptions.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                     <div className="space-y-2">
+                        <Label className="font-semibold">2. Unduh dan Isi Template</Label>
+                        <Button onClick={handleExportTemplate} variant="secondary" className="w-full max-w-sm" disabled={!selectedMonth || !selectedYear}>
+                            <Download className="mr-2 h-4 w-4" /> Download Template
+                        </Button>
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="excel-file-schedules" className="font-semibold">3. Unggah File yang Sudah Diisi</Label>
+                        <Input id="excel-file-schedules" type="file" accept=".xlsx, .xls, .csv" onChange={handleFileImport} disabled={isImporting || !selectedMonth || !selectedYear} className="max-w-sm" />
+                        {isImporting && (
+                            <div className="flex flex-col gap-2 text-sm text-muted-foreground max-w-sm">
+                                <p>Mengimpor {importProgress.toFixed(0)}%...</p>
+                                <Progress value={importProgress} className="w-full" />
+                            </div>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
+
             <Card>
                 <CardHeader><CardTitle>Daftar Jadwal</CardTitle><CardDescription>Semua jadwal & status yang telah dibuat.</CardDescription></CardHeader>
                 <CardContent>
@@ -522,4 +520,4 @@ export default function AdminSchedulesPage() {
             </AlertDialog>
         </>
     );
-    
+}
