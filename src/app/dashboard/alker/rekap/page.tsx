@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -8,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FileSpreadsheet } from 'lucide-react';
@@ -47,12 +47,18 @@ const getMonthOptions = () => {
     return options;
 };
 
+const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
+const units = ['Provisioning', 'B2B', 'B2C', 'MTC'];
+
 export default function AlkerRekapPage() {
     const firestore = useFirestore();
     const { user, isUserLoading } = useUser();
     const router = useRouter();
 
     const [selectedMonth, setSelectedMonth] = useState('');
+    const [selectedUnit, setSelectedUnit] = useState('all');
+    const [selectedSA, setSelectedSA] = useState('SA KUDUS');
+    const [manualTeknisiCount, setManualTeknisiCount] = useState('');
 
     const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
     const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
@@ -71,16 +77,13 @@ export default function AlkerRekapPage() {
         if (!userProfile || (userProfile.role !== 'admin' && userProfile.role !== 'korlap')) {
             return null;
         }
-        // Fetch all documents. Client-side filtering will be applied.
         return query(collection(firestore, 'tool-checklists'));
     }, [firestore, userProfile]);
 
     const { data: allChecklists, isLoading: checklistsLoading } = useCollection<AlkerChecklist>(checklistsQuery);
 
     const checklistsInMonth = useMemo(() => {
-        if (!allChecklists || !selectedMonth) {
-            return [];
-        }
+        if (!allChecklists || !selectedMonth) return [];
 
         const year = parseInt(selectedMonth.split('-')[0]);
         const monthIndex = parseInt(selectedMonth.split('-')[1]) - 1;
@@ -101,21 +104,24 @@ export default function AlkerRekapPage() {
     }, [monthOptions, selectedMonth]);
 
     const { filteredChecklists, numTeknisi } = useMemo(() => {
-        if (!checklistsInMonth) {
-            return { filteredChecklists: [], numTeknisi: 0 };
-        }
+        if (!checklistsInMonth) return { filteredChecklists: [], numTeknisi: 0 };
         
-        const uniqueUserIds = new Set(checklistsInMonth.map(c => c.userId));
+        const unitFiltered = selectedUnit === 'all'
+            ? checklistsInMonth
+            : checklistsInMonth.filter(c => c.userUnit === selectedUnit);
+
+        const uniqueUserIds = new Set(unitFiltered.map(c => c.userId));
         const count = uniqueUserIds.size;
         
-        return { filteredChecklists: checklistsInMonth, numTeknisi: count };
-    }, [checklistsInMonth]);
+        return { filteredChecklists: unitFiltered, numTeknisi: count };
+    }, [checklistsInMonth, selectedUnit]);
 
     const summaryData = useMemo(() => {
-        if (numTeknisi === 0) return [];
+        const teknisiCount = manualTeknisiCount ? parseInt(manualTeknisiCount) : numTeknisi;
+        if (teknisiCount === 0) return [];
 
         return toolBenchmarks.map(tool => {
-            const target = tool.tolokUkur === 'Per-1 Teknisi' ? numTeknisi : Math.ceil(numTeknisi / 2);
+            const target = tool.tolokUkur === 'Per-1 Teknisi' ? teknisiCount : Math.ceil(teknisiCount / 2);
             
             const relevantTools = filteredChecklists.flatMap(c => c.tools).filter(t => t.toolName === tool.name && t.condition === 'baik');
             const pemenuhan = relevantTools.length;
@@ -157,7 +163,7 @@ export default function AlkerRekapPage() {
                 keterangan,
             };
         });
-    }, [numTeknisi, filteredChecklists]);
+    }, [numTeknisi, filteredChecklists, manualTeknisiCount]);
     
     const totalTarget = useMemo(() => summaryData.reduce((acc, item) => acc + item.target, 0), [summaryData]);
     const totalPemenuhan = useMemo(() => summaryData.reduce((acc, item) => acc + item.pemenuhan, 0), [summaryData]);
@@ -165,6 +171,33 @@ export default function AlkerRekapPage() {
 
 
     const handleExport = () => {
+        const teknisiCountForExport = manualTeknisiCount || numTeknisi;
+        const bulanPekerjaan = selectedMonth ? format(new Date(selectedMonth + '-02'), 'MMMM yyyy', {locale: idLocale}) : 'SEMUA';
+
+        let headerInfo: { A: string; B?: string }[] = [];
+        
+        if(selectedUnit === 'Provisioning') {
+            headerInfo = [
+                { A: 'KERTAS KERJA PEMERIKSAAN (KKP)' },
+                { A: 'PEMENUHAN ALKER SARKER' },
+                {},
+                { A: 'PAKET PEKERJAAN', B: ': PEKERJAAN PASANG SAMBUNGAN BARU (PSB)' },
+                { A: 'WITEL', B: ': SEMARANG' },
+                { A: 'WILAYAH OPERASI', B: `: ${selectedSA}` },
+                { A: 'PERIODE JANGKA WAKTU PELAKSANAAN PEKERJAAN', B: `: ${bulanPekerjaan.toUpperCase()}` },
+                { A: 'JML TEKNISI', B: `: ${teknisiCountForExport}` },
+                {},
+            ];
+        } else { // Assurance template for B2B, B2C, MTC, etc.
+             headerInfo = [
+                { A: 'PAKET PEKERJAAN', B: ': ASSURANCE' },
+                { A: 'REG / WITEL / SEKTOR', B: `: 3 / SEMARANG / ${selectedSA}` },
+                { A: 'BULAN PEKERJAAN', B: `: ${bulanPekerjaan.toUpperCase()}` },
+                { A: 'JUMLAH TEKNISI', B: `: ${teknisiCountForExport}` },
+                {},
+            ];
+        }
+
         const dataToExport = summaryData.map((item, index) => ({
             'No': index + 1,
             'Uraian': item.uraian,
@@ -177,18 +210,13 @@ export default function AlkerRekapPage() {
             'KETERANGAN': item.keterangan,
         }));
         
-        const headerInfo = [
-            { A: 'ALL INFRASTRUKTUR ACCESS' },
-            { A: 'PAKET PEKERJAAN', B: ': ASSURANCE' },
-            { A: 'REG / WITEL / SEKTOR', B: ': 3 / KUDUS / PATI' },
-            { A: 'BULAN PEKERJAAN', B: `: ${selectedMonth ? format(new Date(selectedMonth + '-02'), 'MMMM yyyy', {locale: idLocale}).toUpperCase() : 'SEMUA'}` },
-            { A: 'JUMLAH TEKNISI', B: `: ${numTeknisi}` },
-            {}, // Empty row
-        ];
-
-        const worksheet = XLSX.utils.json_to_sheet(dataToExport, { skipHeader: true });
-        XLSX.utils.sheet_add_aoa(worksheet, [Object.keys(dataToExport[0])], { origin: 'A7' });
+        const worksheet = XLSX.utils.json_to_sheet([]);
         XLSX.utils.sheet_add_json(worksheet, headerInfo, { skipHeader: true, origin: 'A1' });
+        
+        const headerRow = Object.keys(dataToExport[0] || {});
+        XLSX.utils.sheet_add_aoa(worksheet, [headerRow], { origin: `A${headerInfo.length + 1}` });
+        
+        XLSX.utils.sheet_add_json(worksheet, dataToExport, { skipHeader: true, origin: -1 });
         
         XLSX.utils.sheet_add_aoa(worksheet, [
             ["", "Nilai Kelengkapan (%)", "", "", "", "", "", "", `${nilaiKelengkapan.toFixed(2)}%`]
@@ -197,7 +225,7 @@ export default function AlkerRekapPage() {
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Rekap Alker');
 
-        XLSX.writeFile(workbook, `Rekap_Alker_Bulan_${selectedMonth || 'Semua'}.xlsx`);
+        XLSX.writeFile(workbook, `Rekap_Alker_${selectedUnit}_${selectedSA}_${selectedMonth}.xlsx`);
     };
     
     const isLoading = isUserLoading || isProfileLoading || checklistsLoading;
@@ -217,7 +245,7 @@ export default function AlkerRekapPage() {
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Rekapitulasi Alat Kerja</h1>
-                    <p className="text-muted-foreground">Analisis kelengkapan alat kerja teknisi.</p>
+                    <p className="text-muted-foreground">Analisis kelengkapan alat kerja teknisi per unit.</p>
                 </div>
                 <Button onClick={handleExport} disabled={summaryData.length === 0}>
                     <FileSpreadsheet className="mr-2 h-4 w-4" />
@@ -229,8 +257,8 @@ export default function AlkerRekapPage() {
                 <CardHeader>
                     <CardTitle>Filter Data</CardTitle>
                 </CardHeader>
-                <CardContent className="grid md:grid-cols-2 gap-4">
-                    <div className="grid gap-2">
+                <CardContent className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                     <div className="grid gap-2">
                         <Label htmlFor="month-filter">Bulan Pekerjaan</Label>
                          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
                             <SelectTrigger id="month-filter"><SelectValue placeholder="Pilih bulan..." /></SelectTrigger>
@@ -243,6 +271,29 @@ export default function AlkerRekapPage() {
                             </SelectContent>
                         </Select>
                     </div>
+                     <div className="grid gap-2">
+                        <Label htmlFor="unit-filter">Unit</Label>
+                         <Select value={selectedUnit} onValueChange={setSelectedUnit}>
+                            <SelectTrigger id="unit-filter"><SelectValue placeholder="Pilih unit..." /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Semua Unit</SelectItem>
+                                {units.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="sa-filter">Service Area (untuk KOP)</Label>
+                         <Select value={selectedSA} onValueChange={setSelectedSA}>
+                            <SelectTrigger id="sa-filter"><SelectValue placeholder="Pilih SA..." /></SelectTrigger>
+                            <SelectContent>
+                                {serviceAreas.map(sa => <SelectItem key={sa} value={sa}>{sa}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                     <div className="grid gap-2">
+                        <Label htmlFor="jml-teknisi">Jumlah Teknisi (Manual)</Label>
+                        <Input id="jml-teknisi" type="number" placeholder={`Otomatis: ${numTeknisi}`} value={manualTeknisiCount} onChange={(e) => setManualTeknisiCount(e.target.value)} />
+                    </div>
                 </CardContent>
             </Card>
             
@@ -250,10 +301,7 @@ export default function AlkerRekapPage() {
                 <CardHeader>
                     <CardTitle>Tabel Rekapitulasi</CardTitle>
                     <CardDescription>
-                        {selectedMonth ? 
-                         `Menampilkan rekap untuk ${numTeknisi} teknisi yang mengirim laporan pada bulan ${format(new Date(selectedMonth + '-02'), 'MMMM yyyy', {locale: idLocale})}.`
-                         : 'Pilih bulan untuk melihat data.'
-                        }
+                        {`Menampilkan rekap untuk ${manualTeknisiCount || numTeknisi} teknisi (Unit: ${selectedUnit}) pada bulan ${selectedMonth ? format(new Date(selectedMonth + '-02'), 'MMMM yyyy', {locale: idLocale}) : '...'}.`}
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -269,7 +317,7 @@ export default function AlkerRekapPage() {
                                     <TableHead>Pemenuhan</TableHead>
                                     <TableHead>GAP</TableHead>
                                     <TableHead className="min-w-[200px]">Ket Merk/Type/PIC</TableHead>
-                                    <TableHead>Keterangan</TableHead>
+                                    <TableHead>KETERANGAN</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -294,7 +342,7 @@ export default function AlkerRekapPage() {
                                 ) : (
                                     <TableRow>
                                         <TableCell colSpan={9} className="h-24 text-center">
-                                            {selectedMonth ? 'Tidak ada data laporan ditemukan untuk bulan yang dipilih.' : 'Silakan pilih bulan untuk memulai.'}
+                                            {selectedMonth ? 'Tidak ada data laporan ditemukan untuk filter yang dipilih.' : 'Silakan pilih bulan untuk memulai.'}
                                         </TableCell>
                                     </TableRow>
                                 )}
