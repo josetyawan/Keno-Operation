@@ -27,7 +27,7 @@ import { Progress } from '@/components/ui/progress';
 import * as XLSX from 'xlsx';
 
 
-type ValidShiftType = 'piket-demak' | 'siang-malam' | 'malam' | 'ijin' | 'cuti';
+type ValidShiftType = 'piket-demak' | 'siang-malam' | 'malam' | 'ijin' | 'cuti' | 'weekend-duty' | 'holiday-duty' ;
 
 function ScheduleForm({ schedule, users, onFormSubmit }: { schedule?: Schedule | null, users: UserProfile[], onFormSubmit: (data: Partial<Schedule>) => void }) {
     const [userId, setUserId] = useState('');
@@ -39,7 +39,7 @@ function ScheduleForm({ schedule, users, onFormSubmit }: { schedule?: Schedule |
         if (schedule) {
             setUserId(schedule.userId);
             setDate(schedule.date.toDate());
-            const validTypes: ValidShiftType[] = ['piket-demak', 'siang-malam', 'malam', 'ijin', 'cuti'];
+            const validTypes: ValidShiftType[] = ['piket-demak', 'siang-malam', 'malam', 'ijin', 'cuti', 'weekend-duty', 'holiday-duty'];
             if (validTypes.includes(schedule.shiftType as any)) {
                 setShiftType(schedule.shiftType as ValidShiftType);
             } else {
@@ -113,6 +113,8 @@ function ScheduleForm({ schedule, users, onFormSubmit }: { schedule?: Schedule |
                         <SelectItem value="piket-demak">Piket Demak (PDM)</SelectItem>
                         <SelectItem value="siang-malam">Piket Siang-Malam (SM)</SelectItem>
                         <SelectItem value="malam">Piket Malam (M)</SelectItem>
+                        <SelectItem value="weekend-duty">Jaga Akhir Pekan</SelectItem>
+                        <SelectItem value="holiday-duty">Jaga Hari Libur</SelectItem>
                         <SelectItem value="ijin">Ijin (i)</SelectItem>
                         <SelectItem value="cuti">Cuti (C)</SelectItem>
                     </SelectContent>
@@ -244,24 +246,27 @@ export default function AdminSchedulesPage() {
             const workbook = XLSX.read(data, { type: 'binary' });
             const sheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[sheetName];
-            // Using { raw: false } helps parse formatted text over raw values
             const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { raw: false });
     
             if (jsonData.length === 0) {
                 throw new Error("Sheet Excel kosong.");
             }
+            
+            const findColumn = (keys: string[], aliases: string[]): string | undefined => {
+                const lowerCaseAliases = aliases.map(a => a.toLowerCase().trim());
+                for (const key of keys) {
+                    if (lowerCaseAliases.includes(key.toLowerCase().trim())) {
+                        return key;
+                    }
+                }
+                return undefined;
+            };
     
             const userMapByNik = new Map(activeUsers.map(u => [u.nik, u]));
             const shiftCodeMap: Record<string, ValidShiftType> = {
-                'smc': 'siang-malam',
-                's/mc': 'siang-malam',
-                'sm': 'siang-malam',
+                'smc': 'siang-malam', 's/mc': 'siang-malam', 'sm': 'siang-malam',
                 'm': 'malam',
-                'pt/bd': 'piket-demak',
-                'pdm': 'piket-demak',
-                'ptm': 'piket-demak',
-                'pu': 'piket-demak',
-                'pb': 'piket-demak',
+                'pt/bd': 'piket-demak', 'pdm': 'piket-demak', 'ptm': 'piket-demak', 'pu': 'piket-demak', 'pb': 'piket-demak',
                 'i': 'ijin',
                 'c': 'cuti',
             };
@@ -274,11 +279,12 @@ export default function AdminSchedulesPage() {
             let batch = writeBatch(firestore);
 
             const firstRow = jsonData[0];
-            const dateColumns = Object.keys(firstRow).filter(key => !isNaN(parseInt(key, 10)) && parseInt(key, 10) >= 1 && parseInt(key, 10) <= 31);
-            const nikHeader = Object.keys(firstRow).find(key => key.toLowerCase().trim() === 'nik');
+            const firstRowKeys = Object.keys(firstRow);
+            const dateColumns = firstRowKeys.filter(key => !isNaN(parseInt(key, 10)) && parseInt(key, 10) >= 1 && parseInt(key, 10) <= 31);
+            const nikHeader = findColumn(firstRowKeys, ['nik', 'nik karyawan', 'nomor induk']);
 
             if (!nikHeader) {
-                throw new Error("Kolom 'NIK' tidak ditemukan di file Excel. Pastikan nama kolom sudah benar.");
+                throw new Error("Kolom NIK tidak ditemukan. Pastikan ada kolom dengan nama 'NIK', 'NIK Karyawan', atau 'Nomor Induk'.");
             }
     
             for (const row of jsonData) {
