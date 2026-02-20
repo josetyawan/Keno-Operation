@@ -257,16 +257,22 @@ export default function AdminSchedulesPage() {
     };
     
     const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const fileInput = event.target as HTMLInputElement;
+
         if (!event.target.files || event.target.files.length === 0) {
           toast({ variant: "destructive", title: "Tidak ada file dipilih." });
           return;
         }
-        if (!firestore || !activeUsers) {
-          toast({ variant: "destructive", title: "Data Error", description: "Data pengguna belum siap." });
-          return;
+
+        if (!firestore || !activeUsers || activeUsers.length === 0) {
+            toast({ variant: "destructive", title: "Data Pengguna Belum Siap", description: "Data pengguna sedang dimuat. Silakan tunggu beberapa saat dan coba lagi." });
+            if (fileInput) fileInput.value = ''; // Reset file input
+            return;
         }
+
         if (!selectedMonth || !selectedYear) {
             toast({ variant: "destructive", title: "Bulan & Tahun Diperlukan", description: "Silakan pilih bulan dan tahun jadwal sebelum mengunggah file." });
+            if (fileInput) fileInput.value = '';
             return;
         }
     
@@ -325,7 +331,6 @@ export default function AdminSchedulesPage() {
             for (const row of jsonData) {
                 const nik = row[nikHeader]?.toString().trim();
                 if (!nik) {
-                    // Skip empty NIK rows silently
                     continue;
                 }
     
@@ -374,11 +379,10 @@ export default function AdminSchedulesPage() {
               await batch.commit();
             }
             
-            let description = `Impor berhasil! ${createdCount} data jadwal telah disimpan.`;
+            let description = `Impor berhasil! ${createdCount} data jadwal telah disimpan/diperbarui.`;
             if (errorCount > 0) {
                 const skippedNikList = Array.from(skippedUsers).slice(0, 3).join(', ');
                 description += ` ${errorCount} baris dilewati karena NIK tidak terdaftar atau belum disetujui (contoh NIK: ${skippedNikList}${skippedUsers.size > 3 ? '...' : ''}).`;
-                console.warn("NIK yang dilewati:", Array.from(skippedUsers));
             }
     
             toast({
@@ -391,7 +395,6 @@ export default function AdminSchedulesPage() {
             toast({ variant: "destructive", title: "Impor Gagal", description: error.message });
           } finally {
             setIsImporting(false);
-            const fileInput = document.getElementById('excel-file-schedules') as HTMLInputElement;
             if (fileInput) fileInput.value = '';
           }
         };
@@ -443,13 +446,13 @@ export default function AdminSchedulesPage() {
                     <div className="space-y-2">
                         <Label className="font-semibold">1. Pilih Periode Jadwal</Label>
                         <div className="grid grid-cols-2 gap-4 max-w-sm">
-                            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                            <Select value={selectedMonth} onValueChange={setSelectedMonth} disabled={areUsersLoading}>
                                 <SelectTrigger id="import-month"><SelectValue placeholder="Pilih Bulan..." /></SelectTrigger>
                                 <SelectContent>
                                     {monthOptions.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
                                 </SelectContent>
                             </Select>
-                            <Select value={selectedYear} onValueChange={setSelectedYear}>
+                            <Select value={selectedYear} onValueChange={setSelectedYear} disabled={areUsersLoading}>
                                 <SelectTrigger id="import-year"><SelectValue placeholder="Pilih Tahun..." /></SelectTrigger>
                                 <SelectContent>
                                     {yearOptions.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
@@ -459,13 +462,13 @@ export default function AdminSchedulesPage() {
                     </div>
                      <div className="space-y-2">
                         <Label className="font-semibold">2. Unduh dan Isi Template</Label>
-                        <Button onClick={handleExportTemplate} variant="secondary" className="w-full max-w-sm" disabled={!selectedMonth || !selectedYear}>
+                        <Button onClick={handleExportTemplate} variant="secondary" className="w-full max-w-sm" disabled={areUsersLoading || !selectedMonth || !selectedYear}>
                             <Download className="mr-2 h-4 w-4" /> Download Template
                         </Button>
                     </div>
                      <div className="space-y-2">
                         <Label htmlFor="excel-file-schedules" className="font-semibold">3. Unggah File yang Sudah Diisi</Label>
-                        <Input id="excel-file-schedules" type="file" accept=".xlsx, .xls, .csv" onChange={handleFileImport} disabled={isImporting || !selectedMonth || !selectedYear} className="max-w-sm" />
+                        <Input id="excel-file-schedules" type="file" accept=".xlsx, .xls, .csv" onChange={handleFileImport} disabled={areUsersLoading || isImporting || !selectedMonth || !selectedYear} className="max-w-sm" />
                         {isImporting && (
                             <div className="flex flex-col gap-2 text-sm text-muted-foreground max-w-sm">
                                 <p>Mengimpor {importProgress.toFixed(0)}%...</p>
