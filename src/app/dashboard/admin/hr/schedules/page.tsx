@@ -244,7 +244,7 @@ export default function AdminSchedulesPage() {
                 throw new Error("Sheet Excel kosong.");
             }
     
-            const userMapByEmail = new Map(activeUsers.map(u => [u.email, u]));
+            const userMapByNik = new Map(activeUsers.map(u => [u.nik, u]));
             const validShiftTypes: ValidShiftType[] = ['piket-demak', 'siang-malam', 'malam', 'ijin', 'cuti'];
             
             let processedRows = 0;
@@ -254,17 +254,17 @@ export default function AdminSchedulesPage() {
             let batch = writeBatch(firestore);
     
             for (const row of jsonData) {
-                const email = row.email?.toString().trim();
+                const nik = row.nik?.toString().trim();
                 const date = row.date instanceof Date && isValid(row.date) ? row.date : null;
                 const shiftType = row.shiftType?.toString().trim().toLowerCase();
                 const notes = row.notes?.toString() || '';
     
-                if (!email || !date || !shiftType || !validShiftTypes.includes(shiftType)) {
+                if (!nik || !date || !shiftType || !validShiftTypes.includes(shiftType)) {
                     errorCount++;
                     continue;
                 }
     
-                const user = userMapByEmail.get(email);
+                const user = userMapByNik.get(nik);
                 if (!user) {
                     errorCount++;
                     continue;
@@ -344,7 +344,7 @@ export default function AdminSchedulesPage() {
                             <DialogHeader>
                                 <DialogTitle>Import Jadwal dari Excel</DialogTitle>
                                 <DialogDescription>
-                                    Upload file Excel dengan kolom: `email`, `date` (format YYYY-MM-DD), `shiftType`. Pastikan `shiftType` berisi: piket-demak, siang-malam, malam, ijin, atau cuti.
+                                    Upload file Excel dengan kolom: `nik` (NIK Karyawan), `date` (format YYYY-MM-DD), `shiftType`. Pastikan `shiftType` berisi: piket-demak, siang-malam, malam, ijin, atau cuti.
                                 </DialogDescription>
                             </DialogHeader>
                             <div className="py-4 space-y-4">
