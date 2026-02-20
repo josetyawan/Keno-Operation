@@ -147,6 +147,7 @@ export type ServiceAreaStats = {
   odc: { jumlah: number };
   odp: { jumlah: number };
   mitratel: { jumlah: number };
+  nodeB: { jumlah: number };
 };
 
 export type NetworkStats = {

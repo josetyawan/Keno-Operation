@@ -58,6 +58,18 @@ const SA_CODE_MAPPING: Record<string, NetworkAsset['serviceArea']> = {
 };
 
 const getAssetServiceArea = (asset: NetworkAsset): NetworkAsset['serviceArea'] => {
+    if (asset.assetType === 'NODE-B' && asset.siteId) {
+        const upperSiteId = asset.siteId.toUpperCase();
+        if (upperSiteId.includes('BLA')) return 'SA BLORA';
+        if (upperSiteId.includes('JPA')) return 'SA JEPARA';
+        if (upperSiteId.includes('DMK')) return 'SA KUDUS';
+        if (upperSiteId.includes('KDS')) return 'SA KUDUS';
+        if (upperSiteId.includes('GRO')) return 'SA PURWODADI';
+        if (upperSiteId.includes('PAT')) return 'SA PATI';
+        if (upperSiteId.includes('RBG')) return 'SA REMBANG';
+        return 'SA KUDUS'; // Fallback
+    }
+    
     if (asset.assetType === 'MITRATEL' && asset.serviceArea) {
       return asset.serviceArea as NetworkAsset['serviceArea'];
     }
@@ -129,6 +141,7 @@ export default function AllproPage() {
                 odc: { jumlah: 0 },
                 odp: { jumlah: 0 },
                 mitratel: { jumlah: 0 },
+                nodeB: { jumlah: 0 },
             };
             return acc;
         }, {} as { [key: string]: ServiceAreaStats });
@@ -150,6 +163,7 @@ export default function AllproPage() {
                     case 'ODC': acc[correctAssetSA].odc.jumlah++; break;
                     case 'ODP': acc[correctAssetSA].odp.jumlah++; break;
                     case 'MITRATEL': acc[correctAssetSA].mitratel.jumlah++; break;
+                    case 'NODE-B': acc[correctAssetSA].nodeB.jumlah++; break;
                 }
             }
             return acc;
@@ -182,6 +196,7 @@ export default function AllproPage() {
       odc: { title: "ODC All", headers: ["Service Area", "Jumlah ODC"], rows: [] as any[], totals: { jumlah: 0 }},
       odp: { title: "ODP All", headers: ["Service Area", "Jumlah ODP"], rows: [] as any[], totals: { jumlah: 0 }},
       mitratel: { title: "Mitratel All", headers: ["Service Area", "Jumlah Site"], rows: [] as any[], totals: { jumlah: 0 }},
+      nodeB: { title: "NODE-B All", headers: ["Service Area", "Jumlah Site"], rows: [] as any[], totals: { jumlah: 0 }},
     };
     
     if (!stats) return results;
@@ -218,12 +233,17 @@ export default function AllproPage() {
         const mitratelRow = { serviceArea: sa, jumlah: data.mitratel.jumlah };
         results.mitratel.rows.push(mitratelRow);
         results.mitratel.totals.jumlah += mitratelRow.jumlah;
+
+        // NODE-B
+        const nodeBRow = { serviceArea: sa, jumlah: data.nodeB.jumlah };
+        results.nodeB.rows.push(nodeBRow);
+        results.nodeB.totals.jumlah += nodeBRow.jumlah;
     }
     
     return results;
   }, [networkStats]);
   
-  const { olt, odc, odp, ftm, mitratel } = rekapData;
+  const { olt, odc, odp, ftm, mitratel, nodeB } = rekapData;
 
   const isLoading = isUserLoading || isProfileLoading || areStatsLoading;
   const lastUpdated = networkStats?.lastUpdated?.toDate();
@@ -313,6 +333,48 @@ export default function AllproPage() {
                     <TableCell className="font-bold">
                       <Link href={`/dashboard/assets/list?assetType=MITRATEL`} className="hover:underline">
                         {mitratel.totals.jumlah}
+                      </Link>
+                    </TableCell>
+                </TableRow>
+              </TableFooter>
+            </Table>
+          </CardContent>
+        </Card>
+        
+        {/* NODE-B Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{nodeB.title}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  {nodeB.headers.map(h => <TableHead key={h}>{h}</TableHead>)}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {nodeB.totals.jumlah > 0 ? (
+                    nodeB.rows.map(row => (
+                      <TableRow key={row.serviceArea}>
+                        <TableCell className="font-medium">{row.serviceArea}</TableCell>
+                        <TableCell className="font-bold">
+                          <Link href={`/dashboard/assets/list?assetType=NODE-B&serviceArea=${encodeURIComponent(row.serviceArea)}`} className="hover:underline">
+                            {row.jumlah}
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                ) : (
+                    <TableRow><TableCell colSpan={2} className="text-center h-24">{!networkStats ? "Statistik belum dihitung." : "Tidak ada data NODE-B."}</TableCell></TableRow>
+                )}
+              </TableBody>
+               <TableFooter>
+                <TableRow>
+                    <TableCell className="font-bold">Grand Total</TableCell>
+                    <TableCell className="font-bold">
+                      <Link href={`/dashboard/assets/list?assetType=NODE-B`} className="hover:underline">
+                        {nodeB.totals.jumlah}
                       </Link>
                     </TableCell>
                 </TableRow>
@@ -532,5 +594,3 @@ export default function AllproPage() {
     </div>
   );
 }
-
-    

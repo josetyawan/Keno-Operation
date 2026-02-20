@@ -118,8 +118,23 @@ export default function AdminAssetsPage() {
     
     const constraints: QueryConstraint[] = [];
     
+    // Only filter by service area on the server to allow flexible name search on client
     constraints.push(where('serviceArea', '==', searchServiceArea));
+    
+    return query(collection(firestore, 'network-assets'), ...constraints);
 
+  }, [firestore, currentUserProfile, isUserLoading, isProfileLoading, hasSearched, searchServiceArea]);
+
+
+  const { data: queriedAssets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(assetsQuery);
+
+  // Perform client-side filtering for name AND inferred type for better performance
+  const filteredAssets = useMemo(() => {
+    if (!queriedAssets) return [];
+    
+    const lowercasedSearchName = searchName.toLowerCase().trim();
+    
+    // Also infer type on client to refine filtering
     const upperSearch = searchName.toUpperCase().trim();
     const assetPrefixes = ['ODP', 'ODC', 'OLT', 'FTM', 'MITRATEL', 'NODE-B'];
     let inferredType: string | null = null;
@@ -131,27 +146,21 @@ export default function AdminAssetsPage() {
         }
     }
 
-    if (inferredType) {
-        constraints.push(where('assetType', '==', inferredType));
-    }
+    return queriedAssets.filter(asset => {
+        const nameMatch = asset.name.toLowerCase().includes(lowercasedSearchName);
+        
+        // If a type is inferred from the search prefix (e.g., "ODP-XXX"),
+        // then we only show assets of that type that also match the name.
+        if (inferredType) {
+            return asset.assetType === inferredType && nameMatch;
+        }
+        
+        // If no type is inferred (e.g., a search for "JPA001"),
+        // we search the name across all asset types returned for the service area.
+        // This will find NODE-B by its siteName, or any other asset by its name.
+        return nameMatch;
+    });
     
-    return query(collection(firestore, 'network-assets'), ...constraints);
-
-  }, [firestore, currentUserProfile, isUserLoading, isProfileLoading, hasSearched, searchServiceArea, searchName]);
-
-
-  const { data: queriedAssets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(assetsQuery);
-
-  // Perform client-side filtering for name only, on the smaller dataset from server
-  const filteredAssets = useMemo(() => {
-    if (!queriedAssets) return [];
-    
-    const lowercasedSearchName = searchName.toLowerCase().trim();
-    if (lowercasedSearchName) {
-        return queriedAssets.filter(asset => asset.name.toLowerCase().includes(lowercasedSearchName));
-    }
-    
-    return queriedAssets;
   }, [queriedAssets, searchName]);
 
 
@@ -231,6 +240,29 @@ export default function AdminAssetsPage() {
     }
   };
 
+    const mapNodeBToServiceArea = (siteId: string): string => {
+        const upperSiteId = (siteId || '').toUpperCase();
+        if (upperSiteId.includes('BLA')) return 'SA BLORA';
+        if (upperSiteId.includes('JPA')) return 'SA JEPARA';
+        if (upperSiteId.includes('DMK')) return 'SA KUDUS';
+        if (upperSiteId.includes('KDS')) return 'SA KUDUS';
+        if (upperSiteId.includes('GRO')) return 'SA PURWODADI';
+        if (upperSiteId.includes('PAT')) return 'SA PATI';
+        if (upperSiteId.includes('RBG')) return 'SA REMBANG';
+        return 'Unmap';
+    };
+
+    const mapStoToServiceArea = (sto: string): NetworkAsset['serviceArea'] => {
+        const upperSto = sto.toUpperCase().trim();
+        if (['PWB', 'WRO', 'TRO', 'GBU', 'GDO'].some(code => upperSto.includes(code))) return 'SA PURWODADI';
+        if (['CEP', 'BLO', 'NGA', 'RDB'].some(code => upperSto.includes(code))) return 'SA BLORA';
+        if (['KMJ', 'BAN', 'KEL', 'PEC'].some(code => upperSto.includes(code))) return 'SA JEPARA';
+        if (['KUD', 'DMA'].some(code => upperSto.includes(code))) return 'SA KUDUS';
+        if (['PAT', 'TAY', 'JWN'].some(code => upperSto.includes(code))) return 'SA PATI';
+        if (['LSE', 'RBN'].some(code => upperSto.includes(code))) return 'SA REMBANG';
+        return 'SA KUDUS';
+    };
+
 
   const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!importAssetType) {
@@ -245,30 +277,7 @@ export default function AdminAssetsPage() {
         toast({ variant: "destructive", title: "Database Error", description: "Koneksi database belum siap." });
         return;
     }
-
-    const mapStoToServiceArea = (sto: string): NetworkAsset['serviceArea'] => {
-        const upperSto = sto.toUpperCase().trim();
-        if (['PWB', 'WRO', 'TRO', 'GBU', 'GDO'].some(code => upperSto.includes(code))) return 'SA PURWODADI';
-        if (['CEP', 'BLO', 'NGA', 'RDB'].some(code => upperSto.includes(code))) return 'SA BLORA';
-        if (['KMJ', 'BAN', 'KEL', 'PEC'].some(code => upperSto.includes(code))) return 'SA JEPARA';
-        if (['KUD', 'DMA'].some(code => upperSto.includes(code))) return 'SA KUDUS';
-        if (['PAT', 'TAY', 'JWN'].some(code => upperSto.includes(code))) return 'SA PATI';
-        if (['LSE', 'RBN'].some(code => upperSto.includes(code))) return 'SA REMBANG';
-        return 'SA KUDUS';
-    };
     
-    const mapNodeBToServiceArea = (siteId: string): string => {
-        const upperSiteId = (siteId || '').toUpperCase();
-        if (upperSiteId.includes('BLA')) return 'SA BLORA';
-        if (upperSiteId.includes('JPA')) return 'SA JEPARA';
-        if (upperSiteId.includes('DMK')) return 'SA KUDUS';
-        if (upperSiteId.includes('KDS')) return 'SA KUDUS';
-        if (upperSiteId.includes('GRO')) return 'SA PURWODADI';
-        if (upperSiteId.includes('PAT')) return 'SA PATI';
-        if (upperSiteId.includes('RBG')) return 'SA REMBANG';
-        return 'Unmap';
-    };
-
     setIsImporting(true);
     setProgress(0);
     const file = event.target.files[0];
@@ -604,16 +613,16 @@ export default function AdminAssetsPage() {
                             };
 
                             if (latValue && longValue) assetData.coordinates = `${latValue}, ${longValue}`;
-                            if (row[oltMerkCol!] != null) assetData.oltMerk = String(row[oltMerkCol!]);
-                            if (row[splitterOltCol!] != null) assetData.splitterOlt = String(row[splitterOltCol!]);
-                            if (row[snOntCol!] != null) assetData.snOnt = String(row[snOntCol!]);
-                            if (row[eqpPortCol!] != null) assetData.eqpPort = String(row[eqpPortCol!]);
-                            if (row[cascadeCol!] != null) assetData.cascade = String(row[cascadeCol!]);
-                            if (row[cascadeAtCol!] != null) assetData.cascadeAt = String(row[cascadeAtCol!]);
-                            if (row[catbtsCol!] != null) assetData.catbts = String(row[catbtsCol!]);
-                            if (row[rncBscCol!] != null) assetData.rncBsc = String(row[rncBscCol!]);
-                            if (row[routerRanCol!] != null) assetData.routerRan = String(row[routerRanCol!]);
-                            if (row[alamatCol!] != null) assetData.alamat = String(row[alamatCol!]);
+                            if (row[oltMerkCol!] !== undefined) assetData.oltMerk = String(row[oltMerkCol!]);
+                            if (row[splitterOltCol!] !== undefined) assetData.splitterOlt = String(row[splitterOltCol!]);
+                            if (row[snOntCol!] !== undefined) assetData.snOnt = String(row[snOntCol!]);
+                            if (row[eqpPortCol!] !== undefined) assetData.eqpPort = String(row[eqpPortCol!]);
+                            if (row[cascadeCol!] !== undefined) assetData.cascade = String(row[cascadeCol!]);
+                            if (row[cascadeAtCol!] !== undefined) assetData.cascadeAt = String(row[cascadeAtCol!]);
+                            if (row[catbtsCol!] !== undefined) assetData.catbts = String(row[catbtsCol!]);
+                            if (row[rncBscCol!] !== undefined) assetData.rncBsc = String(row[rncBscCol!]);
+                            if (row[routerRanCol!] !== undefined) assetData.routerRan = String(row[routerRanCol!]);
+                            if (row[alamatCol!] !== undefined) assetData.alamat = String(row[alamatCol!]);
 
                             const existingAsset = existingAssetsMap.get(siteId);
                             if (existingAsset) {
