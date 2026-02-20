@@ -374,10 +374,10 @@ export default function AdminSchedulesPage() {
               await batch.commit();
             }
             
-            let description = `Berhasil memproses ${createdCount} data jadwal.`;
+            let description = `Impor berhasil! ${createdCount} data jadwal telah disimpan.`;
             if (errorCount > 0) {
-                const skippedNikList = Array.from(skippedUsers).slice(0, 5).join(', ');
-                description += ` ${errorCount} baris dilewati karena NIK tidak ditemukan. Contoh NIK yang tidak ditemukan: ${skippedNikList}${skippedUsers.size > 5 ? '...' : ''}. Mohon periksa kembali NIK di file Excel dan pastikan sudah terdaftar di halaman Manajemen User.`;
+                const skippedNikList = Array.from(skippedUsers).slice(0, 3).join(', ');
+                description += ` ${errorCount} baris dilewati karena NIK tidak terdaftar atau belum disetujui (contoh NIK: ${skippedNikList}${skippedUsers.size > 3 ? '...' : ''}).`;
                 console.warn("NIK yang dilewati:", Array.from(skippedUsers));
             }
     
