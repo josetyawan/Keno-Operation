@@ -85,7 +85,7 @@ export type ProjectID = {
 export type NetworkAsset = {
   id: string;
   name: string;
-  assetType: 'OLT' | 'ODC' | 'ODP' | 'FTM' | 'MITRATEL';
+  assetType: 'OLT' | 'ODC' | 'ODP' | 'FTM' | 'MITRATEL' | 'NODE-B';
   subType: 'Mini OLT' | 'OLT' | 'EA' | 'OA' | 'N/A';
   serviceArea: string;
   sto: string;
@@ -93,13 +93,26 @@ export type NetworkAsset = {
   dateAdded: any;
   kapasitas?: string;
   spec?: string;
-  // New fields for ODP
-  portAvai?: string; // AVAI
-  portUsed?: string; // USED
-  portRsv?: string; // RSV
-  portRsk?: string; // RSK
+  portAvai?: string;
+  portUsed?: string;
+  portRsv?: string;
+  portRsk?: string;
   mitratelSiteId?: string;
   tenantSiteId?: string;
+
+  // Fields for NODE-B
+  siteId?: string;
+  siteName?: string;
+  oltMerk?: string;
+  splitterOlt?: string;
+  snOnt?: string;
+  eqpPort?: string;
+  cascade?: string;
+  cascadeAt?: string;
+  catbts?: string;
+  rncBsc?: string;
+  routerRan?: string;
+  alamat?: string;
 };
 
 export type MapLink = {

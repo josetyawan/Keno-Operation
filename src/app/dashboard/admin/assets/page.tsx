@@ -59,7 +59,7 @@ import * as XLSX from 'xlsx';
 import Link from 'next/link';
 
 
-const assetTypes = ['OLT', 'ODC', 'ODP', 'FTM', 'Mini OLT', 'MITRATEL'];
+const assetTypes = ['OLT', 'ODC', 'ODP', 'FTM', 'Mini OLT', 'MITRATEL', 'NODE-B'];
 const baseServiceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
 
 
@@ -85,9 +85,7 @@ export default function AdminAssetsPage() {
 
   const canSearch = searchServiceArea !== 'all';
   const hasSearched = canSearch && searchName.trim() !== '';
-  const isMitratelSearch = useMemo(() => searchName.toUpperCase().trim().startsWith('MITRATEL'), [searchName]);
-
-
+  
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
     useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
   );
@@ -123,7 +121,7 @@ export default function AdminAssetsPage() {
     constraints.push(where('serviceArea', '==', searchServiceArea));
 
     const upperSearch = searchName.toUpperCase().trim();
-    const assetPrefixes = ['ODP', 'ODC', 'OLT', 'FTM', 'MITRATEL'];
+    const assetPrefixes = ['ODP', 'ODC', 'OLT', 'FTM', 'MITRATEL', 'NODE-B'];
     let inferredType: string | null = null;
     
     for (const prefix of assetPrefixes) {
@@ -164,6 +162,10 @@ export default function AdminAssetsPage() {
       const endIndex = startIndex + ITEMS_PER_PAGE;
       return filteredAssets.slice(startIndex, endIndex);
   }, [filteredAssets, currentPage]);
+
+  const isNodeBSearch = useMemo(() => paginatedAssets?.[0]?.assetType === 'NODE-B', [paginatedAssets]);
+  const isMitratelSearch = useMemo(() => paginatedAssets?.[0]?.assetType === 'MITRATEL', [paginatedAssets]);
+
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -292,7 +294,7 @@ export default function AdminAssetsPage() {
             const chunkSize = 200;
             let currentIndex = 0;
             
-            const assetNameCol = findColumn(firstRowKeys, ['olt', 'odc', 'odp', 'ftm', 'gpon', 'nama', 'name', `nama ${importAssetType.toLowerCase()}`, 'device name', 'asset name', 'nama aset', 'nama perangkat', 'odp name', 'site_name']);
+            const assetNameCol = findColumn(firstRowKeys, ['olt', 'odc', 'odp', 'ftm', 'gpon', 'nama', 'name', `nama ${importAssetType.toLowerCase()}`, 'device name', 'asset name', 'nama aset', 'nama perangkat', 'odp name', 'site_name', 'site name']);
             const stoCol = findColumn(firstRowKeys, ['sto', 'lokasi sto', 'telkom sto', 'telkom sto odc 2', 'lokasi', 'sto location', 'area sto', 'kode sto', 'sto/lokasi']);
             const coordinatesCol = findColumn(firstRowKeys, ['koordinat', 'coordinate', 'location', 'lokasi', 'gps']);
             const latCol = findColumn(firstRowKeys, ['lat', 'latitude']);
@@ -506,6 +508,129 @@ export default function AdminAssetsPage() {
                 };
 
                 processMitratelChunk();
+                return;
+            }
+
+            if (importAssetType === 'NODE-B') {
+                const siteIdCol = findColumn(firstRowKeys, ['site id', 'site_id']);
+                const siteNameCol = findColumn(firstRowKeys, ['site name', 'site_name']);
+                const oltMerkCol = findColumn(firstRowKeys, ['olt merk']);
+                const splitterOltCol = findColumn(firstRowKeys, ['splitter olt']);
+                const snOntCol = findColumn(firstRowKeys, ['sn ont']);
+                const eqpPortCol = findColumn(firstRowKeys, ['eqp port']);
+                const cascadeCol = findColumn(firstRowKeys, ['cascade']);
+                const cascadeAtCol = findColumn(firstRowKeys, ['cascade at']);
+                const catbtsCol = findColumn(firstRowKeys, ['catbts']);
+                const rncBscCol = findColumn(firstRowKeys, ['rnc/bsc']);
+                const routerRanCol = findColumn(firstRowKeys, ['router/ran']);
+                const alamatCol = findColumn(firstRowKeys, ['alamat']);
+
+                if (!siteIdCol || !siteNameCol) {
+                    throw new Error("Kolom wajib (SITE ID, SITE NAME) untuk impor NODE-B tidak ditemukan.");
+                }
+
+                let totalCreated = 0;
+                let totalUpdated = 0;
+                const assetsCollection = collection(firestore, 'network-assets');
+
+                const processNodeBChunk = async () => {
+                    try {
+                        const end = Math.min(currentIndex + chunkSize, totalRows);
+                        const chunkRows = jsonData.slice(currentIndex, end);
+                        const siteIdsInChunk = chunkRows.map(row => row[siteIdCol]?.toString().trim()).filter(Boolean);
+
+                        if (siteIdsInChunk.length === 0) {
+                            currentIndex = end;
+                            if (currentIndex < totalRows) setTimeout(processNodeBChunk, 50);
+                            return;
+                        }
+
+                        const existingAssetsMap = new Map<string, { id: string }>();
+                        const queryChunks: string[][] = [];
+                        for (let i = 0; i < siteIdsInChunk.length; i += 30) {
+                            queryChunks.push(siteIdsInChunk.slice(i, i + 30));
+                        }
+                        for (const idChunk of queryChunks) {
+                            if (idChunk.length > 0) {
+                                const q = query(assetsCollection, where('siteId', 'in', idChunk), where('assetType', '==', 'NODE-B'));
+                                const querySnapshot = await getDocs(q);
+                                querySnapshot.forEach(doc => {
+                                    existingAssetsMap.set(doc.data().siteId.trim(), { id: doc.id });
+                                });
+                            }
+                        }
+
+                        const batch = writeBatch(firestore);
+
+                        for (const row of chunkRows) {
+                            const siteId = row[siteIdCol]?.toString().trim();
+                            if (!siteId) continue;
+                            
+                            const latValue = row[latCol!]?.toString().replace(',', '.');
+                            const longValue = row[longCol!]?.toString().replace(',', '.');
+                            const sto = row[stoCol!]?.toString().trim() || 'N/A';
+
+                            const assetData: Partial<NetworkAsset> = {
+                                name: row[siteNameCol!]?.toString().trim() || siteId,
+                                assetType: 'NODE-B',
+                                subType: 'N/A',
+                                serviceArea: sto ? mapStoToServiceArea(sto) : 'SA KUDUS',
+                                sto: sto,
+                                coordinates: latValue && longValue ? `${latValue}, ${longValue}` : undefined,
+                                siteId: siteId,
+                                siteName: row[siteNameCol!]?.toString().trim(),
+                                oltMerk: row[oltMerkCol!]?.toString(),
+                                splitterOlt: row[splitterOltCol!]?.toString(),
+                                snOnt: row[snOntCol!]?.toString(),
+                                eqpPort: row[eqpPortCol!]?.toString(),
+                                cascade: row[cascadeCol!]?.toString(),
+                                cascadeAt: row[cascadeAtCol!]?.toString(),
+                                catbts: row[catbtsCol!]?.toString(),
+                                rncBsc: row[rncBscCol!]?.toString(),
+                                routerRan: row[routerRanCol!]?.toString(),
+                                alamat: row[alamatCol!]?.toString(),
+                            };
+
+                            const existingAsset = existingAssetsMap.get(siteId);
+                            if (existingAsset) {
+                                batch.update(doc(assetsCollection, existingAsset.id), assetData);
+                                totalUpdated++;
+                            } else {
+                                const newAssetDocRef = doc(assetsCollection);
+                                batch.set(newAssetDocRef, { ...assetData, id: newAssetDocRef.id, dateAdded: serverTimestamp() });
+                                totalCreated++;
+                            }
+                        }
+                        
+                        await batch.commit();
+                        
+                        currentIndex = end;
+                        setProgress((currentIndex / totalRows) * 100);
+
+                        if (currentIndex < totalRows) {
+                            setTimeout(processNodeBChunk, 1500); 
+                        } else {
+                            toast({
+                                title: 'Impor Selesai',
+                                description: `Berhasil membuat ${totalCreated} aset NODE-B baru dan memperbarui ${totalUpdated} aset.`,
+                                duration: 9000
+                            });
+                            setIsImporting(false);
+                            setIsImportDialogOpen(false);
+                            setImportAssetType('');
+                            setProgress(0);
+                            const fileInput = document.getElementById('excel-file') as HTMLInputElement;
+                            if (fileInput) fileInput.value = '';
+                        }
+                    } catch (chunkError: any) {
+                        console.error("Failed to process NODE-B data chunk:", chunkError);
+                        toast({ variant: "destructive", title: 'Proses Impor NODE-B Gagal', description: `Error: ${chunkError.message}` });
+                        setIsImporting(false);
+                        setProgress(0);
+                    }
+                };
+
+                processNodeBChunk();
                 return;
             }
             
@@ -785,78 +910,121 @@ export default function AdminAssetsPage() {
         <CardContent>
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
-                {!isMitratelSearch && <TableHead>Sub-Type</TableHead>}
-                <TableHead>Service Area</TableHead>
-                {!isMitratelSearch && <TableHead>STO</TableHead>}
-                <TableHead>Coordinates</TableHead>
-                {isMitratelSearch && <TableHead>Mitratel ID</TableHead>}
-                {isMitratelSearch && <TableHead>Tenant ID</TableHead>}
-                {!isMitratelSearch && <TableHead>Avail</TableHead>}
-                {!isMitratelSearch && <TableHead>Used</TableHead>}
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
+                {isNodeBSearch ? (
+                     <TableRow>
+                        <TableHead>Site ID</TableHead>
+                        <TableHead>Site Name</TableHead>
+                        <TableHead>OLT Merk</TableHead>
+                        <TableHead>Splitter OLT</TableHead>
+                        <TableHead>SN ONT</TableHead>
+                        <TableHead>EQP Port</TableHead>
+                        <TableHead>Cascade</TableHead>
+                        <TableHead>Cascade At</TableHead>
+                        <TableHead>CATBTS</TableHead>
+                        <TableHead>RNC/BSC</TableHead>
+                        <TableHead>Router/RAN</TableHead>
+                        <TableHead>Alamat</TableHead>
+                        <TableHead className="text-right">Lokasi</TableHead>
+                    </TableRow>
+                ) : (
+                    <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Type</TableHead>
+                        {!isMitratelSearch && <TableHead>Sub-Type</TableHead>}
+                        <TableHead>Service Area</TableHead>
+                        {!isMitratelSearch && <TableHead>STO</TableHead>}
+                        <TableHead>Coordinates</TableHead>
+                        {isMitratelSearch && <TableHead>Mitratel ID</TableHead>}
+                        {isMitratelSearch && <TableHead>Tenant ID</TableHead>}
+                        {!isMitratelSearch && <TableHead>Avail</TableHead>}
+                        {!isMitratelSearch && <TableHead>Used</TableHead>}
+                        <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                )}
             </TableHeader>
             <TableBody>
               {areAssetsLoading && hasSearched ? (
                  Array.from({ length: 5 }).map((_, index) => (
                     <TableRow key={index}>
-                        <TableCell colSpan={11}><Skeleton className="h-6 w-full" /></TableCell>
+                        <TableCell colSpan={isNodeBSearch ? 13 : 11}><Skeleton className="h-6 w-full" /></TableCell>
                     </TableRow>
                 ))
               ) : paginatedAssets.length > 0 && hasSearched ? (
                 paginatedAssets.map(a => {
                   const coords = a.coordinates?.split(',').map(c => c.trim());
                   const googleMapsUrl = coords && coords.length === 2 ? `https://www.google.com/maps/search/?api=1&query=${coords[0]},${coords[1]}` : null;
-                  return (
-                  <TableRow key={a.id}>
-                    <TableCell className="font-medium">{a.name}</TableCell>
-                    <TableCell>{a.assetType}</TableCell>
-                    {!isMitratelSearch && <TableCell>{a.subType}</TableCell>}
-                    <TableCell>{a.serviceArea}</TableCell>
-                    {!isMitratelSearch && <TableCell>{a.sto}</TableCell>}
-                    <TableCell>{a.coordinates || '-'}</TableCell>
-                    {isMitratelSearch && <TableCell>{a.mitratelSiteId || '-'}</TableCell>}
-                    {isMitratelSearch && <TableCell>{a.tenantSiteId || '-'}</TableCell>}
-                    {!isMitratelSearch && <TableCell>{a.portAvai || '-'}</TableCell>}
-                    {!isMitratelSearch && <TableCell>{a.portUsed || '-'}</TableCell>}
-                    <TableCell className="text-right">
-                       {googleMapsUrl && (
-                        <Button asChild variant="ghost" size="icon" title="Lihat di Google Maps">
-                          <Link href={googleMapsUrl} target="_blank" rel="noopener noreferrer">
-                            <MapPin className="h-4 w-4 text-blue-600" />
-                          </Link>
-                        </Button>
-                      )}
-                       <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                              <Trash2 className="h-4 w-4" />
+                  return isNodeBSearch ? (
+                     <TableRow key={a.id}>
+                        <TableCell>{a.siteId}</TableCell>
+                        <TableCell>{a.siteName}</TableCell>
+                        <TableCell>{a.oltMerk}</TableCell>
+                        <TableCell>{a.splitterOlt}</TableCell>
+                        <TableCell>{a.snOnt}</TableCell>
+                        <TableCell>{a.eqpPort}</TableCell>
+                        <TableCell>{a.cascade}</TableCell>
+                        <TableCell>{a.cascadeAt}</TableCell>
+                        <TableCell>{a.catbts}</TableCell>
+                        <TableCell>{a.rncBsc}</TableCell>
+                        <TableCell>{a.routerRan}</TableCell>
+                        <TableCell>{a.alamat}</TableCell>
+                        <TableCell className="text-right">
+                           {googleMapsUrl && (
+                            <Button asChild variant="ghost" size="icon" title="Lihat di Google Maps">
+                              <Link href={googleMapsUrl} target="_blank" rel="noopener noreferrer">
+                                <MapPin className="h-4 w-4 text-blue-600" />
+                              </Link>
                             </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Ini akan menghapus aset "{a.name}" secara permanen.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Batal</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDeleteAsset(a.id, a.name)} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-                                Hapus
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                    </TableCell>
-                  </TableRow>
-                )})
+                          )}
+                        </TableCell>
+                    </TableRow>
+                  ) : (
+                    <TableRow key={a.id}>
+                        <TableCell className="font-medium">{a.name}</TableCell>
+                        <TableCell>{a.assetType}</TableCell>
+                        {!isMitratelSearch && <TableCell>{a.subType}</TableCell>}
+                        <TableCell>{a.serviceArea}</TableCell>
+                        {!isMitratelSearch && <TableCell>{a.sto}</TableCell>}
+                        <TableCell>{a.coordinates || '-'}</TableCell>
+                        {isMitratelSearch && <TableCell>{a.mitratelSiteId || '-'}</TableCell>}
+                        {isMitratelSearch && <TableCell>{a.tenantSiteId || '-'}</TableCell>}
+                        {!isMitratelSearch && <TableCell>{a.portAvai || '-'}</TableCell>}
+                        {!isMitratelSearch && <TableCell>{a.portUsed || '-'}</TableCell>}
+                        <TableCell className="text-right">
+                        {googleMapsUrl && (
+                            <Button asChild variant="ghost" size="icon" title="Lihat di Google Maps">
+                            <Link href={googleMapsUrl} target="_blank" rel="noopener noreferrer">
+                                <MapPin className="h-4 w-4 text-blue-600" />
+                            </Link>
+                            </Button>
+                        )}
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    Ini akan menghapus aset "{a.name}" secara permanen.
+                                </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                <AlertDialogCancel>Batal</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDeleteAsset(a.id, a.name)} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                                    Hapus
+                                </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                            </AlertDialog>
+                        </TableCell>
+                    </TableRow>
+                  )
+                })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={11} className="h-24 text-center">
+                  <TableCell colSpan={isNodeBSearch ? 13 : 11} className="h-24 text-center">
                      {!canSearch 
                       ? "Silakan pilih Service Area untuk memulai." 
                       : !hasSearched 

@@ -108,7 +108,7 @@
       "properties": {
         "id": { "type": "string", "description": "Unique identifier for the Network Asset." },
         "name": { "type": "string", "description": "A unique name or identifier for the asset (e.g., OLT-KDS-01)." },
-        "assetType": { "type": "string", "description": "The main type of the asset.", "enum": ["OLT", "ODC", "ODP", "FTM", "MITRATEL"] },
+        "assetType": { "type": "string", "description": "The main type of the asset.", "enum": ["OLT", "ODC", "ODP", "FTM", "MITRATEL", "NODE-B"] },
         "subType": { "type": "string", "description": "A subtype for assets like OLT (Mini OLT/OLT) or FTM (EA/OA).", "enum": ["Mini OLT", "OLT", "EA", "OA", "N/A"] },
         "serviceArea": { "type": "string", "description": "The service area the asset belongs to." },
         "sto": { "type": "string", "description": "STO (Sentral Telepon Otomat) location identifier." },
@@ -121,7 +121,19 @@
         "portRsv": { "type": "string", "description": "Reserved ports, typically for ODP." },
         "portRsk": { "type": "string", "description": "Damaged/Rusak ports, typically for ODP." },
         "mitratelSiteId": { "type": "string", "description": "Site ID from Mitratel for a Mitratel asset." },
-        "tenantSiteId": { "type": "string", "description": "Tenant Site ID for a Mitratel asset." }
+        "tenantSiteId": { "type": "string", "description": "Tenant Site ID for a Mitratel asset." },
+        "siteId": { "type": "string" },
+        "siteName": { "type": "string" },
+        "oltMerk": { "type": "string" },
+        "splitterOlt": { "type": "string" },
+        "snOnt": { "type": "string" },
+        "eqpPort": { "type": "string" },
+        "cascade": { "type": "string" },
+        "cascadeAt": { "type": "string" },
+        "catbts": { "type": "string" },
+        "rncBsc": { "type": "string" },
+        "routerRan": { "type": "string" },
+        "alamat": { "type": "string" }
       },
       "required": ["id", "name", "assetType", "serviceArea", "sto", "dateAdded"]
     },
