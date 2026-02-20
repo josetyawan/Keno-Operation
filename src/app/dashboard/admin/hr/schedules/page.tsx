@@ -262,7 +262,7 @@ export default function AdminSchedulesPage() {
                 return undefined;
             };
     
-            const userMapByNik = new Map(activeUsers.map(u => [u.nik, u]));
+            const userMapByNik = new Map(activeUsers.filter(u => u.nik).map(u => [u.nik!.trim(), u]));
             const shiftCodeMap: Record<string, ValidShiftType> = {
                 'smc': 'siang-malam', 's/mc': 'siang-malam', 'sm': 'siang-malam',
                 'm': 'malam',
@@ -481,3 +481,4 @@ export default function AdminSchedulesPage() {
     );
 
     
+
