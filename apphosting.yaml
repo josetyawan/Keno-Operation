@@ -14,3 +14,5 @@ env:
     value: "AIzaSyDR1T6v23MxvIBHt3z2GFBj2OfPhEBsLkA"
   - variable: BOT_SECRET_KEY
     value: "NotaKuSuperSecretKey@2024"
+  - variable: APPS_SCRIPT_WEB_APP_URL
+    value: "PASTE_YOUR_WEB_APP_URL_HERE"

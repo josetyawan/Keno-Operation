@@ -1,0 +1,76 @@
+// ================== PENTING: KONFIGURASI ==================
+// Ganti dengan ID Spreadsheet dan Nama Sheet Anda yang benar.
+const SPREADSHEET_ID = "YOUR_SPREADSHEET_ID_HERE";
+const SHEET_NAME = "YOUR_SHEET_NAME_HERE"; // Contoh: 'Riwayat Gangguan'
+
+/**
+ * Fungsi ini akan dijalankan setiap kali Web App URL Anda diakses dengan metode GET.
+ * Ini berfungsi sebagai API untuk aplikasi Firebase Anda.
+ * 
+ * @param {GoogleAppsScript.Events.DoGet} e - Objek event dari permintaan GET.
+ * @returns {GoogleAppsScript.Content.TextOutput} - Data dalam format JSON.
+ */
+function doGet(e) {
+  try {
+    // 1. Buka spreadsheet berdasarkan ID dan nama sheet.
+    const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME);
+    
+    // Periksa apakah sheet ditemukan
+    if (!sheet) {
+      return createJsonResponse({ error: true, message: `Sheet dengan nama "${SHEET_NAME}" tidak ditemukan.` });
+    }
+
+    // 2. Ambil semua data dari sheet.
+    const data = sheet.getDataRange().getValues();
+
+    // Periksa apakah ada data
+    if (data.length <= 1) { // <= 1 untuk menghitung baris header
+      return createJsonResponse([]); // Kembalikan array kosong jika hanya ada header atau tidak ada data sama sekali
+    }
+
+    // 3. Ubah data menjadi format JSON yang lebih mudah digunakan.
+    // Baris pertama (data[0]) dianggap sebagai header (kunci).
+    const headers = data[0];
+    const jsonData = data.slice(1).map(row => {
+      const obj = {};
+      headers.forEach((header, index) => {
+        obj[header] = row[index];
+      });
+      return obj;
+    });
+
+    // 4. Kembalikan data sebagai respons JSON.
+    return createJsonResponse(jsonData);
+
+  } catch (error) {
+    // Tangani jika terjadi error saat proses
+    Logger.log("Error di doGet: " + error.toString());
+    return createJsonResponse({ error: true, message: "Terjadi kesalahan di server Apps Script: " + error.toString() });
+  }
+}
+
+/**
+ * Helper function untuk membuat respons JSON.
+ * @param {object | any[]} data - Objek atau array yang akan diubah menjadi JSON.
+ * @returns {GoogleAppsScript.Content.TextOutput} - Objek TextOutput.
+ */
+function createJsonResponse(data) {
+  return ContentService
+    .createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ============== CARA DEPLOY SEBAGAI WEB APP ==============
+// 1. Simpan file ini.
+// 2. Klik tombol biru "Deploy" di pojok kanan atas.
+// 3. Pilih "New deployment".
+// 4. Klik ikon Roda Gigi (⚙️) di sebelah "Select type", lalu pilih "Web app".
+// 5. Di bagian "Configuration":
+//    - Beri deskripsi (opsional, misal: "API Data Riwayat Gangguan v1").
+//    - "Execute as": Biarkan "Me".
+//    - "Who has access": **WAJIB** pilih "Anyone". Ini penting agar aplikasi Anda bisa mengaksesnya.
+// 6. Klik "Deploy".
+// 7. Google akan meminta otorisasi. Klik "Authorize access" dan ikuti alur untuk memberikan izin pada akun Google Anda.
+// 8. Setelah selesai, Anda akan mendapatkan "Web app URL". **SALIN URL INI**.
+// 9. Tempelkan URL tersebut ke dalam file `apphosting.yaml` di aplikasi Anda pada variabel `APPS_SCRIPT_WEB_APP_URL`.
+// =========================================================

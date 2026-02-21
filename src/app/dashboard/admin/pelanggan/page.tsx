@@ -28,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Bot, PlusCircle, MapPin, Loader2, Upload, Search, History, Phone, Pencil, Wrench, QrCode, FileSpreadsheet } from 'lucide-react';
+import { Bot, PlusCircle, MapPin, Loader2, Upload, Search, History, Phone, Pencil, Wrench, QrCode, FileSpreadsheet, DownloadCloud } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, useDoc, useStorage } from '@/firebase';
 import { collection, query, doc, serverTimestamp, where, getDocs, limit, orderBy } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -42,6 +42,8 @@ import Image from 'next/image';
 import { format, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import * as XLSX from 'xlsx';
+import { fetchFromSheet } from './actions';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
 
@@ -414,6 +416,11 @@ export default function AdminPelangganPage() {
   const [isUpdateLocationDialogOpen, setIsUpdateLocationDialogOpen] = useState(false);
   const [isUpdateAssetDialogOpen, setIsUpdateAssetDialogOpen] = useState(false);
 
+  // New state for Sheet data
+  const [isFetchingSheet, setIsFetchingSheet] = useState(false);
+  const [sheetData, setSheetData] = useState<any[] | null>(null);
+  const [sheetError, setSheetError] = useState<string | null>(null);
+
 
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
     useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
@@ -473,6 +480,25 @@ export default function AdminPelangganPage() {
     setIsSearching(false);
   };
 
+  const handleFetchFromSheet = async () => {
+    setIsFetchingSheet(true);
+    setSheetData(null);
+    setSheetError(null);
+    try {
+        const data = await fetchFromSheet();
+        if (data.error) {
+            throw new Error(data.message);
+        }
+        setSheetData(data);
+        toast({ title: 'Sukses', description: `${data.length} baris data berhasil diambil dari Google Sheet.`});
+    } catch(error: any) {
+        setSheetError(error.message);
+        toast({ variant: 'destructive', title: 'Gagal Mengambil Data', description: error.message });
+    } finally {
+        setIsFetchingSheet(false);
+    }
+  }
+
   const handleExportToExcel = async () => {
     if (!isAdmin || !firestore) {
       toast({ variant: 'destructive', title: 'Akses Ditolak' });
@@ -525,19 +551,25 @@ export default function AdminPelangganPage() {
 
   return (
     <>
-      <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
+      <div className="flex items-start justify-between mb-8 flex-wrap gap-4">
         <div><h1 className="text-3xl font-bold tracking-tight">Data Pelanggan & Riwayat Gangguan</h1><p className="text-muted-foreground mt-1">Cari pelanggan berdasarkan No. Service untuk melihat riwayat atau menambah data.</p></div>
-         {isAdmin && (
-            <Button onClick={handleExportToExcel} variant="outline">
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                Export Semua Data
-            </Button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={handleFetchFromSheet} variant="secondary" disabled={isFetchingSheet}>
+            {isFetchingSheet ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <DownloadCloud className="mr-2 h-4 w-4" />}
+            Ambil Riwayat dari Sheet
+          </Button>
+          {isAdmin && (
+              <Button onClick={handleExportToExcel} variant="outline">
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Export Data Pelanggan
+              </Button>
+          )}
+        </div>
       </div>
       
       <Card className="mb-6">
         <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Search /> Cari Pelanggan</CardTitle>
+            <CardTitle className="flex items-center gap-2"><Search /> Cari Pelanggan (Database Aplikasi)</CardTitle>
         </CardHeader>
         <CardContent>
             <form onSubmit={handleSearch} className="flex items-end gap-4">
@@ -549,13 +581,52 @@ export default function AdminPelangganPage() {
             </form>
         </CardContent>
       </Card>
+
+      {sheetData && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Data Riwayat Gangguan dari Google Sheet</CardTitle>
+            <CardDescription>Menampilkan {sheetData.length} baris data yang berhasil diambil.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  {sheetData[0] && Object.keys(sheetData[0]).map(key => <TableHead key={key}>{key}</TableHead>)}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sheetData.slice(0, 5).map((row, index) => (
+                  <TableRow key={index}>
+                    {Object.values(row).map((value: any, i) => <TableCell key={i}>{value}</TableCell>)}
+                  </TableRow>
+                ))}
+                {sheetData.length > 5 && (
+                    <TableRow><TableCell colSpan={Object.keys(sheetData[0]).length} className="text-center text-muted-foreground">...dan {sheetData.length - 5} baris lainnya.</TableCell></TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {sheetError && (
+        <Card className="mb-6 border-destructive">
+             <CardHeader>
+                <CardTitle className="text-destructive">Gagal Mengambil Data dari Sheet</CardTitle>
+             </CardHeader>
+             <CardContent>
+                <p className="text-sm text-destructive">{sheetError}</p>
+             </CardContent>
+        </Card>
+      )}
       
       {isSearching && <div className="flex justify-center items-center p-8"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>}
 
       {!isSearching && searchPerformed && !searchedPelanggan && (
           <Card>
               <CardContent className="p-6 text-center">
-                  <p className="text-muted-foreground mb-4">Pelanggan dengan No. Service "{searchNoService}" tidak ditemukan.</p>
+                  <p className="text-muted-foreground mb-4">Pelanggan dengan No. Service "{searchNoService}" tidak ditemukan di database aplikasi.</p>
                   <Button onClick={() => setIsNewPelangganDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/>Tambah Pelanggan Baru</Button>
               </CardContent>
           </Card>
@@ -567,7 +638,7 @@ export default function AdminPelangganPage() {
                 <CardHeader className="flex flex-row items-start justify-between">
                     <div>
                         <CardTitle>Detail Pelanggan</CardTitle>
-                        <CardDescription>Data pelanggan yang tersimpan di sistem.</CardDescription>
+                        <CardDescription>Data pelanggan yang tersimpan di database aplikasi.</CardDescription>
                     </div>
                      <div className="flex gap-2">
                         <Button variant="outline" size="sm" onClick={() => setIsAddContactDialogOpen(true)}><Phone className="mr-2 h-4 w-4"/>Tambah Kontak</Button>
@@ -611,21 +682,9 @@ export default function AdminPelangganPage() {
               </Card>
 
               <Card>
-                <CardHeader>
-                    <CardTitle>Lanjutkan Laporan di Bot</CardTitle>
-                    <CardDescription>Gunakan bot Telegram untuk membuat laporan gangguan baru bagi pelanggan ini.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Button asChild className="w-full">
-                        <Link href="https://t.me/B2BLapor_bot" target="_blank" rel="noopener noreferrer"><Bot className="mr-2 h-4 w-4" /> Buka @B2BLapor_bot</Link>
-                    </Button>
-                </CardContent>
-              </Card>
-
-              <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><History /> Riwayat Laporan</CardTitle>
-                    <CardDescription>Menampilkan riwayat laporan gangguan yang tersimpan di database.</CardDescription>
+                    <CardTitle className="flex items-center gap-2"><History /> Riwayat Laporan (Database Aplikasi)</CardTitle>
+                    <CardDescription>Menampilkan riwayat laporan gangguan yang tersimpan di database aplikasi.</CardDescription>
                   </CardHeader>
                   <CardContent>
                         {isRiwayatLoading ? (
@@ -653,7 +712,7 @@ export default function AdminPelangganPage() {
                             </div>
                         ) : (
                             <div className="text-center h-24 flex flex-col items-center justify-center text-muted-foreground">
-                               <p>Tidak ada riwayat laporan yang ditemukan untuk pelanggan ini.</p>
+                               <p>Tidak ada riwayat laporan yang ditemukan di database aplikasi untuk pelanggan ini.</p>
                             </div>
                         )}
                     </CardContent>
