@@ -27,8 +27,11 @@ export default function ChatPage() {
   );
 
   const messagesQuery = useMemoFirebase(() => {
+    if (!userProfile || userProfile.registrationStatus !== 'approved') {
+        return null;
+    }
     return query(collection(firestore, 'messages'), orderBy('createdAt', 'asc'));
-  }, [firestore]);
+  }, [firestore, userProfile]);
 
   const { data: messages, isLoading: areMessagesLoading } = useCollection<Message>(messagesQuery);
 
