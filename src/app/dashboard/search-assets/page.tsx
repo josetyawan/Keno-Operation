@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -138,6 +139,7 @@ export default function SearchAssetsPage() {
 
     // Prevent searching on very short, generic terms
     if (searchTerm.length < 3) {
+        // But allow prefixes like ODP, ODC, FTM to start searching
         if (!searchTerm.startsWith('ODP') && !searchTerm.startsWith('ODC') && !searchTerm.startsWith('FTM')) {
             return [];
         }
@@ -145,35 +147,53 @@ export default function SearchAssetsPage() {
 
     return queriedAssets.filter(asset => {
         const assetName = asset.name.toUpperCase();
+        const assetType = asset.assetType;
 
-        // --- Intent-based rules for specific asset types ---
-
-        // Rule for ODP: Must include '/'
-        if (searchTerm.startsWith('ODP')) {
-            if (asset.assetType !== 'ODP') return false; 
-            return searchTerm.includes('/') && assetName.startsWith(searchTerm);
+        // --- ODP ---
+        if (assetType === 'ODP') {
+            if (searchTerm.startsWith('ODP')) {
+                return searchTerm.includes('/') && assetName.startsWith(searchTerm);
+            }
+            return assetName.includes(searchTerm); 
         }
 
-        // Rule for ODC: Must have 3 parts (e.g., ODC-KDS-FAC)
-        if (searchTerm.startsWith('ODC-')) {
-            if (asset.assetType !== 'ODC') return false; 
-            const parts = searchTerm.split('-');
-            if (parts.length < 3 || (parts.length === 3 && parts[2] === '')) return false; 
-            return assetName.startsWith(searchTerm);
+        // --- ODC ---
+        if (assetType === 'ODC') {
+            if (searchTerm.startsWith('ODC-')) {
+                const parts = searchTerm.split('-');
+                if (parts.length >= 3 && parts[2] !== '') {
+                     return assetName.startsWith(searchTerm);
+                }
+                return false;
+            }
+            return assetName.includes(searchTerm);
         }
         
-        // Rule for FTM: Must include '-'
-        if (searchTerm.startsWith('FTM-')) {
-            if (asset.assetType !== 'FTM') return false; 
-            return assetName.startsWith(searchTerm);
+        // --- FTM ---
+        if (assetType === 'FTM') {
+            if (searchTerm.startsWith('FTM-')) {
+                return assetName.startsWith(searchTerm);
+            }
+            return assetName.includes(searchTerm);
         }
 
-        // --- General "contains" search for all other cases ---
-        const nameMatch = assetName.includes(searchTerm);
-        const siteIdMatch = asset.siteId?.toUpperCase().includes(searchTerm) ?? false;
-        const tenantIdMatch = asset.tenantSiteId?.toUpperCase().includes(searchTerm) ?? false;
+        // --- Mini OLT --- (by checking subType)
+        if (asset.subType === 'Mini OLT') {
+            return assetName.includes(searchTerm);
+        }
 
-        return nameMatch || siteIdMatch || tenantIdMatch;
+        // --- Node B ---
+        if (assetType === 'NODE-B') {
+            return asset.siteId?.toUpperCase().includes(searchTerm) ?? false;
+        }
+        
+        // --- Mitratel ---
+        if (assetType === 'MITRATEL') {
+            return asset.tenantSiteId?.toUpperCase().includes(searchTerm) ?? false;
+        }
+
+        // Fallback for any other asset types (e.g. regular OLT)
+        return assetName.includes(searchTerm);
     });
     
   }, [queriedAssets, searchName]);
