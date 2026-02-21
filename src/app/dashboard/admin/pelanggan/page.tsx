@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -453,33 +454,15 @@ export default function AdminPelangganPage() {
     setSheetHistory([]); // Clear previous history
     const serviceNumberToFind = searchedPelanggan.noService.trim();
     try {
-      const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS6GU4F_Iqvw7u1pkL06KQjDrrdGCu_DshWT0QWeozGpwpUIAc757COSNEnkhrRKH1RnPDqNeXDDNjU/export?format=xlsx');
+      const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS6GU4F_Iqvw7u1pkL06KQjDrrdGCu_DshWT0QWeozGpwpUIAc757COSNEnkhrRKH1RnPDqNeXDDNjU/pub?output=csv');
       if (!response.ok) {
         throw new Error(`Gagal mengambil data dari Google Sheet. Status: ${response.status}`);
       }
 
-      const arrayBuffer = await response.arrayBuffer();
-      const workbook = XLSX.read(arrayBuffer, { type: 'buffer' });
+      const csvText = await response.text();
+      const workbook = XLSX.read(csvText, { type: 'string' });
       
-      const expectedSheetName = format(new Date(), 'MMMM yyyy', { locale: idLocale });
-      let sheetName = workbook.SheetNames.find(name => name.trim().toLowerCase() === expectedSheetName.toLowerCase());
-
-      if (!sheetName) {
-        const monthYearRegex = /^(Januari|Februari|Maret|April|Mei|Juni|Juli|Agustus|September|Oktober|November|Desember) \d{4}$/i;
-        sheetName = workbook.SheetNames.find(name => monthYearRegex.test(name.trim()));
-      }
-      
-      if (!sheetName) {
-        sheetName = workbook.SheetNames[0];
-        if (sheetName) {
-          toast({
-            title: 'Info',
-            description: `Sheet untuk bulan ini tidak ditemukan. Menampilkan data dari sheet pertama: "${sheetName}".`,
-            duration: 7000
-          });
-        }
-      }
-      
+      const sheetName = workbook.SheetNames[0];
       if (!sheetName) {
         throw new Error('File Google Sheet tidak memiliki sheet yang dapat dibaca.');
       }
@@ -506,7 +489,7 @@ export default function AdminPelangganPage() {
       const keteranganIndex = findIndex(headerRow, ['keterangan']);
 
       if (noServiceIndex === -1) {
-          throw new Error("Kolom 'No Service' tidak ditemukan di Google Sheet.");
+          throw new Error("Kolom 'No. Service' tidak ditemukan di Google Sheet.");
       }
 
       const history = dataRows
