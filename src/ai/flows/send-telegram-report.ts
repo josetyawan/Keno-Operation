@@ -35,8 +35,8 @@ export type SendTelegramReportInput = z.infer<typeof SendTelegramReportInputSche
 export type SendTelegramReportOutput = z.infer<typeof SendTelegramReportOutputSchema>;
 
 // Define the Telegram bot token and chat ID from environment variables
-const TELEGRAM_BOT_TOKEN = 'YOUR_FINANCE_BOT_TOKEN_HERE';
-const TELEGRAM_CHAT_ID = 'YOUR_FINANCE_CHAT_ID_HERE'; 
+const TELEGRAM_BOT_TOKEN = '8043290500:AAGxBvwZvkyASJb3a_q8wEBiveyVE2NN9lY';
+const TELEGRAM_CHAT_ID = '-4689716037'; 
 
 // Main exported function that wraps the Genkit flow
 export async function sendTelegramReport(input: SendTelegramReportInput): Promise<SendTelegramReportOutput> {
@@ -51,7 +51,7 @@ const sendTelegramReportFlow = ai.defineFlow(
     outputSchema: SendTelegramReportOutputSchema,
   },
   async (input) => {
-    if (!TELEGRAM_BOT_TOKEN || TELEGRAM_CHAT_ID === 'YOUR_FINANCE_CHAT_ID_HERE') {
+    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
       const errorMsg = 'Telegram Bot Token atau Chat ID untuk Keuangan belum dikonfigurasi.';
       console.error(errorMsg);
       return { success: false, error: errorMsg };

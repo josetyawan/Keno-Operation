@@ -9,8 +9,8 @@ import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import TelegramBot from 'node-telegram-bot-api';
 
-const TELEGRAM_BOT_TOKEN = 'YOUR_FINANCE_BOT_TOKEN_HERE';
-const TELEGRAM_CHAT_ID = 'YOUR_FINANCE_CHAT_ID_HERE';
+const TELEGRAM_BOT_TOKEN = '8043290500:AAGxBvwZvkyASJb3a_q8wEBiveyVE2NN9lY';
+const TELEGRAM_CHAT_ID = '-4689716037';
 
 // Re-using the same schema as the rekap report
 const PaidDataItemSchema = z.object({
@@ -47,8 +47,8 @@ const sendPaidNoticeFlow = ai.defineFlow(
     outputSchema: SendPaidNoticeOutputSchema,
   },
   async (input) => {
-    if (!TELEGRAM_BOT_TOKEN || TELEGRAM_BOT_TOKEN === 'YOUR_FINANCE_BOT_TOKEN_HERE') {
-      const errorMsg = 'Telegram Bot Token for Finance is not configured.';
+    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+      const errorMsg = 'Telegram Bot Token or Chat ID for Finance is not configured.';
       console.error(errorMsg);
       return { success: false, error: errorMsg };
     }
