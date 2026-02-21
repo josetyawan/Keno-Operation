@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, useDoc } from '@/firebase';
 import { collection, query, orderBy, serverTimestamp, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -34,10 +34,26 @@ export default function GroupChatPage() {
   }, [firestore, userProfile]);
 
   const { data: messages, isLoading: areMessagesLoading } = useCollection<Message>(messagesQuery);
+  
+  const threeDaysAgo = useMemo(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 3);
+    return date;
+  }, []);
+
+  const recentMessages = useMemo(() => {
+    if (!messages) return [];
+    return messages.filter(msg => {
+      // Show message if it has no timestamp yet (optimistic update)
+      if (!msg.createdAt?.toDate) return true;
+      // Otherwise, only show if it's within the last 3 days
+      return msg.createdAt.toDate() > threeDaysAgo;
+    });
+  }, [messages, threeDaysAgo]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [recentMessages]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,10 +97,10 @@ export default function GroupChatPage() {
             <Skeleton className="h-16 w-3/4 ml-auto" />
             <Skeleton className="h-12 w-1/2" />
           </div>
-        ) : messages && messages.length > 0 ? (
-          messages.map((msg, index) => {
+        ) : recentMessages && recentMessages.length > 0 ? (
+          recentMessages.map((msg, index) => {
             const isCurrentUser = msg.userId === user?.uid;
-            const showAvatarAndName = index === 0 || messages[index - 1]?.userId !== msg.userId;
+            const showAvatarAndName = index === 0 || recentMessages[index - 1]?.userId !== msg.userId;
             const messageDate = msg.createdAt?.toDate ? format(msg.createdAt.toDate(), 'p', { locale: idLocale }) : '';
 
             return (

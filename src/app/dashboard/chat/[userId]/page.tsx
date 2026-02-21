@@ -48,9 +48,25 @@ export default function PrivateChatPage() {
   const chatRoomRef = useMemoFirebase(() => chatId ? doc(firestore, 'chats', chatId) : null, [chatId, firestore]);
   const { data: chatRoom } = useDoc<ChatRoom>(chatRoomRef);
 
+  const threeDaysAgo = useMemo(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 3);
+    return date;
+  }, []);
+
+  const recentMessages = useMemo(() => {
+    if (!messages) return [];
+    return messages.filter(msg => {
+      // Show message if it has no timestamp yet (optimistic update)
+      if (!msg.createdAt?.toDate) return true;
+      // Otherwise, only show if it's within the last 3 days
+      return msg.createdAt.toDate() > threeDaysAgo;
+    });
+  }, [messages, threeDaysAgo]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [recentMessages]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -126,8 +142,8 @@ export default function PrivateChatPage() {
             <Skeleton className="h-16 w-3/4 ml-auto" />
             <Skeleton className="h-12 w-1/2" />
           </div>
-        ) : messages && messages.length > 0 ? (
-          messages.map((msg) => {
+        ) : recentMessages && recentMessages.length > 0 ? (
+          recentMessages.map((msg) => {
             const isCurrentUser = msg.userId === user?.uid;
             const messageDate = msg.createdAt?.toDate ? format(msg.createdAt.toDate(), 'p', { locale: idLocale }) : '';
 
