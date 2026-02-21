@@ -100,21 +100,24 @@ export default function AdminAssetsPage() {
   const dynamicServiceAreas = useMemo(() => {
     const serviceAreaSet = new Set<string>(baseServiceAreas);
     
+    // Always add these special categories
+    serviceAreaSet.add('MITRATEL');
+    serviceAreaSet.add('NODE-B');
+    
     const addSA = (sa: string) => {
         const upperSa = sa.toUpperCase();
-        // Prevent adding variations of Mitratel or Node-B since they are hardcoded
-        if (upperSa.includes('MITRATEL') || upperSa.includes('NODE-B')) {
-            return;
-        }
+        if (upperSa.includes('MITRATEL') || upperSa.includes('NODE-B')) return;
         serviceAreaSet.add(sa);
     };
     
     if (mancoreLinks) mancoreLinks.forEach(link => addSA(link.serviceArea));
     if (mapLinks) mapLinks.forEach(link => addSA(link.serviceArea));
     
-    // De-duplicate and ensure correct order
-    const finalAreas = Array.from(serviceAreaSet).sort();
-    return ['MITRATEL', 'NODE-B', ...finalAreas];
+    const sortedGeographicAreas = Array.from(serviceAreaSet)
+      .filter(sa => sa !== 'MITRATEL' && sa !== 'NODE-B')
+      .sort();
+      
+    return ['MITRATEL', 'NODE-B', ...sortedGeographicAreas];
   }, [mancoreLinks, mapLinks]);
 
   useEffect(() => {
@@ -151,60 +154,49 @@ export default function AdminAssetsPage() {
     if (!searchTerm) return [];
 
     return queriedAssets.filter(asset => {
-        const assetName = asset.name.toUpperCase();
+        const assetName = (asset.name || '').toUpperCase();
         const assetType = asset.assetType;
 
-        // Rule for Mitratel (searched by tenantId)
-        if (assetType === 'MITRATEL') {
+        // Mitratel and Node-B are special cases based on the selected Service Area
+        if (searchServiceArea === 'MITRATEL') {
+            if (assetType !== 'MITRATEL') return false;
             return asset.tenantSiteId?.toUpperCase().includes(searchTerm) ?? false;
         }
-
-        // Rule for Node-B (searched by siteId)
-        if (assetType === 'NODE-B') {
+        if (searchServiceArea === 'NODE-B') {
+            if (assetType !== 'NODE-B') return false;
             return asset.siteId?.toUpperCase().includes(searchTerm) ?? false;
         }
-
-        // --- Rules for geographical Service Areas ---
-
-        // Rule for ODP: Must start with ODP, and be more specific
+        
+        // --- Geographic Service Area Filtering ---
+        
+        // Rule 1: Handle prefix-based searches first.
+        // If a search starts with a known prefix, ONLY match that asset type.
         if (searchTerm.startsWith('ODP')) {
-            if (assetType !== 'ODP') return false; // If search is for ODP, only show ODPs.
-            
-            // Show results only after a certain level of specificity
-            if (searchTerm.includes('/')) {
-                 return assetName.includes(searchTerm);
-            }
+            if (assetType !== 'ODP') return false;
+            // Apply ODP specificity rules
+            if (searchTerm.includes('/')) return assetName.includes(searchTerm);
             const parts = searchTerm.split('-');
-            if (parts.length > 2) {
-                 return assetName.startsWith(searchTerm);
-            }
-            return false; // Not specific enough yet
+            return parts.length > 2 && assetName.startsWith(searchTerm);
         }
-
-        // Rule for ODC: Must start with ODC- and be more specific
         if (searchTerm.startsWith('ODC-')) {
-             if (assetType !== 'ODC') return false;
-             
-             const parts = searchTerm.split('-');
-             if (parts.length > 2 && parts[2]) { // e.g., ODC-KUD-F...
-                 return assetName.startsWith(searchTerm);
-             }
-             return false; // Not specific enough
+            if (assetType !== 'ODC') return false;
+            // Apply ODC specificity rules
+            const parts = searchTerm.split('-');
+            return parts.length > 2 && parts[2] && assetName.startsWith(searchTerm);
+        }
+        if (searchTerm.startsWith('FTM-')) {
+            if (assetType !== 'FTM') return false;
+            return assetName.startsWith(searchTerm);
         }
 
-        // Rule for FTM: Must start with FTM-
-        if (searchTerm.startsWith('FTM-')) {
-             if (assetType !== 'FTM') return false;
-             return assetName.startsWith(searchTerm);
-        }
-        
-        // General Search Rule for terms like 'FAC'
-        // This should only apply to ODC and OLT assets
+        // Rule 2: If it's a general search (no specific prefix), then apply general rules.
+        // This is for cases like searching 'FAC'.
+        // This search should ONLY apply to ODC and OLT assets.
         if (assetType === 'ODC' || assetType === 'OLT') {
-             return assetName.includes(searchTerm);
+            return assetName.includes(searchTerm);
         }
         
-        // If none of the above rules match (e.g. general search on an ODP/FTM), don't show it.
+        // Rule 3: If an asset type doesn't match any of the above conditions, exclude it.
         return false;
     });
     
