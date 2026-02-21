@@ -61,16 +61,23 @@ function createJsonResponse(data) {
 }
 
 // ============== CARA DEPLOY SEBAGAI WEB APP ==============
-// 1. Simpan file ini.
-// 2. Klik tombol biru "Deploy" di pojok kanan atas.
-// 3. Pilih "New deployment".
-// 4. Klik ikon Roda Gigi (⚙️) di sebelah "Select type", lalu pilih "Web app".
-// 5. Di bagian "Configuration":
+// 1. Simpan file ini (Ctrl + S).
+// 2. Klik tombol biru "Deploy" di pojok kanan atas, lalu pilih "New deployment".
+// 3. Klik ikon Roda Gigi (⚙️) di sebelah "Select type", lalu pilih "Web app".
+// 4. Di bagian "Configuration":
 //    - Beri deskripsi (opsional, misal: "API Data Riwayat Gangguan v1").
 //    - "Execute as": Biarkan "Me".
 //    - "Who has access": **WAJIB** pilih "Anyone". Ini penting agar aplikasi Anda bisa mengaksesnya.
-// 6. Klik "Deploy".
-// 7. Google akan meminta otorisasi. Klik "Authorize access" dan ikuti alur untuk memberikan izin pada akun Google Anda.
-// 8. Setelah selesai, Anda akan mendapatkan "Web app URL". **SALIN URL INI**.
-// 9. Tempelkan URL tersebut ke dalam file `apphosting.yaml` di aplikasi Anda pada variabel `APPS_SCRIPT_WEB_APP_URL`.
+// 5. Klik tombol biru "Deploy".
+// 6. Jika diminta, klik "Authorize access" dan ikuti alur untuk memberikan izin pada akun Google Anda.
+// 7. Setelah selesai, Anda akan mendapatkan "Web app URL". **SALIN ULANG URL INI** bahkan jika terlihat sama.
+// 8. Tempelkan URL tersebut ke dalam file `.env` di aplikasi Anda pada variabel `APPS_SCRIPT_WEB_APP_URL`.
 // =========================================================
+
+// =========== CARA MEMPERBARUI DEPLOYMENT (PENTING!) ===========
+// 1. Setelah mengubah kode, simpan file (Ctrl + S).
+// 2. Klik "Deploy" -> "Manage deployments".
+// 3. Pilih deployment aktif Anda, lalu klik ikon pensil (Edit).
+// 4. Di bagian "Version", pilih "New version".
+// 5. Klik "Deploy". Perubahan Anda kini sudah aktif.
+// =============================================================
