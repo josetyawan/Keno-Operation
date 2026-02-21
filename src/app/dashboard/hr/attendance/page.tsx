@@ -266,26 +266,27 @@ export default function AttendancePage() {
 
     const allUserAttendancesQuery = useMemoFirebase(() => {
         if (!user) return null;
-        const startOfToday = getStartOfDay();
-        const endOfToday = add(startOfToday, { days: 1 });
-        return query(
-            collection(firestore, 'attendances'),
-            where('userId', '==', user.uid),
-            where('checkInTime', '>=', Timestamp.fromDate(startOfToday)),
-            where('checkInTime', '<', Timestamp.fromDate(endOfToday))
-        );
-    }, [user, firestore, today]);
+        return query(collection(firestore, 'attendances'), where('userId', '==', user.uid));
+    }, [user, firestore]);
 
-    const { data: allAttendances, isLoading: isAttendanceLoading } = useCollection<Attendance>(allUserAttendancesQuery);
+    const { data: allUserAttendances, isLoading: isAttendanceLoading } = useCollection<Attendance>(allUserAttendancesQuery);
 
     useEffect(() => {
       setIsLoading(isScheduleLoading || isAttendanceLoading || isProfileLoading);
-      if (!isAttendanceLoading && allAttendances) {
-          setTodayAttendance(allAttendances[0] || null);
+      if (!isAttendanceLoading && allUserAttendances) {
+          const startOfToday = getStartOfDay();
+          const endOfToday = add(startOfToday, { days: 1 });
+
+          const todayAtt = allUserAttendances.find(att => {
+              if (!att.checkInTime || !att.checkInTime.toDate) return false;
+              const checkIn = att.checkInTime.toDate();
+              return checkIn >= startOfToday && checkIn < endOfToday;
+          });
+          setTodayAttendance(todayAtt || null);
       } else if (!isAttendanceLoading) {
           setTodayAttendance(null);
       }
-    }, [allAttendances, isAttendanceLoading, isScheduleLoading, isProfileLoading]);
+    }, [allUserAttendances, isAttendanceLoading, isScheduleLoading, isProfileLoading, today]);
     
     // --- Camera Logic for Main Check-in ---
     useEffect(() => {
