@@ -1,4 +1,3 @@
-
 'use server';
 
 /**
@@ -35,7 +34,7 @@ export type SendTelegramReportInput = z.infer<typeof SendTelegramReportInputSche
 export type SendTelegramReportOutput = z.infer<typeof SendTelegramReportOutputSchema>;
 
 // Define the Telegram bot token and chat ID from environment variables
-const TELEGRAM_BOT_TOKEN = '8043290500:AAGxBvwZvkyASJb3a_q8wEBiveyVE2NN9lY';
+const TELEGRAM_BOT_TOKEN = '7858540741:AAHJS7OqRtGoj3YbgtN3JJ0HYTC99GQi3uQ';
 const TELEGRAM_CHAT_ID = '-4689716037'; 
 
 // Main exported function that wraps the Genkit flow

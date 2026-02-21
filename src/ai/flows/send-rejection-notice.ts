@@ -9,7 +9,7 @@ import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import TelegramBot from 'node-telegram-bot-api';
 
-const TELEGRAM_BOT_TOKEN = '8043290500:AAGxBvwZvkyASJb3a_q8wEBiveyVE2NN9lY';
+const TELEGRAM_BOT_TOKEN = '7858540741:AAHJS7OqRtGoj3YbgtN3JJ0HYTC99GQi3uQ';
 const TELEGRAM_CHAT_ID = '-4689716037';
 
 const SendRejectionNoticeInputSchema = z.object({
