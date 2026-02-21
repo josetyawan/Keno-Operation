@@ -37,7 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Bot, PlusCircle, MapPin, Loader2, Upload, Search, History, Phone, Pencil, Wrench, QrCode, FileSpreadsheet } from 'lucide-react';
+import { Bot, PlusCircle, MapPin, Loader2, Upload, Search, History, Phone, Pencil, Wrench, QrCode, FileSpreadsheet, RefreshCw } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, useDoc, useStorage } from '@/firebase';
 import { collection, query, doc, serverTimestamp, where, getDocs, limit, orderBy } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -432,39 +432,46 @@ export default function AdminPelangganPage() {
     }
   }, [user, currentUserProfile, isUserLoading, isProfileLoading, router]);
   
-  useEffect(() => {
-      if (!searchedPelanggan?.noService) {
-        setSheetHistory([]);
-        return;
+  const handleFetchSheetHistory = async () => {
+    if (!searchedPelanggan?.noService) {
+      toast({
+        variant: 'destructive',
+        title: 'Pelanggan Tidak Ditemukan',
+        description: 'Cari pelanggan terlebih dahulu untuk memuat riwayat.',
+      });
+      return;
+    }
+
+    setIsSheetHistoryLoading(true);
+    setSheetHistory([]); // Clear previous history
+    const serviceNumberToFind = searchedPelanggan.noService.trim();
+    try {
+      const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS6GU4F_Iqvw7u1pkL06KQjDrrdGCu_DshWT0QWeozGpwpUIAc757COSNEnkhrRKH1RnPDqNeXDDNjU/export?format=csv&gid=0&t=' + new Date().getTime());
+      if (!response.ok) throw new Error('Gagal mengambil data dari Google Sheet.');
+
+      const data = await response.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const sheetName = workbook.SheetNames[0];
+      const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+      const history = jsonData.filter((row: any) =>
+        row['No Service']?.toString().trim() === serviceNumberToFind
+      ).sort((a: any, b: any) => new Date(b.Timestamp).getTime() - new Date(a.Timestamp).getTime());
+
+      setSheetHistory(history);
+      if (history.length === 0) {
+        toast({
+          title: 'Riwayat Tidak Ditemukan',
+          description: 'Tidak ada riwayat laporan dari bot yang ditemukan untuk pelanggan ini.',
+        });
       }
-
-      const fetchSheetHistory = async () => {
-        setIsSheetHistoryLoading(true);
-        const serviceNumberToFind = searchedPelanggan.noService.trim();
-        try {
-            const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS6GU4F_Iqvw7u1pkL06KQjDrrdGCu_DshWT0QWeozGpwpUIAc757COSNEnkhrRKH1RnPDqNeXDDNjU/export?format=csv&gid=0&t=' + new Date().getTime());
-            if (!response.ok) throw new Error('Gagal mengambil data dari Google Sheet.');
-            
-            const data = await response.arrayBuffer();
-            const workbook = XLSX.read(data);
-            const sheetName = workbook.SheetNames[0];
-            const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-
-            const history = jsonData.filter((row: any) => 
-                row['No Service']?.toString().trim() === serviceNumberToFind
-            ).sort((a: any, b: any) => new Date(b.Timestamp).getTime() - new Date(a.Timestamp).getTime());
-
-            setSheetHistory(history);
-        } catch (error: any) {
-            toast({ variant: 'destructive', title: 'Gagal Memuat Riwayat', description: 'Tidak dapat mengambil riwayat laporan dari Google Sheet.' });
-            setSheetHistory([]);
-        } finally {
-            setIsSheetHistoryLoading(false);
-        }
-    };
-
-    fetchSheetHistory();
-  }, [searchedPelanggan, toast]);
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Gagal Memuat Riwayat', description: 'Tidak dapat mengambil riwayat laporan dari Google Sheet.' });
+      setSheetHistory([]);
+    } finally {
+      setIsSheetHistoryLoading(false);
+    }
+  };
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -473,6 +480,7 @@ export default function AdminPelangganPage() {
     setIsSearching(true);
     setSearchPerformed(true);
     setSearchedPelanggan(null);
+    setSheetHistory([]); // Clear history on new search
 
     const q = query(collection(firestore, 'pelanggan'), where('noService', '==', searchNoService.trim()), limit(1));
     const querySnapshot = await getDocs(q);
@@ -636,10 +644,20 @@ export default function AdminPelangganPage() {
               </Card>
 
               <Card>
-                  <CardHeader><CardTitle className="flex items-center gap-2"><History /> Riwayat Laporan (dari Bot)</CardTitle></CardHeader>
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <span className="flex items-center gap-2"><History /> Riwayat Laporan (dari Bot)</span>
+                      <Button onClick={handleFetchSheetHistory} disabled={isSheetHistoryLoading || !searchedPelanggan} variant="outline" size="sm">
+                          {isSheetHistoryLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                          Muat Ulang
+                      </Button>
+                    </CardTitle>
+                  </CardHeader>
                   <CardContent>
                         {isSheetHistoryLoading ? (
-                            <Skeleton className="h-24" />
+                           <div className="flex justify-center items-center h-24">
+                                <Loader2 className="h-6 w-6 animate-spin" />
+                            </div>
                         ) : sheetHistory.length > 0 ? (
                             <div className="hidden md:block">
                                 <Table>
@@ -648,7 +666,10 @@ export default function AdminPelangganPage() {
                                 </Table>
                             </div>
                         ) : (
-                            <div className="text-center h-24 flex items-center justify-center text-muted-foreground">Belum ada riwayat laporan dari bot untuk pelanggan ini.</div>
+                            <div className="text-center h-24 flex flex-col items-center justify-center text-muted-foreground">
+                               <p>Riwayat laporan dari bot akan muncul di sini.</p>
+                               <p className="text-xs">Klik "Muat Ulang" untuk mengambil data.</p>
+                            </div>
                         )}
                     </CardContent>
               </Card>
