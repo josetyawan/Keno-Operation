@@ -78,10 +78,11 @@ service cloud.firestore {
     }
 
     match /riwayat-gangguan/{riwayatId} {
-      // Allow write access for the bot API, which is protected by a secret key.
-      // Read access is still protected for app users.
-      allow write: if true;
+      // Allow admins and korlaps to create records (e.g., via CSV import).
+      allow create: if isAdmin() || isKorlap();
       allow read: if hasAllProAccess() || isKorlap();
+      // Only admins can update or delete existing records.
+      allow update, delete: if isAdmin();
     }
 
     match /map-links/{mapLinkId} {

@@ -30,7 +30,7 @@ import {
 } from '@/components/ui/select';
 import { Bot, PlusCircle, MapPin, Loader2, Upload, Search, History, Phone, Pencil, Wrench, QrCode, FileSpreadsheet, DownloadCloud } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, useDoc, useStorage } from '@/firebase';
-import { collection, query, doc, serverTimestamp, where, getDocs, limit, orderBy } from 'firebase/firestore';
+import { collection, query, doc, serverTimestamp, where, getDocs, limit, orderBy, Timestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { UserProfile, Pelanggan, RiwayatGangguan } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -42,8 +42,8 @@ import Image from 'next/image';
 import { format, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import * as XLSX from 'xlsx';
-import { fetchFromSheet } from './actions';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Progress } from '@/components/ui/progress';
 
 const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
 
@@ -416,10 +416,10 @@ export default function AdminPelangganPage() {
   const [isUpdateLocationDialogOpen, setIsUpdateLocationDialogOpen] = useState(false);
   const [isUpdateAssetDialogOpen, setIsUpdateAssetDialogOpen] = useState(false);
 
-  // New state for Sheet data
-  const [isFetchingSheet, setIsFetchingSheet] = useState(false);
-  const [sheetData, setSheetData] = useState<any[] | null>(null);
-  const [sheetError, setSheetError] = useState<string | null>(null);
+  // New state for CSV import
+  const [isImporting, setIsImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
 
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
@@ -479,25 +479,88 @@ export default function AdminPelangganPage() {
     }
     setIsSearching(false);
   };
-
-  const handleFetchFromSheet = async () => {
-    setIsFetchingSheet(true);
-    setSheetData(null);
-    setSheetError(null);
-    try {
-        const data = await fetchFromSheet();
-        if (data.error) {
-            throw new Error(data.message);
+  
+    const handleImportFromCSV = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (!event.target.files || event.target.files.length === 0) {
+            toast({ variant: 'destructive', title: 'Tidak ada file dipilih' });
+            return;
         }
-        setSheetData(data);
-        toast({ title: 'Sukses', description: `${data.length} baris data berhasil diambil dari Google Sheet.`});
-    } catch(error: any) {
-        setSheetError(error.message);
-        toast({ variant: 'destructive', title: 'Gagal Mengambil Data', description: error.message });
-    } finally {
-        setIsFetchingSheet(false);
-    }
-  }
+        setIsImporting(true);
+        setImportProgress(0);
+        const file = event.target.files[0];
+        const reader = new FileReader();
+
+        reader.onload = async (e) => {
+            try {
+                const data = e.target?.result;
+                const workbook = XLSX.read(data, { type: 'binary' });
+                const sheetName = workbook.SheetNames[0];
+                if (!sheetName) throw new Error("File CSV/Excel tidak memiliki sheet.");
+                
+                const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+                if (jsonData.length === 0) {
+                    throw new Error('File CSV/Excel kosong atau formatnya tidak benar.');
+                }
+
+                let importedCount = 0;
+                const totalRows = jsonData.length;
+
+                for (const row of jsonData as any[]) {
+                    const findKey = (aliases: string[]) => aliases.find(alias => row[alias] !== undefined);
+                    
+                    const noServiceKey = findKey(['No Service', 'no service', 'no_service']);
+                    const tanggalLaporKey = findKey(['Tanggal Lapor', 'tanggal lapor', 'tanggal_lapor']);
+
+                    const noService = noServiceKey ? row[noServiceKey] : undefined;
+                    const tanggalLapor = tanggalLaporKey ? row[tanggalLaporKey] : undefined;
+                    
+                    if (!noService || !tanggalLapor) {
+                        console.warn('Skipping row due to missing required fields:', row);
+                        continue;
+                    }
+
+                    let jsDate;
+                    if (typeof tanggalLapor === 'number') {
+                        jsDate = XLSX.SSF.parse_date_code(tanggalLapor);
+                        jsDate = new Date(jsDate.y, jsDate.m - 1, jsDate.d, jsDate.H, jsDate.M, jsDate.S);
+                    } else {
+                        jsDate = new Date(tanggalLapor);
+                    }
+
+                    if (!isValid(jsDate)) {
+                        console.warn('Skipping row due to invalid date:', row);
+                        continue;
+                    }
+                    
+                    const noTiketKey = findKey(['No Tiket', 'no tiket', 'no_tiket']);
+                    const teknisiKey = findKey(['Teknisi', 'teknisi']);
+                    const keteranganKey = findKey(['Keterangan', 'keterangan']);
+
+                    const newRiwayat: Omit<RiwayatGangguan, 'id'> = {
+                        noService: String(noService),
+                        tanggalLapor: Timestamp.fromDate(jsDate),
+                        noTiket: noTiketKey ? String(row[noTiketKey]) : '',
+                        teknisi: teknisiKey ? String(row[teknisiKey]) : '',
+                        keterangan: keteranganKey ? String(row[keteranganKey]) : '',
+                    };
+
+                    await addDocumentNonBlocking(collection(firestore, 'riwayat-gangguan'), newRiwayat);
+                    importedCount++;
+                    setImportProgress((importedCount / totalRows) * 100);
+                }
+                
+                toast({ title: 'Impor Berhasil', description: `${importedCount} dari ${totalRows} baris berhasil diimpor.` });
+            } catch (error: any) {
+                toast({ variant: 'destructive', title: 'Impor Gagal', description: error.message });
+            } finally {
+                setIsImporting(false);
+                setImportProgress(0);
+                setIsImportDialogOpen(false);
+            }
+        };
+        reader.readAsBinaryString(file);
+    };
 
   const handleExportToExcel = async () => {
     if (!isAdmin || !firestore) {
@@ -554,10 +617,29 @@ export default function AdminPelangganPage() {
       <div className="flex items-start justify-between mb-8 flex-wrap gap-4">
         <div><h1 className="text-3xl font-bold tracking-tight">Data Pelanggan & Riwayat Gangguan</h1><p className="text-muted-foreground mt-1">Cari pelanggan berdasarkan No. Service untuk melihat riwayat atau menambah data.</p></div>
         <div className="flex flex-wrap gap-2">
-          <Button onClick={handleFetchFromSheet} variant="secondary" disabled={isFetchingSheet}>
-            {isFetchingSheet ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <DownloadCloud className="mr-2 h-4 w-4" />}
-            Ambil Riwayat dari Sheet
-          </Button>
+          <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+              <DialogTrigger asChild>
+                  <Button variant="secondary"><Upload className="mr-2 h-4 w-4" /> Import Riwayat dari CSV</Button>
+              </DialogTrigger>
+              <DialogContent>
+                  <DialogHeader>
+                      <DialogTitle>Import Riwayat Gangguan dari CSV</DialogTitle>
+                      <DialogDescription>Unduh data riwayat gangguan dari Google Sheet sebagai file .csv, lalu unggah di sini. Pastikan nama kolom seperti 'No Service' dan 'Tanggal Lapor' ada di file Anda.</DialogDescription>
+                  </DialogHeader>
+                   <div className="py-4 grid gap-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="csv-file">Pilih File CSV</Label>
+                            <Input id="csv-file" type="file" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" onChange={handleImportFromCSV} disabled={isImporting} />
+                        </div>
+                        {isImporting && (
+                            <div className="flex flex-col gap-2 text-sm text-muted-foreground">
+                                <p>Mengimpor {importProgress.toFixed(0)}%...</p>
+                                <Progress value={importProgress} className="w-full" />
+                            </div>
+                        )}
+                    </div>
+              </DialogContent>
+          </Dialog>
           {isAdmin && (
               <Button onClick={handleExportToExcel} variant="outline">
                   <FileSpreadsheet className="mr-2 h-4 w-4" />
@@ -581,45 +663,6 @@ export default function AdminPelangganPage() {
             </form>
         </CardContent>
       </Card>
-
-      {sheetData && (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Data Riwayat Gangguan dari Google Sheet</CardTitle>
-            <CardDescription>Menampilkan {sheetData.length} baris data yang berhasil diambil.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  {sheetData[0] && Object.keys(sheetData[0]).map(key => <TableHead key={key}>{key}</TableHead>)}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sheetData.slice(0, 5).map((row, index) => (
-                  <TableRow key={index}>
-                    {Object.values(row).map((value: any, i) => <TableCell key={i}>{value}</TableCell>)}
-                  </TableRow>
-                ))}
-                {sheetData.length > 5 && (
-                    <TableRow><TableCell colSpan={Object.keys(sheetData[0]).length} className="text-center text-muted-foreground">...dan {sheetData.length - 5} baris lainnya.</TableCell></TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
-
-      {sheetError && (
-        <Card className="mb-6 border-destructive">
-             <CardHeader>
-                <CardTitle className="text-destructive">Gagal Mengambil Data dari Sheet</CardTitle>
-             </CardHeader>
-             <CardContent>
-                <p className="text-sm text-destructive">{sheetError}</p>
-             </CardContent>
-        </Card>
-      )}
       
       {isSearching && <div className="flex justify-center items-center p-8"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>}
 
