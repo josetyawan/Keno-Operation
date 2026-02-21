@@ -435,12 +435,20 @@ export default function AdminPelangganPage() {
     }
     return query(
       collection(firestore, 'riwayat-gangguan'),
-      where('noService', '==', searchedPelanggan.noService),
-      orderBy('tanggalLapor', 'desc')
+      where('noService', '==', searchedPelanggan.noService)
     );
   }, [firestore, searchedPelanggan]);
 
-  const { data: riwayatGangguan, isLoading: isRiwayatLoading } = useCollection<RiwayatGangguan>(riwayatQuery);
+  const { data: unsortedRiwayat, isLoading: isRiwayatLoading } = useCollection<RiwayatGangguan>(riwayatQuery);
+
+  const riwayatGangguan = useMemo(() => {
+    if (!unsortedRiwayat) return null;
+    return [...unsortedRiwayat].sort((a, b) => {
+        const timeA = safeToDate(a.tanggalLapor)?.getTime() ?? 0;
+        const timeB = safeToDate(b.tanggalLapor)?.getTime() ?? 0;
+        return timeB - timeA; // descending
+    });
+  }, [unsortedRiwayat]);
 
 
   const handleSearch = async (e: React.FormEvent) => {
