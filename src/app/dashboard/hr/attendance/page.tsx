@@ -260,27 +260,33 @@ export default function AttendancePage() {
         }
     }, [schedules, isScheduleLoading]);
 
-    const attendanceQuery = useMemoFirebase(() => {
+    // Refactored query to avoid composite index
+    const allUserAttendancesQuery = useMemoFirebase(() => {
         if (!user) return null;
-        const start = Timestamp.fromDate(today);
-        const end = Timestamp.fromDate(add(today, { days: 1 }));
         return query(
             collection(firestore, 'attendances'),
-            where('userId', '==', user.uid),
-            where('checkInTime', '>=', start),
-            where('checkInTime', '<', end),
-            limit(1)
+            where('userId', '==', user.uid)
         );
-    }, [firestore, today, user]);
+    }, [user, firestore]);
 
-    const { data: attendances, isLoading: isAttendanceLoading } = useCollection<Attendance>(attendanceQuery);
+    const { data: allAttendances, isLoading: isAttendanceLoading } = useCollection<Attendance>(allUserAttendancesQuery);
 
     useEffect(() => {
       setIsLoading(isScheduleLoading || isAttendanceLoading);
-        if (!isAttendanceLoading) {
-            setTodayAttendance(attendances?.[0] || null);
-        }
-    }, [attendances, isAttendanceLoading, isScheduleLoading]);
+      if (!isAttendanceLoading && allAttendances) {
+          const startOfToday = getStartOfDay();
+          const endOfToday = add(startOfToday, { days: 1 });
+          // Find the record for today from all the user's records
+          const attendanceForToday = allAttendances.find(att => {
+              if (!att.checkInTime || !att.checkInTime.toDate) return false;
+              const checkInTime = att.checkInTime.toDate();
+              return checkInTime >= startOfToday && checkInTime < endOfToday;
+          });
+          setTodayAttendance(attendanceForToday || null);
+      } else if (!isAttendanceLoading) {
+          setTodayAttendance(null);
+      }
+    }, [allAttendances, isAttendanceLoading, isScheduleLoading, today]);
     
     // --- Camera Logic for Main Check-in ---
     useEffect(() => {
