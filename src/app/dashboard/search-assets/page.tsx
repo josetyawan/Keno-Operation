@@ -52,9 +52,6 @@ export default function SearchAssetsPage() {
   
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
-
-  const canSearch = searchServiceArea !== 'all';
-  const hasSearched = canSearch && searchName.trim().length > 0;
   
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
     useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
@@ -141,7 +138,7 @@ export default function SearchAssetsPage() {
   }, [user, currentUserProfile, isUserLoading, isProfileLoading, router]);
 
   const assetsQuery = useMemoFirebase(() => {
-    if (!currentUserProfile || !hasSearched) {
+    if (!currentUserProfile || searchServiceArea === 'all') {
       return null;
     }
     const collectionRef = collection(firestore, 'network-assets');
@@ -154,7 +151,7 @@ export default function SearchAssetsPage() {
     }
     
     return query(collectionRef, ...constraints);
-  }, [firestore, currentUserProfile, hasSearched, searchServiceArea]);
+  }, [firestore, currentUserProfile, searchServiceArea]);
 
   const { data: queriedAssets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(assetsQuery);
 
@@ -163,7 +160,9 @@ export default function SearchAssetsPage() {
     
     const searchTerm = searchName.trim().toUpperCase();
 
-    if (!searchTerm) return [];
+    if (!searchTerm) {
+        return [];
+    }
 
     return queriedAssets.filter(asset => {
         const assetName = (asset.name || '').toUpperCase();
@@ -176,34 +175,29 @@ export default function SearchAssetsPage() {
             return asset.siteId?.toUpperCase().includes(searchTerm) ?? false;
         }
         
-        const isGeneralSearch = !searchTerm.startsWith('ODP') && !searchTerm.startsWith('ODC-') && !searchTerm.startsWith('FTM-');
-
-        if (isGeneralSearch) {
-            if (assetType === 'ODC' || assetType === 'OLT') {
-                return assetName.includes(searchTerm);
-            }
-            return false;
-        } else {
-            if (searchTerm.startsWith('ODP')) {
-                if (assetType !== 'ODP') return false;
-                const parts = searchTerm.split('-');
-                if (searchTerm.includes('/') || parts.length > 2) {
-                    return assetName.startsWith(searchTerm);
-                }
-                return false;
-            }
-            if (searchTerm.startsWith('ODC-')) {
-                if (assetType !== 'ODC') return false;
-                const parts = searchTerm.split('-');
-                if (parts.length > 2 && parts[2]) {
-                    return assetName.startsWith(searchTerm);
-                }
-                return false;
-            }
-            if (searchTerm.startsWith('FTM-')) {
-                if (assetType !== 'FTM') return false;
+        if (searchTerm.startsWith('ODP-')) {
+            if (assetType !== 'ODP') return false;
+            const parts = searchTerm.split('-');
+            if (searchTerm.includes('/') || (parts.length > 2 && parts[2])) {
                 return assetName.startsWith(searchTerm);
             }
+            return false;
+        }
+        if (searchTerm.startsWith('ODC-')) {
+            if (assetType !== 'ODC') return false;
+            const parts = searchTerm.split('-');
+            if (parts.length > 2 && parts[2]) {
+                return assetName.startsWith(searchTerm);
+            }
+            return false;
+        }
+        if (searchTerm.startsWith('FTM-')) {
+            if (assetType !== 'FTM') return false;
+            return assetName.startsWith(searchTerm);
+        }
+
+        if (assetType === 'ODC' || assetType === 'OLT') {
+            return assetName.includes(searchTerm);
         }
         
         return false;
@@ -253,6 +247,9 @@ export default function SearchAssetsPage() {
 
 
   const isLoading = isUserLoading || isProfileLoading || areMancoreLinksLoading || areMapLinksLoading;
+  
+  const canSearch = searchServiceArea !== 'all';
+  const hasTyped = searchName.trim().length > 0;
   
   if (isLoading) {
       return (
@@ -338,7 +335,7 @@ export default function SearchAssetsPage() {
                 <div>
                     <CardTitle>Daftar Aset</CardTitle>
                     <CardDescription>
-                        {hasSearched ? `Menampilkan ${paginatedAssets.length} dari ${filteredAssets.length} aset yang cocok.` : (canSearch ? 'Ketik nama aset, Site ID, atau Tenant ID di atas untuk mencari.' : 'Pilih Kategori/Area untuk melihat data.')}
+                        {canSearch && hasTyped ? `Menampilkan ${paginatedAssets.length} dari ${filteredAssets.length} aset yang cocok.` : (canSearch ? 'Ketik nama aset, Site ID, atau Tenant ID di atas untuk mencari.' : 'Pilih Kategori/Area untuk melihat data.')}
                     </CardDescription>
                 </div>
                 {filteredAssets.length > 0 && (
@@ -439,7 +436,7 @@ export default function SearchAssetsPage() {
                   <TableCell colSpan={isNodeBSearch ? 12 : 10} className="h-24 text-center">
                     {!canSearch 
                       ? "Silakan pilih Kategori/Area untuk memulai." 
-                      : !hasSearched 
+                      : !hasTyped 
                       ? "Ketik nama aset, Site ID, atau Tenant ID di atas untuk mencari." 
                       : "Tidak ada aset yang cocok dengan filter Anda."}
                   </TableCell>

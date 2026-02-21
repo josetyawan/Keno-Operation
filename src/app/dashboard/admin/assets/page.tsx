@@ -82,9 +82,6 @@ export default function AdminAssetsPage() {
   
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
-
-  const canSearch = searchServiceArea !== 'all';
-  const hasSearched = canSearch && searchName.trim().length > 0;
   
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
     useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
@@ -125,9 +122,9 @@ export default function AdminAssetsPage() {
     }
   }, [user, currentUserProfile, isUserLoading, isProfileLoading, router]);
 
-  // Fetch assets only when user has typed something to search.
+  // Fetch assets only when a service area is selected. Filtering by name is done on the client.
   const assetsQuery = useMemoFirebase(() => {
-    if (isUserLoading || isProfileLoading || !user || currentUserProfile?.role !== 'admin' || !hasSearched) {
+    if (isUserLoading || isProfileLoading || !user || !currentUserProfile || searchServiceArea === 'all') {
       return null;
     }
     const collectionRef = collection(firestore, 'network-assets');
@@ -140,7 +137,7 @@ export default function AdminAssetsPage() {
     }
     
     return query(collectionRef, ...constraints);
-  }, [firestore, currentUserProfile, isUserLoading, isProfileLoading, user, hasSearched, searchServiceArea]);
+  }, [firestore, currentUserProfile, isUserLoading, isProfileLoading, user, searchServiceArea]);
 
 
   const { data: queriedAssets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(assetsQuery);
@@ -150,7 +147,9 @@ export default function AdminAssetsPage() {
     
     const searchTerm = searchName.trim().toUpperCase();
 
-    if (!searchTerm) return [];
+    if (!searchTerm) {
+        return []; // Show nothing until user types
+    }
 
     return queriedAssets.filter(asset => {
         const assetName = (asset.name || '').toUpperCase();
@@ -163,34 +162,31 @@ export default function AdminAssetsPage() {
             return asset.siteId?.toUpperCase().includes(searchTerm) ?? false;
         }
         
-        const isGeneralSearch = !searchTerm.startsWith('ODP') && !searchTerm.startsWith('ODC-') && !searchTerm.startsWith('FTM-');
-
-        if (isGeneralSearch) {
-            if (assetType === 'ODC' || assetType === 'OLT') {
-                return assetName.includes(searchTerm);
-            }
-            return false;
-        } else {
-            if (searchTerm.startsWith('ODP')) {
-                if (assetType !== 'ODP') return false;
-                const parts = searchTerm.split('-');
-                if (searchTerm.includes('/') || parts.length > 2) {
-                    return assetName.startsWith(searchTerm);
-                }
-                return false;
-            }
-            if (searchTerm.startsWith('ODC-')) {
-                if (assetType !== 'ODC') return false;
-                const parts = searchTerm.split('-');
-                if (parts.length > 2 && parts[2]) {
-                    return assetName.startsWith(searchTerm);
-                }
-                return false;
-            }
-            if (searchTerm.startsWith('FTM-')) {
-                if (assetType !== 'FTM') return false;
+        // Specific prefix searches
+        if (searchTerm.startsWith('ODP-')) {
+            if (assetType !== 'ODP') return false;
+            const parts = searchTerm.split('-');
+            if (searchTerm.includes('/') || (parts.length > 2 && parts[2])) {
                 return assetName.startsWith(searchTerm);
             }
+            return false;
+        }
+        if (searchTerm.startsWith('ODC-')) {
+            if (assetType !== 'ODC') return false;
+            const parts = searchTerm.split('-');
+            if (parts.length > 2 && parts[2]) {
+                return assetName.startsWith(searchTerm);
+            }
+            return false;
+        }
+        if (searchTerm.startsWith('FTM-')) {
+            if (assetType !== 'FTM') return false;
+            return assetName.startsWith(searchTerm);
+        }
+
+        // General search for ODC and OLT if no specific prefix is matched
+        if (assetType === 'ODC' || assetType === 'OLT') {
+            return assetName.includes(searchTerm);
         }
         
         return false;
@@ -867,6 +863,9 @@ export default function AdminAssetsPage() {
 
 
   const isLoading = isUserLoading || isProfileLoading || areMancoreLinksLoading || areMapLinksLoading;
+  
+  const canSearch = searchServiceArea !== 'all';
+  const hasTyped = searchName.trim().length > 0;
 
   if (isLoading && !queriedAssets) {
       return (
@@ -997,7 +996,7 @@ export default function AdminAssetsPage() {
                 <div>
                     <CardTitle>Daftar Aset</CardTitle>
                     <CardDescription>
-                        {hasSearched ? `Menampilkan ${paginatedAssets.length} dari ${filteredAssets.length} aset yang cocok.` : (canSearch ? 'Ketik nama aset untuk memulai pencarian.' : 'Pilih Kategori/Area untuk mengaktifkan pencarian.')}
+                        {canSearch && hasTyped ? `Menampilkan ${paginatedAssets.length} dari ${filteredAssets.length} aset yang cocok.` : (canSearch ? 'Ketik nama aset untuk memulai pencarian.' : 'Pilih Kategori/Area untuk mengaktifkan pencarian.')}
                     </CardDescription>
                 </div>
                 {filteredAssets.length > 0 && (
@@ -1124,7 +1123,7 @@ export default function AdminAssetsPage() {
                   <TableCell colSpan={isNodeBSearch ? 12 : 10} className="h-24 text-center">
                      {!canSearch 
                       ? "Silakan pilih Kategori/Area untuk memulai." 
-                      : !hasSearched 
+                      : !hasTyped
                       ? "Ketik nama aset di atas untuk mencari." 
                       : "Tidak ada aset yang cocok dengan pencarian Anda."}
                   </TableCell>
