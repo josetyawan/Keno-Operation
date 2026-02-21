@@ -50,7 +50,7 @@ import { Trash2, Upload, Search, Loader2, ChevronLeft, ChevronRight, MapPin } fr
 import { Progress } from "@/components/ui/progress";
 import { useUser, useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking, useDoc, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
 import { collection, query, doc, serverTimestamp, writeBatch, where, getDocs, limit, type QueryConstraint } from 'firebase/firestore';
-import type { UserProfile, NetworkAsset, MancoreLink, MapLink } from '@/lib/types';
+import type { UserProfile, NetworkAsset } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
@@ -92,10 +92,10 @@ export default function AdminAssetsPage() {
   
     // Fetch links to create dynamic service area list
   const mancoreLinksQuery = useMemoFirebase(() => collection(firestore, 'mancore-links'), [firestore]);
-  const { data: mancoreLinks, isLoading: areMancoreLinksLoading } = useCollection<MancoreLink>(mancoreLinksQuery);
+  const { data: mancoreLinks, isLoading: areMancoreLinksLoading } = useCollection(mancoreLinksQuery);
 
   const mapLinksQuery = useMemoFirebase(() => collection(firestore, 'map-links'), [firestore]);
-  const { data: mapLinks, isLoading: areMapLinksLoading } = useCollection<MapLink>(mapLinksQuery);
+  const { data: mapLinks, isLoading: areMapLinksLoading } = useCollection(mapLinksQuery);
   
   const dynamicServiceAreas = useMemo(() => {
     const allSAs = new Set<string>(baseServiceAreas);
@@ -588,8 +588,8 @@ export default function AdminAssetsPage() {
                 const routerRanCol = findColumn(firstRowKeys, ['router/ran']);
                 const alamatCol = findColumn(firstRowKeys, ['alamat']);
 
-                if (!siteIdCol || !siteNameCol) {
-                    throw new Error("Kolom wajib (SITE ID/BASE ID, SITE NAME) untuk impor NODE-B tidak ditemukan.");
+                if (!siteIdCol) {
+                    throw new Error("Kolom wajib (SITE ID/BASE ID) untuk impor NODE-B tidak ditemukan.");
                 }
 
                 let totalCreated = 0;
@@ -629,18 +629,18 @@ export default function AdminAssetsPage() {
                             const siteId = row[siteIdCol]?.toString().trim();
                             if (!siteId) continue;
                             
-                            const latValue = row[latCol!]?.toString().replace(',', '.');
-                            const longValue = row[longCol!]?.toString().replace(',', '.');
-                            const sto = row[stoCol!]?.toString().trim() || 'N/A';
+                            const latValue = latCol ? row[latCol!]?.toString().replace(',', '.') : undefined;
+                            const longValue = longCol ? row[longCol!]?.toString().replace(',', '.') : undefined;
+                            const sto = stoCol ? row[stoCol!]?.toString().trim() : 'N/A';
 
                             const assetData: Partial<NetworkAsset> = {
-                                name: row[siteNameCol!]?.toString().trim() || siteId,
+                                name: siteNameCol ? row[siteNameCol!]?.toString().trim() : siteId,
                                 assetType: 'NODE-B',
                                 subType: 'N/A',
                                 serviceArea: mapNodeBToServiceArea(siteId),
                                 sto: sto,
                                 siteId: siteId,
-                                siteName: row[siteNameCol!]?.toString().trim(),
+                                siteName: siteNameCol ? row[siteNameCol!]?.toString().trim() : '',
                             };
 
                             if (latValue && longValue) assetData.coordinates = `${latValue}, ${longValue}`;
@@ -999,7 +999,7 @@ export default function AdminAssetsPage() {
               {areAssetsLoading && hasSearched ? (
                  Array.from({ length: 5 }).map((_, index) => (
                     <TableRow key={index}>
-                        <TableCell colSpan={isNodeBSearch ? 12 : 11}><Skeleton className="h-6 w-full" /></TableCell>
+                        <TableCell colSpan={isNodeBSearch ? 12 : 10}><Skeleton className="h-6 w-full" /></TableCell>
                     </TableRow>
                 ))
               ) : paginatedAssets.length > 0 && hasSearched ? (
@@ -1008,7 +1008,7 @@ export default function AdminAssetsPage() {
                   const googleMapsUrl = coords && coords.length === 2 ? `https://www.google.com/maps/search/?api=1&query=${coords[0]},${coords[1]}` : null;
                   return isNodeBSearch ? (
                      <TableRow key={a.id}>
-                        <TableCell>{a.siteId}</TableCell>
+                        <TableCell className="font-medium">{a.siteId}</TableCell>
                         <TableCell>{a.oltMerk}</TableCell>
                         <TableCell>{a.splitterOlt}</TableCell>
                         <TableCell>{a.snOnt}</TableCell>
@@ -1076,7 +1076,7 @@ export default function AdminAssetsPage() {
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={isNodeBSearch ? 12 : 11} className="h-24 text-center">
+                  <TableCell colSpan={isNodeBSearch ? 12 : 10} className="h-24 text-center">
                      {!canSearch 
                       ? "Silakan pilih Service Area untuk memulai." 
                       : !hasSearched 

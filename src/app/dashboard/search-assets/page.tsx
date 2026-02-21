@@ -327,7 +327,7 @@ export default function SearchAssetsPage() {
             <TableBody>
               {areAssetsLoading && hasSearched ? (
                  Array.from({ length: 5 }).map((_, index) => (
-                    <TableRow key={index}><TableCell colSpan={isNodeBSearch ? 12 : 11}><Skeleton className="h-6 w-full" /></TableCell></TableRow>
+                    <TableRow key={index}><TableCell colSpan={isNodeBSearch ? 12 : 10}><Skeleton className="h-6 w-full" /></TableCell></TableRow>
                 ))
               ) : paginatedAssets.length > 0 && hasSearched ? (
                 paginatedAssets.map(a => {
@@ -335,7 +335,7 @@ export default function SearchAssetsPage() {
                   const googleMapsUrl = coords && coords.length === 2 ? `https://www.google.com/maps/search/?api=1&amp;query=${coords[0]},${coords[1]}` : null;
                   return isNodeBSearch ? (
                      <TableRow key={a.id}>
-                        <TableCell>{a.siteId}</TableCell>
+                        <TableCell className="font-medium">{a.siteId}</TableCell>
                         <TableCell>{a.oltMerk}</TableCell>
                         <TableCell>{a.splitterOlt}</TableCell>
                         <TableCell>{a.snOnt}</TableCell>
@@ -379,7 +379,7 @@ export default function SearchAssetsPage() {
                 )})
               ) : (
                 <TableRow>
-                  <TableCell colSpan={isNodeBSearch ? 12 : 11} className="h-24 text-center">
+                  <TableCell colSpan={isNodeBSearch ? 12 : 10} className="h-24 text-center">
                     {!canSearch 
                       ? "Silakan pilih Service Area untuk memulai." 
                       : !hasSearched 

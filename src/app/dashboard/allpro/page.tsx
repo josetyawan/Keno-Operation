@@ -58,6 +58,7 @@ const SA_CODE_MAPPING: Record<string, NetworkAsset['serviceArea']> = {
 };
 
 const getAssetServiceArea = (asset: NetworkAsset): NetworkAsset['serviceArea'] | 'Unmap' => {
+    // Handle NODE-B first based on siteId
     if (asset.assetType === 'NODE-B' && asset.siteId) {
         const upperSiteId = asset.siteId.toUpperCase();
         if (upperSiteId.includes('BLA')) return 'SA BLORA';
@@ -67,23 +68,28 @@ const getAssetServiceArea = (asset: NetworkAsset): NetworkAsset['serviceArea'] |
         if (upperSiteId.includes('GRO')) return 'SA PURWODADI';
         if (upperSiteId.includes('PAT')) return 'SA PATI';
         if (upperSiteId.includes('RBG')) return 'SA REMBANG';
-        return 'Unmap'; // Fallback for unmapped site IDs
+        return 'Unmap'; // Important: Fallback for unmapped NODE-B
     }
     
+    // Handle Mitratel based on its own serviceArea property
     if (asset.assetType === 'MITRATEL' && asset.serviceArea) {
       return asset.serviceArea as NetworkAsset['serviceArea'];
     }
     
+    // Handle OLT, FTM, ODC, ODP, etc.
     const upperAssetName = (asset.name || '').toUpperCase();
     const upperSto = (asset.sto || '').toUpperCase().trim();
 
+    // Check by asset name first
     for (const code in SA_CODE_MAPPING) {
+        // Use a regex to avoid partial matches within words (e.g., 'PAT' in 'SEPATU')
         const regex = new RegExp(`[\\s-_]${code}[\\s-_]|^${code}[\\s-_]|[\\s-_]${code}$|^${code}$`);
         if (regex.test(upperAssetName)) {
             return SA_CODE_MAPPING[code];
         }
     }
 
+    // If no match in name, check by STO code
     if (upperSto) {
        for (const code in SA_CODE_MAPPING) {
             if (upperSto.includes(code)) {
@@ -91,6 +97,8 @@ const getAssetServiceArea = (asset: NetworkAsset): NetworkAsset['serviceArea'] |
             }
         }
     }
+    
+    // Default fallback if no other rule matches for these asset types
     return 'SA KUDUS';
 };
 
@@ -148,7 +156,7 @@ export default function AllproPage() {
 
         const newStatsByServiceArea = allAssets.reduce((acc, asset) => {
             const correctAssetSA = getAssetServiceArea(asset);
-            if (acc[correctAssetSA]) {
+            if (correctAssetSA !== 'Unmap' && acc[correctAssetSA]) {
                 const assetTypeUpper = (asset.assetType || '').toUpperCase();
                 const subTypeUpper = (asset.subType || '').toUpperCase().trim();
                 switch (assetTypeUpper) {
