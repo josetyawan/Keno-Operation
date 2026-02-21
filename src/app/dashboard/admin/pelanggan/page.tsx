@@ -344,15 +344,39 @@ export default function AdminPelangganPage() {
       {searchedPelanggan && (
           <div className="space-y-6">
               <Card>
-                  <CardHeader><CardTitle>Detail Pelanggan</CardTitle></CardHeader>
-                  <CardContent className="grid md:grid-cols-3 gap-4 text-sm">
-                      <div><p className="text-muted-foreground">No. Service</p><p className="font-bold text-base">{searchedPelanggan.noService}</p></div>
-                      <div><p className="text-muted-foreground">Nama</p><p className="font-semibold">{searchedPelanggan.namaPelanggan}</p></div>
-                      <div><p className="text-muted-foreground">Service Area</p><p>{searchedPelanggan.serviceArea}</p></div>
-                      <div className="md:col-span-2"><p className="text-muted-foreground">Alamat</p><p>{searchedPelanggan.alamat || '-'}</p></div>
-                      <div><p className="text-muted-foreground">No. Telepon</p><p>{searchedPelanggan.nomorTelepon || '-'}</p></div>
-                      <div><p className="text-muted-foreground">Koordinat</p><Link href={`https://www.google.com/maps/search/?api=1&query=${searchedPelanggan.koordinat}`} target="_blank" className="text-blue-600 hover:underline flex items-center gap-1">{searchedPelanggan.koordinat} <MapPin className="h-4 w-4" /></Link></div>
-                  </CardContent>
+                <CardHeader><CardTitle>Detail Pelanggan</CardTitle></CardHeader>
+                <CardContent>
+                    <dl className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-6 text-sm">
+                        <div className="flex flex-col">
+                            <dt className="text-muted-foreground">No. Service</dt>
+                            <dd className="font-bold text-base">{searchedPelanggan.noService}</dd>
+                        </div>
+                        <div className="flex flex-col">
+                            <dt className="text-muted-foreground">Nama</dt>
+                            <dd className="font-semibold">{searchedPelanggan.namaPelanggan}</dd>
+                        </div>
+                        <div className="flex flex-col">
+                            <dt className="text-muted-foreground">Service Area</dt>
+                            <dd>{searchedPelanggan.serviceArea}</dd>
+                        </div>
+                        <div className="flex flex-col md:col-span-2">
+                            <dt className="text-muted-foreground">Alamat</dt>
+                            <dd>{searchedPelanggan.alamat || '-'}</dd>
+                        </div>
+                        <div className="flex flex-col">
+                            <dt className="text-muted-foreground">No. Telepon</dt>
+                            <dd>{searchedPelanggan.nomorTelepon || '-'}</dd>
+                        </div>
+                        <div className="flex flex-col">
+                            <dt className="text-muted-foreground">Koordinat</dt>
+                            <dd>
+                                <Link href={`https://www.google.com/maps/search/?api=1&query=${searchedPelanggan.koordinat}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
+                                    {searchedPelanggan.koordinat} <MapPin className="h-4 w-4" />
+                                </Link>
+                            </dd>
+                        </div>
+                    </dl>
+                </CardContent>
               </Card>
 
               <Card>
@@ -362,7 +386,7 @@ export default function AdminPelangganPage() {
                 </CardHeader>
                 <CardContent>
                     <Button asChild className="w-full">
-                        <Link href="https://t.me/B2BLapor_bot" target="_blank" rel="noopener noreferrer">
+                        <Link href="https.t.me/B2BLapor_bot" target="_blank" rel="noopener noreferrer">
                             <Bot className="mr-2 h-4 w-4" /> Buka @B2BLapor_bot
                         </Link>
                     </Button>
@@ -371,26 +395,62 @@ export default function AdminPelangganPage() {
 
               <Card>
                   <CardHeader>
-                      <div className="flex justify-between items-center">
-                         <CardTitle className="flex items-center gap-2"><History /> Riwayat Laporan (dari Bot)</CardTitle>
-                      </div>
+                      <CardTitle className="flex items-center gap-2"><History /> Riwayat Laporan (dari Bot)</CardTitle>
                   </CardHeader>
                   <CardContent>
-                      {isSheetHistoryLoading ? <Skeleton className="h-24" /> : (
-                          <Table>
-                              <TableHeader><TableRow><TableHead>Tanggal Lapor</TableHead><TableHead>No. Tiket DSC</TableHead><TableHead>Keluhan</TableHead></TableRow></TableHeader>
-                              <TableBody>
-                                  {sheetHistory.length > 0 ? sheetHistory.map((g, i) => (
-                                      <TableRow key={i}>
-                                          <TableCell>{g['Timestamp'] || '-'}</TableCell>
-                                          <TableCell>{g['No Tiket DSC'] || '-'}</TableCell>
-                                          <TableCell className="max-w-xs truncate">{g['Keluhan']}</TableCell>
-                                      </TableRow>
-                                  )) : <TableRow><TableCell colSpan={3} className="text-center h-24">Belum ada riwayat laporan dari bot untuk pelanggan ini.</TableCell></TableRow>}
-                              </TableBody>
-                          </Table>
-                      )}
-                  </CardContent>
+                        {isSheetHistoryLoading ? (
+                            <Skeleton className="h-24" />
+                        ) : sheetHistory.length > 0 ? (
+                            <>
+                                {/* Desktop Table */}
+                                <div className="hidden md:block">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Tanggal Lapor</TableHead>
+                                                <TableHead>No. Tiket DSC</TableHead>
+                                                <TableHead>Keluhan</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {sheetHistory.map((g, i) => (
+                                                <TableRow key={i}>
+                                                    <TableCell className="whitespace-nowrap">{g['Timestamp'] || '-'}</TableCell>
+                                                    <TableCell>{g['No Tiket DSC'] || '-'}</TableCell>
+                                                    <TableCell>{g['Keluhan']}</TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                                {/* Mobile Cards */}
+                                <div className="space-y-4 md:hidden">
+                                    {sheetHistory.map((g, i) => (
+                                        <Card key={i} className="p-4">
+                                            <dl className="grid gap-3">
+                                                <div className="flex flex-col">
+                                                    <dt className="text-sm font-medium text-muted-foreground">Tanggal Lapor</dt>
+                                                    <dd>{g['Timestamp'] || '-'}</dd>
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <dt className="text-sm font-medium text-muted-foreground">No. Tiket DSC</dt>
+                                                    <dd>{g['No Tiket DSC'] || '-'}</dd>
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <dt className="text-sm font-medium text-muted-foreground">Keluhan</dt>
+                                                    <dd>{g['Keluhan']}</dd>
+                                                </div>
+                                            </dl>
+                                        </Card>
+                                    ))}
+                                </div>
+                            </>
+                        ) : (
+                            <div className="text-center h-24 flex items-center justify-center text-muted-foreground">
+                                Belum ada riwayat laporan dari bot untuk pelanggan ini.
+                            </div>
+                        )}
+                    </CardContent>
               </Card>
           </div>
       )}
@@ -404,5 +464,3 @@ export default function AdminPelangganPage() {
     </>
   );
 }
-
-    
