@@ -361,9 +361,7 @@ export default function AdminSchedulesPage() {
             const data = e.target?.result;
             const workbook = XLSX.read(data, { type: 'binary' });
             const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-            // IMPORTANT CHANGE: Set `raw` to `false` to get the formatted string text from cells,
-            // which prevents Excel from auto-converting NIKs to numbers.
-            const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false, defval: null });
+            const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: null });
     
             if (jsonData.length === 0) {
                 throw new Error("Sheet Excel kosong.");
