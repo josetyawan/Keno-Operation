@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -41,6 +42,7 @@ const adminNavGroups = [
       { href: '/dashboard/admin/hr/schedules', label: 'Manajemen Jadwal', icon: CalendarClock, access: 'korlap' },
       { href: '/dashboard/admin/hr/holidays', label: 'Manajemen Hari Libur', icon: CalendarOff, access: 'admin' },
       { href: '/dashboard/hr/work-schedule', label: 'Jadwal Kerja', icon: CalendarDays, access: 'korlap' },
+      { href: '/dashboard/hr/attendance/rekap', label: 'Rekap Absensi', icon: ClipboardCheck, access: 'korlap' },
       { href: '/dashboard/alker/rekap', label: 'Rekap Alker', icon: ClipboardCheck, access: 'korlap' },
     ]
   },

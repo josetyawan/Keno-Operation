@@ -105,7 +105,7 @@ service cloud.firestore {
 
     match /attendances/{attendanceId} {
       allow get: if isOwner(resource.data.userId) || isAdmin() || isKorlap();
-      allow list: if isApproved();
+      allow list: if isAdmin() || isKorlap();
       allow create: if isCreatingOwn('userId');
       allow update, delete: if isAdmin();
     }
