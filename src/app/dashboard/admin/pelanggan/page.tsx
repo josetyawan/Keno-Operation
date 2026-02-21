@@ -470,11 +470,42 @@ export default function AdminPelangganPage() {
       const csvData = await response.text();
       const workbook = XLSX.read(csvData, { type: 'string' });
       const sheetName = workbook.SheetNames[0];
-      const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { raw: false });
+      if (!sheetName) {
+        throw new Error('File Google Sheet tidak memiliki sheet yang dapat dibaca.');
+      }
+      const jsonData: any[][] = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, raw: false, blankrows: false });
 
-      const history = jsonData.filter((row: any) =>
-        row['No Service']?.toString().trim() === serviceNumberToFind
-      ).sort((a: any, b: any) => parseIndonesianDate(b.Tanggal).getTime() - parseIndonesianDate(a.Tanggal).getTime());
+      if (jsonData.length < 1) {
+        throw new Error('Sheet kosong atau tidak memiliki header.');
+      }
+      
+      const headerRow: string[] = jsonData[0].map(h => String(h));
+      const dataRows = jsonData.slice(1);
+
+      const findIndex = (headers: string[], keys: string[]) => {
+          const lowerKeys = keys.map(k => k.toLowerCase());
+          return headers.findIndex(h => h && lowerKeys.includes(h.toString().toLowerCase().trim()));
+      };
+
+      const noServiceIndex = findIndex(headerRow, ['no service']);
+      const tanggalIndex = findIndex(headerRow, ['tanggal']);
+      const noTiketIndex = findIndex(headerRow, ['no tiket']);
+      const teknisiIndex = findIndex(headerRow, ['teknisi']);
+      const keteranganIndex = findIndex(headerRow, ['keterangan']);
+
+      if (noServiceIndex === -1) {
+          throw new Error("Kolom 'No Service' tidak ditemukan di Google Sheet.");
+      }
+
+      const history = dataRows
+        .filter((row: any) => row[noServiceIndex]?.toString().trim() === serviceNumberToFind)
+        .map((row: any) => ({
+            Tanggal: tanggalIndex !== -1 ? row[tanggalIndex] : '-',
+            'No Tiket': noTiketIndex !== -1 ? row[noTiketIndex] : '-',
+            Teknisi: teknisiIndex !== -1 ? row[teknisiIndex] : '-',
+            Keterangan: keteranganIndex !== -1 ? row[keteranganIndex] : '-',
+        }))
+        .sort((a: any, b: any) => parseIndonesianDate(b.Tanggal).getTime() - parseIndonesianDate(a.Tanggal).getTime());
 
       setSheetHistory(history);
       if (history.length === 0) {
@@ -679,8 +710,20 @@ export default function AdminPelangganPage() {
                         ) : sheetHistory.length > 0 ? (
                             <div className="overflow-x-auto">
                                 <Table>
-                                    <TableHeader><TableRow><TableHead>Tanggal Lapor</TableHead><TableHead>No. Tiket</TableHead><TableHead>Keterangan</TableHead></TableRow></TableHeader>
-                                    <TableBody>{sheetHistory.map((g, i) => (<TableRow key={i}><TableCell className="whitespace-nowrap">{g['Tanggal'] || '-'}</TableCell><TableCell>{g['No Tiket'] || '-'}</TableCell><TableCell>{g['Keterangan']}</TableCell></TableRow>))}</TableBody>
+                                    <TableHeader><TableRow>
+                                        <TableHead>Tanggal Lapor</TableHead>
+                                        <TableHead>No. Tiket</TableHead>
+                                        <TableHead>Teknisi</TableHead>
+                                        <TableHead>Keterangan</TableHead>
+                                    </TableRow></TableHeader>
+                                    <TableBody>{sheetHistory.map((g, i) => (
+                                        <TableRow key={i}>
+                                            <TableCell className="whitespace-nowrap">{g['Tanggal'] || '-'}</TableCell>
+                                            <TableCell>{g['No Tiket'] || '-'}</TableCell>
+                                            <TableCell>{g['Teknisi'] || '-'}</TableCell>
+                                            <TableCell>{g['Keterangan'] || '-'}</TableCell>
+                                        </TableRow>
+                                    ))}</TableBody>
                                 </Table>
                             </div>
                         ) : (
