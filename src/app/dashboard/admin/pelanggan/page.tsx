@@ -24,7 +24,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogClose,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,7 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Bot, PlusCircle, MapPin, Loader2, Upload, Search, History, Phone, Pencil } from 'lucide-react';
+import { Bot, PlusCircle, MapPin, Loader2, Upload, Search, History, Phone, Pencil, Wrench } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, useDoc, useStorage } from '@/firebase';
 import { collection, query, doc, serverTimestamp, where, getDocs, limit } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -78,6 +77,7 @@ function NewPelangganDialog({ isOpen, onOpenChange, onFinished }: { isOpen: bool
     const [nomorTelepon, setNomorTelepon] = useState('');
     const [koordinat, setKoordinat] = useState('');
     const [serviceArea, setServiceArea] = useState('');
+    const [odpName, setOdpName] = useState('');
     const [fotoCp, setFotoCp] = useState<File | null>(null);
     const [fotoCpPreview, setFotoCpPreview] = useState<string | null>(null);
     const [isGettingLocation, setIsGettingLocation] = useState(false);
@@ -116,7 +116,7 @@ function NewPelangganDialog({ isOpen, onOpenChange, onFinished }: { isOpen: bool
             if (fotoCp) {
                 const filePath = `pelanggan/${user.uid}/${Date.now()}-${fotoCp.name}`;
                 const storageRef = ref(storage, filePath);
-                await uploadBytes(storageRef, file);
+                await uploadBytes(storageRef, fotoCp);
                 fotoCpUrl = await getDownloadURL(storageRef);
             }
 
@@ -129,6 +129,7 @@ function NewPelangganDialog({ isOpen, onOpenChange, onFinished }: { isOpen: bool
                 nomorTelepon: nomorTelepon ? [nomorTelepon] : [],
                 koordinat,
                 serviceArea,
+                odpName: odpName.trim(),
                 fotoCpUrl,
                 dateAdded: serverTimestamp(),
             };
@@ -181,6 +182,10 @@ function NewPelangganDialog({ isOpen, onOpenChange, onFinished }: { isOpen: bool
                         <SelectTrigger><SelectValue placeholder="Pilih Service Area" /></SelectTrigger>
                         <SelectContent>{serviceAreas.map(sa => <SelectItem key={sa} value={sa}>{sa}</SelectItem>)}</SelectContent>
                       </Select>
+                  </div>
+                   <div className="grid gap-2">
+                    <Label htmlFor="new-odpName">Nama ODP</Label>
+                    <Input id="new-odpName" value={odpName} onChange={(e) => setOdpName(e.target.value)} placeholder="Contoh: ODP-KDS-FA/001" />
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="new-fotoCp">Foto Lokasi</Label>
@@ -318,6 +323,51 @@ function UpdateLocationDialog({ pelanggan, isOpen, onOpenChange, onFinished }: {
     );
 }
 
+function UpdateAssetDialog({ pelanggan, isOpen, onOpenChange, onFinished }: { pelanggan: Pelanggan, isOpen: boolean, onOpenChange: (open: boolean) => void, onFinished: (data: Partial<Pelanggan>) => void }) {
+    const firestore = useFirestore();
+    const { toast } = useToast();
+    const [odpName, setOdpName] = useState(pelanggan.odpName || '');
+    const [isSaving, setIsSaving] = useState(false);
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSaving(true);
+        try {
+            const updatedData = { odpName: odpName.trim() };
+            const docRef = doc(firestore, 'pelanggan', pelanggan.id);
+            updateDocumentNonBlocking(docRef, updatedData);
+            toast({ title: 'Aset berhasil diperbarui' });
+            onFinished(updatedData);
+        } catch (error: any) {
+             toast({ variant: 'destructive', title: 'Gagal menyimpan', description: error.message });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    return (
+         <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Ubah Aset Terhubung (ODP)</DialogTitle>
+                    <DialogDescription>Masukkan nama ODP baru yang terhubung dengan pelanggan ini. Kosongkan jika tidak ada.</DialogDescription>
+                </DialogHeader>
+                 <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="update-odp">Nama ODP</Label>
+                        <Input id="update-odp" value={odpName} onChange={(e) => setOdpName(e.target.value)} placeholder="Contoh: ODP-KDS-FA/001" />
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild><Button variant="secondary">Batal</Button></DialogClose>
+                        <Button type="submit" disabled={isSaving}>{isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}</Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+
 // --- MAIN PAGE COMPONENT ---
 
 export default function AdminPelangganPage() {
@@ -336,6 +386,7 @@ export default function AdminPelangganPage() {
   const [isNewPelangganDialogOpen, setIsNewPelangganDialogOpen] = useState(false);
   const [isAddContactDialogOpen, setIsAddContactDialogOpen] = useState(false);
   const [isUpdateLocationDialogOpen, setIsUpdateLocationDialogOpen] = useState(false);
+  const [isUpdateAssetDialogOpen, setIsUpdateAssetDialogOpen] = useState(false);
 
 
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
@@ -455,6 +506,7 @@ export default function AdminPelangganPage() {
                      <div className="flex gap-2">
                         <Button variant="outline" size="sm" onClick={() => setIsAddContactDialogOpen(true)}><Phone className="mr-2 h-4 w-4"/>Tambah Kontak</Button>
                         <Button variant="outline" size="sm" onClick={() => setIsUpdateLocationDialogOpen(true)}><Pencil className="mr-2 h-4 w-4"/>Ubah Lokasi</Button>
+                        <Button variant="outline" size="sm" onClick={() => setIsUpdateAssetDialogOpen(true)}><Wrench className="mr-2 h-4 w-4"/>Ubah Aset</Button>
                     </div>
                 </CardHeader>
                 <CardContent>
@@ -477,6 +529,7 @@ export default function AdminPelangganPage() {
                                 </Link>
                             </dd>
                         </div>
+                         <div className="flex flex-col"><dt className="text-muted-foreground">ODP Terhubung</dt><dd>{searchedPelanggan.odpName || '-'}</dd></div>
                     </dl>
                 </CardContent>
               </Card>
@@ -540,6 +593,15 @@ export default function AdminPelangganPage() {
                  onFinished={(updatedData) => {
                     setSearchedPelanggan(prev => prev ? { ...prev, ...updatedData } : null);
                     setIsUpdateLocationDialogOpen(false);
+                 }}
+            />
+            <UpdateAssetDialog
+                 pelanggan={searchedPelanggan}
+                 isOpen={isUpdateAssetDialogOpen}
+                 onOpenChange={setIsUpdateAssetDialogOpen}
+                 onFinished={(updatedData) => {
+                    setSearchedPelanggan(prev => prev ? { ...prev, ...updatedData } : null);
+                    setIsUpdateAssetDialogOpen(false);
                  }}
             />
           </>

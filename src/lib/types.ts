@@ -141,6 +141,7 @@ export type Pelanggan = {
   fotoCpUrl?: string;
   serviceArea: string;
   dateAdded: any;
+  odpName?: string;
 };
 
 export type ServiceAreaStats = {
