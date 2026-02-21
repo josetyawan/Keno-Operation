@@ -13,11 +13,13 @@ import { id as idLocale } from 'date-fns/locale';
 import Image from 'next/image';
 import type { UserProfile, Attendance } from '@/lib/types';
 import { useRouter } from 'next/navigation';
-import { Calendar as CalendarIcon, Printer, MapPin } from 'lucide-react';
+import { Calendar as CalendarIcon, Printer, MapPin, Download } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { toJpeg } from 'html-to-image';
+
 
 export default function AttendanceRekapPage() {
     const { user, isUserLoading } = useUser();
@@ -74,8 +76,45 @@ export default function AttendanceRekapPage() {
         return new Map(users.map(u => [u.id, u.displayName || u.email]));
     }, [users]);
     
-    const handlePrint = () => {
-        window.print();
+    const handleDownloadJpg = async () => {
+        const printableArea = document.getElementById('printable-area');
+        if (!printableArea) {
+            toast({
+                variant: 'destructive',
+                title: 'Elemen tidak ditemukan',
+                description: 'Tidak dapat menemukan area untuk diunduh.',
+            });
+            return;
+        }
+
+        toast({
+            title: 'Mempersiapkan unduhan...',
+            description: 'Kolase sedang dibuat, ini mungkin butuh beberapa saat.',
+        });
+
+        try {
+            // Give browser time to render images before capturing
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            const dataUrl = await toJpeg(printableArea, { 
+                quality: 0.95,
+                backgroundColor: '#ffffff',
+                pixelRatio: 2, // Increase resolution for better quality
+             });
+            const link = document.createElement('a');
+            const dateString = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : 'rekap';
+            link.download = `rekap-absensi-${dateString}.jpg`;
+            link.href = dataUrl;
+            link.click();
+            link.remove();
+        } catch (error) {
+            console.error('Gagal membuat gambar:', error);
+            toast({
+                variant: 'destructive',
+                title: 'Gagal Mengunduh',
+                description: 'Terjadi kesalahan saat membuat file JPG.',
+            });
+        }
     };
     
     const isLoading = isUserLoading || isProfileLoading || areAttendancesLoading || areUsersLoading;
@@ -128,10 +167,10 @@ export default function AttendanceRekapPage() {
                 </CardContent>
             </Card>
 
-            <div id="printable-area">
+            <div id="printable-area" className="bg-white p-4">
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-2xl font-bold">Laporan Absensi - {selectedDate ? format(selectedDate, 'dd MMMM yyyy', {locale: idLocale}) : ''}</h2>
-                    <Button onClick={handlePrint} className="no-print"><Printer className="mr-2 h-4 w-4" /> Cetak Kolase</Button>
+                    <Button onClick={handleDownloadJpg} className="no-print"><Download className="mr-2 h-4 w-4" /> Download JPG</Button>
                 </div>
 
                 {isLoading ? (
