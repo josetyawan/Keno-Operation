@@ -1,13 +1,12 @@
-
 'use client';
 
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from '@/components/ui/card';
 import {
   Table,
@@ -123,48 +122,60 @@ export default function SearchAssetsPage() {
   }, [user, currentUserProfile, isUserLoading, isProfileLoading, router]);
 
   const assetsQuery = useMemoFirebase(() => {
-    if (!canSearch || !currentUserProfile || searchName.trim() === '') {
+    if (!canSearch || !currentUserProfile) {
       return null;
     }
-    
-    const constraints: QueryConstraint[] = [];
-    
-    constraints.push(where('serviceArea', '==', searchServiceArea));
-    
-    const upperSearch = searchName.toUpperCase().trim();
-    const assetPrefixes = ['ODP', 'ODC', 'OLT', 'FTM', 'MITRATEL', 'NODE-B'];
-    let inferredType: string | null = null;
-    
-    for (const prefix of assetPrefixes) {
-        if (upperSearch.startsWith(prefix)) {
-            inferredType = prefix;
-            break;
-        }
-    }
-
-    if (inferredType) {
-        constraints.push(where('assetType', '==', inferredType));
-    }
-
+    const constraints: QueryConstraint[] = [where('serviceArea', '==', searchServiceArea)];
     return query(collection(firestore, 'network-assets'), ...constraints);
-  }, [firestore, currentUserProfile, canSearch, searchServiceArea, searchName]);
+  }, [firestore, currentUserProfile, canSearch, searchServiceArea]);
 
   const { data: queriedAssets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(assetsQuery);
 
   const filteredAssets = useMemo(() => {
     if (!queriedAssets) return [];
     
-    const lowercasedSearchName = searchName.toLowerCase().trim();
-    if (lowercasedSearchName) {
-        return queriedAssets.filter(asset => {
-            const nameMatch = asset.name.toLowerCase().includes(lowercasedSearchName);
-            const siteIdMatch = asset.siteId?.toLowerCase().includes(lowercasedSearchName);
-            const tenantIdMatch = asset.tenantSiteId?.toLowerCase().includes(lowercasedSearchName);
-            return nameMatch || !!siteIdMatch || !!tenantIdMatch;
-        });
+    const searchTerm = searchName.trim().toUpperCase();
+
+    // Prevent searching on very short, generic terms
+    if (searchTerm.length < 3) {
+        if (!searchTerm.startsWith('ODP') && !searchTerm.startsWith('ODC') && !searchTerm.startsWith('FTM')) {
+            return [];
+        }
     }
+
+    return queriedAssets.filter(asset => {
+        const assetName = asset.name.toUpperCase();
+
+        // --- Intent-based rules for specific asset types ---
+
+        // Rule for ODP: Must include '/'
+        if (searchTerm.startsWith('ODP')) {
+            if (asset.assetType !== 'ODP') return false; 
+            return searchTerm.includes('/') && assetName.startsWith(searchTerm);
+        }
+
+        // Rule for ODC: Must have 3 parts (e.g., ODC-KDS-FAC)
+        if (searchTerm.startsWith('ODC-')) {
+            if (asset.assetType !== 'ODC') return false; 
+            const parts = searchTerm.split('-');
+            if (parts.length < 3 || (parts.length === 3 && parts[2] === '')) return false; 
+            return assetName.startsWith(searchTerm);
+        }
+        
+        // Rule for FTM: Must include '-'
+        if (searchTerm.startsWith('FTM-')) {
+            if (asset.assetType !== 'FTM') return false; 
+            return assetName.startsWith(searchTerm);
+        }
+
+        // --- General "contains" search for all other cases ---
+        const nameMatch = assetName.includes(searchTerm);
+        const siteIdMatch = asset.siteId?.toUpperCase().includes(searchTerm) ?? false;
+        const tenantIdMatch = asset.tenantSiteId?.toUpperCase().includes(searchTerm) ?? false;
+
+        return nameMatch || siteIdMatch || tenantIdMatch;
+    });
     
-    return queriedAssets;
   }, [queriedAssets, searchName]);
 
   const totalPages = Math.ceil(filteredAssets.length / ITEMS_PER_PAGE);
@@ -288,7 +299,7 @@ export default function SearchAssetsPage() {
         <CardHeader>
           <CardTitle>Daftar Aset</CardTitle>
           <CardDescription>
-            {hasSearched ? `Menampilkan ${paginatedAssets.length} dari ${filteredAssets.length} aset yang cocok.` : (canSearch ? 'Ketik nama aset untuk memulai pencarian.' : 'Pilih Service Area untuk melihat data.')}
+            {hasSearched ? `Menampilkan ${paginatedAssets.length} dari ${filteredAssets.length} aset yang cocok.` : (canSearch ? 'Ketik nama aset, Site ID, atau Tenant ID di atas untuk mencari.' : 'Pilih Service Area untuk melihat data.')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -311,14 +322,13 @@ export default function SearchAssetsPage() {
                     </TableRow>
                 ) : (
                     <TableRow>
-                        <TableHead>Name</TableHead>
+                        <TableHead>{isMitratelSearch ? 'Tenant ID' : 'Name'}</TableHead>
                         <TableHead>Type</TableHead>
                         {!isMitratelSearch && <TableHead>Sub-Type</TableHead>}
                         <TableHead>Service Area</TableHead>
                         {!isMitratelSearch && <TableHead>STO</TableHead>}
                         <TableHead>Coordinates</TableHead>
                         {isMitratelSearch && <TableHead>Mitratel ID</TableHead>}
-                        {isMitratelSearch && <TableHead>Tenant ID</TableHead>}
                         {!isMitratelSearch && <TableHead>Avail</TableHead>}
                         {!isMitratelSearch && <TableHead>Used</TableHead>}
                         <TableHead className="text-right">Actions</TableHead>
@@ -359,14 +369,13 @@ export default function SearchAssetsPage() {
                     </TableRow>
                   ) : (
                   <TableRow key={a.id}>
-                    <TableCell className="font-medium">{a.name}</TableCell>
+                    <TableCell className="font-medium">{isMitratelSearch ? a.tenantSiteId : a.name}</TableCell>
                     <TableCell>{a.assetType}</TableCell>
                     {!isMitratelSearch && <TableCell>{a.subType}</TableCell>}
                     <TableCell>{a.serviceArea}</TableCell>
                     {!isMitratelSearch && <TableCell>{a.sto}</TableCell>}
                     <TableCell>{a.coordinates || '-'}</TableCell>
                     {isMitratelSearch && <TableCell>{a.mitratelSiteId || '-'}</TableCell>}
-                    {isMitratelSearch && <TableCell>{a.tenantSiteId || '-'}</TableCell>}
                     {!isMitratelSearch && <TableCell>{a.portAvai || '-'}</TableCell>}
                     {!isMitratelSearch && <TableCell>{a.portUsed || '-'}</TableCell>}
                     <TableCell className="text-right">

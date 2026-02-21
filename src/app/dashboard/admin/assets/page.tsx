@@ -111,18 +111,12 @@ export default function AdminAssetsPage() {
 
   // Fetch assets from server with server-side filtering
   const assetsQuery = useMemoFirebase(() => {
-    if (isUserLoading || isProfileLoading || !user || currentUserProfile?.role !== 'admin' || !hasSearched) {
+    if (isUserLoading || isProfileLoading || !user || currentUserProfile?.role !== 'admin' || !canSearch) {
       return null;
     }
-    
-    const constraints: QueryConstraint[] = [];
-    
-    // Only filter by service area on the server to allow flexible name search on client
-    constraints.push(where('serviceArea', '==', searchServiceArea));
-    
+    const constraints: QueryConstraint[] = [where('serviceArea', '==', searchServiceArea)];
     return query(collection(firestore, 'network-assets'), ...constraints);
-
-  }, [firestore, currentUserProfile, isUserLoading, isProfileLoading, hasSearched, searchServiceArea]);
+  }, [firestore, currentUserProfile, isUserLoading, isProfileLoading, user, canSearch, searchServiceArea]);
 
 
   const { data: queriedAssets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(assetsQuery);
@@ -130,31 +124,51 @@ export default function AdminAssetsPage() {
   const filteredAssets = useMemo(() => {
     if (!queriedAssets) return [];
     
-    const lowercasedSearchName = searchName.toLowerCase().trim();
-    
-    const upperSearch = searchName.toUpperCase().trim();
-    const assetPrefixes = ['ODP', 'ODC', 'OLT', 'FTM', 'MITRATEL', 'NODE-B'];
-    let inferredType: string | null = null;
-    
-    for (const prefix of assetPrefixes) {
-        if (upperSearch.startsWith(prefix)) {
-            inferredType = prefix;
-            break;
+    const searchTerm = searchName.trim().toUpperCase();
+
+    // Prevent searching on very short, generic terms
+    if (searchTerm.length < 3) {
+        if (!searchTerm.startsWith('ODP') && !searchTerm.startsWith('ODC') && !searchTerm.startsWith('FTM')) {
+            return [];
         }
     }
 
     return queriedAssets.filter(asset => {
-        const nameMatch = asset.name.toLowerCase().includes(lowercasedSearchName);
-        const siteIdMatch = asset.siteId?.toLowerCase().includes(lowercasedSearchName);
-        const tenantIdMatch = asset.tenantSiteId?.toLowerCase().includes(lowercasedSearchName);
+        const assetName = asset.name.toUpperCase();
 
-        const fullMatch = nameMatch || !!siteIdMatch || !!tenantIdMatch;
+        // --- Intent-based rules for specific asset types ---
 
-        if (inferredType) {
-            return asset.assetType === inferredType && fullMatch;
+        // Rule for ODP: Must include '/'
+        if (searchTerm.startsWith('ODP')) {
+            if (asset.assetType !== 'ODP') return false; 
+            return searchTerm.includes('/') && assetName.startsWith(searchTerm);
+        }
+
+        // Rule for ODC: Must have 3 parts (e.g., ODC-KDS-FAC)
+        if (searchTerm.startsWith('ODC-')) {
+            if (asset.assetType !== 'ODC') return false; 
+            const parts = searchTerm.split('-');
+            if (parts.length < 3 || (parts.length === 3 && parts[2] === '')) return false; 
+            return assetName.startsWith(searchTerm);
         }
         
-        return fullMatch;
+        // Rule for FTM: Must include '-'
+        if (searchTerm.startsWith('FTM-')) {
+            if (asset.assetType !== 'FTM') return false; 
+            return assetName.startsWith(searchTerm);
+        }
+
+        // --- General "contains" search for all other cases ---
+        // This handles:
+        // - NODE-B by siteId (e.g., "JPA099")
+        // - Mitratel by tenantId (e.g., "14KDS147")
+        // - Mini OLT by part of its name (e.g., "FAC" for GPON...FAC)
+        // - Partial searches for ODP/ODC/FTM names (e.g., searching "FK")
+        const nameMatch = assetName.includes(searchTerm);
+        const siteIdMatch = asset.siteId?.toUpperCase().includes(searchTerm) ?? false;
+        const tenantIdMatch = asset.tenantSiteId?.toUpperCase().includes(searchTerm) ?? false;
+
+        return nameMatch || siteIdMatch || tenantIdMatch;
     });
     
   }, [queriedAssets, searchName]);
@@ -576,7 +590,7 @@ export default function AdminAssetsPage() {
                 const cascadeAtCol = findColumn(firstRowKeys, ['cascade at']);
                 const catbtsCol = findColumn(firstRowKeys, ['catbts']);
                 const rncBscCol = findColumn(firstRowKeys, ['rnc/bsc']);
-                const routerRanCol = findColumn(firstRowKeys, ['router/ran']);
+                const routerRanCol = findColumn(firstRowKeys, ['router/ran', 'router ran']);
                 const alamatCol = findColumn(firstRowKeys, ['alamat']);
 
                 if (!siteIdCol) {
@@ -625,26 +639,26 @@ export default function AdminAssetsPage() {
                             const sto = stoCol ? row[stoCol!]?.toString().trim() : 'N/A';
 
                             const assetData: Partial<NetworkAsset> = {
-                                name: siteNameCol ? row[siteNameCol!]?.toString().trim() : siteId,
+                                name: siteNameCol && row[siteNameCol] ? row[siteNameCol].toString().trim() : siteId,
                                 assetType: 'NODE-B',
                                 subType: 'N/A',
                                 serviceArea: mapNodeBToServiceArea(siteId),
                                 sto: sto,
                                 siteId: siteId,
-                                siteName: siteNameCol ? row[siteNameCol!]?.toString().trim() : '',
+                                siteName: siteNameCol && row[siteNameCol] ? row[siteNameCol].toString().trim() : '',
                             };
 
                             if (latValue && longValue) assetData.coordinates = `${latValue}, ${longValue}`;
-                            if (row[oltMerkCol!] !== undefined) assetData.oltMerk = String(row[oltMerkCol!]);
-                            if (row[splitterOltCol!] !== undefined) assetData.splitterOlt = String(row[splitterOltCol!]);
-                            if (row[snOntCol!] !== undefined) assetData.snOnt = String(row[snOntCol!]);
-                            if (row[eqpPortCol!] !== undefined) assetData.eqpPort = String(row[eqpPortCol!]);
-                            if (row[cascadeCol!] !== undefined) assetData.cascade = String(row[cascadeCol!]);
-                            if (row[cascadeAtCol!] !== undefined) assetData.cascadeAt = String(row[cascadeAtCol!]);
-                            if (row[catbtsCol!] !== undefined) assetData.catbts = String(row[catbtsCol!]);
-                            if (row[rncBscCol!] !== undefined) assetData.rncBsc = String(row[rncBscCol!]);
-                            if (row[routerRanCol!] !== undefined) assetData.routerRan = String(row[routerRanCol!]);
-                            if (row[alamatCol!] !== undefined) assetData.alamat = String(row[alamatCol!]);
+                            if (oltMerkCol && row[oltMerkCol] !== undefined) assetData.oltMerk = String(row[oltMerkCol]);
+                            if (splitterOltCol && row[splitterOltCol] !== undefined) assetData.splitterOlt = String(row[splitterOltCol]);
+                            if (snOntCol && row[snOntCol] !== undefined) assetData.snOnt = String(row[snOntCol]);
+                            if (eqpPortCol && row[eqpPortCol] !== undefined) assetData.eqpPort = String(row[eqpPortCol]);
+                            if (cascadeCol && row[cascadeCol] !== undefined) assetData.cascade = String(row[cascadeCol]);
+                            if (cascadeAtCol && row[cascadeAtCol] !== undefined) assetData.cascadeAt = String(row[cascadeAtCol]);
+                            if (catbtsCol && row[catbtsCol] !== undefined) assetData.catbts = String(row[catbtsCol]);
+                            if (rncBscCol && row[rncBscCol] !== undefined) assetData.rncBsc = String(row[rncBscCol]);
+                            if (routerRanCol && row[routerRanCol] !== undefined) assetData.routerRan = String(row[routerRanCol]);
+                            if (alamatCol && row[alamatCol] !== undefined) assetData.alamat = String(row[alamatCol]);
                             
 
                             const existingAsset = existingAssetsMap.get(siteId);
@@ -972,14 +986,13 @@ export default function AdminAssetsPage() {
                     </TableRow>
                 ) : (
                     <TableRow>
-                        <TableHead>Name</TableHead>
+                        <TableHead>{isMitratelSearch ? 'Tenant ID' : 'Name'}</TableHead>
                         <TableHead>Type</TableHead>
                         {!isMitratelSearch && <TableHead>Sub-Type</TableHead>}
                         <TableHead>Service Area</TableHead>
                         {!isMitratelSearch && <TableHead>STO</TableHead>}
                         <TableHead>Coordinates</TableHead>
                         {isMitratelSearch && <TableHead>Mitratel ID</TableHead>}
-                        {isMitratelSearch && <TableHead>Tenant ID</TableHead>}
                         {!isMitratelSearch && <TableHead>Avail</TableHead>}
                         {!isMitratelSearch && <TableHead>Used</TableHead>}
                         <TableHead className="text-right">Actions</TableHead>
@@ -1022,14 +1035,13 @@ export default function AdminAssetsPage() {
                     </TableRow>
                   ) : (
                     <TableRow key={a.id}>
-                        <TableCell className="font-medium">{a.name}</TableCell>
+                        <TableCell className="font-medium">{isMitratelSearch ? a.tenantSiteId : a.name}</TableCell>
                         <TableCell>{a.assetType}</TableCell>
                         {!isMitratelSearch && <TableCell>{a.subType}</TableCell>}
                         <TableCell>{a.serviceArea}</TableCell>
                         {!isMitratelSearch && <TableCell>{a.sto}</TableCell>}
                         <TableCell>{a.coordinates || '-'}</TableCell>
                         {isMitratelSearch && <TableCell>{a.mitratelSiteId || '-'}</TableCell>}
-                        {isMitratelSearch && <TableCell>{a.tenantSiteId || '-'}</TableCell>}
                         {!isMitratelSearch && <TableCell>{a.portAvai || '-'}</TableCell>}
                         {!isMitratelSearch && <TableCell>{a.portUsed || '-'}</TableCell>}
                         <TableCell className="text-right">
