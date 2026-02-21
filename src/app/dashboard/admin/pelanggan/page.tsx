@@ -446,8 +446,10 @@ export default function AdminPelangganPage() {
     setSheetHistory([]); // Clear previous history
     const serviceNumberToFind = searchedPelanggan.noService.trim();
     try {
-      const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS6GU4F_Iqvw7u1pkL06KQjDrrdGCu_DshWT0QWeozGpwpUIAc757COSNEnkhrRKH1RnPDqNeXDDNjU/export?format=csv&gid=0&t=' + new Date().getTime());
-      if (!response.ok) throw new Error('Gagal mengambil data dari Google Sheet.');
+      const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS6GU4F_Iqvw7u1pkL06KQjDrrdGCu_DshWT0QWeozGpwpUIAc757COSNEnkhrRKH1RnPDqNeXDDNjU/pub?gid=0&single=true&output=csv&t=' + new Date().getTime());
+      if (!response.ok) {
+        throw new Error(`Gagal mengambil data dari Google Sheet. Status: ${response.status}`);
+      }
 
       const csvData = await response.text();
       const workbook = XLSX.read(csvData, { type: 'string' });
@@ -466,7 +468,7 @@ export default function AdminPelangganPage() {
         });
       }
     } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Gagal Memuat Riwayat', description: 'Tidak dapat mengambil riwayat laporan dari Google Sheet.' });
+      toast({ variant: 'destructive', title: 'Gagal Memuat Riwayat', description: error.message || 'Tidak dapat mengambil riwayat laporan dari Google Sheet.' });
       setSheetHistory([]);
     } finally {
       setIsSheetHistoryLoading(false);
