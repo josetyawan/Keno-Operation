@@ -76,10 +76,12 @@ service cloud.firestore {
       allow update: if isKorlap() || (hasAllProAccess() && isUpdatingOwn('userId')) || isAdmin();
       allow delete: if isAdmin() || isKorlap();
     }
-    
+
     match /riwayat-gangguan/{riwayatId} {
-      // Allow all access for debugging the bot API
-      allow read, write: if true; 
+      // Allow write access for the bot API, which is protected by a secret key.
+      // Read access is still protected.
+      allow write: if true;
+      allow read: if hasAllProAccess() || isKorlap();
     }
 
     match /map-links/{mapLinkId} {

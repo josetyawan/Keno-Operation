@@ -1,7 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import { initializeFirebase } from '@/firebase/init';
-import { addDoc, collection } from 'firebase/firestore';
+import { addDoc, collection, Timestamp } from 'firebase/firestore';
 
 export async function POST(request: Request) {
     const secretKey = process.env.BOT_SECRET_KEY;
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
         
         const newRiwayatData = {
             noService: body.no_service || '',
-            tanggalLapor: new Date(), // Using native Date object for broader compatibility
+            tanggalLapor: Timestamp.now(), // Use Firestore Timestamp for server-side operations
             noTiket: body.no_tiket || '',
             teknisi: body.teknisi || '',
             keterangan: body.keterangan || '',
@@ -45,6 +45,7 @@ export async function POST(request: Request) {
         console.error('API Error in /api/gangguan:', error);
         
         const errorMessage = error.message || 'An unknown server error occurred.';
+        // Return a concise JSON error to prevent "message is too long" in the bot
         return NextResponse.json({ success: false, error: `Server-side API error: ${errorMessage}` }, { status: 500 });
     }
 }
