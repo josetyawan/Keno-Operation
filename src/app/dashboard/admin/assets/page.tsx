@@ -111,8 +111,8 @@ export default function AdminAssetsPage() {
     if (mapLinks) mapLinks.forEach(link => addSA(link.serviceArea));
     
     // De-duplicate and ensure correct order
-    const finalAreas = ['MITRATEL', 'NODE-B', ...Array.from(serviceAreaSet).sort()];
-    return [...new Set(finalAreas)];
+    const finalAreas = Array.from(serviceAreaSet).sort();
+    return ['MITRATEL', 'NODE-B', ...finalAreas];
   }, [mancoreLinks, mapLinks]);
 
   useEffect(() => {
@@ -141,7 +141,7 @@ export default function AdminAssetsPage() {
 
   const { data: queriedAssets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(assetsQuery);
 
-  const filteredAssets = useMemo(() => {
+ const filteredAssets = useMemo(() => {
     if (!queriedAssets) return [];
     
     const searchTerm = searchName.trim().toUpperCase();
@@ -157,59 +157,61 @@ export default function AdminAssetsPage() {
         const assetName = asset.name.toUpperCase();
         const assetType = asset.assetType;
 
-        // --- Handle by Asset Type ---
-
-        if (assetType === 'NODE-B') {
-            return asset.siteId?.toUpperCase().includes(searchTerm) ?? false;
-        }
-        
+        // Rule for Mitratel (searched by tenantId)
         if (assetType === 'MITRATEL') {
             return asset.tenantSiteId?.toUpperCase().includes(searchTerm) ?? false;
         }
 
-        if (assetType === 'ODP') {
-            // ODPs only match if the search term starts with "ODP".
-            // This prevents general searches like "FAC" from matching ODPs.
-            if (searchTerm.startsWith('ODP')) {
-                return assetName.includes(searchTerm);
-            }
-            return false;
+        // Rule for Node-B (searched by siteId)
+        if (assetType === 'NODE-B') {
+            return asset.siteId?.toUpperCase().includes(searchTerm) ?? false;
         }
 
-        if (assetType === 'FTM') {
-            // FTMs only match if the search term starts with "FTM-".
-            if (searchTerm.startsWith('FTM-')) {
-                return assetName.startsWith(searchTerm);
+        // --- Rules for geographical Service Areas ---
+
+        // Rule for ODP: Must start with ODP, and be more specific
+        if (searchTerm.startsWith('ODP')) {
+            if (assetType !== 'ODP') return false; // If search is for ODP, only show ODPs.
+            
+            // Show results only after a certain level of specificity
+            if (searchTerm.includes('/')) {
+                 return assetName.includes(searchTerm);
             }
-            return false;
+            const parts = searchTerm.split('-');
+            if (parts.length > 2) {
+                 return assetName.startsWith(searchTerm);
+            }
+            return false; // Not specific enough yet
+        }
+
+        // Rule for ODC: Must start with ODC- and be more specific
+        if (searchTerm.startsWith('ODC-')) {
+             if (assetType !== 'ODC') return false;
+             
+             const parts = searchTerm.split('-');
+             if (parts.length > 2 && parts[2]) { // e.g., ODC-KUD-F...
+                 return assetName.startsWith(searchTerm);
+             }
+             return false; // Not specific enough
+        }
+
+        // Rule for FTM: Must start with FTM-
+        if (searchTerm.startsWith('FTM-')) {
+             if (assetType !== 'FTM') return false;
+             return assetName.startsWith(searchTerm);
         }
         
-        if (assetType === 'ODC') {
-            // If the user specifically searches for an ODC...
-            if (searchTerm.startsWith('ODC-')) {
-                const parts = searchTerm.split('-');
-                // ...only show results once they start typing the 3rd part.
-                if (parts.length >= 3 && parts[2]) {
-                     return assetName.startsWith(searchTerm);
-                }
-                // Don't show all ODCs if only "ODC-KUD" is typed.
-                return false;
-            }
-            // For general searches (like "FAC"), allow ODCs to appear.
-            return assetName.includes(searchTerm);
+        // General Search Rule for terms like 'FAC'
+        // This should only apply to ODC and OLT assets
+        if (assetType === 'ODC' || assetType === 'OLT') {
+             return assetName.includes(searchTerm);
         }
-
-        if (asset.assetType === 'OLT') { // This covers both Mini OLT and regular OLT
-            // The Mini OLT name is like "GPON00-D4-KUD-4FAC"
-            // A general "includes" search is appropriate for this.
-            return assetName.includes(searchTerm);
-        }
-
-        // Default: Do not match any other asset types.
+        
+        // If none of the above rules match (e.g. general search on an ODP/FTM), don't show it.
         return false;
     });
     
-  }, [queriedAssets, searchName]);
+  }, [queriedAssets, searchName, searchServiceArea]);
 
 
   const totalPages = Math.ceil(filteredAssets.length / ITEMS_PER_PAGE);
