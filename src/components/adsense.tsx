@@ -40,8 +40,15 @@ export function Adsense(props: AdsenseProps) {
   useEffect(() => {
     try {
       (window.adsbygoogle = window.adsbygoogle || []).push({});
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      // This error is common in development with React's StrictMode,
+      // which intentionally double-invokes effects. AdSense thinks the ad slot
+      // is already filled from the first invocation. We can safely ignore this error.
+      if (err && err.message && err.message.includes("already have ads in them")) {
+        // This is the expected error in dev, so we can ignore it.
+        return;
+      }
+      console.error("AdSense error:", err);
     }
   }, []);
 
