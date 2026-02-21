@@ -361,16 +361,16 @@ export default function AdminSchedulesPage() {
             const data = e.target?.result;
             const workbook = XLSX.read(data, { type: 'binary' });
             const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: null });
+            const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: null, raw: false });
     
             if (jsonData.length === 0) {
                 throw new Error("Sheet Excel kosong.");
             }
             
-            const headerRow = jsonData[0];
-            const nikHeaderIndex = headerRow.findIndex((cell: string) => ['nik', 'nik karyawan', 'nomor induk'].includes(String(cell || '').trim().toLowerCase()));
+            const headerKeys = Object.keys(jsonData[0] || {});
+            const nikHeader = headerKeys.find(key => ['nik', 'nik karyawan', 'nomor induk'].includes(key.trim().toLowerCase()));
 
-            if (nikHeaderIndex === -1) {
+            if (!nikHeader) {
                 throw new Error("Kolom 'NIK' tidak ditemukan. Pastikan file Excel Anda memiliki kolom dengan nama 'NIK'.");
             }
             
@@ -397,11 +397,13 @@ export default function AdminSchedulesPage() {
             const chunkSize = 200;
             let batch = writeBatch(firestore);
             
-            const dateColumns = headerRow.map((header: string, index: number) => ({ header: String(header).trim(), index })).filter((col: {header: string, index: number}) => !isNaN(parseInt(col.header, 10)) && parseInt(col.header, 10) >= 1 && parseInt(col.header, 10) <= 31);
+            const dateColumns = headerKeys.filter((key: string) => {
+                const dayNum = parseInt(key, 10);
+                return !isNaN(dayNum) && dayNum >= 1 && dayNum <= 31;
+            });
     
-            for (let i = 1; i < jsonData.length; i++) {
-                const row = jsonData[i];
-                const nikFromExcel = String(row[nikHeaderIndex] || '').trim();
+            for (const row of jsonData) {
+                const nikFromExcel = String(row[nikHeader] || '').trim();
                 if (!nikFromExcel) {
                     continue;
                 }
@@ -413,9 +415,9 @@ export default function AdminSchedulesPage() {
                     continue;
                 }
 
-                for (const col of dateColumns) {
-                    const day = parseInt(col.header);
-                    const shiftCode = String(row[col.index] || '').trim().toLowerCase();
+                for (const dayStr of dateColumns) {
+                    const day = parseInt(dayStr, 10);
+                    const shiftCode = String(row[dayStr] || '').trim().toLowerCase();
                     const mappedShift = shiftCodeMap[shiftCode];
 
                     if (mappedShift) {
@@ -445,7 +447,7 @@ export default function AdminSchedulesPage() {
                 }
                 
                 processedRows++;
-                setImportProgress((processedRows / (jsonData.length - 1)) * 100);
+                setImportProgress((processedRows / jsonData.length) * 100);
             }
     
             if (createdCount > 0 && createdCount % chunkSize !== 0) {
