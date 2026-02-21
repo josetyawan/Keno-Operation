@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { BookCopy, BarChart3, Search, ClipboardCheck, Wrench, Bot, Contact } from 'lucide-react';
+import { BookCopy, BarChart3, Search, ClipboardCheck, Wrench, Bot, Contact, MessageSquare } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
@@ -210,6 +210,25 @@ export default function DashboardSelectorPage() {
             </Card>
             </Link>
         )}
+
+        <Link href="/dashboard/chat">
+            <Card className="hover:border-primary hover:shadow-lg transition-all duration-200 h-full">
+                <CardHeader className="flex flex-row items-center gap-4">
+                <div className="p-3 rounded-full bg-primary/10 text-primary">
+                    <MessageSquare className="h-8 w-8" />
+                </div>
+                <div>
+                    <CardTitle>Chat</CardTitle>
+                    <CardDescription>Komunikasi tim secara real-time.</CardDescription>
+                </div>
+                </CardHeader>
+                <CardContent>
+                <p className="text-sm text-muted-foreground">
+                    Kirim pesan ke grup atau secara pribadi ke pengguna lain.
+                </p>
+                </CardContent>
+            </Card>
+        </Link>
         
         <Link href="/dashboard/bots">
             <Card className="hover:border-primary hover:shadow-lg transition-all duration-200 h-full">
