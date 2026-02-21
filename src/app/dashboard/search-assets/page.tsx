@@ -175,15 +175,25 @@ export default function SearchAssetsPage() {
   }, [filteredAssets, currentPage]);
   
   const isNodeBSearch = useMemo(() => {
-    if (!hasSearched || paginatedAssets.length === 0) return false;
-    const firstAssetType = paginatedAssets[0].assetType;
-    // If the first asset is NODE-B, we can be pretty sure it's a NODE-B search.
-    if (firstAssetType === 'NODE-B') return true;
-    // If not, check if the search term matches a siteId pattern, as assetType might be missing on some results.
+    const upperSearch = searchName.toUpperCase().trim();
+    if (upperSearch.startsWith('NODE-B')) return true;
+
     const siteIdPatterns = ['JPA', 'KDS', 'DMK', 'PAT', 'RBG', 'GRO', 'BLA'];
-    const upperSearch = searchName.toUpperCase();
-    return siteIdPatterns.some(p => upperSearch.includes(p));
-  }, [paginatedAssets, hasSearched, searchName]);
+    // Check if the search query looks like a site ID
+    if (siteIdPatterns.some(p => upperSearch.includes(p))) {
+        // To avoid false positives (e.g., searching for a person named 'Pat'), check if it contains numbers.
+        if (/\d/.test(upperSearch)) {
+            return true;
+        }
+    }
+    
+    // Also consider if the found assets are of type NODE-B, even if search term is ambiguous
+    if (paginatedAssets.length > 0 && paginatedAssets.every(a => a.assetType === 'NODE-B')) {
+        return true;
+    }
+
+    return false;
+}, [searchName, paginatedAssets]);
   
   const isMitratelSearch = useMemo(() => paginatedAssets?.[0]?.assetType === 'MITRATEL', [paginatedAssets]);
 
@@ -286,7 +296,6 @@ export default function SearchAssetsPage() {
                {isNodeBSearch ? (
                      <TableRow>
                         <TableHead>Site ID</TableHead>
-                        <TableHead>Site Name</TableHead>
                         <TableHead>OLT Merk</TableHead>
                         <TableHead>Splitter OLT</TableHead>
                         <TableHead>SN ONT</TableHead>
@@ -318,7 +327,7 @@ export default function SearchAssetsPage() {
             <TableBody>
               {areAssetsLoading && hasSearched ? (
                  Array.from({ length: 5 }).map((_, index) => (
-                    <TableRow key={index}><TableCell colSpan={isNodeBSearch ? 13 : 11}><Skeleton className="h-6 w-full" /></TableCell></TableRow>
+                    <TableRow key={index}><TableCell colSpan={isNodeBSearch ? 12 : 11}><Skeleton className="h-6 w-full" /></TableCell></TableRow>
                 ))
               ) : paginatedAssets.length > 0 && hasSearched ? (
                 paginatedAssets.map(a => {
@@ -327,7 +336,6 @@ export default function SearchAssetsPage() {
                   return isNodeBSearch ? (
                      <TableRow key={a.id}>
                         <TableCell>{a.siteId}</TableCell>
-                        <TableCell>{a.siteName}</TableCell>
                         <TableCell>{a.oltMerk}</TableCell>
                         <TableCell>{a.splitterOlt}</TableCell>
                         <TableCell>{a.snOnt}</TableCell>
@@ -371,7 +379,7 @@ export default function SearchAssetsPage() {
                 )})
               ) : (
                 <TableRow>
-                  <TableCell colSpan={isNodeBSearch ? 13 : 11} className="h-24 text-center">
+                  <TableCell colSpan={isNodeBSearch ? 12 : 11} className="h-24 text-center">
                     {!canSearch 
                       ? "Silakan pilih Service Area untuk memulai." 
                       : !hasSearched 
@@ -398,5 +406,3 @@ export default function SearchAssetsPage() {
     </>
   );
 }
-
-    

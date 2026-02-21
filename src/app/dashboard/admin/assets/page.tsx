@@ -150,11 +150,9 @@ export default function AdminAssetsPage() {
         const nameMatch = asset.name.toLowerCase().includes(lowercasedSearchName);
         
         let specificMatch = false;
-        if (asset.assetType === 'NODE-B') {
-            const siteIdMatch = asset.siteId?.toLowerCase().includes(lowercasedSearchName);
-            // As requested, siteId is the primary identifier, not siteName.
-            specificMatch = !!(siteIdMatch);
-        }
+        // As requested, siteId is the primary identifier for NODE-B, not siteName.
+        const siteIdMatch = asset.siteId?.toLowerCase().includes(lowercasedSearchName);
+        specificMatch = !!(siteIdMatch);
 
         const fullMatch = nameMatch || specificMatch;
 
@@ -176,7 +174,26 @@ export default function AdminAssetsPage() {
       return filteredAssets.slice(startIndex, endIndex);
   }, [filteredAssets, currentPage]);
 
-  const isNodeBSearch = useMemo(() => paginatedAssets?.[0]?.assetType === 'NODE-B', [paginatedAssets]);
+  const isNodeBSearch = useMemo(() => {
+    const upperSearch = searchName.toUpperCase().trim();
+    if (upperSearch.startsWith('NODE-B')) return true;
+
+    const siteIdPatterns = ['JPA', 'KDS', 'DMK', 'PAT', 'RBG', 'GRO', 'BLA'];
+    // Check if the search query looks like a site ID
+    if (siteIdPatterns.some(p => upperSearch.includes(p))) {
+        // To avoid false positives (e.g., searching for a person named 'Pat'), check if it contains numbers.
+        if (/\d/.test(upperSearch)) {
+            return true;
+        }
+    }
+    
+    // Also consider if the found assets are of type NODE-B, even if search term is ambiguous
+    if (paginatedAssets.length > 0 && paginatedAssets.every(a => a.assetType === 'NODE-B')) {
+        return true;
+    }
+
+    return false;
+}, [searchName, paginatedAssets]);
   const isMitratelSearch = useMemo(() => paginatedAssets?.[0]?.assetType === 'MITRATEL', [paginatedAssets]);
 
   const mapNodeBToServiceArea = (siteId: string): string => {
@@ -558,7 +575,7 @@ export default function AdminAssetsPage() {
             }
 
             if (importAssetType === 'NODE-B') {
-                const siteIdCol = findColumn(firstRowKeys, ['site id', 'site_id']);
+                const siteIdCol = findColumn(firstRowKeys, ['site id', 'site_id', 'base id']);
                 const siteNameCol = findColumn(firstRowKeys, ['site name', 'site_name']);
                 const oltMerkCol = findColumn(firstRowKeys, ['olt merk']);
                 const splitterOltCol = findColumn(firstRowKeys, ['splitter olt']);
@@ -572,7 +589,7 @@ export default function AdminAssetsPage() {
                 const alamatCol = findColumn(firstRowKeys, ['alamat']);
 
                 if (!siteIdCol || !siteNameCol) {
-                    throw new Error("Kolom wajib (SITE ID, SITE NAME) untuk impor NODE-B tidak ditemukan.");
+                    throw new Error("Kolom wajib (SITE ID/BASE ID, SITE NAME) untuk impor NODE-B tidak ditemukan.");
                 }
 
                 let totalCreated = 0;
@@ -637,6 +654,7 @@ export default function AdminAssetsPage() {
                             if (row[rncBscCol!] !== undefined) assetData.rncBsc = String(row[rncBscCol!]);
                             if (row[routerRanCol!] !== undefined) assetData.routerRan = String(row[routerRanCol!]);
                             if (row[alamatCol!] !== undefined) assetData.alamat = String(row[alamatCol!]);
+                            
 
                             const existingAsset = existingAssetsMap.get(siteId);
                             if (existingAsset) {
@@ -949,7 +967,6 @@ export default function AdminAssetsPage() {
                 {isNodeBSearch ? (
                      <TableRow>
                         <TableHead>Site ID</TableHead>
-                        <TableHead>Site Name</TableHead>
                         <TableHead>OLT Merk</TableHead>
                         <TableHead>Splitter OLT</TableHead>
                         <TableHead>SN ONT</TableHead>
@@ -982,7 +999,7 @@ export default function AdminAssetsPage() {
               {areAssetsLoading && hasSearched ? (
                  Array.from({ length: 5 }).map((_, index) => (
                     <TableRow key={index}>
-                        <TableCell colSpan={isNodeBSearch ? 13 : 11}><Skeleton className="h-6 w-full" /></TableCell>
+                        <TableCell colSpan={isNodeBSearch ? 12 : 11}><Skeleton className="h-6 w-full" /></TableCell>
                     </TableRow>
                 ))
               ) : paginatedAssets.length > 0 && hasSearched ? (
@@ -992,7 +1009,6 @@ export default function AdminAssetsPage() {
                   return isNodeBSearch ? (
                      <TableRow key={a.id}>
                         <TableCell>{a.siteId}</TableCell>
-                        <TableCell>{a.siteName}</TableCell>
                         <TableCell>{a.oltMerk}</TableCell>
                         <TableCell>{a.splitterOlt}</TableCell>
                         <TableCell>{a.snOnt}</TableCell>
@@ -1060,7 +1076,7 @@ export default function AdminAssetsPage() {
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={isNodeBSearch ? 13 : 11} className="h-24 text-center">
+                  <TableCell colSpan={isNodeBSearch ? 12 : 11} className="h-24 text-center">
                      {!canSearch 
                       ? "Silakan pilih Service Area untuk memulai." 
                       : !hasSearched 
