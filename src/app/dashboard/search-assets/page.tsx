@@ -90,6 +90,10 @@ export default function SearchAssetsPage() {
             standardSAs.add(link.serviceArea)
         }
     });
+    // Remove NODE-B if it exists to prevent duplication before prepending it.
+    standardSAs.delete('NODE-B');
+    
+    // Add special search categories
     return ['MITRATEL', 'NODE-B', ...Array.from(standardSAs).sort()];
   }, [mancoreLinks, mapLinks]);
 
@@ -153,9 +157,7 @@ export default function SearchAssetsPage() {
     
     const searchTerm = searchName.trim().toUpperCase();
 
-    // Prevent searching on very short, generic terms
     if (searchTerm.length < 3) {
-        // But allow prefixes like ODP, ODC, FTM to start searching
         if (!searchTerm.startsWith('ODP') && !searchTerm.startsWith('ODC') && !searchTerm.startsWith('FTM')) {
             return [];
         }
@@ -165,10 +167,20 @@ export default function SearchAssetsPage() {
         const assetName = asset.name.toUpperCase();
         const assetType = asset.assetType;
 
+        // --- Node B ---
+        if (assetType === 'NODE-B') {
+            return asset.siteId?.toUpperCase().includes(searchTerm) ?? false;
+        }
+        
+        // --- Mitratel ---
+        if (assetType === 'MITRATEL') {
+            return asset.tenantSiteId?.toUpperCase().includes(searchTerm) ?? false;
+        }
+
         // --- ODP ---
         if (assetType === 'ODP') {
-            if (searchTerm.startsWith('ODP')) {
-                return searchTerm.includes('/') && assetName.startsWith(searchTerm);
+            if (searchTerm.startsWith('ODP') && searchTerm.includes('/')) {
+                return assetName.startsWith(searchTerm);
             }
             return assetName.includes(searchTerm); 
         }
@@ -177,7 +189,7 @@ export default function SearchAssetsPage() {
         if (assetType === 'ODC') {
             if (searchTerm.startsWith('ODC-')) {
                 const parts = searchTerm.split('-');
-                if (parts.length >= 3 && parts[2] !== '') {
+                if (parts.length >= 3 && parts[2]) {
                      return assetName.startsWith(searchTerm);
                 }
                 return false;
@@ -193,19 +205,9 @@ export default function SearchAssetsPage() {
             return assetName.includes(searchTerm);
         }
 
-        // --- Mini OLT --- (by checking subType)
-        if (asset.subType === 'Mini OLT') {
+        // --- Mini OLT ---
+        if (asset.assetType === 'OLT' && asset.subType === 'Mini OLT') {
             return assetName.includes(searchTerm);
-        }
-
-        // --- Node B ---
-        if (assetType === 'NODE-B') {
-            return asset.siteId?.toUpperCase().includes(searchTerm) ?? false;
-        }
-        
-        // --- Mitratel ---
-        if (assetType === 'MITRATEL') {
-            return asset.tenantSiteId?.toUpperCase().includes(searchTerm) ?? false;
         }
 
         // Fallback for any other asset types (e.g. regular OLT)
