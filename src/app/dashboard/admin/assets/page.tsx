@@ -84,7 +84,7 @@ export default function AdminAssetsPage() {
   const ITEMS_PER_PAGE = 10;
 
   const canSearch = searchServiceArea !== 'all';
-  const hasSearched = canSearch && searchName.trim() !== '';
+  const hasSearched = canSearch && searchName.trim().length > 0;
   
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
     useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
@@ -100,7 +100,6 @@ export default function AdminAssetsPage() {
   const dynamicServiceAreas = useMemo(() => {
     const serviceAreaSet = new Set<string>(baseServiceAreas);
     
-    // Always add these special categories
     serviceAreaSet.add('MITRATEL');
     serviceAreaSet.add('NODE-B');
     
@@ -126,9 +125,9 @@ export default function AdminAssetsPage() {
     }
   }, [user, currentUserProfile, isUserLoading, isProfileLoading, router]);
 
-  // Fetch assets from server with server-side filtering
+  // Fetch assets only when user has typed something to search.
   const assetsQuery = useMemoFirebase(() => {
-    if (isUserLoading || isProfileLoading || !user || currentUserProfile?.role !== 'admin' || !canSearch) {
+    if (isUserLoading || isProfileLoading || !user || currentUserProfile?.role !== 'admin' || !hasSearched) {
       return null;
     }
     const collectionRef = collection(firestore, 'network-assets');
@@ -141,12 +140,12 @@ export default function AdminAssetsPage() {
     }
     
     return query(collectionRef, ...constraints);
-  }, [firestore, currentUserProfile, isUserLoading, isProfileLoading, user, canSearch, searchServiceArea]);
+  }, [firestore, currentUserProfile, isUserLoading, isProfileLoading, user, hasSearched, searchServiceArea]);
 
 
   const { data: queriedAssets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(assetsQuery);
 
- const filteredAssets = useMemo(() => {
+  const filteredAssets = useMemo(() => {
     if (!queriedAssets) return [];
     
     const searchTerm = searchName.trim().toUpperCase();
@@ -155,48 +154,45 @@ export default function AdminAssetsPage() {
 
     return queriedAssets.filter(asset => {
         const assetName = (asset.name || '').toUpperCase();
-        const assetType = asset.assetType;
+        const assetType = (asset.assetType || '').toUpperCase();
 
-        // Mitratel and Node-B are special cases based on the selected Service Area
         if (searchServiceArea === 'MITRATEL') {
-            if (assetType !== 'MITRATEL') return false;
             return asset.tenantSiteId?.toUpperCase().includes(searchTerm) ?? false;
         }
         if (searchServiceArea === 'NODE-B') {
-            if (assetType !== 'NODE-B') return false;
             return asset.siteId?.toUpperCase().includes(searchTerm) ?? false;
         }
         
-        // --- Geographic Service Area Filtering ---
-        
-        // Rule 1: Handle prefix-based searches first.
-        // If a search starts with a known prefix, ONLY match that asset type.
-        if (searchTerm.startsWith('ODP')) {
-            if (assetType !== 'ODP') return false;
-            // Apply ODP specificity rules
-            if (searchTerm.includes('/')) return assetName.includes(searchTerm);
-            const parts = searchTerm.split('-');
-            return parts.length > 2 && assetName.startsWith(searchTerm);
-        }
-        if (searchTerm.startsWith('ODC-')) {
-            if (assetType !== 'ODC') return false;
-            // Apply ODC specificity rules
-            const parts = searchTerm.split('-');
-            return parts.length > 2 && parts[2] && assetName.startsWith(searchTerm);
-        }
-        if (searchTerm.startsWith('FTM-')) {
-            if (assetType !== 'FTM') return false;
-            return assetName.startsWith(searchTerm);
-        }
+        const isGeneralSearch = !searchTerm.startsWith('ODP') && !searchTerm.startsWith('ODC-') && !searchTerm.startsWith('FTM-');
 
-        // Rule 2: If it's a general search (no specific prefix), then apply general rules.
-        // This is for cases like searching 'FAC'.
-        // This search should ONLY apply to ODC and OLT assets.
-        if (assetType === 'ODC' || assetType === 'OLT') {
-            return assetName.includes(searchTerm);
+        if (isGeneralSearch) {
+            if (assetType === 'ODC' || assetType === 'OLT') {
+                return assetName.includes(searchTerm);
+            }
+            return false;
+        } else {
+            if (searchTerm.startsWith('ODP')) {
+                if (assetType !== 'ODP') return false;
+                const parts = searchTerm.split('-');
+                if (searchTerm.includes('/') || parts.length > 2) {
+                    return assetName.startsWith(searchTerm);
+                }
+                return false;
+            }
+            if (searchTerm.startsWith('ODC-')) {
+                if (assetType !== 'ODC') return false;
+                const parts = searchTerm.split('-');
+                if (parts.length > 2 && parts[2]) {
+                    return assetName.startsWith(searchTerm);
+                }
+                return false;
+            }
+            if (searchTerm.startsWith('FTM-')) {
+                if (assetType !== 'FTM') return false;
+                return assetName.startsWith(searchTerm);
+            }
         }
         
-        // Rule 3: If an asset type doesn't match any of the above conditions, exclude it.
         return false;
     });
     
@@ -870,7 +866,7 @@ export default function AdminAssetsPage() {
 };
 
 
-  const isLoading = isUserLoading || isProfileLoading || areAssetsLoading || areMancoreLinksLoading || areMapLinksLoading;
+  const isLoading = isUserLoading || isProfileLoading || areMancoreLinksLoading || areMapLinksLoading;
 
   if (isLoading && !queriedAssets) {
       return (
@@ -1046,13 +1042,13 @@ export default function AdminAssetsPage() {
                 )}
             </TableHeader>
             <TableBody>
-              {areAssetsLoading && hasSearched ? (
+              {areAssetsLoading ? (
                  Array.from({ length: 5 }).map((_, index) => (
                     <TableRow key={index}>
                         <TableCell colSpan={isNodeBSearch ? 12 : 10}><Skeleton className="h-6 w-full" /></TableCell>
                     </TableRow>
                 ))
-              ) : paginatedAssets.length > 0 && hasSearched ? (
+              ) : paginatedAssets.length > 0 ? (
                 paginatedAssets.map(a => {
                   const coords = a.coordinates?.split(',').map(c => c.trim());
                   const googleMapsUrl = coords && coords.length === 2 ? `https://www.google.com/maps/search/?api=1&query=${coords[0]},${coords[1]}` : null;
