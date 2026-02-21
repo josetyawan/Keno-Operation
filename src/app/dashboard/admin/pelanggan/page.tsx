@@ -44,7 +44,8 @@ import { format, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import * as XLSX from 'xlsx';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Progress } from '@/components/ui/progress';
+import { fetchFromSheet } from './actions';
+
 
 const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
 
@@ -411,17 +412,12 @@ export default function AdminPelangganPage() {
   const [searchedPelanggan, setSearchedPelanggan] = useState<Pelanggan | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [searchPerformed, setSearchPerformed] = useState(false);
+  const [isFetchingSheet, setIsFetchingSheet] = useState(false);
   
   const [isNewPelangganDialogOpen, setIsNewPelangganDialogOpen] = useState(false);
   const [isAddContactDialogOpen, setIsAddContactDialogOpen] = useState(false);
   const [isUpdateLocationDialogOpen, setIsUpdateLocationDialogOpen] = useState(false);
   const [isUpdateAssetDialogOpen, setIsUpdateAssetDialogOpen] = useState(false);
-
-  // New state for CSV import
-  const [isImporting, setIsImporting] = useState(false);
-  const [importProgress, setImportProgress] = useState(0);
-  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-
 
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
     useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
@@ -480,90 +476,36 @@ export default function AdminPelangganPage() {
     }
     setIsSearching(false);
   };
+
+  const handleFetchFromSheet = async () => {
+    setIsFetchingSheet(true);
+    try {
+      const result = await fetchFromSheet();
+      if (result.success) {
+        toast({
+          title: 'Sinkronisasi Berhasil',
+          description: `${result.count} data riwayat gangguan berhasil diambil dan disimpan.`,
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Sinkronisasi Gagal',
+          description: result.message,
+          duration: 9000,
+        });
+      }
+    } catch (error: any) {
+       toast({
+          variant: 'destructive',
+          title: 'Terjadi Kesalahan',
+          description: error.message,
+          duration: 9000,
+        });
+    }
+    setIsFetchingSheet(false);
+  };
   
-    const handleImportFromCSV = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        if (!event.target.files || event.target.files.length === 0) {
-            toast({ variant: 'destructive', title: 'Tidak ada file dipilih' });
-            return;
-        }
-        setIsImporting(true);
-        setImportProgress(0);
-        const file = event.target.files[0];
-        const reader = new FileReader();
-
-        reader.onload = async (e) => {
-            try {
-                const data = e.target?.result;
-                const workbook = XLSX.read(data, { type: 'binary' });
-                const sheetName = workbook.SheetNames[0];
-                if (!sheetName) throw new Error("File CSV/Excel tidak memiliki sheet.");
-                
-                const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-
-                if (jsonData.length === 0) {
-                    throw new Error('File CSV/Excel kosong atau formatnya tidak benar.');
-                }
-
-                let importedCount = 0;
-                const totalRows = jsonData.length;
-
-                for (const row of jsonData as any[]) {
-                    const findKey = (aliases: string[]) => aliases.find(alias => row[alias] !== undefined);
-                    
-                    const noServiceKey = findKey(['No Service', 'no service', 'no_service']);
-                    const tanggalLaporKey = findKey(['Tanggal Lapor', 'tanggal lapor', 'tanggal_lapor']);
-
-                    const noService = noServiceKey ? row[noServiceKey] : undefined;
-                    const tanggalLapor = tanggalLaporKey ? row[tanggalLaporKey] : undefined;
-                    
-                    if (!noService || !tanggalLapor) {
-                        console.warn('Skipping row due to missing required fields:', row);
-                        continue;
-                    }
-
-                    let jsDate;
-                    if (typeof tanggalLapor === 'number') {
-                        jsDate = XLSX.SSF.parse_date_code(tanggalLapor);
-                        jsDate = new Date(jsDate.y, jsDate.m - 1, jsDate.d, jsDate.H, jsDate.M, jsDate.S);
-                    } else {
-                        jsDate = new Date(tanggalLapor);
-                    }
-
-                    if (!isValid(jsDate)) {
-                        console.warn('Skipping row due to invalid date:', row);
-                        continue;
-                    }
-                    
-                    const noTiketKey = findKey(['No Tiket', 'no tiket', 'no_tiket']);
-                    const teknisiKey = findKey(['Teknisi', 'teknisi']);
-                    const keteranganKey = findKey(['Keterangan', 'keterangan']);
-
-                    const newRiwayat: Omit<RiwayatGangguan, 'id'> = {
-                        noService: String(noService),
-                        tanggalLapor: Timestamp.fromDate(jsDate),
-                        noTiket: noTiketKey ? String(row[noTiketKey]) : '',
-                        teknisi: teknisiKey ? String(row[teknisiKey]) : '',
-                        keterangan: keteranganKey ? String(row[keteranganKey]) : '',
-                    };
-
-                    await addDocumentNonBlocking(collection(firestore, 'riwayat-gangguan'), newRiwayat);
-                    importedCount++;
-                    setImportProgress((importedCount / totalRows) * 100);
-                }
-                
-                toast({ title: 'Impor Berhasil', description: `${importedCount} dari ${totalRows} baris berhasil diimpor.` });
-            } catch (error: any) {
-                toast({ variant: 'destructive', title: 'Impor Gagal', description: error.message });
-            } finally {
-                setIsImporting(false);
-                setImportProgress(0);
-                setIsImportDialogOpen(false);
-            }
-        };
-        reader.readAsBinaryString(file);
-    };
-
-  const handleExportToExcel = async () => {
+    const handleExportToExcel = async () => {
     if (!isAdmin || !firestore) {
       toast({ variant: 'destructive', title: 'Akses Ditolak' });
       return;
@@ -618,29 +560,10 @@ export default function AdminPelangganPage() {
       <div className="flex items-start justify-between mb-8 flex-wrap gap-4">
         <div><h1 className="text-3xl font-bold tracking-tight">Data Pelanggan & Riwayat Gangguan</h1><p className="text-muted-foreground mt-1">Cari pelanggan berdasarkan No. Service untuk melihat riwayat atau menambah data.</p></div>
         <div className="flex flex-wrap gap-2">
-          <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
-              <DialogTrigger asChild>
-                  <Button variant="secondary"><Upload className="mr-2 h-4 w-4" /> Import Riwayat dari CSV</Button>
-              </DialogTrigger>
-              <DialogContent>
-                  <DialogHeader>
-                      <DialogTitle>Import Riwayat Gangguan dari CSV</DialogTitle>
-                      <DialogDescription>Unduh data riwayat gangguan dari Google Sheet sebagai file .csv, lalu unggah di sini. Pastikan nama kolom seperti 'No Service' dan 'Tanggal Lapor' ada di file Anda.</DialogDescription>
-                  </DialogHeader>
-                   <div className="py-4 grid gap-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="csv-file">Pilih File CSV</Label>
-                            <Input id="csv-file" type="file" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" onChange={handleImportFromCSV} disabled={isImporting} />
-                        </div>
-                        {isImporting && (
-                            <div className="flex flex-col gap-2 text-sm text-muted-foreground">
-                                <p>Mengimpor {importProgress.toFixed(0)}%...</p>
-                                <Progress value={importProgress} className="w-full" />
-                            </div>
-                        )}
-                    </div>
-              </DialogContent>
-          </Dialog>
+            <Button onClick={handleFetchFromSheet} variant="secondary" disabled={isFetchingSheet}>
+              {isFetchingSheet ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Bot className="mr-2 h-4 w-4" />}
+              {isFetchingSheet ? 'Mengambil Data...' : 'Ambil Riwayat dari Sheet'}
+            </Button>
           {isAdmin && (
               <Button onClick={handleExportToExcel} variant="outline">
                   <FileSpreadsheet className="mr-2 h-4 w-4" />
