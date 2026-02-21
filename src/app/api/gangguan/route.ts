@@ -1,3 +1,4 @@
+
 import { NextResponse } from 'next/server';
 import { initializeFirebase } from '@/firebase/init';
 import { addDoc, collection, Timestamp } from 'firebase/firestore';
@@ -49,6 +50,8 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: true, message: 'Data riwayat gangguan berhasil disimpan.' });
     } catch (error: any) {
         console.error('API Error in /api/gangguan:', error);
-        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+        // Ensure a simple, serializable error message is returned.
+        const errorMessage = error.message || 'An unknown server error occurred.';
+        return NextResponse.json({ success: false, error: `Server-side API error: ${errorMessage}` }, { status: 500 });
     }
 }

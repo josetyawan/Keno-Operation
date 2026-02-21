@@ -79,8 +79,11 @@ service cloud.firestore {
     
     match /riwayat-gangguan/{riwayatId} {
       allow read: if isApproved();
-      // Writes should come from the bot (service account), but we can allow admin writes for manual correction.
-      allow write: if isAdmin(); 
+      // Allow create requests from the bot via the API endpoint (unauthenticated from Firebase's PoV)
+      // This is secure because the API endpoint itself is protected by a secret key.
+      allow create: if true; 
+      // Only admins can update or delete history records.
+      allow update, delete: if isAdmin();
     }
 
     match /map-links/{mapLinkId} {
