@@ -71,13 +71,20 @@ function createJsonResponse(data) {
 // 5. Klik tombol biru "Deploy".
 // 6. Jika diminta, klik "Authorize access" dan ikuti alur untuk memberikan izin pada akun Google Anda.
 // 7. Setelah selesai, Anda akan mendapatkan "Web app URL". **SALIN ULANG URL INI** bahkan jika terlihat sama.
-// 8. Tempelkan URL tersebut ke dalam file `.env` di aplikasi Anda pada variabel `APPS_SCRIPT_WEB_APP_URL`.
+// 8. Tempelkan URL tersebut ke dalam file `apphosting.yaml` di aplikasi Anda pada variabel `APPS_SCRIPT_WEB_APP_URL`.
 // =========================================================
 
-// =========== CARA MEMPERBARUI DEPLOYMENT (PENTING!) ===========
-// 1. Setelah mengubah kode, simpan file (Ctrl + S).
+// =========== CARA MEMPERBARUI DEPLOYMENT (SANGAT PENTING!) ===========
+// Setiap kali Anda mengubah KODE atau IZIN, Anda HARUS membuat deployment versi baru.
+// Jika tidak, URL Web App Anda akan tetap menjalankan KODE LAMA.
+// 
+// 1. Simpan file ini jika ada perubahan (Ctrl + S).
 // 2. Klik "Deploy" -> "Manage deployments".
-// 3. Pilih deployment aktif Anda, lalu klik ikon pensil (Edit).
-// 4. Di bagian "Version", pilih "New version".
-// 5. Klik "Deploy". Perubahan Anda kini sudah aktif.
-// =============================================================
+// 3. Pilih deployment aktif Anda (biasanya hanya ada satu).
+// 4. Klik ikon pensil (Edit ✎).
+// 5. Di bagian "Version", klik dropdown dan pilih "New version".
+// 6. Beri deskripsi singkat (opsional, misal: "Perbaikan izin akses").
+// 7. Klik tombol biru "Deploy".
+//
+// URL Web App Anda akan tetap sama, tetapi sekarang akan menjalankan kode terbaru.
+// =======================================================================
