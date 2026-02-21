@@ -76,7 +76,7 @@ export default function SearchAssetsPage() {
 
   const mitratelMapUrl = useMemo(() => {
     if (!mapLinks) return null;
-    const mitratelLink = mapLinks.find(link => link.serviceArea.toUpperCase() === 'MITRATEL');
+    const mitratelLink = mapLinks.find(link => link.serviceArea.toUpperCase().includes('MITRATEL'));
     return mitratelLink?.url || null;
   }, [mapLinks]);
   
@@ -85,9 +85,11 @@ export default function SearchAssetsPage() {
     
     const addSA = (sa: string) => {
         const upperSa = sa.toUpperCase();
-        if (upperSa !== 'MITRATEL' && upperSa !== 'NODE-B') {
-            serviceAreaSet.add(sa);
+        // Prevent adding variations of Mitratel or Node-B since they are hardcoded
+        if (upperSa.includes('MITRATEL') || upperSa.includes('NODE-B')) {
+            return;
         }
+        serviceAreaSet.add(sa);
     };
     
     if (mancoreLinks) mancoreLinks.forEach(link => addSA(link.serviceArea));
@@ -158,12 +160,7 @@ export default function SearchAssetsPage() {
     
     const searchTerm = searchName.trim().toUpperCase();
 
-    if (searchTerm.length < 3) {
-      const allowedPrefixes = ['ODP', 'ODC', 'FTM'];
-      if (!allowedPrefixes.some(p => searchTerm.startsWith(p))) {
-        return [];
-      }
-    }
+    if (!searchTerm) return [];
 
     return queriedAssets.filter(asset => {
         const assetName = asset.name.toUpperCase();
