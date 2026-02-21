@@ -361,7 +361,7 @@ export default function AdminSchedulesPage() {
             const data = e.target?.result;
             const workbook = XLSX.read(data, { type: 'array' });
             const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: null, raw: true });
+            const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: null, raw: false }); // Change: raw: false
     
             if (jsonData.length === 0) {
                 throw new Error("Sheet Excel kosong.");
