@@ -449,8 +449,8 @@ export default function AdminPelangganPage() {
       const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS6GU4F_Iqvw7u1pkL06KQjDrrdGCu_DshWT0QWeozGpwpUIAc757COSNEnkhrRKH1RnPDqNeXDDNjU/export?format=csv&gid=0&t=' + new Date().getTime());
       if (!response.ok) throw new Error('Gagal mengambil data dari Google Sheet.');
 
-      const data = await response.arrayBuffer();
-      const workbook = XLSX.read(data);
+      const csvData = await response.text();
+      const workbook = XLSX.read(csvData, { type: 'string' });
       const sheetName = workbook.SheetNames[0];
       const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
