@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import {
@@ -9,14 +7,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import {
   Dialog,
   DialogContent,
@@ -50,6 +40,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
+import { id as idLocale } from 'date-fns/locale';
 
 const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
 
@@ -462,18 +453,39 @@ export default function AdminPelangganPage() {
     setSheetHistory([]); // Clear previous history
     const serviceNumberToFind = searchedPelanggan.noService.trim();
     try {
-      const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS6GU4F_Iqvw7u1pkL06KQjDrrdGCu_DshWT0QWeozGpwpUIAc757COSNEnkhrRKH1RnPDqNeXDDNjU/pub?output=csv');
+      const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS6GU4F_Iqvw7u1pkL06KQjDrrdGCu_DshWT0QWeozGpwpUIAc757COSNEnkhrRKH1RnPDqNeXDDNjU/export?format=xlsx');
       if (!response.ok) {
         throw new Error(`Gagal mengambil data dari Google Sheet. Status: ${response.status}`);
       }
 
-      const csvData = await response.text();
-      const workbook = XLSX.read(csvData, { type: 'string' });
-      const sheetName = workbook.SheetNames[0];
+      const arrayBuffer = await response.arrayBuffer();
+      const workbook = XLSX.read(arrayBuffer, { type: 'buffer' });
+      
+      const expectedSheetName = format(new Date(), 'MMMM yyyy', { locale: idLocale });
+      let sheetName = workbook.SheetNames.find(name => name.trim().toLowerCase() === expectedSheetName.toLowerCase());
+
+      if (!sheetName) {
+        const monthYearRegex = /^(Januari|Februari|Maret|April|Mei|Juni|Juli|Agustus|September|Oktober|November|Desember) \d{4}$/i;
+        sheetName = workbook.SheetNames.find(name => monthYearRegex.test(name.trim()));
+      }
+      
+      if (!sheetName) {
+        sheetName = workbook.SheetNames[0];
+        if (sheetName) {
+          toast({
+            title: 'Info',
+            description: `Sheet untuk bulan ini tidak ditemukan. Menampilkan data dari sheet pertama: "${sheetName}".`,
+            duration: 7000
+          });
+        }
+      }
+      
       if (!sheetName) {
         throw new Error('File Google Sheet tidak memiliki sheet yang dapat dibaca.');
       }
-      const jsonData: any[][] = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, raw: false, blankrows: false });
+
+      const worksheet = workbook.Sheets[sheetName];
+      const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false, blankrows: false });
 
       if (jsonData.length < 1) {
         throw new Error('Sheet kosong atau tidak memiliki header.');
@@ -487,9 +499,9 @@ export default function AdminPelangganPage() {
           return headers.findIndex(h => h && lowerKeys.includes(h.toString().toLowerCase().trim()));
       };
 
-      const noServiceIndex = findIndex(headerRow, ['no service']);
+      const noServiceIndex = findIndex(headerRow, ['no. service', 'no service', 'noser']);
       const tanggalIndex = findIndex(headerRow, ['tanggal']);
-      const noTiketIndex = findIndex(headerRow, ['no tiket']);
+      const noTiketIndex = findIndex(headerRow, ['no tiket', 'no. tiket']);
       const teknisiIndex = findIndex(headerRow, ['teknisi']);
       const keteranganIndex = findIndex(headerRow, ['keterangan']);
 
@@ -500,10 +512,10 @@ export default function AdminPelangganPage() {
       const history = dataRows
         .filter((row: any) => row[noServiceIndex]?.toString().trim() === serviceNumberToFind)
         .map((row: any) => ({
-            Tanggal: tanggalIndex !== -1 ? row[tanggalIndex] : '-',
+            'Tanggal': tanggalIndex !== -1 ? row[tanggalIndex] : '-',
             'No Tiket': noTiketIndex !== -1 ? row[noTiketIndex] : '-',
-            Teknisi: teknisiIndex !== -1 ? row[teknisiIndex] : '-',
-            Keterangan: keteranganIndex !== -1 ? row[keteranganIndex] : '-',
+            'Teknisi': teknisiIndex !== -1 ? row[teknisiIndex] : '-',
+            'Keterangan': keteranganIndex !== -1 ? row[keteranganIndex] : '-',
         }))
         .sort((a: any, b: any) => parseIndonesianDate(b.Tanggal).getTime() - parseIndonesianDate(a.Tanggal).getTime());
 
