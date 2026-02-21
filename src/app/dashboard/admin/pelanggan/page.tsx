@@ -41,6 +41,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { format, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
+import * as XLSX from 'xlsx';
 
 const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
 
@@ -429,17 +430,18 @@ export default function AdminPelangganPage() {
     }
   }, [user, currentUserProfile, isUserLoading, isProfileLoading, router]);
   
-  const riwayatQuery = useMemoFirebase(() => {
-    if (!searchedPelanggan) {
-      return null;
-    }
-    return query(
-      collection(firestore, 'riwayat-gangguan'),
-      where('noService', '==', searchedPelanggan.noService)
-    );
-  }, [firestore, searchedPelanggan]);
+  const allRiwayatQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'riwayat-gangguan'));
+  }, [firestore]);
 
-  const { data: unsortedRiwayat, isLoading: isRiwayatLoading } = useCollection<RiwayatGangguan>(riwayatQuery);
+  const { data: allRiwayat, isLoading: isRiwayatLoading } = useCollection<RiwayatGangguan>(allRiwayatQuery);
+
+  const unsortedRiwayat = useMemo(() => {
+      if (!allRiwayat || !searchedPelanggan) return null;
+      return allRiwayat.filter(riwayat => riwayat.noService === searchedPelanggan.noService);
+  }, [allRiwayat, searchedPelanggan]);
+
 
   const riwayatGangguan = useMemo(() => {
     if (!unsortedRiwayat) return null;
