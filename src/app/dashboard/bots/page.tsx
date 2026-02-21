@@ -15,10 +15,34 @@ const bots = [
     url: 'https://t.me/B2BLapor_bot',
   },
   {
-    name: 'Bot Lembar SA',
+    name: 'Lembar SA Bot',
     username: '@LembarSA_bot',
     description: 'Bot untuk mencari detail dan service number di dalam ODP khusus untuk area Kudus.',
     url: 'https://t.me/LembarSA_bot',
+  },
+   {
+    name: 'MOWO Provi & Assurance',
+    username: '@mowoprovi_bot',
+    description: 'Update WO Provisioning, lihat & update replace ONT, Benjar ODP, Uji Petik, dan update tiket Assurance.',
+    url: 'https://t.me/mowoprovi_bot',
+  },
+  {
+    name: 'Input Progres Provisioning',
+    username: '@inputsakudus_bot',
+    description: 'Bot khusus untuk update progres Work Order (WO) Provisioning.',
+    url: 'https://t.me/inputsakudus_bot',
+  },
+  {
+    name: 'Lapor Manual Grapari',
+    username: '@Graparikds_lapor_bot',
+    description: 'Bot untuk input laporan manual Grapari dengan format khusus. Contoh: /input Segmen: INDIHOME...',
+    url: 'https://t.me/Graparikds_lapor_bot',
+  },
+  {
+    name: 'Cek ID Telegram',
+    username: '@idgroup2_bot',
+    description: 'Bot sederhana untuk mengetahui ID chat Telegram pribadi Anda atau ID grup.',
+    url: 'https://t.me/idgroup2_bot',
   }
 ];
 
