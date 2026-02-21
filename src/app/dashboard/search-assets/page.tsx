@@ -79,10 +79,18 @@ export default function SearchAssetsPage() {
   }, [mapLinks]);
   
   const dynamicServiceAreas = useMemo(() => {
-    const allSAs = new Set<string>(baseServiceAreas);
-    if (mancoreLinks) mancoreLinks.forEach(link => allSAs.add(link.serviceArea));
-    if (mapLinks) mapLinks.forEach(link => allSAs.add(link.serviceArea));
-    return Array.from(allSAs).filter(sa => sa.toUpperCase() !== 'MITRATEL').sort();
+    const standardSAs = new Set<string>(baseServiceAreas);
+    if (mancoreLinks) mancoreLinks.forEach(link => {
+        if (!link.serviceArea.toLowerCase().includes('mitratel')) {
+            standardSAs.add(link.serviceArea)
+        }
+    });
+    if (mapLinks) mapLinks.forEach(link => {
+        if (!link.serviceArea.toLowerCase().includes('mitratel')) {
+            standardSAs.add(link.serviceArea)
+        }
+    });
+    return ['MITRATEL', 'NODE-B', ...Array.from(standardSAs).sort()];
   }, [mancoreLinks, mapLinks]);
 
   const mancoreLinksBySA = useMemo(() => {
@@ -126,8 +134,16 @@ export default function SearchAssetsPage() {
     if (!canSearch || !currentUserProfile) {
       return null;
     }
-    const constraints: QueryConstraint[] = [where('serviceArea', '==', searchServiceArea)];
-    return query(collection(firestore, 'network-assets'), ...constraints);
+    const collectionRef = collection(firestore, 'network-assets');
+    const constraints: QueryConstraint[] = [];
+
+    if (searchServiceArea === 'MITRATEL' || searchServiceArea === 'NODE-B') {
+        constraints.push(where('assetType', '==', searchServiceArea));
+    } else {
+        constraints.push(where('serviceArea', '==', searchServiceArea));
+    }
+    
+    return query(collectionRef, ...constraints);
   }, [firestore, currentUserProfile, canSearch, searchServiceArea]);
 
   const { data: queriedAssets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(assetsQuery);
@@ -206,28 +222,8 @@ export default function SearchAssetsPage() {
       return filteredAssets.slice(startIndex, endIndex);
   }, [filteredAssets, currentPage]);
   
-  const isNodeBSearch = useMemo(() => {
-    const upperSearch = searchName.toUpperCase().trim();
-    if (upperSearch.startsWith('NODE-B')) return true;
-
-    const siteIdPatterns = ['JPA', 'KDS', 'DMK', 'PAT', 'RBG', 'GRO', 'BLA'];
-    // Check if the search query looks like a site ID
-    if (siteIdPatterns.some(p => upperSearch.includes(p))) {
-        // To avoid false positives (e.g., searching for a person named 'Pat'), check if it contains numbers.
-        if (/\d/.test(upperSearch)) {
-            return true;
-        }
-    }
-    
-    // Also consider if the found assets are of type NODE-B, even if search term is ambiguous
-    if (paginatedAssets.length > 0 && paginatedAssets.every(a => a.assetType === 'NODE-B')) {
-        return true;
-    }
-
-    return false;
-}, [searchName, paginatedAssets]);
-  
-  const isMitratelSearch = useMemo(() => paginatedAssets?.[0]?.assetType === 'MITRATEL', [paginatedAssets]);
+  const isNodeBSearch = searchServiceArea === 'NODE-B';
+  const isMitratelSearch = searchServiceArea === 'MITRATEL';
 
 
   useEffect(() => {
@@ -265,11 +261,11 @@ export default function SearchAssetsPage() {
         <CardContent>
             <div className="grid sm:grid-cols-1 md:grid-cols-3 gap-4">
                  <div className="grid gap-1.5 md:col-span-1">
-                    <Label htmlFor="search-area">1. Pilih Service Area *</Label>
+                    <Label htmlFor="search-area">1. Pilih Kategori/Area *</Label>
                     <Select value={searchServiceArea} onValueChange={setSearchServiceArea}>
                         <SelectTrigger id="search-area"><SelectValue placeholder="Pilih untuk memulai..." /></SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Pilih Service Area...</SelectItem>
+                            <SelectItem value="all">Pilih Kategori/Area...</SelectItem>
                             {dynamicServiceAreas.map(sa => <SelectItem key={sa} value={sa}>{sa}</SelectItem>)}
                         </SelectContent>
                     </Select>
@@ -319,7 +315,7 @@ export default function SearchAssetsPage() {
         <CardHeader>
           <CardTitle>Daftar Aset</CardTitle>
           <CardDescription>
-            {hasSearched ? `Menampilkan ${paginatedAssets.length} dari ${filteredAssets.length} aset yang cocok.` : (canSearch ? 'Ketik nama aset, Site ID, atau Tenant ID di atas untuk mencari.' : 'Pilih Service Area untuk melihat data.')}
+            {hasSearched ? `Menampilkan ${paginatedAssets.length} dari ${filteredAssets.length} aset yang cocok.` : (canSearch ? 'Ketik nama aset, Site ID, atau Tenant ID di atas untuk mencari.' : 'Pilih Kategori/Area untuk melihat data.')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -411,7 +407,7 @@ export default function SearchAssetsPage() {
                 <TableRow>
                   <TableCell colSpan={isNodeBSearch ? 12 : 10} className="h-24 text-center">
                     {!canSearch 
-                      ? "Silakan pilih Service Area untuk memulai." 
+                      ? "Silakan pilih Kategori/Area untuk memulai." 
                       : !hasSearched 
                       ? "Ketik nama aset, Site ID, atau Tenant ID di atas untuk mencari." 
                       : "Tidak ada aset yang cocok dengan filter Anda."}

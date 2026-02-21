@@ -98,10 +98,19 @@ export default function AdminAssetsPage() {
   const { data: mapLinks, isLoading: areMapLinksLoading } = useCollection(mapLinksQuery);
   
   const dynamicServiceAreas = useMemo(() => {
-    const allSAs = new Set<string>(baseServiceAreas);
-    if (mancoreLinks) mancoreLinks.forEach(link => allSAs.add(link.serviceArea));
-    if (mapLinks) mapLinks.forEach(link => allSAs.add(link.serviceArea));
-    return Array.from(allSAs).filter(sa => !sa.toLowerCase().includes('mitratel')).sort();
+    const standardSAs = new Set<string>(baseServiceAreas);
+    if (mancoreLinks) mancoreLinks.forEach(link => {
+        if (!link.serviceArea.toLowerCase().includes('mitratel')) {
+            standardSAs.add(link.serviceArea)
+        }
+    });
+    if (mapLinks) mapLinks.forEach(link => {
+        if (!link.serviceArea.toLowerCase().includes('mitratel')) {
+            standardSAs.add(link.serviceArea)
+        }
+    });
+    // Add special search categories
+    return ['MITRATEL', 'NODE-B', ...Array.from(standardSAs).sort()];
   }, [mancoreLinks, mapLinks]);
 
   useEffect(() => {
@@ -115,8 +124,16 @@ export default function AdminAssetsPage() {
     if (isUserLoading || isProfileLoading || !user || currentUserProfile?.role !== 'admin' || !canSearch) {
       return null;
     }
-    const constraints: QueryConstraint[] = [where('serviceArea', '==', searchServiceArea)];
-    return query(collection(firestore, 'network-assets'), ...constraints);
+    const collectionRef = collection(firestore, 'network-assets');
+    const constraints: QueryConstraint[] = [];
+    
+    if (searchServiceArea === 'MITRATEL' || searchServiceArea === 'NODE-B') {
+        constraints.push(where('assetType', '==', searchServiceArea));
+    } else {
+        constraints.push(where('serviceArea', '==', searchServiceArea));
+    }
+    
+    return query(collectionRef, ...constraints);
   }, [firestore, currentUserProfile, isUserLoading, isProfileLoading, user, canSearch, searchServiceArea]);
 
 
@@ -197,24 +214,8 @@ export default function AdminAssetsPage() {
       return filteredAssets.slice(startIndex, endIndex);
   }, [filteredAssets, currentPage]);
 
-  const isNodeBSearch = useMemo(() => {
-    const upperSearch = searchName.toUpperCase().trim();
-    if (upperSearch.startsWith('NODE-B')) return true;
-
-    const siteIdPatterns = ['JPA', 'KDS', 'DMK', 'PAT', 'RBG', 'GRO', 'BLA'];
-    if (siteIdPatterns.some(p => upperSearch.includes(p))) {
-        if (/\d/.test(upperSearch)) {
-            return true;
-        }
-    }
-    
-    if (paginatedAssets.length > 0 && paginatedAssets.every(a => a.assetType === 'NODE-B')) {
-        return true;
-    }
-
-    return false;
-}, [searchName, paginatedAssets]);
-  const isMitratelSearch = useMemo(() => paginatedAssets?.[0]?.assetType === 'MITRATEL', [paginatedAssets]);
+  const isNodeBSearch = searchServiceArea === 'NODE-B';
+  const isMitratelSearch = searchServiceArea === 'MITRATEL';
 
   const mapNodeBToServiceArea = (siteId: string): string => {
         const upperSiteId = (siteId || '').toUpperCase();
@@ -961,7 +962,7 @@ export default function AdminAssetsPage() {
                     <Select value={searchServiceArea} onValueChange={setSearchServiceArea}>
                         <SelectTrigger id="search-area"><SelectValue placeholder="Pilih untuk memulai..." /></SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Pilih Service Area...</SelectItem>
+                            <SelectItem value="all">Pilih Kategori/Area...</SelectItem>
                             {dynamicServiceAreas.map(sa => <SelectItem key={sa} value={sa}>{sa}</SelectItem>)}
                         </SelectContent>
                     </Select>
@@ -978,7 +979,7 @@ export default function AdminAssetsPage() {
         <CardHeader>
           <CardTitle>Daftar Aset</CardTitle>
           <CardDescription>
-            {hasSearched ? `Menampilkan ${paginatedAssets.length} dari ${filteredAssets.length} aset yang cocok.` : (canSearch ? 'Ketik nama aset untuk memulai pencarian.' : 'Pilih Service Area untuk mengaktifkan pencarian.')}
+            {hasSearched ? `Menampilkan ${paginatedAssets.length} dari ${filteredAssets.length} aset yang cocok.` : (canSearch ? 'Ketik nama aset untuk memulai pencarian.' : 'Pilih Kategori/Area untuk mengaktifkan pencarian.')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -1096,7 +1097,7 @@ export default function AdminAssetsPage() {
                 <TableRow>
                   <TableCell colSpan={isNodeBSearch ? 12 : 10} className="h-24 text-center">
                      {!canSearch 
-                      ? "Silakan pilih Service Area untuk memulai." 
+                      ? "Silakan pilih Kategori/Area untuk memulai." 
                       : !hasSearched 
                       ? "Ketik nama aset di atas untuk mencari." 
                       : "Tidak ada aset yang cocok dengan pencarian Anda."}
