@@ -122,6 +122,7 @@
         "portRsk": { "type": "string", "description": "Damaged/Rusak ports, typically for ODP." },
         "mitratelSiteId": { "type": "string", "description": "Site ID from Mitratel for a Mitratel asset." },
         "tenantSiteId": { "type": "string", "description": "Tenant Site ID for a Mitratel asset." },
+        "qrCodeUrl": { "type": "string", "description": "URL of the QR code for the asset.", "format": "uri" },
         "siteId": { "type": "string" },
         "siteName": { "type": "string" },
         "oltMerk": { "type": "string" },
@@ -173,7 +174,7 @@
         "noService": { "type": "string", "description": "Customer's service number (e.g., IndiHome number)." },
         "namaPelanggan": { "type": "string", "description": "Name of the customer." },
         "alamat": { "type": "string", "description": "Address of the customer." },
-        "nomorTelepon": { "type": "string", "description": "Phone number of the customer." },
+        "nomorTelepon": { "type": "array", "items": { "type": "string" }, "description": "List of customer's phone numbers." },
         "koordinat": { "type": "string", "description": "GPS coordinates of the customer's location." },
         "fotoCpUrl": { "type": "string", "description": "URL of the customer's location photo.", "format": "uri" },
         "serviceArea": { "type": "string", "description": "The service area the customer belongs to." },
@@ -338,3 +339,5 @@
     "reasoning": "The data is structured with a top-level `users` collection for profiles and a top-level `notas` collection for all user-generated notes. This flat structure for `notas` simplifies querying, allowing all users to view all notes easily, which aligns with the application's requirements. Security is enforced within the rules: while reads are permissive, writes (create, update, delete) are strictly controlled. A user can only create a nota with their own `userId`, and can only update or delete notas they own. Admins are granted special privileges to update any nota for verification purposes. A `network-assets` collection is added for managing network equipment, with admin-only write access. This design is efficient and secure for the specified use case."
   }
 }
+
+    

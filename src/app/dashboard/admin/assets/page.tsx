@@ -46,7 +46,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Trash2, Upload, Search, Loader2, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
+import { Trash2, Upload, Search, Loader2, ChevronLeft, ChevronRight, MapPin, QrCode } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
 import { useUser, useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking, useDoc, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
 import { collection, query, doc, serverTimestamp, writeBatch, where, getDocs, limit, type QueryConstraint } from 'firebase/firestore';
@@ -402,6 +402,7 @@ export default function AdminAssetsPage() {
             const rskCol = findColumn(firstRowKeys, ['rsk', 'port rsk']);
             const mitratelSiteIdCol = findColumn(firstRowKeys, ['site_id_mitratel']);
             const tenantSiteIdCol = findColumn(firstRowKeys, ['site_id_tenant']);
+            const qrCol = findColumn(firstRowKeys, ['qr', 'qrcode', 'qr_code']);
 
 
             if (!assetNameCol) {
@@ -808,6 +809,7 @@ export default function AdminAssetsPage() {
                             if (usedCol && row[usedCol] != null) assetData.portUsed = row[usedCol].toString();
                             if (rsvCol && row[rsvCol] != null) assetData.portRsv = row[rsvCol].toString();
                             if (rskCol && row[rskCol] != null) assetData.portRsk = row[rskCol].toString();
+                            if (qrCol && row[qrCol] != null) assetData.qrCodeUrl = row[qrCol].toString();
                             assetData.subType = 'N/A';
                         } else if (importAssetType === 'ODC') {
                             if (specCol && row[specCol] != null) assetData.spec = row[specCol].toString();
@@ -1036,6 +1038,7 @@ export default function AdminAssetsPage() {
                         {isMitratelSearch && <TableHead>Mitratel ID</TableHead>}
                         {!isMitratelSearch && <TableHead>Avail</TableHead>}
                         {!isMitratelSearch && <TableHead>Used</TableHead>}
+                        <TableHead>QR</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                 )}
@@ -1044,7 +1047,7 @@ export default function AdminAssetsPage() {
               {areAssetsLoading ? (
                  Array.from({ length: 5 }).map((_, index) => (
                     <TableRow key={index}>
-                        <TableCell colSpan={isNodeBSearch ? 12 : 10}><Skeleton className="h-6 w-full" /></TableCell>
+                        <TableCell colSpan={isNodeBSearch ? 12 : 11}><Skeleton className="h-6 w-full" /></TableCell>
                     </TableRow>
                 ))
               ) : paginatedAssets.length > 0 ? (
@@ -1085,6 +1088,15 @@ export default function AdminAssetsPage() {
                         {isMitratelSearch && <TableCell>{a.mitratelSiteId || '-'}</TableCell>}
                         {!isMitratelSearch && <TableCell>{a.portAvai || '-'}</TableCell>}
                         {!isMitratelSearch && <TableCell>{a.portUsed || '-'}</TableCell>}
+                        <TableCell>
+                            {a.qrCodeUrl ? (
+                                <Button asChild variant="ghost" size="icon" title="Lihat QR Code">
+                                    <Link href={a.qrCodeUrl} target="_blank" rel="noopener noreferrer">
+                                        <QrCode className="h-4 w-4 text-purple-600"/>
+                                    </Link>
+                                </Button>
+                            ) : '-'}
+                        </TableCell>
                         <TableCell className="text-right">
                         {googleMapsUrl && (
                             <Button asChild variant="ghost" size="icon" title="Lihat di Google Maps">
@@ -1120,7 +1132,7 @@ export default function AdminAssetsPage() {
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={isNodeBSearch ? 12 : 10} className="h-24 text-center">
+                  <TableCell colSpan={isNodeBSearch ? 12 : 11} className="h-24 text-center">
                      {!canSearch 
                       ? "Silakan pilih Kategori/Area untuk memulai." 
                       : !hasTyped
@@ -1161,3 +1173,5 @@ export default function AdminAssetsPage() {
     </>
   );
 }
+
+    

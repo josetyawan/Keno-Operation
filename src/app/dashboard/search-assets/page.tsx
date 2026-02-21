@@ -27,7 +27,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Search, ChevronLeft, ChevronRight, MapPin, FolderGit2, Bot } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, MapPin, FolderGit2, Bot, QrCode } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, doc, where, type QueryConstraint } from 'firebase/firestore';
 import type { UserProfile, NetworkAsset, MancoreLink, MapLink } from '@/lib/types';
@@ -375,6 +375,7 @@ export default function SearchAssetsPage() {
                         {isMitratelSearch && <TableHead>Mitratel ID</TableHead>}
                         {!isMitratelSearch && <TableHead>Avail</TableHead>}
                         {!isMitratelSearch && <TableHead>Used</TableHead>}
+                        <TableHead>QR</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                 )}
@@ -382,7 +383,7 @@ export default function SearchAssetsPage() {
             <TableBody>
               {areAssetsLoading ? (
                  Array.from({ length: 5 }).map((_, index) => (
-                    <TableRow key={index}><TableCell colSpan={isNodeBSearch ? 12 : 10}><Skeleton className="h-6 w-full" /></TableCell></TableRow>
+                    <TableRow key={index}><TableCell colSpan={isNodeBSearch ? 12 : 11}><Skeleton className="h-6 w-full" /></TableCell></TableRow>
                 ))
               ) : paginatedAssets.length > 0 ? (
                 paginatedAssets.map(a => {
@@ -422,6 +423,15 @@ export default function SearchAssetsPage() {
                     {isMitratelSearch && <TableCell>{a.mitratelSiteId || '-'}</TableCell>}
                     {!isMitratelSearch && <TableCell>{a.portAvai || '-'}</TableCell>}
                     {!isMitratelSearch && <TableCell>{a.portUsed || '-'}</TableCell>}
+                    <TableCell>
+                        {a.qrCodeUrl ? (
+                            <Button asChild variant="ghost" size="icon" title="Lihat QR Code">
+                                <Link href={a.qrCodeUrl} target="_blank" rel="noopener noreferrer">
+                                    <QrCode className="h-4 w-4 text-purple-600"/>
+                                </Link>
+                            </Button>
+                        ) : '-'}
+                    </TableCell>
                     <TableCell className="text-right">
                        {googleMapsUrl && (
                         <Button asChild variant="ghost" size="icon" title="Lihat di Google Maps">
@@ -440,7 +450,7 @@ export default function SearchAssetsPage() {
                 )})
               ) : (
                 <TableRow>
-                  <TableCell colSpan={isNodeBSearch ? 12 : 10} className="h-24 text-center">
+                  <TableCell colSpan={isNodeBSearch ? 12 : 11} className="h-24 text-center">
                     {!canSearch 
                       ? "Silakan pilih Kategori/Area untuk memulai." 
                       : !hasTyped 
@@ -467,3 +477,5 @@ export default function SearchAssetsPage() {
     </>
   );
 }
+
+    

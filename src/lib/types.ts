@@ -99,6 +99,7 @@ export type NetworkAsset = {
   portRsk?: string;
   mitratelSiteId?: string;
   tenantSiteId?: string;
+  qrCodeUrl?: string;
 
   // Fields for NODE-B
   siteId?: string;
@@ -135,7 +136,7 @@ export type Pelanggan = {
   noService: string;
   namaPelanggan: string;
   alamat?: string;
-  nomorTelepon?: string;
+  nomorTelepon?: string[] | string;
   koordinat: string;
   fotoCpUrl?: string;
   serviceArea: string;
@@ -234,3 +235,5 @@ export type PrivateMessage = {
   userId: string;
   createdAt: any; // Timestamp
 };
+
+    

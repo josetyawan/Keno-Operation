@@ -24,6 +24,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogClose,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,8 +37,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Bot, PlusCircle, MapPin, Loader2, Upload, Search, History } from 'lucide-react';
-import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc, useStorage } from '@/firebase';
+import { Bot, PlusCircle, MapPin, Loader2, Upload, Search, History, Phone, Pencil } from 'lucide-react';
+import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, useDoc, useStorage } from '@/firebase';
 import { collection, query, doc, serverTimestamp, where, getDocs, limit } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { UserProfile, Pelanggan } from '@/lib/types';
@@ -49,128 +50,272 @@ import Link from 'next/link';
 import Image from 'next/image';
 import * as XLSX from 'xlsx';
 
-
 const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
 
-// --- FORM COMPONENTS ---
+// --- Helper & Sub-components ---
 
-function PelangganForm({ pelanggan, onFormSubmit, isSaving }: { pelanggan?: Pelanggan | null, onFormSubmit: (data: Partial<Pelanggan>, file: File | null) => void, isSaving: boolean }) {
-  const [noService, setNoService] = useState('');
-  const [namaPelanggan, setNamaPelanggan] = useState('');
-  const [alamat, setAlamat] = useState('');
-  const [nomorTelepon, setNomorTelepon] = useState('');
-  const [koordinat, setKoordinat] = useState('');
-  const [serviceArea, setServiceArea] = useState('');
-  const [fotoCp, setFotoCp] = useState<File | null>(null);
-  const [fotoCpPreview, setFotoCpPreview] = useState<string | null>(null);
-  const [isGettingLocation, setIsGettingLocation] = useState(false);
-  const { toast } = useToast();
+const formatWaNumber = (phone: string) => {
+    let cleanPhone = phone.replace(/\D/g, '');
+    if (cleanPhone.startsWith('0')) {
+        cleanPhone = '62' + cleanPhone.substring(1);
+    } else if (!cleanPhone.startsWith('62')) {
+        cleanPhone = '62' + cleanPhone;
+    }
+    return `https://wa.me/${cleanPhone}`;
+};
 
-  useEffect(() => {
-    if (pelanggan) {
-      setNoService(pelanggan.noService);
-      setNamaPelanggan(pelanggan.namaPelanggan);
-      setAlamat(pelanggan.alamat || '');
-      setNomorTelepon(pelanggan.nomorTelepon || '');
-      setKoordinat(pelanggan.koordinat);
-      setServiceArea(pelanggan.serviceArea);
-      setFotoCpPreview(pelanggan.fotoCpUrl || null);
-      setFotoCp(null);
-    } else {
-      setNoService('');
-      setNamaPelanggan('');
-      setAlamat('');
-      setNomorTelepon('');
-      setKoordinat('');
-      setServiceArea('');
-      setFotoCpPreview(null);
-      setFotoCp(null);
-    }
-  }, [pelanggan]);
-  
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-        setFotoCp(file);
-        setFotoCpPreview(URL.createObjectURL(file));
-    }
-  };
+function NewPelangganDialog({ isOpen, onOpenChange, onFinished }: { isOpen: boolean, onOpenChange: (open: boolean) => void, onFinished: (pelanggan: Pelanggan) => void }) {
+    const { user } = useUser();
+    const firestore = useFirestore();
+    const storage = useStorage();
+    const { toast } = useToast();
+    const [isSaving, setIsSaving] = useState(false);
+    
+    // Form state
+    const [noService, setNoService] = useState('');
+    const [namaPelanggan, setNamaPelanggan] = useState('');
+    const [alamat, setAlamat] = useState('');
+    const [nomorTelepon, setNomorTelepon] = useState('');
+    const [koordinat, setKoordinat] = useState('');
+    const [serviceArea, setServiceArea] = useState('');
+    const [fotoCp, setFotoCp] = useState<File | null>(null);
+    const [fotoCpPreview, setFotoCpPreview] = useState<string | null>(null);
+    const [isGettingLocation, setIsGettingLocation] = useState(false);
 
-  const handleGetLocation = () => {
-    if (!navigator.geolocation) {
-        toast({ variant: 'destructive', title: 'Geolocation Tidak Didukung' });
-        return;
-    }
-    setIsGettingLocation(true);
-    navigator.geolocation.getCurrentPosition(
-        (position) => {
-            const { latitude, longitude } = position.coords;
-            setKoordinat(`${latitude}, ${longitude}`);
-            setIsGettingLocation(false);
-            toast({ title: 'Lokasi Berhasil Diambil' });
-        },
-        (error) => {
-            toast({ variant: 'destructive', title: 'Gagal Mendapatkan Lokasi', description: error.message });
-            setIsGettingLocation(false);
+    const handleGetLocation = () => {
+        setIsGettingLocation(true);
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                setKoordinat(`${position.coords.latitude}, ${position.coords.longitude}`);
+                setIsGettingLocation(false);
+            },
+            () => {
+                toast({ variant: 'destructive', title: 'Gagal Mendapatkan Lokasi' });
+                setIsGettingLocation(false);
+            }
+        );
+    };
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            setFotoCp(file);
+            setFotoCpPreview(URL.createObjectURL(file));
         }
+    };
+    
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!user || !user.email || !noService || !namaPelanggan || !koordinat || !serviceArea) {
+            toast({ variant: 'destructive', title: 'Data tidak lengkap' });
+            return;
+        }
+        setIsSaving(true);
+        try {
+            let fotoCpUrl: string | undefined = undefined;
+            if (fotoCp) {
+                const filePath = `pelanggan/${user.uid}/${Date.now()}-${fotoCp.name}`;
+                const storageRef = ref(storage, filePath);
+                await uploadBytes(storageRef, file);
+                fotoCpUrl = await getDownloadURL(storageRef);
+            }
+
+            const newPelangganData: Omit<Pelanggan, 'id'> = {
+                userId: user.uid,
+                userEmail: user.email,
+                noService,
+                namaPelanggan,
+                alamat,
+                nomorTelepon: nomorTelepon ? [nomorTelepon] : [],
+                koordinat,
+                serviceArea,
+                fotoCpUrl,
+                dateAdded: serverTimestamp(),
+            };
+            const docRef = await addDocumentNonBlocking(collection(firestore, 'pelanggan'), newPelangganData);
+            toast({ title: 'Pelanggan berhasil dibuat' });
+            onFinished({ ...newPelangganData, id: docRef.id } as Pelanggan);
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Gagal menyimpan', description: error.message });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+    
+    return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                    <DialogTitle>Tambah Pelanggan Baru</DialogTitle>
+                    <DialogDescription>Isi detail pelanggan di bawah ini.</DialogDescription>
+                </DialogHeader>
+                 <form onSubmit={handleSubmit} className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="new-noService">No. Service *</Label>
+                    <Input id="new-noService" value={noService} onChange={(e) => setNoService(e.target.value)} required />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="new-namaPelanggan">Nama Pelanggan *</Label>
+                    <Input id="new-namaPelanggan" value={namaPelanggan} onChange={(e) => setNamaPelanggan(e.target.value)} required />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="new-alamat">Alamat</Label>
+                    <Textarea id="new-alamat" value={alamat} onChange={(e) => setAlamat(e.target.value)} />
+                  </div>
+                   <div className="grid gap-2">
+                    <Label htmlFor="new-nomorTelepon">No. Telepon</Label>
+                    <Input id="new-nomorTelepon" value={nomorTelepon} onChange={(e) => setNomorTelepon(e.target.value)} />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="new-koordinat">Koordinat *</Label>
+                    <div className="flex items-center gap-2">
+                        <Input id="new-koordinat" value={koordinat} onChange={(e) => setKoordinat(e.target.value)} required />
+                        <Button type="button" variant="outline" size="icon" onClick={handleGetLocation} disabled={isGettingLocation}>
+                            {isGettingLocation ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
+                        </Button>
+                    </div>
+                  </div>
+                   <div className="grid gap-2">
+                    <Label htmlFor="new-serviceArea">Service Area *</Label>
+                     <Select value={serviceArea} onValueChange={setServiceArea} required>
+                        <SelectTrigger><SelectValue placeholder="Pilih Service Area" /></SelectTrigger>
+                        <SelectContent>{serviceAreas.map(sa => <SelectItem key={sa} value={sa}>{sa}</SelectItem>)}</SelectContent>
+                      </Select>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="new-fotoCp">Foto Lokasi</Label>
+                    <Input id="new-fotoCp" type="file" onChange={handleFileChange} accept="image/*" />
+                    {fotoCpPreview && <div className="relative w-32 h-32 mt-2"><Image src={fotoCpPreview} alt="Preview Foto" fill className="rounded-md object-cover" /></div>}
+                  </div>
+                  <DialogFooter>
+                    <DialogClose asChild><Button type="button" variant="secondary">Batal</Button></DialogClose>
+                    <Button type="submit" disabled={isSaving}>{isSaving ? <Loader2 className="animate-spin" /> : 'Simpan'}</Button>
+                  </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
     );
-  };
+}
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!noService || !namaPelanggan || !koordinat || !serviceArea) return;
-    const data: Partial<Pelanggan> = { noService, namaPelanggan, alamat, nomorTelepon, koordinat, serviceArea };
-    if (!pelanggan) {
-        data.dateAdded = serverTimestamp();
-    }
-    onFormSubmit(data, fotoCp);
-  };
+function AddContactDialog({ pelanggan, isOpen, onOpenChange, onFinished }: { pelanggan: Pelanggan, isOpen: boolean, onOpenChange: (open: boolean) => void, onFinished: (data: Partial<Pelanggan>) => void }) {
+    const firestore = useFirestore();
+    const { toast } = useToast();
+    const [newPhone, setNewPhone] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
 
-  return (
-     <form onSubmit={handleSubmit} className="grid gap-4 py-4">
-      <div className="grid gap-2">
-        <Label htmlFor="noService">No. Service *</Label>
-        <Input id="noService" value={noService} onChange={(e) => setNoService(e.target.value)} placeholder="Contoh: 1234567890" required />
-      </div>
-      <div className="grid gap-2">
-        <Label htmlFor="namaPelanggan">Nama Pelanggan *</Label>
-        <Input id="namaPelanggan" value={namaPelanggan} onChange={(e) => setNamaPelanggan(e.target.value)} placeholder="Nama Pelanggan" required />
-      </div>
-      <div className="grid gap-2">
-        <Label htmlFor="alamat">Alamat</Label>
-        <Textarea id="alamat" value={alamat} onChange={(e) => setAlamat(e.target.value)} placeholder="Alamat lengkap pelanggan" />
-      </div>
-       <div className="grid gap-2">
-        <Label htmlFor="nomorTelepon">No. Telepon</Label>
-        <Input id="nomorTelepon" value={nomorTelepon} onChange={(e) => setNomorTelepon(e.target.value)} placeholder="0812..." />
-      </div>
-      <div className="grid gap-2">
-        <Label htmlFor="koordinat">Koordinat *</Label>
-        <div className="flex items-center gap-2">
-            <Input id="koordinat" value={koordinat} onChange={(e) => setKoordinat(e.target.value)} className="flex-grow" placeholder="-7.123, 110.456" required />
-            <Button type="button" variant="outline" size="icon" onClick={handleGetLocation} disabled={isGettingLocation} title="Ambil Lokasi Saat Ini">
-                {isGettingLocation ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
-            </Button>
-        </div>
-      </div>
-       <div className="grid gap-2">
-        <Label htmlFor="serviceArea">Service Area *</Label>
-         <Select value={serviceArea} onValueChange={setServiceArea} required>
-            <SelectTrigger><SelectValue placeholder="Pilih Service Area" /></SelectTrigger>
-            <SelectContent>{serviceAreas.map(sa => <SelectItem key={sa} value={sa}>{sa}</SelectItem>)}</SelectContent>
-          </Select>
-      </div>
-      <div className="grid gap-2">
-        <Label htmlFor="fotoCp">Foto Lokasi Rumah/Kantor</Label>
-        <Input id="fotoCp" type="file" onChange={handleFileChange} accept="image/*" />
-        {fotoCpPreview && <div className="relative w-32 h-32 mt-2"><Image src={fotoCpPreview} alt="Preview Foto" fill className="rounded-md object-cover" /></div>}
-      </div>
-      <DialogFooter>
-        <DialogClose asChild><Button type="button" variant="secondary">Batal</Button></DialogClose>
-        <Button type="submit" disabled={isSaving}>{isSaving ? <Loader2 className="animate-spin" /> : 'Simpan'}</Button>
-      </DialogFooter>
-    </form>
-  );
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newPhone.trim()) {
+            toast({ variant: 'destructive', title: 'Nomor telepon diperlukan' });
+            return;
+        }
+        setIsSaving(true);
+        try {
+            const currentPhones = Array.isArray(pelanggan.nomorTelepon) ? pelanggan.nomorTelepon : (pelanggan.nomorTelepon ? [pelanggan.nomorTelepon] : []);
+            const updatedPhones = [...currentPhones, newPhone.trim()];
+            const updatedData = { nomorTelepon: updatedPhones };
+
+            const docRef = doc(firestore, 'pelanggan', pelanggan.id);
+            updateDocumentNonBlocking(docRef, updatedData);
+            
+            toast({ title: 'Kontak berhasil ditambahkan' });
+            onFinished(updatedData);
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Gagal menyimpan', description: error.message });
+        } finally {
+            setIsSaving(false);
+            setNewPhone('');
+        }
+    };
+    
+    return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Tambah Nomor Kontak</DialogTitle>
+                    <DialogDescription>Tambahkan nomor telepon baru untuk {pelanggan.namaPelanggan}.</DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="new-phone">Nomor Telepon Baru</Label>
+                        <Input id="new-phone" value={newPhone} onChange={(e) => setNewPhone(e.target.value)} placeholder="0812..." required/>
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild><Button variant="secondary">Batal</Button></DialogClose>
+                        <Button type="submit" disabled={isSaving}>{isSaving ? 'Menyimpan...' : 'Tambah'}</Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function UpdateLocationDialog({ pelanggan, isOpen, onOpenChange, onFinished }: { pelanggan: Pelanggan, isOpen: boolean, onOpenChange: (open: boolean) => void, onFinished: (data: Partial<Pelanggan>) => void }) {
+    const firestore = useFirestore();
+    const { toast } = useToast();
+    const [alamat, setAlamat] = useState(pelanggan.alamat || '');
+    const [koordinat, setKoordinat] = useState(pelanggan.koordinat || '');
+    const [isSaving, setIsSaving] = useState(false);
+    const [isGettingLocation, setIsGettingLocation] = useState(false);
+
+     const handleGetLocation = () => {
+        setIsGettingLocation(true);
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                setKoordinat(`${position.coords.latitude}, ${position.coords.longitude}`);
+                setIsGettingLocation(false);
+            },
+            () => {
+                toast({ variant: 'destructive', title: 'Gagal Mendapatkan Lokasi' });
+                setIsGettingLocation(false);
+            }
+        );
+    };
+    
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSaving(true);
+        try {
+            const updatedData = { alamat, koordinat };
+            const docRef = doc(firestore, 'pelanggan', pelanggan.id);
+            updateDocumentNonBlocking(docRef, updatedData);
+            toast({ title: 'Lokasi berhasil diperbarui' });
+            onFinished(updatedData);
+        } catch (error: any) {
+             toast({ variant: 'destructive', title: 'Gagal menyimpan', description: error.message });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    return (
+         <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Ubah Lokasi Pelanggan</DialogTitle>
+                </DialogHeader>
+                 <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="update-alamat">Alamat Baru</Label>
+                        <Textarea id="update-alamat" value={alamat} onChange={(e) => setAlamat(e.target.value)} />
+                    </div>
+                     <div className="grid gap-2">
+                        <Label htmlFor="update-koordinat">Koordinat Baru</Label>
+                        <div className="flex items-center gap-2">
+                            <Input id="update-koordinat" value={koordinat} onChange={(e) => setKoordinat(e.target.value)} required />
+                            <Button type="button" variant="outline" size="icon" onClick={handleGetLocation} disabled={isGettingLocation}>
+                                {isGettingLocation ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
+                            </Button>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild><Button variant="secondary">Batal</Button></DialogClose>
+                        <Button type="submit" disabled={isSaving}>{isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}</Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
 }
 
 // --- MAIN PAGE COMPONENT ---
@@ -178,7 +323,6 @@ function PelangganForm({ pelanggan, onFormSubmit, isSaving }: { pelanggan?: Pela
 export default function AdminPelangganPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
-  const storage = useStorage();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -189,8 +333,10 @@ export default function AdminPelangganPage() {
   const [searchPerformed, setSearchPerformed] = useState(false);
   const [isSheetHistoryLoading, setIsSheetHistoryLoading] = useState(false);
   
-  const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [isNewPelangganDialogOpen, setIsNewPelangganDialogOpen] = useState(false);
+  const [isAddContactDialogOpen, setIsAddContactDialogOpen] = useState(false);
+  const [isUpdateLocationDialogOpen, setIsUpdateLocationDialogOpen] = useState(false);
+
 
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
     useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
@@ -216,11 +362,9 @@ export default function AdminPelangganPage() {
         setIsSheetHistoryLoading(true);
         const serviceNumberToFind = searchedPelanggan.noService.trim();
         try {
-            // Appending a timestamp to bypass caches
             const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS6GU4F_Iqvw7u1pkL06KQjDrrdGCu_DshWT0QWeozGpwpUIAc757COSNEnkhrRKH1RnPDqNeXDDNjU/export?format=csv&gid=0&t=' + new Date().getTime());
-            if (!response.ok) {
-                throw new Error('Gagal mengambil data dari Google Sheet.');
-            }
+            if (!response.ok) throw new Error('Gagal mengambil data dari Google Sheet.');
+            
             const data = await response.arrayBuffer();
             const workbook = XLSX.read(data);
             const sheetName = workbook.SheetNames[0];
@@ -232,12 +376,7 @@ export default function AdminPelangganPage() {
 
             setSheetHistory(history);
         } catch (error: any) {
-            console.error(error);
-            toast({
-                variant: 'destructive',
-                title: 'Gagal Memuat Riwayat',
-                description: 'Tidak dapat mengambil riwayat laporan dari Google Sheet.'
-            });
+            toast({ variant: 'destructive', title: 'Gagal Memuat Riwayat', description: 'Tidak dapat mengambil riwayat laporan dari Google Sheet.' });
             setSheetHistory([]);
         } finally {
             setIsSheetHistoryLoading(false);
@@ -267,42 +406,6 @@ export default function AdminPelangganPage() {
     setIsSearching(false);
   };
   
-  const handleFormSubmit = async (data: Partial<Pelanggan>, file: File | null) => {
-    if (!firestore || !user || !storage) return;
-    setIsSaving(true);
-    try {
-        let fotoCpUrl: string | undefined = undefined;
-
-        if (file) {
-            const filePath = `pelanggan/${user.uid}/${Date.now()}-${file.name}`;
-            const storageRef = ref(storage, filePath);
-            await uploadBytes(storageRef, file);
-            fotoCpUrl = await getDownloadURL(storageRef);
-        }
-
-        const dataToSave: Partial<Pelanggan> = { ...data, fotoCpUrl };
-        dataToSave.userId = user.uid;
-        dataToSave.userEmail = user.email!;
-        
-        const pelangganCollection = collection(firestore, 'pelanggan');
-        const newDocRef = await addDocumentNonBlocking(pelangganCollection, dataToSave);
-        
-        toast({ 
-            title: 'Pelanggan Dibuat',
-            description: 'Lanjutkan proses laporan di bot Telegram.',
-            duration: 7000,
-        });
-        
-        setIsFormDialogOpen(false);
-        setSearchedPelanggan({ ...dataToSave, id: newDocRef.id } as Pelanggan);
-
-    } catch(error: any) {
-        toast({ variant: 'destructive', title: 'Gagal Menyimpan', description: error.message });
-    } finally {
-        setIsSaving(false);
-    }
-  }
-
   const isLoading = isUserLoading || isProfileLoading;
 
   if (isLoading) {
@@ -336,7 +439,7 @@ export default function AdminPelangganPage() {
           <Card>
               <CardContent className="p-6 text-center">
                   <p className="text-muted-foreground mb-4">Pelanggan dengan No. Service "{searchNoService}" tidak ditemukan.</p>
-                  <Button onClick={() => setIsFormDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/>Tambah Pelanggan Baru</Button>
+                  <Button onClick={() => setIsNewPelangganDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/>Tambah Pelanggan Baru</Button>
               </CardContent>
           </Card>
       )}
@@ -344,31 +447,30 @@ export default function AdminPelangganPage() {
       {searchedPelanggan && (
           <div className="space-y-6">
               <Card>
-                <CardHeader><CardTitle>Detail Pelanggan</CardTitle></CardHeader>
+                <CardHeader className="flex flex-row items-start justify-between">
+                    <div>
+                        <CardTitle>Detail Pelanggan</CardTitle>
+                        <CardDescription>Data pelanggan yang tersimpan di sistem.</CardDescription>
+                    </div>
+                     <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setIsAddContactDialogOpen(true)}><Phone className="mr-2 h-4 w-4"/>Tambah Kontak</Button>
+                        <Button variant="outline" size="sm" onClick={() => setIsUpdateLocationDialogOpen(true)}><Pencil className="mr-2 h-4 w-4"/>Ubah Lokasi</Button>
+                    </div>
+                </CardHeader>
                 <CardContent>
                     <dl className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-6 text-sm">
-                        <div className="flex flex-col">
-                            <dt className="text-muted-foreground">No. Service</dt>
-                            <dd className="font-bold text-base">{searchedPelanggan.noService}</dd>
+                        <div className="flex flex-col"><dt className="text-muted-foreground">No. Service</dt><dd className="font-bold text-base">{searchedPelanggan.noService}</dd></div>
+                        <div className="flex flex-col"><dt className="text-muted-foreground">Nama</dt><dd className="font-semibold">{searchedPelanggan.namaPelanggan}</dd></div>
+                        <div className="flex flex-col"><dt className="text-muted-foreground">Service Area</dt><dd>{searchedPelanggan.serviceArea}</dd></div>
+                        <div className="flex flex-col md:col-span-2"><dt className="text-muted-foreground">Alamat</dt><dd>{searchedPelanggan.alamat || '-'}</dd></div>
+                        <div className="flex flex-col"><dt className="text-muted-foreground">No. Telepon</dt>
+                            <dd className="flex flex-col gap-1">
+                                {(Array.isArray(searchedPelanggan.nomorTelepon) ? searchedPelanggan.nomorTelepon : [searchedPelanggan.nomorTelepon]).filter(Boolean).map((phone, i) => (
+                                    <a key={i} href={formatWaNumber(phone as string)} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">{phone}</a>
+                                ))}
+                            </dd>
                         </div>
-                        <div className="flex flex-col">
-                            <dt className="text-muted-foreground">Nama</dt>
-                            <dd className="font-semibold">{searchedPelanggan.namaPelanggan}</dd>
-                        </div>
-                        <div className="flex flex-col">
-                            <dt className="text-muted-foreground">Service Area</dt>
-                            <dd>{searchedPelanggan.serviceArea}</dd>
-                        </div>
-                        <div className="flex flex-col md:col-span-2">
-                            <dt className="text-muted-foreground">Alamat</dt>
-                            <dd>{searchedPelanggan.alamat || '-'}</dd>
-                        </div>
-                        <div className="flex flex-col">
-                            <dt className="text-muted-foreground">No. Telepon</dt>
-                            <dd>{searchedPelanggan.nomorTelepon || '-'}</dd>
-                        </div>
-                        <div className="flex flex-col">
-                            <dt className="text-muted-foreground">Koordinat</dt>
+                        <div className="flex flex-col"><dt className="text-muted-foreground">Koordinat</dt>
                             <dd>
                                 <Link href={`https://www.google.com/maps/search/?api=1&query=${searchedPelanggan.koordinat}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
                                     {searchedPelanggan.koordinat} <MapPin className="h-4 w-4" />
@@ -386,69 +488,25 @@ export default function AdminPelangganPage() {
                 </CardHeader>
                 <CardContent>
                     <Button asChild className="w-full">
-                        <Link href="https.t.me/B2BLapor_bot" target="_blank" rel="noopener noreferrer">
-                            <Bot className="mr-2 h-4 w-4" /> Buka @B2BLapor_bot
-                        </Link>
+                        <Link href="https://t.me/B2BLapor_bot" target="_blank" rel="noopener noreferrer"><Bot className="mr-2 h-4 w-4" /> Buka @B2BLapor_bot</Link>
                     </Button>
                 </CardContent>
-            </Card>
+              </Card>
 
               <Card>
-                  <CardHeader>
-                      <CardTitle className="flex items-center gap-2"><History /> Riwayat Laporan (dari Bot)</CardTitle>
-                  </CardHeader>
+                  <CardHeader><CardTitle className="flex items-center gap-2"><History /> Riwayat Laporan (dari Bot)</CardTitle></CardHeader>
                   <CardContent>
                         {isSheetHistoryLoading ? (
                             <Skeleton className="h-24" />
                         ) : sheetHistory.length > 0 ? (
-                            <>
-                                {/* Desktop Table */}
-                                <div className="hidden md:block">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Tanggal Lapor</TableHead>
-                                                <TableHead>No. Tiket DSC</TableHead>
-                                                <TableHead>Keluhan</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {sheetHistory.map((g, i) => (
-                                                <TableRow key={i}>
-                                                    <TableCell className="whitespace-nowrap">{g['Timestamp'] || '-'}</TableCell>
-                                                    <TableCell>{g['No Tiket DSC'] || '-'}</TableCell>
-                                                    <TableCell>{g['Keluhan']}</TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </div>
-                                {/* Mobile Cards */}
-                                <div className="space-y-4 md:hidden">
-                                    {sheetHistory.map((g, i) => (
-                                        <Card key={i} className="p-4">
-                                            <dl className="grid gap-3">
-                                                <div className="flex flex-col">
-                                                    <dt className="text-sm font-medium text-muted-foreground">Tanggal Lapor</dt>
-                                                    <dd>{g['Timestamp'] || '-'}</dd>
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <dt className="text-sm font-medium text-muted-foreground">No. Tiket DSC</dt>
-                                                    <dd>{g['No Tiket DSC'] || '-'}</dd>
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <dt className="text-sm font-medium text-muted-foreground">Keluhan</dt>
-                                                    <dd>{g['Keluhan']}</dd>
-                                                </div>
-                                            </dl>
-                                        </Card>
-                                    ))}
-                                </div>
-                            </>
-                        ) : (
-                            <div className="text-center h-24 flex items-center justify-center text-muted-foreground">
-                                Belum ada riwayat laporan dari bot untuk pelanggan ini.
+                            <div className="hidden md:block">
+                                <Table>
+                                    <TableHeader><TableRow><TableHead>Tanggal Lapor</TableHead><TableHead>No. Tiket DSC</TableHead><TableHead>Keluhan</TableHead></TableRow></TableHeader>
+                                    <TableBody>{sheetHistory.map((g, i) => (<TableRow key={i}><TableCell className="whitespace-nowrap">{g['Timestamp'] || '-'}</TableCell><TableCell>{g['No Tiket DSC'] || '-'}</TableCell><TableCell>{g['Keluhan']}</TableCell></TableRow>))}</TableBody>
+                                </Table>
                             </div>
+                        ) : (
+                            <div className="text-center h-24 flex items-center justify-center text-muted-foreground">Belum ada riwayat laporan dari bot untuk pelanggan ini.</div>
                         )}
                     </CardContent>
               </Card>
@@ -456,11 +514,38 @@ export default function AdminPelangganPage() {
       )}
 
       {/* --- Dialogs --- */}
-      <Dialog open={isFormDialogOpen} onOpenChange={setIsFormDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]"><DialogHeader><DialogTitle>Tambah Pelanggan Baru</DialogTitle><DialogDescription>Isi detail pelanggan di bawah ini.</DialogDescription></DialogHeader>
-            <PelangganForm pelanggan={null} onFormSubmit={handleFormSubmit} isSaving={isSaving} />
-        </DialogContent>
-      </Dialog>
+      <NewPelangganDialog 
+        isOpen={isNewPelangganDialogOpen}
+        onOpenChange={setIsNewPelangganDialogOpen}
+        onFinished={(newPelanggan) => {
+            setSearchedPelanggan(newPelanggan);
+            setIsNewPelangganDialogOpen(false);
+        }}
+      />
+      {searchedPelanggan && (
+          <>
+            <AddContactDialog 
+                pelanggan={searchedPelanggan}
+                isOpen={isAddContactDialogOpen}
+                onOpenChange={setIsAddContactDialogOpen}
+                onFinished={(updatedData) => {
+                    setSearchedPelanggan(prev => prev ? { ...prev, ...updatedData } : null);
+                    setIsAddContactDialogOpen(false);
+                }}
+            />
+            <UpdateLocationDialog
+                 pelanggan={searchedPelanggan}
+                 isOpen={isUpdateLocationDialogOpen}
+                 onOpenChange={setIsUpdateLocationDialogOpen}
+                 onFinished={(updatedData) => {
+                    setSearchedPelanggan(prev => prev ? { ...prev, ...updatedData } : null);
+                    setIsUpdateLocationDialogOpen(false);
+                 }}
+            />
+          </>
+      )}
     </>
   );
 }
+
+    
