@@ -1,11 +1,23 @@
+
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Bot, Send, ArrowLeft } from 'lucide-react';
+import { Bot, Send, ArrowLeft, Copy } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useToast } from "@/hooks/use-toast";
 
+const grapariFormat = `/input
+Segmen : INDIHOME
+Nama Pelanggan : 
+No Service : 
+No WA/Seluler : 
+Ancer2 Lokasi : 
+Keluhan : 
+Waktu teknisi : 
+No Tiket DSC : boleh dikosongi
+No Tiket Insera : boleh dikosongi`;
 
 const bots = [
   {
@@ -35,8 +47,9 @@ const bots = [
   {
     name: 'Lapor Manual Grapari',
     username: '@Graparikds_lapor_bot',
-    description: 'Bot untuk input laporan manual Grapari dengan format khusus. Contoh: /input Segmen: INDIHOME...',
+    description: 'Bot untuk input laporan manual Grapari dengan format khusus.',
     url: 'https://t.me/Graparikds_lapor_bot',
+    format: grapariFormat
   },
   {
     name: 'Cek ID Telegram',
@@ -48,6 +61,24 @@ const bots = [
 
 export default function BotsPage() {
   const router = useRouter();
+  const { toast } = useToast();
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      toast({
+        title: "Format disalin!",
+        description: "Format laporan telah disalin ke clipboard.",
+      });
+    }, (err) => {
+      console.error('Could not copy text: ', err);
+      toast({
+        variant: "destructive",
+        title: "Gagal menyalin",
+        description: "Tidak dapat menyalin format ke clipboard.",
+      });
+    });
+  };
+
 
   return (
     <div className="mx-auto grid w-full flex-1 auto-rows-max gap-6">
@@ -74,6 +105,17 @@ export default function BotsPage() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground mb-4">{bot.description}</p>
+               {bot.format && (
+                <div className="mb-4">
+                  <pre className="text-xs p-3 bg-muted rounded-md whitespace-pre-wrap font-mono">
+                    {bot.format}
+                  </pre>
+                  <Button variant="outline" size="sm" className="w-full mt-2" onClick={() => handleCopy(bot.format as string)}>
+                    <Copy className="mr-2 h-4 w-4" />
+                    Salin Format
+                  </Button>
+                </div>
+              )}
               <Button asChild className="w-full">
                 <Link href={bot.url} target="_blank" rel="noopener noreferrer">
                   <Send className="mr-2 h-4 w-4" /> Buka Bot
