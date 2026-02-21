@@ -165,8 +165,11 @@ export default function AllproPage() {
                         else acc[correctAssetSA].olt.olt++;
                         break;
                     case 'FTM':
-                        if (subTypeUpper === 'EA') acc[correctAssetSA].ftm.ea++;
-                        else if (subTypeUpper === 'OA') acc[correctAssetSA].ftm.oa++;
+                        if (subTypeUpper === 'EA') {
+                            acc[correctAssetSA].ftm.ea++;
+                        } else { // Assume if not EA, it's OA or a passive equivalent
+                            acc[correctAssetSA].ftm.oa++;
+                        }
                         break;
                     case 'ODC': acc[correctAssetSA].odc.jumlah++; break;
                     case 'ODP': acc[correctAssetSA].odp.jumlah++; break;
