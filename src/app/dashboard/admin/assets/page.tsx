@@ -110,7 +110,9 @@ export default function AdminAssetsPage() {
     if (mancoreLinks) mancoreLinks.forEach(link => addSA(link.serviceArea));
     if (mapLinks) mapLinks.forEach(link => addSA(link.serviceArea));
     
-    return ['MITRATEL', 'NODE-B', ...Array.from(serviceAreaSet).sort()];
+    // De-duplicate and ensure correct order
+    const finalAreas = ['MITRATEL', 'NODE-B', ...Array.from(serviceAreaSet).sort()];
+    return [...new Set(finalAreas)];
   }, [mancoreLinks, mapLinks]);
 
   useEffect(() => {
@@ -145,60 +147,66 @@ export default function AdminAssetsPage() {
     const searchTerm = searchName.trim().toUpperCase();
 
     if (searchTerm.length < 3) {
-        if (!searchTerm.startsWith('ODP') && !searchTerm.startsWith('ODC') && !searchTerm.startsWith('FTM')) {
-            return [];
-        }
+      const allowedPrefixes = ['ODP', 'ODC', 'FTM'];
+      if (!allowedPrefixes.some(p => searchTerm.startsWith(p))) {
+        return [];
+      }
     }
 
     return queriedAssets.filter(asset => {
         const assetName = asset.name.toUpperCase();
         const assetType = asset.assetType;
 
-        // --- Node B ---
+        // --- Handle by Asset Type ---
+
         if (assetType === 'NODE-B') {
             return asset.siteId?.toUpperCase().includes(searchTerm) ?? false;
         }
         
-        // --- Mitratel ---
         if (assetType === 'MITRATEL') {
             return asset.tenantSiteId?.toUpperCase().includes(searchTerm) ?? false;
         }
 
-        // --- ODP ---
         if (assetType === 'ODP') {
-            if (searchTerm.startsWith('ODP') && searchTerm.includes('/')) {
-                return assetName.startsWith(searchTerm);
+            // ODPs only match if the search term starts with "ODP".
+            // This prevents general searches like "FAC" from matching ODPs.
+            if (searchTerm.startsWith('ODP')) {
+                return assetName.includes(searchTerm);
             }
-            return assetName.includes(searchTerm); 
+            return false;
         }
 
-        // --- ODC ---
-        if (assetType === 'ODC') {
-            if (searchTerm.startsWith('ODC-')) {
-                const parts = searchTerm.split('-');
-                if (parts.length >= 3 && parts[2]) {
-                     return assetName.startsWith(searchTerm);
-                }
-                return false;
-            }
-            return assetName.includes(searchTerm);
-        }
-        
-        // --- FTM ---
         if (assetType === 'FTM') {
+            // FTMs only match if the search term starts with "FTM-".
             if (searchTerm.startsWith('FTM-')) {
                 return assetName.startsWith(searchTerm);
             }
+            return false;
+        }
+        
+        if (assetType === 'ODC') {
+            // If the user specifically searches for an ODC...
+            if (searchTerm.startsWith('ODC-')) {
+                const parts = searchTerm.split('-');
+                // ...only show results once they start typing the 3rd part.
+                if (parts.length >= 3 && parts[2]) {
+                     return assetName.startsWith(searchTerm);
+                }
+                // Don't show all ODCs if only "ODC-KUD" is typed.
+                return false;
+            }
+            // For general searches (like "FAC"), allow ODCs to appear.
             return assetName.includes(searchTerm);
         }
 
-        // --- Mini OLT ---
-        if (asset.assetType === 'OLT' && asset.subType === 'Mini OLT') {
+        if (asset.assetType === 'OLT') { // This covers both Mini OLT and regular OLT
+            // The Mini OLT name is like "GPON00-D4-KUD-4FAC"
+            // A general "includes" search is appropriate for this.
             return assetName.includes(searchTerm);
         }
 
-        // Fallback for any other asset types (e.g. regular OLT)
-        return assetName.includes(searchTerm);
+        // Default: Do not match any other asset types.
+        return false;
     });
     
   }, [queriedAssets, searchName]);
