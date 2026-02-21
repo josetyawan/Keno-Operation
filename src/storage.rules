@@ -22,6 +22,10 @@ service firebase.storage {
       allow write: if request.auth.uid == userId;
     }
 
+    match /hr_evidence/{userId}/{fileName} {
+      allow write: if request.auth.uid == userId;
+    }
+
     match /alker-photos/{userId}/{fileName} {
       allow write: if request.auth.uid == userId;
     }

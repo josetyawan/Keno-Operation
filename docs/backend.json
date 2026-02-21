@@ -204,7 +204,8 @@
                 "type": "string", 
                 "enum": ["piket-demak", "siang-malam", "malam", "ijin", "cuti", "weekend-duty", "holiday-duty"]
             },
-            "notes": {"type": "string"},
+            "notes": {"type": "string", "description": "Reason for leave or other notes."},
+            "evidenceUrl": {"type": "string", "format": "uri", "description": "URL for leave evidence (e.g., doctor's note)."},
             "createdAt": {"type": "string", "format": "date-time"}
         },
         "required": ["id", "userId", "userEmail", "date", "shiftType", "createdAt"]
@@ -220,7 +221,8 @@
             "checkInTime": {"type": "string", "format": "date-time"},
             "checkInPhotoUrl": {"type": "string", "format": "uri"},
             "checkInCoordinates": {"type": "string"},
-            "status": {"type": "string", "enum": ["present", "absent"]}
+            "reason": {"type": "string", "description": "Reason for a non-standard check-in (e.g., late)."},
+            "status": {"type": "string", "enum": ["present", "absent", "late", "remote-progress"]}
         },
         "required": ["id", "userId", "scheduleId", "checkInTime", "checkInPhotoUrl", "checkInCoordinates", "status"]
     },

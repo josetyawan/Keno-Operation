@@ -172,6 +172,7 @@ export type Schedule = {
     date: any; // Firestore Timestamp
     shiftType: 'piket-demak' | 'siang-malam' | 'malam' | 'ijin' | 'cuti' | 'weekend-duty' | 'holiday-duty';
     notes?: string;
+    evidenceUrl?: string;
     createdAt: any; // Firestore Timestamp
 };
 
@@ -182,7 +183,8 @@ export type Attendance = {
     checkInTime: any; // Firestore Timestamp
     checkInPhotoUrl: string;
     checkInCoordinates: string;
-    status: 'present' | 'absent';
+    status: 'present' | 'absent' | 'late' | 'remote-progress';
+    reason?: string;
 };
 
 export type AlkerTool = {

@@ -2,13 +2,13 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { useUser, useFirestore, useCollection, useStorage, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
+import { useUser, useFirestore, useCollection, useStorage, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
 import { collection, query, where, Timestamp, limit, doc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Camera, Clock, MapPin, Loader2, VideoOff, AlertTriangle, Coffee, Info, FileWarning } from 'lucide-react';
+import { Camera, Clock, MapPin, Loader2, VideoOff, AlertTriangle, Coffee, Info, FileWarning, Upload } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { format, set, add, sub } from 'date-fns';
@@ -28,9 +28,9 @@ import {
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 
 // --- Helper Functions ---
-
 const getStartOfDay = () => {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
@@ -41,11 +41,17 @@ const shiftTypeLabels: Record<string, string> = {
   'piket-demak': 'Piket Demak (PDM)',
   'siang-malam': 'Piket Siang-Malam (SM)',
   'malam': 'Piket Malam (M)',
-  'ijin': 'Izin (i)',
-  'cuti': 'Cuti (C)',
+  'ijin': 'Izin',
+  'cuti': 'Cuti',
   'weekend-duty': 'Jaga Akhir Pekan',
   'holiday-duty': 'Jaga Hari Libur',
 };
+
+const attendanceStatusLabels: Record<string, string> = {
+    'present': 'Hadir Tepat Waktu',
+    'late': 'Izin Terlambat',
+    'remote-progress': 'Izin Langsung Progres',
+}
 
 const getCheckInWindow = (shiftType: Schedule['shiftType']): { start: Date, end: Date, target: Date } | null => {
     const now = new Date();
@@ -75,7 +81,6 @@ const getCheckInWindow = (shiftType: Schedule['shiftType']): { start: Date, end:
 };
 
 // --- Child Component for Check-in UI ---
-
 function CheckInUI({
     isLoading,
     todaySchedule,
@@ -119,10 +124,11 @@ function CheckInUI({
     
     if (todayAttendance) {
         const checkInTime = todayAttendance.checkInTime.toDate();
+        const attendanceStatus = attendanceStatusLabels[todayAttendance.status] || 'Absen';
         return (
             <div className="space-y-6">
                 <Alert variant="default" className="bg-green-50 border-green-200 text-green-800 dark:bg-green-950 dark:border-green-800 dark:text-green-200 [&>svg]:text-green-600">
-                    <Camera className="h-4 w-4" /><AlertTitle>Anda Sudah Absen Hari Ini</AlertTitle>
+                    <Camera className="h-4 w-4" /><AlertTitle>Anda Sudah Absen Hari Ini ({attendanceStatus})</AlertTitle>
                     <AlertDescription>Kehadiran Anda telah tercatat. Terima kasih.</AlertDescription>
                 </Alert>
                 <div className="grid md:grid-cols-2 gap-6">
@@ -144,6 +150,13 @@ function CheckInUI({
                                 </p>
                             </div>
                         </div>
+                        {todayAttendance.reason && (
+                             <div className="flex items-start gap-3"><Info className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-1" />
+                                <div><p className="text-sm text-muted-foreground">Alasan</p>
+                                    <p className="font-medium text-sm whitespace-pre-wrap">{todayAttendance.reason}</p>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -208,7 +221,6 @@ function CheckInUI({
 }
 
 // --- Main Page Component ---
-
 export default function AttendancePage() {
     const { user, isUserLoading } = useUser();
     const firestore = useFirestore();
@@ -227,9 +239,6 @@ export default function AttendancePage() {
     
     // Leave request state
     const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
-    const [leaveType, setLeaveType] = useState<'ijin' | 'cuti'>('ijin');
-    const [leaveReason, setLeaveReason] = useState('');
-    const [isRequestingLeave, setIsRequestingLeave] = useState(false);
 
     // --- Data Fetching ---
     const today = useMemo(() => getStartOfDay(), []);
@@ -252,27 +261,28 @@ export default function AttendancePage() {
     }, [schedules, isScheduleLoading]);
 
     const attendanceQuery = useMemoFirebase(() => {
-        if (!todaySchedule) return null;
+        if (!user) return null;
+        const start = Timestamp.fromDate(today);
+        const end = Timestamp.fromDate(add(today, { days: 1 }));
         return query(
             collection(firestore, 'attendances'),
-            where('scheduleId', '==', todaySchedule.id),
+            where('userId', '==', user.uid),
+            where('checkInTime', '>=', start),
+            where('checkInTime', '<', end),
             limit(1)
         );
-    }, [firestore, todaySchedule]);
+    }, [firestore, today, user]);
 
     const { data: attendances, isLoading: isAttendanceLoading } = useCollection<Attendance>(attendanceQuery);
 
     useEffect(() => {
-        if (todaySchedule && !isAttendanceLoading) {
+      setIsLoading(isScheduleLoading || isAttendanceLoading);
+        if (!isAttendanceLoading) {
             setTodayAttendance(attendances?.[0] || null);
-            setIsLoading(false);
-        } else if (!todaySchedule && !isScheduleLoading) {
-            setTodayAttendance(null);
-            setIsLoading(false);
         }
-    }, [attendances, isAttendanceLoading, todaySchedule, isScheduleLoading]);
+    }, [attendances, isAttendanceLoading, isScheduleLoading]);
     
-    // --- Camera Logic ---
+    // --- Camera Logic for Main Check-in ---
     useEffect(() => {
         const checkInWindow = todaySchedule ? getCheckInWindow(todaySchedule.shiftType) : null;
         const needsCamera = todaySchedule && !todayAttendance && checkInWindow;
@@ -296,42 +306,6 @@ export default function AttendancePage() {
         };
     }, [todaySchedule, todayAttendance]);
     
-    const handleLeaveRequest = async () => {
-        if (!leaveReason.trim()) {
-            toast({ variant: 'destructive', title: 'Alasan Diperlukan', description: 'Silakan isi alasan pengajuan Anda.' });
-            return;
-        }
-        if (!user || !user.email) {
-            toast({ variant: 'destructive', title: 'Error', description: 'User tidak ditemukan.' });
-            return;
-        }
-
-        setIsRequestingLeave(true);
-        try {
-            const scheduleId = `${user.uid}_${format(today, 'yyyy-MM-dd')}`;
-            const scheduleDocRef = doc(firestore, "schedules", scheduleId);
-            
-            const scheduleData = {
-                userId: user.uid,
-                userEmail: user.email,
-                date: Timestamp.fromDate(today),
-                shiftType: leaveType,
-                notes: leaveReason,
-                createdAt: todaySchedule?.createdAt || Timestamp.now(),
-            };
-    
-            await setDoc(scheduleDocRef, scheduleData, { merge: true });
-    
-            toast({ title: 'Pengajuan Terkirim', description: `Status Anda untuk hari ini telah diatur sebagai ${leaveType === 'ijin' ? 'Izin' : 'Cuti'}.` });
-            setIsLeaveDialogOpen(false);
-            setLeaveReason('');
-        } catch (error: any) {
-            console.error('Failed to submit leave request:', error);
-            toast({ variant: 'destructive', title: 'Gagal Mengajukan Izin', description: 'Terjadi kesalahan saat menyimpan data. Pastikan Anda memiliki izin.' });
-        } finally {
-            setIsRequestingLeave(false);
-        }
-    };
 
     const handleCheckIn = async () => {
         if (!todaySchedule || !videoRef.current || !canvasRef.current || !user) return;
@@ -412,50 +386,206 @@ export default function AttendancePage() {
                         <Dialog open={isLeaveDialogOpen} onOpenChange={setIsLeaveDialogOpen}>
                             <DialogTrigger asChild>
                                 <Button variant="outline" className="w-full">
-                                    <FileWarning className="mr-2 h-4 w-4" /> Tidak Bisa Hadir? (Ajukan Izin/Cuti)
+                                    <FileWarning className="mr-2 h-4 w-4" /> Tidak Bisa Hadir / Terlambat?
                                 </Button>
                             </DialogTrigger>
-                            <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle>Pengajuan Izin/Cuti</DialogTitle>
-                                    <DialogDescription>
-                                        Pilih jenis pengajuan dan berikan alasan. Jika Anda memiliki jadwal, statusnya akan diperbarui. Jika tidak, jadwal izin/cuti baru akan dibuat untuk hari ini.
-                                    </DialogDescription>
-                                </DialogHeader>
-                                <div className="grid gap-4 py-4">
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="leave-type">Jenis Pengajuan</Label>
-                                        <Select value={leaveType} onValueChange={(v: 'ijin' | 'cuti') => setLeaveType(v)}>
-                                            <SelectTrigger id="leave-type"><SelectValue placeholder="Pilih jenis..." /></SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="ijin">Izin Sakit / Keperluan Mendesak</SelectItem>
-                                                <SelectItem value="cuti">Cuti</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="leave-reason">Alasan (Wajib Diisi)</Label>
-                                        <Textarea
-                                            id="leave-reason"
-                                            placeholder="Contoh: Sakit demam, perlu istirahat."
-                                            value={leaveReason}
-                                            onChange={(e) => setLeaveReason(e.target.value)}
-                                            rows={4}
-                                        />
-                                    </div>
-                                </div>
-                                <DialogFooter>
-                                    <DialogClose asChild><Button variant="ghost">Batal</Button></DialogClose>
-                                    <Button onClick={handleLeaveRequest} disabled={isRequestingLeave || !leaveReason.trim()}>
-                                        {isRequestingLeave && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                        Kirim Pengajuan
-                                    </Button>
-                                </DialogFooter>
-                            </DialogContent>
+                            <LeaveRequestDialog 
+                                todaySchedule={todaySchedule}
+                                today={today}
+                                onFinished={() => setIsLeaveDialogOpen(false)}
+                            />
                         </Dialog>
                     </div>
                 </CardContent>
             </Card>
         </div>
+    );
+}
+
+// --- Dialog Component for Leave/Late/Remote ---
+function LeaveRequestDialog({ todaySchedule, today, onFinished }: { todaySchedule: Schedule | null; today: Date; onFinished: () => void; }) {
+    const { user } = useUser();
+    const firestore = useFirestore();
+    const storage = useStorage();
+    const { toast } = useToast();
+
+    const [leaveType, setLeaveType] = useState<'sick-leave' | 'cuti' | 'late' | 'remote-progress'>('sick-leave');
+    const [reason, setReason] = useState('');
+    const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Camera State
+    const dialogVideoRef = useRef<HTMLVideoElement>(null);
+    const dialogCanvasRef = useRef<HTMLCanvasElement>(null);
+    const [dialogStream, setDialogStream] = useState<MediaStream | null>(null);
+    const [dialogHasCamera, setDialogHasCamera] = useState(false);
+    const [selfie, setSelfie] = useState<string | null>(null);
+
+    const needsCamera = leaveType === 'late' || leaveType === 'remote-progress';
+
+    useEffect(() => {
+        async function setupCamera() {
+            if (needsCamera) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    setDialogStream(stream);
+                    if (dialogVideoRef.current) {
+                        dialogVideoRef.current.srcObject = stream;
+                    }
+                    setDialogHasCamera(true);
+                } catch {
+                    setDialogHasCamera(false);
+                    toast({ variant: 'destructive', title: 'Kamera Gagal', description: 'Gagal mengakses kamera. Mohon izinkan akses kamera di browser Anda.' });
+                }
+            }
+        }
+
+        setupCamera();
+
+        return () => {
+            dialogStream?.getTracks().forEach(track => track.stop());
+        };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [leaveType]);
+
+    const handleTakePhoto = () => {
+        if (!dialogVideoRef.current || !dialogCanvasRef.current) return;
+        const video = dialogVideoRef.current;
+        const canvas = dialogCanvasRef.current;
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const context = canvas.getContext('2d');
+        context?.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+        setSelfie(canvas.toDataURL('image/jpeg'));
+    };
+
+    const handleSubmit = async () => {
+        if (!user || !user.email) return;
+        setIsSubmitting(true);
+        
+        try {
+            if (leaveType === 'sick-leave' || leaveType === 'cuti') {
+                if (!reason.trim() || !evidenceFile) {
+                    toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Mohon isi alasan dan unggah foto bukti.' });
+                    return;
+                }
+                const filePath = `hr_evidence/${user.uid}/${Date.now()}-${evidenceFile.name}`;
+                const storageRef = ref(storage, filePath);
+                await uploadBytes(storageRef, evidenceFile);
+                const evidenceUrl = await getDownloadURL(storageRef);
+                
+                const scheduleId = `${user.uid}_${format(today, 'yyyy-MM-dd')}`;
+                const scheduleDocRef = doc(firestore, "schedules", scheduleId);
+                const scheduleData = {
+                    userId: user.uid, userEmail: user.email,
+                    date: Timestamp.fromDate(today),
+                    shiftType: leaveType === 'sick-leave' ? 'ijin' : 'cuti',
+                    notes: reason, evidenceUrl,
+                    createdAt: todaySchedule?.createdAt || Timestamp.now(),
+                };
+                await setDoc(scheduleDocRef, scheduleData, { merge: true });
+                toast({ title: 'Pengajuan Terkirim', description: 'Status jadwal Anda telah diperbarui.' });
+
+            } else if (leaveType === 'late' || leaveType === 'remote-progress') {
+                if (!reason.trim() || !selfie) {
+                    toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Mohon isi alasan dan ambil swafoto.' });
+                    return;
+                }
+
+                let coordinates = 'N/A';
+                if (leaveType === 'remote-progress') {
+                    const position = await new Promise<GeolocationPosition>((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true }));
+                    coordinates = `${position.coords.latitude}, ${position.coords.longitude}`;
+                }
+                
+                const photoBlob = await (await fetch(selfie)).blob();
+                const filePath = `hr_attendance/${user.uid}/${Date.now()}-selfie.jpg`;
+                const storageRef = ref(storage, filePath);
+                await uploadBytes(storageRef, photoBlob);
+                const photoUrl = await getDownloadURL(storageRef);
+
+                const attendanceData = {
+                    userId: user.uid,
+                    scheduleId: todaySchedule?.id || `${user.uid}_${format(today, 'yyyy-MM-dd')}`,
+                    checkInTime: Timestamp.now(),
+                    checkInPhotoUrl: photoUrl,
+                    checkInCoordinates: coordinates,
+                    status: leaveType === 'late' ? 'late' : 'remote-progress',
+                    reason: reason,
+                };
+                await addDocumentNonBlocking(collection(firestore, 'attendances'), attendanceData);
+                toast({ title: 'Izin Terkirim', description: 'Absensi izin Anda telah tercatat.' });
+            }
+            onFinished();
+        } catch (error: any) {
+            console.error("Failed to submit leave request:", error);
+            toast({ variant: 'destructive', title: 'Gagal Mengajukan', description: error.message || 'Terjadi kesalahan.' });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+
+    return (
+        <DialogContent className="max-w-md">
+            <DialogHeader>
+                <DialogTitle>Pengajuan Izin / Lapor Keterlambatan</DialogTitle>
+                <DialogDescription>
+                    Pilih jenis pengajuan Anda dan lengkapi data yang diperlukan.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                    <Label htmlFor="leave-type">Jenis Pengajuan</Label>
+                    <Select value={leaveType} onValueChange={(v: any) => { setLeaveType(v); setSelfie(null); }}>
+                        <SelectTrigger id="leave-type"><SelectValue placeholder="Pilih jenis..." /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="sick-leave">Izin Sakit / Keperluan Mendesak</SelectItem>
+                            <SelectItem value="cuti">Cuti</SelectItem>
+                            <SelectItem value="late">Izin Datang Terlambat</SelectItem>
+                            <SelectItem value="remote-progress">Izin Langsung Progres</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="grid gap-2">
+                    <Label htmlFor="reason">Alasan (Wajib Diisi)</Label>
+                    <Textarea id="reason" placeholder="Jelaskan alasan Anda..." value={reason} onChange={(e) => setReason(e.target.value)} rows={3} />
+                </div>
+                
+                {(leaveType === 'sick-leave' || leaveType === 'cuti') && (
+                    <div className="grid gap-2">
+                         <Label htmlFor="evidence">Foto Bukti (Surat Dokter, dll)</Label>
+                         <Input id="evidence" type="file" accept="image/*" onChange={(e) => setEvidenceFile(e.target.files?.[0] || null)} />
+                    </div>
+                )}
+                
+                {needsCamera && (
+                    <div className="grid gap-2">
+                        <Label>Swafoto (Selfie)</Label>
+                        <div className="relative aspect-video w-full bg-muted rounded-md overflow-hidden flex items-center justify-center">
+                            {selfie ? (
+                                <Image src={selfie} alt="Selfie Preview" fill className="object-cover"/>
+                            ) : (
+                                <>
+                                    <video ref={dialogVideoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
+                                    {!dialogHasCamera && <VideoOff className="h-10 w-10 text-muted-foreground absolute" />}
+                                </>
+                            )}
+                            <canvas ref={dialogCanvasRef} className="hidden"></canvas>
+                        </div>
+                        <Button type="button" onClick={selfie ? () => setSelfie(null) : handleTakePhoto} variant="secondary" disabled={!dialogHasCamera}>
+                            {selfie ? 'Ambil Ulang' : 'Ambil Foto'}
+                        </Button>
+                    </div>
+                )}
+            </div>
+            <DialogFooter>
+                <DialogClose asChild><Button variant="ghost">Batal</Button></DialogClose>
+                <Button onClick={handleSubmit} disabled={isSubmitting}>
+                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Kirim Pengajuan
+                </Button>
+            </DialogFooter>
+        </DialogContent>
     );
 }
