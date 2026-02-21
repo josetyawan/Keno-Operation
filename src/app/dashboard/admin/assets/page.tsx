@@ -98,22 +98,19 @@ export default function AdminAssetsPage() {
   const { data: mapLinks, isLoading: areMapLinksLoading } = useCollection(mapLinksQuery);
   
   const dynamicServiceAreas = useMemo(() => {
-    const standardSAs = new Set<string>(baseServiceAreas);
-    if (mancoreLinks) mancoreLinks.forEach(link => {
-        if (!link.serviceArea.toLowerCase().includes('mitratel')) {
-            standardSAs.add(link.serviceArea)
-        }
-    });
-    if (mapLinks) mapLinks.forEach(link => {
-        if (!link.serviceArea.toLowerCase().includes('mitratel')) {
-            standardSAs.add(link.serviceArea)
-        }
-    });
-    // Remove NODE-B if it exists to prevent duplication before prepending it.
-    standardSAs.delete('NODE-B');
+    const serviceAreaSet = new Set<string>(baseServiceAreas);
     
-    // Add special search categories
-    return ['MITRATEL', 'NODE-B', ...Array.from(standardSAs).sort()];
+    const addSA = (sa: string) => {
+        const upperSa = sa.toUpperCase();
+        if (upperSa !== 'MITRATEL' && upperSa !== 'NODE-B') {
+            serviceAreaSet.add(sa);
+        }
+    };
+    
+    if (mancoreLinks) mancoreLinks.forEach(link => addSA(link.serviceArea));
+    if (mapLinks) mapLinks.forEach(link => addSA(link.serviceArea));
+    
+    return ['MITRATEL', 'NODE-B', ...Array.from(serviceAreaSet).sort()];
   }, [mancoreLinks, mapLinks]);
 
   useEffect(() => {
@@ -258,6 +255,28 @@ export default function AdminAssetsPage() {
     });
   };
   
+  const handleViewResultsOnMap = () => {
+    const assetsWithCoords = filteredAssets.filter(
+        a => a.coordinates && a.coordinates.includes(',')
+    );
+
+    if (assetsWithCoords.length === 0) {
+        toast({
+            variant: "destructive",
+            title: "Tidak Ada Koordinat",
+            description: "Tidak ada aset di hasil pencarian ini yang memiliki data koordinat untuk ditampilkan di peta.",
+        });
+        return;
+    }
+    
+    const baseUrl = 'https://www.google.com/maps/dir/';
+    const coordsString = assetsWithCoords
+        .map(a => a.coordinates!.replace(/\s/g, ''))
+        .join('/');
+    
+    const finalUrl = baseUrl + coordsString;
+    window.open(finalUrl, '_blank');
+  };
 
   const confirmDeleteAll = async () => {
     if (!firestore) return;
@@ -548,6 +567,7 @@ export default function AdminAssetsPage() {
                                 subType: 'N/A',
                                 coordinates: `${latValue}, ${longValue}`,
                                 tenantSiteId: tenantId,
+                                siteName,
                                 mitratelSiteId: row[mitratelSiteIdCol]?.toString().trim() || '-',
                             };
                             
@@ -978,10 +998,20 @@ export default function AdminAssetsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Daftar Aset</CardTitle>
-          <CardDescription>
-            {hasSearched ? `Menampilkan ${paginatedAssets.length} dari ${filteredAssets.length} aset yang cocok.` : (canSearch ? 'Ketik nama aset untuk memulai pencarian.' : 'Pilih Kategori/Area untuk mengaktifkan pencarian.')}
-          </CardDescription>
+             <div className="flex justify-between items-center">
+                <div>
+                    <CardTitle>Daftar Aset</CardTitle>
+                    <CardDescription>
+                        {hasSearched ? `Menampilkan ${paginatedAssets.length} dari ${filteredAssets.length} aset yang cocok.` : (canSearch ? 'Ketik nama aset untuk memulai pencarian.' : 'Pilih Kategori/Area untuk mengaktifkan pencarian.')}
+                    </CardDescription>
+                </div>
+                {filteredAssets.length > 0 && (
+                    <Button onClick={handleViewResultsOnMap} variant="outline">
+                        <MapPin className="mr-2 h-4 w-4" />
+                        Lihat Hasil di Peta
+                    </Button>
+                )}
+            </div>
         </CardHeader>
         <CardContent>
           <Table>

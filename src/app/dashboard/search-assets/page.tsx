@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -35,6 +34,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
+import { useToast } from '@/hooks/use-toast';
 
 
 const baseServiceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
@@ -44,6 +44,7 @@ export default function SearchAssetsPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
+  const { toast } = useToast();
   
   const [searchName, setSearchName] = useState('');
   const [searchServiceArea, setSearchServiceArea] = useState('all');
@@ -79,23 +80,21 @@ export default function SearchAssetsPage() {
   }, [mapLinks]);
   
   const dynamicServiceAreas = useMemo(() => {
-    const standardSAs = new Set<string>(baseServiceAreas);
-    if (mancoreLinks) mancoreLinks.forEach(link => {
-        if (!link.serviceArea.toLowerCase().includes('mitratel')) {
-            standardSAs.add(link.serviceArea)
-        }
-    });
-    if (mapLinks) mapLinks.forEach(link => {
-        if (!link.serviceArea.toLowerCase().includes('mitratel')) {
-            standardSAs.add(link.serviceArea)
-        }
-    });
-    // Remove NODE-B if it exists to prevent duplication before prepending it.
-    standardSAs.delete('NODE-B');
+    const serviceAreaSet = new Set<string>(baseServiceAreas);
     
-    // Add special search categories
-    return ['MITRATEL', 'NODE-B', ...Array.from(standardSAs).sort()];
+    const addSA = (sa: string) => {
+        const upperSa = sa.toUpperCase();
+        if (upperSa !== 'MITRATEL' && upperSa !== 'NODE-B') {
+            serviceAreaSet.add(sa);
+        }
+    };
+    
+    if (mancoreLinks) mancoreLinks.forEach(link => addSA(link.serviceArea));
+    if (mapLinks) mapLinks.forEach(link => addSA(link.serviceArea));
+    
+    return ['MITRATEL', 'NODE-B', ...Array.from(serviceAreaSet).sort()];
   }, [mancoreLinks, mapLinks]);
+
 
   const mancoreLinksBySA = useMemo(() => {
     if (!mancoreLinks) return new Map<string, MancoreLink[]>();
@@ -227,6 +226,29 @@ export default function SearchAssetsPage() {
   const isNodeBSearch = searchServiceArea === 'NODE-B';
   const isMitratelSearch = searchServiceArea === 'MITRATEL';
 
+  const handleViewResultsOnMap = () => {
+    const assetsWithCoords = filteredAssets.filter(
+        a => a.coordinates && a.coordinates.includes(',')
+    );
+
+    if (assetsWithCoords.length === 0) {
+        toast({
+            variant: "destructive",
+            title: "Tidak Ada Koordinat",
+            description: "Tidak ada aset di hasil pencarian ini yang memiliki data koordinat untuk ditampilkan di peta.",
+        });
+        return;
+    }
+    
+    const baseUrl = 'https://www.google.com/maps/dir/';
+    const coordsString = assetsWithCoords
+        .map(a => a.coordinates!.replace(/\s/g, ''))
+        .join('/');
+    
+    const finalUrl = baseUrl + coordsString;
+    window.open(finalUrl, '_blank');
+  };
+
 
   useEffect(() => {
       setCurrentPage(1);
@@ -315,10 +337,20 @@ export default function SearchAssetsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Daftar Aset</CardTitle>
-          <CardDescription>
-            {hasSearched ? `Menampilkan ${paginatedAssets.length} dari ${filteredAssets.length} aset yang cocok.` : (canSearch ? 'Ketik nama aset, Site ID, atau Tenant ID di atas untuk mencari.' : 'Pilih Kategori/Area untuk melihat data.')}
-          </CardDescription>
+            <div className="flex justify-between items-center">
+                <div>
+                    <CardTitle>Daftar Aset</CardTitle>
+                    <CardDescription>
+                        {hasSearched ? `Menampilkan ${paginatedAssets.length} dari ${filteredAssets.length} aset yang cocok.` : (canSearch ? 'Ketik nama aset, Site ID, atau Tenant ID di atas untuk mencari.' : 'Pilih Kategori/Area untuk melihat data.')}
+                    </CardDescription>
+                </div>
+                {filteredAssets.length > 0 && (
+                    <Button onClick={handleViewResultsOnMap} variant="outline">
+                        <MapPin className="mr-2 h-4 w-4" />
+                        Lihat Hasil di Peta
+                    </Button>
+                )}
+            </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -326,6 +358,7 @@ export default function SearchAssetsPage() {
                {isNodeBSearch ? (
                      <TableRow>
                         <TableHead>Site ID</TableHead>
+                        <TableHead>Site Name</TableHead>
                         <TableHead>OLT Merk</TableHead>
                         <TableHead>Splitter OLT</TableHead>
                         <TableHead>SN ONT</TableHead>
@@ -346,6 +379,7 @@ export default function SearchAssetsPage() {
                         <TableHead>Service Area</TableHead>
                         {!isMitratelSearch && <TableHead>STO</TableHead>}
                         <TableHead>Coordinates</TableHead>
+                        {isMitratelSearch && <TableHead>Site Name</TableHead>}
                         {isMitratelSearch && <TableHead>Mitratel ID</TableHead>}
                         {!isMitratelSearch && <TableHead>Avail</TableHead>}
                         {!isMitratelSearch && <TableHead>Used</TableHead>}
@@ -356,7 +390,7 @@ export default function SearchAssetsPage() {
             <TableBody>
               {areAssetsLoading && hasSearched ? (
                  Array.from({ length: 5 }).map((_, index) => (
-                    <TableRow key={index}><TableCell colSpan={isNodeBSearch ? 12 : 10}><Skeleton className="h-6 w-full" /></TableCell></TableRow>
+                    <TableRow key={index}><TableCell colSpan={isNodeBSearch ? 13 : 10}><Skeleton className="h-6 w-full" /></TableCell></TableRow>
                 ))
               ) : paginatedAssets.length > 0 && hasSearched ? (
                 paginatedAssets.map(a => {
@@ -365,6 +399,7 @@ export default function SearchAssetsPage() {
                   return isNodeBSearch ? (
                      <TableRow key={a.id}>
                         <TableCell className="font-medium">{a.siteId}</TableCell>
+                        <TableCell>{a.siteName}</TableCell>
                         <TableCell>{a.oltMerk}</TableCell>
                         <TableCell>{a.splitterOlt}</TableCell>
                         <TableCell>{a.snOnt}</TableCell>
@@ -393,6 +428,7 @@ export default function SearchAssetsPage() {
                     <TableCell>{a.serviceArea}</TableCell>
                     {!isMitratelSearch && <TableCell>{a.sto}</TableCell>}
                     <TableCell>{a.coordinates || '-'}</TableCell>
+                    {isMitratelSearch && <TableCell>{a.siteName}</TableCell>}
                     {isMitratelSearch && <TableCell>{a.mitratelSiteId || '-'}</TableCell>}
                     {!isMitratelSearch && <TableCell>{a.portAvai || '-'}</TableCell>}
                     {!isMitratelSearch && <TableCell>{a.portUsed || '-'}</TableCell>}
@@ -407,7 +443,7 @@ export default function SearchAssetsPage() {
                 )})
               ) : (
                 <TableRow>
-                  <TableCell colSpan={isNodeBSearch ? 12 : 10} className="h-24 text-center">
+                  <TableCell colSpan={isNodeBSearch ? 13 : 10} className="h-24 text-center">
                     {!canSearch 
                       ? "Silakan pilih Kategori/Area untuk memulai." 
                       : !hasSearched 
