@@ -79,7 +79,7 @@ service cloud.firestore {
 
     match /riwayat-gangguan/{riwayatId} {
       // Allow write access for the bot API, which is protected by a secret key.
-      // Read access is still protected.
+      // Read access is still protected for app users.
       allow write: if true;
       allow read: if hasAllProAccess() || isKorlap();
     }
