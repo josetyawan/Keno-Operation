@@ -1,14 +1,28 @@
 
 import { NextResponse } from 'next/server';
-import { initializeFirebase } from '@/firebase/init';
-import { addDoc, collection } from 'firebase/firestore';
+import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
+import { getFirestore, addDoc, collection, type Firestore } from 'firebase/firestore';
+import { firebaseConfig } from '@/firebase/config';
+
+// --- PERBAIKAN UTAMA: Inisialisasi Firebase yang Stabil ---
+// Inisialisasi ini hanya berjalan sekali saat server dimulai, bukan di setiap permintaan.
+let app: FirebaseApp;
+let firestore: Firestore;
+
+if (!getApps().length) {
+  app = initializeApp(firebaseConfig);
+} else {
+  app = getApp();
+}
+firestore = getFirestore(app);
+// --- AKHIR PERBAIKAN ---
 
 export async function POST(request: Request) {
+    // Variabel SECRET KEY diambil dari lingkungan server, ini sudah benar.
     const secretKey = process.env.BOT_SECRET_KEY;
 
     if (!secretKey) {
         console.error("API Error: BOT_SECRET_KEY environment variable is not set on the server.");
-        // Selalu kembalikan JSON, bukan HTML
         return NextResponse.json({ success: false, error: 'Server configuration error: Missing secret key.' }, { status: 500 });
     }
 
@@ -21,16 +35,15 @@ export async function POST(request: Request) {
     }
 
     try {
-        const { firestore } = initializeFirebase();
         const body = await request.json();
 
         if (!body.no_service || !body.keterangan) {
             return NextResponse.json({ success: false, error: 'Data tidak lengkap. Field no_service dan keterangan wajib diisi.' }, { status: 400 });
         }
         
+        // Gunakan koneksi Firestore yang sudah stabil
         const riwayatCollection = collection(firestore, 'riwayat-gangguan');
         
-        // PERBAIKAN: Menggunakan new Date() untuk stempel waktu di sisi server
         const newRiwayatData = {
             noService: body.no_service || '',
             tanggalLapor: new Date(),
@@ -42,11 +55,13 @@ export async function POST(request: Request) {
 
         await addDoc(riwayatCollection, newRiwayatData);
 
+        // Jika berhasil, kirim respons sukses
         return NextResponse.json({ success: true, message: 'Data riwayat gangguan berhasil disimpan.' });
+
     } catch (error: any) {
+        // Jika ada galat lain (misal: JSON tidak valid), laporkan dengan benar.
         console.error('API Error in /api/gangguan:', error);
         
-        // PERBAIKAN: Memastikan respons galat selalu dalam format JSON
         const errorMessage = error.message || 'An unknown server error occurred.';
         return NextResponse.json({ success: false, error: `Server-side API error: ${errorMessage}` }, { status: 500 });
     }
