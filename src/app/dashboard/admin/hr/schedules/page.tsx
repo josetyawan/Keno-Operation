@@ -359,9 +359,9 @@ export default function AdminSchedulesPage() {
         reader.onload = async (e) => {
           try {
             const data = e.target?.result;
-            const workbook = XLSX.read(data, { type: 'binary' });
+            const workbook = XLSX.read(data, { type: 'array' });
             const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: null, raw: false });
+            const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: null, raw: true });
     
             if (jsonData.length === 0) {
                 throw new Error("Sheet Excel kosong.");
@@ -473,7 +473,7 @@ export default function AdminSchedulesPage() {
             if (fileInput) fileInput.value = '';
           }
         };
-        reader.readAsBinaryString(file);
+        reader.readAsArrayBuffer(file);
     };
 
     const isLoading = isUserLoading || isProfileLoading || areSchedulesLoading || areUsersLoading;
