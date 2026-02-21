@@ -29,6 +29,7 @@ import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
+import { getAssetServiceArea } from '@/lib/asset-utils';
 
 const PREFERRED_ORDER: NetworkAsset['serviceArea'][] = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
 
@@ -46,62 +47,6 @@ const skeletonCard = (
     </CardContent>
   </Card>
 );
-
-// This mapping defines which STO codes belong to which Service Area.
-const SA_CODE_MAPPING: Record<string, NetworkAsset['serviceArea']> = {
-    'PWB': 'SA PURWODADI', 'PURWODADI': 'SA PURWODADI', 'WRO': 'SA PURWODADI', 'WIROSARI': 'SA PURWODADI', 'TRO': 'SA PURWODADI', 'TOROH': 'SA PURWODADI', 'GBU': 'SA PURWODADI', 'GUBUNG': 'SA PURWODADI', 'GDO': 'SA PURWODADI', 'GODONG': 'SA PURWODADI',
-    'CEP': 'SA BLORA', 'CEPU': 'SA BLORA', 'BLO': 'SA BLORA', 'BLORA': 'SA BLORA', 'NGA': 'SA BLORA', 'NGAWEN': 'SA BLORA', 'RDB': 'SA BLORA', 'RANDUBLATUNG': 'SA BLORA',
-    'KMJ': 'SA JEPARA', 'JEPARA': 'SA JEPARA', 'JPR': 'SA JEPARA', 'BAN': 'SA JEPARA', 'BANGSRI': 'SA JEPARA', 'KEL': 'SA JEPARA', 'KELING': 'SA JEPARA', 'PEC': 'SA JEPARA', 'PECANGAAN': 'SA JEPARA',
-    'KUD': 'SA KUDUS', 'KUDUS': 'SA KUDUS', 'DMA': 'SA KUDUS', 'DEMAK': 'SA KUDUS',
-    'PAT': 'SA PATI', 'PATI': 'SA PATI', 'TAY': 'SA PATI', 'JWN': 'SA PATI',
-    'LSE': 'SA REMBANG', 'LASEM': 'SA REMBANG', 'RBN': 'SA REMBANG', 'REMBANG': 'SA REMBANG'
-};
-
-const getAssetServiceArea = (asset: NetworkAsset): NetworkAsset['serviceArea'] | 'Unmap' => {
-    // Handle NODE-B first based on siteId
-    if (asset.assetType === 'NODE-B' && asset.siteId) {
-        const upperSiteId = asset.siteId.toUpperCase();
-        if (upperSiteId.includes('BLA')) return 'SA BLORA';
-        if (upperSiteId.includes('JPA')) return 'SA JEPARA';
-        if (upperSiteId.includes('DMK')) return 'SA KUDUS';
-        if (upperSiteId.includes('KDS')) return 'SA KUDUS';
-        if (upperSiteId.includes('GRO')) return 'SA PURWODADI';
-        if (upperSiteId.includes('PAT')) return 'SA PATI';
-        if (upperSiteId.includes('RBG')) return 'SA REMBANG';
-        return 'Unmap'; // Important: Fallback for unmapped NODE-B
-    }
-    
-    // Handle Mitratel based on its own serviceArea property
-    if (asset.assetType === 'MITRATEL' && asset.serviceArea) {
-      return asset.serviceArea as NetworkAsset['serviceArea'];
-    }
-    
-    // Handle OLT, FTM, ODC, ODP, etc.
-    const upperAssetName = (asset.name || '').toUpperCase();
-    const upperSto = (asset.sto || '').toUpperCase().trim();
-
-    // Check by asset name first
-    for (const code in SA_CODE_MAPPING) {
-        // Use a regex to avoid partial matches within words (e.g., 'PAT' in 'SEPATU')
-        const regex = new RegExp(`[\\s-_]${code}[\\s-_]|^${code}[\\s-_]|[\\s-_]${code}$|^${code}$`);
-        if (regex.test(upperAssetName)) {
-            return SA_CODE_MAPPING[code];
-        }
-    }
-
-    // If no match in name, check by STO code
-    if (upperSto) {
-       for (const code in SA_CODE_MAPPING) {
-            if (upperSto.includes(code)) {
-                return SA_CODE_MAPPING[code];
-            }
-        }
-    }
-    
-    // Default fallback if no other rule matches for these asset types
-    return 'SA KUDUS';
-};
-
 
 export default function AllproPage() {
   const router = useRouter();
@@ -171,10 +116,26 @@ export default function AllproPage() {
                             acc[correctAssetSA].ftm.oa++;
                         }
                         break;
-                    case 'ODC': acc[correctAssetSA].odc.jumlah++; break;
-                    case 'ODP': acc[correctAssetSA].odp.jumlah++; break;
-                    case 'MITRATEL': acc[correctAssetSA].mitratel.jumlah++; break;
-                    case 'NODE-B': acc[correctAssetSA].nodeB.jumlah++; break;
+                    case 'ODC': 
+                        if (acc[correctAssetSA].odc) {
+                          acc[correctAssetSA].odc.jumlah++;
+                        }
+                        break;
+                    case 'ODP': 
+                        if (acc[correctAssetSA].odp) {
+                          acc[correctAssetSA].odp.jumlah++; 
+                        }
+                        break;
+                    case 'MITRATEL': 
+                        if (acc[correctAssetSA].mitratel) {
+                           acc[correctAssetSA].mitratel.jumlah++;
+                        }
+                        break;
+                    case 'NODE-B': 
+                        if (acc[correctAssetSA].nodeB) {
+                            acc[correctAssetSA].nodeB.jumlah++;
+                        }
+                        break;
                 }
             }
             return acc;
@@ -207,7 +168,7 @@ export default function AllproPage() {
       odc: { title: "ODC All", headers: ["Service Area", "Jumlah ODC"], rows: [] as any[], totals: { jumlah: 0 }},
       odp: { title: "ODP All", headers: ["Service Area", "Jumlah ODP"], rows: [] as any[], totals: { jumlah: 0 }},
       mitratel: { title: "Mitratel All", headers: ["Service Area", "Jumlah Site"], rows: [] as any[], totals: { jumlah: 0 }},
-      nodeB: { title: "NODE-B All", headers: ["Service Area", "Jumlah Site"], rows: [] as any[], totals: { jumlah: 0 }},
+      nodeB: { title: "NODE-B All", headers: ["Service Area", "Site ID"], rows: [] as any[], totals: { jumlah: 0 }},
     };
     
     if (!stats) return results;

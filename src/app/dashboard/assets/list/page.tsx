@@ -28,6 +28,7 @@ import { collection, query, where, doc, type QueryConstraint } from 'firebase/fi
 import type { UserProfile, NetworkAsset } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
+import { getAssetServiceArea } from '@/lib/asset-utils';
 
 function AssetListSkeleton() {
     return (
@@ -82,46 +83,54 @@ function AssetList() {
   );
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
-  // The query now filters by both type and service area on the server.
+  // The server query now ONLY filters by assetType.
+  // All other filtering (serviceArea, subType, name) is done on the client
+  // to ensure consistency with the dashboard counting logic.
   const assetsQuery = useMemoFirebase(() => {
     if (isUserLoading || isProfileLoading || !user || !userProfile || userProfile.registrationStatus !== 'approved' || !assetType) {
         return null;
     }
-
-    const constraints: QueryConstraint[] = [];
-    constraints.push(where('assetType', '==', assetType));
-    
-    if (serviceArea) {
-      constraints.push(where('serviceArea', '==', serviceArea));
-    }
-
-    if (subType) {
-        constraints.push(where('subType', '==', subType));
-    }
-
     const collectionRef = collection(firestore, 'network-assets');
-    return query(collectionRef, ...constraints);
-
-  }, [firestore, isUserLoading, isProfileLoading, user, userProfile, assetType, serviceArea, subType]);
+    return query(collectionRef, where('assetType', '==', assetType));
+  }, [firestore, isUserLoading, isProfileLoading, user, userProfile, assetType]);
 
   const { data: assets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(assetsQuery);
   
+  // This memo block now contains ALL client-side filtering logic
   const clientFilteredAssets = useMemo(() => {
       if (!assets) return [];
 
+      let filtered = assets;
+      
+      // 1. Filter by Service Area
+      if (serviceArea) {
+          filtered = filtered.filter(asset => getAssetServiceArea(asset) === serviceArea);
+      }
+
+      // 2. Filter by SubType
+      if (subType) {
+        if (subType === 'OLT') {
+            // Link for regular OLTs. Match assets that are not Mini OLTs.
+            filtered = filtered.filter(asset => !(asset.subType || '').toUpperCase().includes('MINI'));
+        } else {
+            // Link for a specific sub-type like 'Mini OLT', 'EA', 'OA'. Match it directly.
+            filtered = filtered.filter(asset => asset.subType === subType);
+        }
+      }
+      
+      // 3. Filter by Search Name
       const lowercasedSearchName = searchName.toLowerCase().trim();
       if (searchName && lowercasedSearchName.length > 0) {
-        return assets.filter(asset => {
+        filtered = filtered.filter(asset => {
             const nameMatch = asset.name.toLowerCase().includes(lowercasedSearchName);
             const siteIdMatch = asset.siteId && asset.siteId.toLowerCase().includes(lowercasedSearchName);
             const tenantIdMatch = asset.tenantSiteId && asset.tenantSiteId.toLowerCase().includes(lowercasedSearchName);
-            return nameMatch || siteIdMatch || tenantIdMatch;
+            return nameMatch || !!siteIdMatch || !!tenantIdMatch;
         });
       }
       
-      return assets;
-
-  }, [assets, searchName]);
+      return filtered;
+  }, [assets, searchName, serviceArea, subType]);
 
   const totalPages = Math.ceil(clientFilteredAssets.length / ITEMS_PER_PAGE);
 
@@ -193,16 +202,16 @@ function AssetList() {
                     </TableRow>
                 ) : (
                     <TableRow>
-                        <TableHead>{isMitratel ? 'Site Name' : 'Name'}</TableHead>
+                        <TableHead>{isMitratel ? 'Tenant ID' : 'Name'}</TableHead>
                         <TableHead>Type</TableHead>
                         {!isMitratel && <TableHead>Sub-Type</TableHead>}
                         <TableHead>Service Area</TableHead>
                         {!isMitratel && <TableHead>STO</TableHead>}
                         <TableHead>Coordinates</TableHead>
                         {isMitratel && <TableHead>Mitratel ID</TableHead>}
-                        {isMitratel && <TableHead>Tenant ID</TableHead>}
-                        {!isMitratel && <TableHead>Avail</TableHead>}
-                        {!isMitratel && <TableHead>Used</TableHead>}
+                        {!isNodeB && !isMitratel && <TableHead>Site Name</TableHead>}
+                        {!isMitratel && !isNodeB && <TableHead>Avail</TableHead>}
+                        {!isMitratel && !isNodeB && <TableHead>Used</TableHead>}
                         <TableHead className="text-right">Lokasi</TableHead>
                     </TableRow>
                 )}
@@ -236,16 +245,16 @@ function AssetList() {
                     </TableRow>
                   ) : (
                     <TableRow key={a.id}>
-                        <TableCell className="font-medium">{a.name}</TableCell>
+                        <TableCell className="font-medium">{isMitratel ? a.tenantSiteId : a.name}</TableCell>
                         <TableCell>{a.assetType}</TableCell>
                         {!isMitratel && <TableCell>{a.subType}</TableCell>}
                         <TableCell>{a.serviceArea}</TableCell>
                         {!isMitratel && <TableCell>{a.sto}</TableCell>}
                         <TableCell>{a.coordinates || '-'}</TableCell>
                         {isMitratel && <TableCell>{a.mitratelSiteId || '-'}</TableCell>}
-                        {isMitratel && <TableCell>{a.tenantSiteId || '-'}</TableCell>}
-                        {!isMitratel && <TableCell>{a.portAvai || '-'}</TableCell>}
-                        {!isMitratel && <TableCell>{a.portUsed || '-'}</TableCell>}
+                        {!isNodeB && !isMitratel && <TableCell>{a.siteName || '-'}</TableCell>}
+                        {!isMitratel && !isNodeB && <TableCell>{a.portAvai || '-'}</TableCell>}
+                        {!isMitratel && !isNodeB && <TableCell>{a.portUsed || '-'}</TableCell>}
                         <TableCell className="text-right">
                           {googleMapsUrl && (
                             <Button asChild variant="ghost" size="icon" title="Lihat di Google Maps">
