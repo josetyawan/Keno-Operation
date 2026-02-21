@@ -1,7 +1,7 @@
 // ================== PENTING: KONFIGURASI ==================
 // Ganti dengan ID Spreadsheet dan Nama Sheet Anda yang benar.
-const SPREADSHEET_ID = "YOUR_SPREADSHEET_ID_HERE";
-const SHEET_NAME = "YOUR_SHEET_NAME_HERE"; // Contoh: 'Riwayat Gangguan'
+const SPREADSHEET_ID = "1I_5nlRnoumDktvvIB6LbNKTfSLP-1G5xsYyjpRuDL5s";
+const SHEET_NAME = "Februari 2026"; // Contoh: 'Riwayat Gangguan'
 
 /**
  * Fungsi ini akan dijalankan setiap kali Web App URL Anda diakses dengan metode GET.

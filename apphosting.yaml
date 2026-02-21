@@ -8,3 +8,10 @@ runtime: nodejs18
 
 runConfig:
   maxInstances: 1
+env:
+  - variable: GEMINI_API_KEY
+    value: "AIzaSyDR1T6v23MxvIBHt3z2GFBj2OfPhEBsLkA"
+  - variable: BOT_SECRET_KEY
+    value: "NotaKuSuperSecretKey@2024"
+  - variable: APPS_SCRIPT_WEB_APP_URL
+    value: "https://script.google.com/macros/s/AKfycbyhu84qilWr-Mq74xmjIpkje_W7m4dEZ4qCWaudCBXkdPAvt0fmF-DX3a6mHmoSLfA3/exec"
