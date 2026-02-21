@@ -79,7 +79,9 @@ service cloud.firestore {
 
     match /riwayat-gangguan/{riwayatId} {
       allow read: if isApproved();
-      allow create: if true;
+      // Allow create requests coming from the bot via the API endpoint
+      allow create: if true; 
+      // Only admins can update or delete history records
       allow update, delete: if isAdmin();
     }
 
@@ -123,30 +125,6 @@ service cloud.firestore {
       allow list: if isApproved();
       allow create: if isApproved() && isCreatingOwn('userId');
       allow update, delete: if (isApproved() && isUpdatingOwn('userId')) || isAdmin() || isKorlap();
-    }
-
-    match /messages/{messageId} {
-      allow read: if isApproved();
-      allow create: if isApproved() && isCreatingOwn('userId');
-      allow update: if false; // Disallow message editing
-      allow delete: if isOwner(resource.data.userId) || isAdmin();
-    }
-
-    match /chats/{chatId} {
-      // Users can create a chat room if they are one of the participants
-      allow create: if request.auth.uid in request.resource.data.participants;
-      // Users can read/update a chat room if they are a participant
-      allow read, update: if request.auth.uid in resource.data.participants;
-      allow delete: if false;
-    }
-
-    match /chats/{chatId}/messages/{messageId} {
-      // Users can read/list messages if they are a participant of the parent chat
-      allow read: if request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
-      // Users can create a message if they are a participant and the sender
-      allow create: if request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants
-                    && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if false; // Disallow editing/deleting private messages
     }
   }
 }

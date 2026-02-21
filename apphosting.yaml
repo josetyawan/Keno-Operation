@@ -12,3 +12,5 @@ runConfig:
 env:
   - variable: GEMINI_API_KEY
     value: "AIzaSyDR1T6v23MxvIBHt3z2GFBj2OfPhEBsLkA"
+  - variable: BOT_SECRET_KEY
+    value: "NotaKuSuperSecretKey@2024"
