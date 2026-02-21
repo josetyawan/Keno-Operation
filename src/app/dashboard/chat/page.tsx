@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -18,17 +17,21 @@ export default function ChatHubPage() {
 
   const usersQuery = useMemoFirebase(() => {
     if (!user) return null;
-    // Fetch all approved users except the current user
+    // Fetch all approved users, ordering by name. We'll filter the current user on the client.
     return query(
       collection(firestore, 'users'),
       where('registrationStatus', '==', 'approved'),
-      where('id', '!=', user.uid),
-      orderBy('id'), // Firestore requires an orderBy when using inequality filters
       orderBy('displayName')
     );
   }, [user, firestore]);
 
-  const { data: users, isLoading: areUsersLoading } = useCollection<UserProfile>(usersQuery);
+  const { data: allApprovedUsers, isLoading: areUsersLoading } = useCollection<UserProfile>(usersQuery);
+
+  // Filter out the current user on the client side
+  const users = useMemo(() => {
+      if (!allApprovedUsers || !user) return [];
+      return allApprovedUsers.filter(u => u.id !== user.uid);
+  }, [allApprovedUsers, user]);
 
   const isLoading = isUserLoading || areUsersLoading;
 
