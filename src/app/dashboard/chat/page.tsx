@@ -17,21 +17,20 @@ export default function ChatHubPage() {
 
   const usersQuery = useMemoFirebase(() => {
     if (!user) return null;
-    // Fetch all approved users, ordering by name. We'll filter the current user on the client.
-    return query(
-      collection(firestore, 'users'),
-      where('registrationStatus', '==', 'approved'),
-      orderBy('displayName')
-    );
+    // Fetch all users and filter on the client to avoid complex index requirements.
+    return query(collection(firestore, 'users'));
   }, [user, firestore]);
 
-  const { data: allApprovedUsers, isLoading: areUsersLoading } = useCollection<UserProfile>(usersQuery);
+  const { data: allUsers, isLoading: areUsersLoading } = useCollection<UserProfile>(usersQuery);
 
   // Filter out the current user on the client side
   const users = useMemo(() => {
-      if (!allApprovedUsers || !user) return [];
-      return allApprovedUsers.filter(u => u.id !== user.uid);
-  }, [allApprovedUsers, user]);
+      if (!allUsers || !user) return [];
+      // Filter for approved users and sort by display name, then filter out the current user.
+      return allUsers
+        .filter(u => u.registrationStatus === 'approved' && u.id !== user.uid)
+        .sort((a, b) => (a.displayName || a.email).localeCompare(b.displayName || b.email));
+  }, [allUsers, user]);
 
   const isLoading = isUserLoading || areUsersLoading;
 
