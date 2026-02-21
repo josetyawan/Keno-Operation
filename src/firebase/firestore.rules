@@ -76,6 +76,12 @@ service cloud.firestore {
       allow update: if isKorlap() || (hasAllProAccess() && isUpdatingOwn('userId')) || isAdmin();
       allow delete: if isAdmin() || isKorlap();
     }
+    
+    match /riwayat-gangguan/{riwayatId} {
+      allow read: if isApproved();
+      // Writes should come from the bot (service account), but we can allow admin writes for manual correction.
+      allow write: if isAdmin(); 
+    }
 
     match /map-links/{mapLinkId} {
       allow get, list: if hasAllProAccess() || isKorlap();

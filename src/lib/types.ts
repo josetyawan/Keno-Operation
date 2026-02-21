@@ -146,6 +146,16 @@ export type Pelanggan = {
   odpQRCodeUrl?: string;
 };
 
+export type RiwayatGangguan = {
+  id: string;
+  pelangganId: string;
+  noService: string;
+  tanggalLapor: any; // Firestore Timestamp
+  noTiket?: string;
+  teknisi?: string;
+  keterangan?: string;
+};
+
 export type ServiceAreaStats = {
   olt: { miniOlt: number; olt: number };
   ftm: { ea: number; oa: number };

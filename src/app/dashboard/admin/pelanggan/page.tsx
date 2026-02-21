@@ -28,18 +28,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Bot, PlusCircle, MapPin, Loader2, Upload, Search, History, Phone, Pencil, Wrench, QrCode, FileSpreadsheet, RefreshCw } from 'lucide-react';
+import { Bot, PlusCircle, MapPin, Loader2, Upload, Search, History, Phone, Pencil, Wrench, QrCode, FileSpreadsheet } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, useDoc, useStorage } from '@/firebase';
 import { collection, query, doc, serverTimestamp, where, getDocs, limit, orderBy } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import type { UserProfile, Pelanggan } from '@/lib/types';
+import type { UserProfile, Pelanggan, RiwayatGangguan } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import * as XLSX from 'xlsx';
 import { format, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 
@@ -47,20 +46,12 @@ const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BL
 
 // --- Helper Functions ---
 
-const parseIndonesianDate = (dateString: string): Date => {
-  if (!dateString) return new Date(0); // For sorting purposes, invalid dates go to the end
-  const months: { [key: string]: number } = {
-    'januari': 0, 'februari': 1, 'maret': 2, 'april': 3, 'mei': 4, 'juni': 5,
-    'juli': 6, 'agustus': 7, 'september': 8, 'oktober': 9, 'november': 10, 'desember': 11
-  };
-  const parts = dateString.toLowerCase().split(' ');
-  if (parts.length !== 3) return new Date(0);
-  const day = parseInt(parts[0], 10);
-  const month = months[parts[1]];
-  const year = parseInt(parts[2], 10);
-
-  if (isNaN(day) || month === undefined || isNaN(year)) return new Date(0);
-  return new Date(year, month, day);
+const safeToDate = (timestamp: any): Date | null => {
+    if (!timestamp) return null;
+    if (timestamp.toDate) return timestamp.toDate();
+    if (timestamp instanceof Date && isValid(timestamp)) return timestamp;
+    const d = new Date(timestamp);
+    return isValid(d) ? d : null;
 };
 
 const formatWaNumber = (phone: string) => {
@@ -414,10 +405,8 @@ export default function AdminPelangganPage() {
 
   const [searchNoService, setSearchNoService] = useState('');
   const [searchedPelanggan, setSearchedPelanggan] = useState<Pelanggan | null>(null);
-  const [sheetHistory, setSheetHistory] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchPerformed, setSearchPerformed] = useState(false);
-  const [isSheetHistoryLoading, setIsSheetHistoryLoading] = useState(false);
   
   const [isNewPelangganDialogOpen, setIsNewPelangganDialogOpen] = useState(false);
   const [isAddContactDialogOpen, setIsAddContactDialogOpen] = useState(false);
@@ -440,89 +429,19 @@ export default function AdminPelangganPage() {
     }
   }, [user, currentUserProfile, isUserLoading, isProfileLoading, router]);
   
-  const handleFetchSheetHistory = async () => {
-    if (!searchedPelanggan?.noService) {
-      toast({
-        variant: 'destructive',
-        title: 'Pelanggan Tidak Ditemukan',
-        description: 'Cari pelanggan terlebih dahulu untuk memuat riwayat.',
-      });
-      return;
+  const riwayatQuery = useMemoFirebase(() => {
+    if (!searchedPelanggan) {
+      return null;
     }
+    return query(
+      collection(firestore, 'riwayat-gangguan'),
+      where('noService', '==', searchedPelanggan.noService),
+      orderBy('tanggalLapor', 'desc')
+    );
+  }, [firestore, searchedPelanggan]);
 
-    setIsSheetHistoryLoading(true);
-    setSheetHistory([]); // Clear previous history
-    const serviceNumberToFind = searchedPelanggan.noService.trim();
-    try {
-      const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS6GU4F_Iqvw7u1pkL06KQjDrrdGCu_DshWT0QWeozGpwpUIAc757COSNEnkhrRKH1RnPDqNeXDDNjU/pub?output=csv');
-      if (!response.ok) {
-        throw new Error(`Gagal mengambil data dari Google Sheet. Status: ${response.status}`);
-      }
+  const { data: riwayatGangguan, isLoading: isRiwayatLoading } = useCollection<RiwayatGangguan>(riwayatQuery);
 
-      const csvText = await response.text();
-      const workbook = XLSX.read(csvText, { type: 'string' });
-      
-      const sheetName = workbook.SheetNames[0];
-      if (!sheetName) {
-        throw new Error('File Google Sheet tidak memiliki sheet yang dapat dibaca.');
-      }
-
-      const worksheet = workbook.Sheets[sheetName];
-      const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: true, blankrows: false });
-
-      if (jsonData.length < 1) {
-        throw new Error('Sheet kosong atau tidak memiliki header.');
-      }
-      
-      const headerRow: string[] = jsonData[0].map(h => String(h).trim());
-      const dataRows = jsonData.slice(1);
-
-      const findIndex = (headers: string[], keys: string[]) => {
-          const lowerKeys = keys.map(k => k.toLowerCase());
-          return headers.findIndex(h => {
-              if (!h) return false;
-              const cleanedHeader = h.toString().toLowerCase().trim().replace(/"/g, '');
-              return lowerKeys.includes(cleanedHeader);
-          });
-      };
-      
-      const noServiceIndex = findIndex(headerRow, ['no service', 'no. service']);
-      const tanggalIndex = findIndex(headerRow, ['tanggal', 'timestamp']);
-      const noTiketIndex = findIndex(headerRow, ['no tiket', 'no. tiket']);
-      const teknisiIndex = findIndex(headerRow, ['teknisi']);
-      const keteranganIndex = findIndex(headerRow, ['keterangan']);
-
-      if (noServiceIndex === -1) {
-          throw new Error("Kolom 'No. Service' tidak ditemukan di Google Sheet.");
-      }
-
-      const history = dataRows
-        .filter((row: any) => {
-            return row[noServiceIndex]?.toString().trim() === serviceNumberToFind;
-        })
-        .map((row: any) => ({
-            'Tanggal': row[tanggalIndex] ? format(new Date(row[tanggalIndex]), 'd MMMM yyyy', { locale: idLocale }) : '-',
-            'No Tiket': row[noTiketIndex] || '-',
-            'Teknisi': row[teknisiIndex] || '-',
-            'Keterangan': row[keteranganIndex] || '-',
-            'rawDateForSort': row[tanggalIndex] ? new Date(row[tanggalIndex]).getTime() : 0,
-        }))
-        .sort((a, b) => b.rawDateForSort - a.rawDateForSort);
-
-      setSheetHistory(history);
-      if (history.length === 0) {
-        toast({
-          title: 'Riwayat Tidak Ditemukan',
-          description: 'Tidak ada riwayat laporan dari bot yang ditemukan untuk pelanggan ini.',
-        });
-      }
-    } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Gagal Memuat Riwayat', description: error.message || 'Tidak dapat mengambil riwayat laporan dari Google Sheet.' });
-      setSheetHistory([]);
-    } finally {
-      setIsSheetHistoryLoading(false);
-    }
-  };
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -531,7 +450,6 @@ export default function AdminPelangganPage() {
     setIsSearching(true);
     setSearchPerformed(true);
     setSearchedPelanggan(null);
-    setSheetHistory([]); // Clear history on new search
 
     const q = query(collection(firestore, 'pelanggan'), where('noService', '==', searchNoService.trim()), limit(1));
     const querySnapshot = await getDocs(q);
@@ -696,20 +614,15 @@ export default function AdminPelangganPage() {
 
               <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      <span className="flex items-center gap-2"><History /> Riwayat Laporan (dari Bot)</span>
-                      <Button onClick={handleFetchSheetHistory} disabled={isSheetHistoryLoading || !searchedPelanggan} variant="outline" size="sm">
-                          {isSheetHistoryLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                          Muat Ulang
-                      </Button>
-                    </CardTitle>
+                    <CardTitle className="flex items-center gap-2"><History /> Riwayat Laporan</CardTitle>
+                    <CardDescription>Menampilkan riwayat laporan gangguan yang tersimpan di database.</CardDescription>
                   </CardHeader>
                   <CardContent>
-                        {isSheetHistoryLoading ? (
+                        {isRiwayatLoading ? (
                            <div className="flex justify-center items-center h-24">
                                 <Loader2 className="h-6 w-6 animate-spin" />
                             </div>
-                        ) : sheetHistory.length > 0 ? (
+                        ) : riwayatGangguan && riwayatGangguan.length > 0 ? (
                             <div className="overflow-x-auto">
                                 <Table>
                                     <TableHeader><TableRow>
@@ -718,20 +631,19 @@ export default function AdminPelangganPage() {
                                         <TableHead>Teknisi</TableHead>
                                         <TableHead>Keterangan</TableHead>
                                     </TableRow></TableHeader>
-                                    <TableBody>{sheetHistory.map((g, i) => (
-                                        <TableRow key={i}>
-                                            <TableCell className="whitespace-nowrap">{g['Tanggal'] || '-'}</TableCell>
-                                            <TableCell>{g['No Tiket'] || '-'}</TableCell>
-                                            <TableCell>{g['Teknisi'] || '-'}</TableCell>
-                                            <TableCell>{g['Keterangan'] || '-'}</TableCell>
+                                    <TableBody>{riwayatGangguan.map((item) => (
+                                        <TableRow key={item.id}>
+                                            <TableCell className="whitespace-nowrap">{safeToDate(item.tanggalLapor) ? format(safeToDate(item.tanggalLapor)!, 'd MMMM yyyy', { locale: idLocale }) : '-'}</TableCell>
+                                            <TableCell>{item.noTiket || '-'}</TableCell>
+                                            <TableCell>{item.teknisi || '-'}</TableCell>
+                                            <TableCell>{item.keterangan || '-'}</TableCell>
                                         </TableRow>
                                     ))}</TableBody>
                                 </Table>
                             </div>
                         ) : (
                             <div className="text-center h-24 flex flex-col items-center justify-center text-muted-foreground">
-                               <p>Riwayat laporan dari bot akan muncul di sini.</p>
-                               <p className="text-xs">Klik "Muat Ulang" untuk mengambil data.</p>
+                               <p>Tidak ada riwayat laporan yang ditemukan untuk pelanggan ini.</p>
                             </div>
                         )}
                     </CardContent>
@@ -782,5 +694,3 @@ export default function AdminPelangganPage() {
     </>
   );
 }
-
-    
