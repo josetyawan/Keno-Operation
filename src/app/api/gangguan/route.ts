@@ -1,13 +1,14 @@
 
 import { NextResponse } from 'next/server';
 import { initializeFirebase } from '@/firebase/init';
-import { addDoc, collection, Timestamp } from 'firebase/firestore';
+import { addDoc, collection } from 'firebase/firestore';
 
 export async function POST(request: Request) {
     const secretKey = process.env.BOT_SECRET_KEY;
 
     if (!secretKey) {
         console.error("API Error: BOT_SECRET_KEY environment variable is not set on the server.");
+        // Selalu kembalikan JSON, bukan HTML
         return NextResponse.json({ success: false, error: 'Server configuration error: Missing secret key.' }, { status: 500 });
     }
 
@@ -29,9 +30,10 @@ export async function POST(request: Request) {
         
         const riwayatCollection = collection(firestore, 'riwayat-gangguan');
         
+        // PERBAIKAN: Menggunakan new Date() untuk stempel waktu di sisi server
         const newRiwayatData = {
             noService: body.no_service || '',
-            tanggalLapor: Timestamp.now(), // Use Firestore Timestamp for server-side operations
+            tanggalLapor: new Date(),
             noTiket: body.no_tiket || '',
             teknisi: body.teknisi || '',
             keterangan: body.keterangan || '',
@@ -44,8 +46,8 @@ export async function POST(request: Request) {
     } catch (error: any) {
         console.error('API Error in /api/gangguan:', error);
         
+        // PERBAIKAN: Memastikan respons galat selalu dalam format JSON
         const errorMessage = error.message || 'An unknown server error occurred.';
-        // Return a concise JSON error to prevent "message is too long" in the bot
         return NextResponse.json({ success: false, error: `Server-side API error: ${errorMessage}` }, { status: 500 });
     }
 }
