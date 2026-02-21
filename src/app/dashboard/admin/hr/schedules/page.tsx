@@ -361,7 +361,8 @@ export default function AdminSchedulesPage() {
             const data = e.target?.result;
             const workbook = XLSX.read(data, { type: 'array' });
             const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: null, raw: false }); // Change: raw: false
+            // IMPORTANT FIX: Read all data as raw strings to avoid type mismatches with NIK.
+            const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: null, rawNumbers: false });
     
             if (jsonData.length === 0) {
                 throw new Error("Sheet Excel kosong.");
@@ -409,6 +410,7 @@ export default function AdminSchedulesPage() {
                 }
     
                 const user = userMapByNik.get(nikFromExcel);
+
                 if (!user) {
                     errorCount++;
                     skippedUsers.add(nikFromExcel);
