@@ -40,7 +40,7 @@ import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import * as XLSX from 'xlsx';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 
 const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
@@ -468,22 +468,26 @@ export default function AdminPelangganPage() {
       }
 
       const worksheet = workbook.Sheets[sheetName];
-      const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false, blankrows: false });
+      const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: true, blankrows: false });
 
       if (jsonData.length < 1) {
         throw new Error('Sheet kosong atau tidak memiliki header.');
       }
       
-      const headerRow: string[] = jsonData[0].map(h => String(h));
+      const headerRow: string[] = jsonData[0].map(h => String(h).trim());
       const dataRows = jsonData.slice(1);
 
       const findIndex = (headers: string[], keys: string[]) => {
           const lowerKeys = keys.map(k => k.toLowerCase());
-          return headers.findIndex(h => h && lowerKeys.includes(h.toString().toLowerCase().trim()));
+          return headers.findIndex(h => {
+              if (!h) return false;
+              const cleanedHeader = h.toString().toLowerCase().trim().replace(/"/g, '');
+              return lowerKeys.includes(cleanedHeader);
+          });
       };
-
-      const noServiceIndex = findIndex(headerRow, ['no. service', 'no service', 'noser']);
-      const tanggalIndex = findIndex(headerRow, ['tanggal']);
+      
+      const noServiceIndex = findIndex(headerRow, ['no service', 'no. service']);
+      const tanggalIndex = findIndex(headerRow, ['tanggal', 'timestamp']);
       const noTiketIndex = findIndex(headerRow, ['no tiket', 'no. tiket']);
       const teknisiIndex = findIndex(headerRow, ['teknisi']);
       const keteranganIndex = findIndex(headerRow, ['keterangan']);
@@ -493,14 +497,17 @@ export default function AdminPelangganPage() {
       }
 
       const history = dataRows
-        .filter((row: any) => row[noServiceIndex]?.toString().trim() === serviceNumberToFind)
+        .filter((row: any) => {
+            return row[noServiceIndex]?.toString().trim() === serviceNumberToFind;
+        })
         .map((row: any) => ({
-            'Tanggal': tanggalIndex !== -1 ? row[tanggalIndex] : '-',
-            'No Tiket': noTiketIndex !== -1 ? row[noTiketIndex] : '-',
-            'Teknisi': teknisiIndex !== -1 ? row[teknisiIndex] : '-',
-            'Keterangan': keteranganIndex !== -1 ? row[keteranganIndex] : '-',
+            'Tanggal': row[tanggalIndex] ? format(new Date(row[tanggalIndex]), 'd MMMM yyyy', { locale: idLocale }) : '-',
+            'No Tiket': row[noTiketIndex] || '-',
+            'Teknisi': row[teknisiIndex] || '-',
+            'Keterangan': row[keteranganIndex] || '-',
+            'rawDateForSort': row[tanggalIndex] ? new Date(row[tanggalIndex]).getTime() : 0,
         }))
-        .sort((a: any, b: any) => parseIndonesianDate(b.Tanggal).getTime() - parseIndonesianDate(a.Tanggal).getTime());
+        .sort((a, b) => b.rawDateForSort - a.rawDateForSort);
 
       setSheetHistory(history);
       if (history.length === 0) {
@@ -775,3 +782,5 @@ export default function AdminPelangganPage() {
     </>
   );
 }
+
+    
