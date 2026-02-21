@@ -46,6 +46,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import type { VariantProps } from 'class-variance-authority';
 import { badgeVariants } from '@/components/ui/badge';
+import { Adsense } from '@/components/adsense';
 
 function NotaActions({ nota }: { nota: Nota }) {
   const { toast } = useToast();
@@ -403,6 +404,15 @@ export default function DashboardPage() {
           )}
         </CardContent>
       </Card>
+      <div className="mt-8 w-full overflow-hidden">
+        <Adsense
+          data-ad-client="ca-pub-6478281232505590"
+          data-ad-slot="YOUR_AD_SLOT_ID_NOTA"
+          data-ad-format="auto"
+          className="block"
+          data-full-width-responsive="true"
+        />
+      </div>
     </>
   );
 }

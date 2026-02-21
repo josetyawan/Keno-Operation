@@ -30,6 +30,7 @@ import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { getAssetServiceArea } from '@/lib/asset-utils';
+import { Adsense } from '@/components/adsense';
 
 const PREFERRED_ORDER: NetworkAsset['serviceArea'][] = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
 
@@ -570,6 +571,15 @@ export default function AllproPage() {
             </Table>
           </CardContent>
         </Card>
+      </div>
+      <div className="mt-2 w-full overflow-hidden">
+        <Adsense
+          data-ad-client="ca-pub-6478281232505590"
+          data-ad-slot="YOUR_AD_SLOT_ID_ALLPRO"
+          data-ad-format="auto"
+          className="block"
+          data-full-width-responsive="true"
+        />
       </div>
     </div>
   );

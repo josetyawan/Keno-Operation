@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { Bot, Send, ArrowLeft, Copy } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
+import { Adsense } from '@/components/adsense';
 
 const grapariFormat = `/input
 Segmen : INDIHOME
@@ -124,6 +125,15 @@ export default function BotsPage() {
             </CardContent>
           </Card>
         ))}
+      </div>
+       <div className="mt-2 w-full overflow-hidden">
+        <Adsense
+          data-ad-client="ca-pub-6478281232505590"
+          data-ad-slot="YOUR_AD_SLOT_ID_BOTS"
+          data-ad-format="auto"
+          className="block"
+          data-full-width-responsive="true"
+        />
       </div>
     </div>
   );
