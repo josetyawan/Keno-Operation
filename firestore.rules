@@ -79,11 +79,9 @@ service cloud.firestore {
 
     match /riwayat-gangguan/{riwayatId} {
       allow read: if isApproved();
-      // Allow create requests from the bot via the API endpoint (unauthenticated from Firebase's PoV)
+      // Allow create/write requests from the bot via the API endpoint (unauthenticated from Firebase's PoV)
       // This is secure because the API endpoint itself is protected by a secret key.
-      allow create: if true; 
-      // Only admins can update or delete history records.
-      allow update, delete: if isAdmin();
+      allow write: if true; 
     }
 
     match /map-links/{mapLinkId} {
