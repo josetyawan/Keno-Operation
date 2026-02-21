@@ -15,4 +15,4 @@ env:
   - variable: BOT_SECRET_KEY
     value: "NotaKuSuperSecretKey@2024"
   - variable: APPS_SCRIPT_WEB_APP_URL
-    value: "PASTE_YOUR_WEB_APP_URL_HERE"
+    value: "https://script.google.com/macros/s/AKfycbxvz3012Yy2tpN3Hb3rFzjMsosk_d4bEJ1AZcpEbdNNOeCtKrccS-S-heeztyzRLCOo/exec"
