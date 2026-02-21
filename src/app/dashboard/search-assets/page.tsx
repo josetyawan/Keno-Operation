@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -27,7 +26,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Search, ChevronLeft, ChevronRight, MapPin, FolderGit2 } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, MapPin, FolderGit2, Bot } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, doc, where, type QueryConstraint } from 'firebase/firestore';
 import type { UserProfile, NetworkAsset, MancoreLink, MapLink } from '@/lib/types';
@@ -426,6 +425,13 @@ export default function SearchAssetsPage() {
                        {googleMapsUrl && (
                         <Button asChild variant="ghost" size="icon" title="Lihat di Google Maps">
                           <Link href={googleMapsUrl} target="_blank" rel="noopener noreferrer"><MapPin className="h-4 w-4 text-blue-600" /></Link>
+                        </Button>
+                      )}
+                      {a.assetType === 'ODP' && a.serviceArea === 'SA KUDUS' && (
+                        <Button asChild variant="ghost" size="icon" title={`Cek ${a.name} di LembarSA Bot`}>
+                            <Link href={`https://t.me/LembarSA_bot?start=searchodp_${a.name}`} target="_blank" rel="noopener noreferrer">
+                                <Bot className="h-4 w-4 text-sky-600" />
+                            </Link>
                         </Button>
                       )}
                     </TableCell>
