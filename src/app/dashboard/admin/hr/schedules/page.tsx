@@ -358,11 +358,21 @@ export default function AdminSchedulesPage() {
     
         reader.onload = async (e) => {
           try {
-            const data = e.target?.result;
+            const arrayBuffer = e.target?.result;
+            if (!arrayBuffer) {
+                throw new Error("Gagal membaca file. File kosong atau rusak.");
+            }
+            const data = new Uint8Array(arrayBuffer as ArrayBuffer);
             const workbook = XLSX.read(data, { type: 'array' });
-            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-            // IMPORTANT FIX: Read all data as raw strings to avoid type mismatches with NIK.
-            const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: null, rawNumbers: false });
+            
+            const sheetName = workbook.SheetNames[0];
+            if (!sheetName) {
+                throw new Error("File Excel tidak memiliki sheet yang dapat dibaca.");
+            }
+            const worksheet = workbook.Sheets[sheetName];
+
+            // This ensures all values are read as their raw string representation.
+            const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: null, raw: false });
     
             if (jsonData.length === 0) {
                 throw new Error("Sheet Excel kosong.");
