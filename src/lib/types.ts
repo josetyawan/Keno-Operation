@@ -132,6 +132,7 @@ export type Pelanggan = {
   id: string;
   userId: string;
   userEmail: string;
+  noService: string;
   namaPelanggan: string;
   alamat?: string;
   nomorTelepon?: string;
@@ -139,6 +140,17 @@ export type Pelanggan = {
   fotoCpUrl?: string;
   serviceArea: string;
   dateAdded: any;
+};
+
+export type LaporanGangguan = {
+  id: string;
+  pelangganId: string;
+  noService: string;
+  noTiket?: string;
+  keterangan: string;
+  status: 'open' | 'closed';
+  tanggalLapor: any; // Timestamp
+  tanggalSelesai?: any; // Timestamp
 };
 
 export type ServiceAreaStats = {

@@ -77,6 +77,12 @@ service cloud.firestore {
       allow delete: if isAdmin() || isKorlap();
     }
 
+    match /laporan-gangguan/{gangguanId} {
+      allow get, list: if hasAllProAccess() || isKorlap();
+      allow create: if hasAllProAccess() || isKorlap();
+      allow update, delete: if isAdmin() || isKorlap();
+    }
+
     match /map-links/{mapLinkId} {
       allow get, list: if hasAllProAccess() || isKorlap();
       allow create, update, delete: if isAdmin();

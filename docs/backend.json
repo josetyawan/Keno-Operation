@@ -170,15 +170,32 @@
         "id": { "type": "string", "description": "Unique identifier for the Pelanggan." },
         "userId": { "type": "string", "description": "The ID of the user who created this customer record." },
         "userEmail": { "type": "string", "description": "The email of the user who created this customer record." },
+        "noService": { "type": "string", "description": "Customer's service number (e.g., IndiHome number)." },
         "namaPelanggan": { "type": "string", "description": "Name of the customer." },
         "alamat": { "type": "string", "description": "Address of the customer." },
         "nomorTelepon": { "type": "string", "description": "Phone number of the customer." },
         "koordinat": { "type": "string", "description": "GPS coordinates of the customer's location." },
-        "fotoCpUrl": { "type": "string", "description": "URL of the customer point (CP) photo.", "format": "uri" },
+        "fotoCpUrl": { "type": "string", "description": "URL of the customer's location photo.", "format": "uri" },
         "serviceArea": { "type": "string", "description": "The service area the customer belongs to." },
         "dateAdded": { "type": "string", "format": "date-time", "description": "The date the customer was added." }
       },
-      "required": ["id", "userId", "userEmail", "namaPelanggan", "koordinat", "serviceArea", "dateAdded"]
+      "required": ["id", "userId", "userEmail", "noService", "namaPelanggan", "koordinat", "serviceArea", "dateAdded"]
+    },
+    "LaporanGangguan": {
+      "title": "Laporan Gangguan",
+      "type": "object",
+      "description": "Represents a disruption report for a customer.",
+      "properties": {
+        "id": { "type": "string" },
+        "pelangganId": { "type": "string", "description": "The ID of the customer experiencing the disruption." },
+        "noService": { "type": "string", "description": "Denormalized service number for querying." },
+        "noTiket": { "type": "string", "description": "The ticket number for the report." },
+        "keterangan": { "type": "string", "description": "Description of the disruption and resolution." },
+        "status": { "type": "string", "enum": ["open", "closed"], "description": "Status of the disruption report." },
+        "tanggalLapor": { "type": "string", "format": "date-time", "description": "Date the disruption was reported." },
+        "tanggalSelesai": { "type": "string", "format": "date-time", "description": "Date the disruption was resolved." }
+      },
+      "required": ["id", "pelangganId", "noService", "keterangan", "status", "tanggalLapor"]
     },
     "NetworkStats": {
       "title": "Network Statistics",
@@ -285,6 +302,7 @@
        { "path": "/map-links/{mapLinkId}", "definition": { "entityName": "MapLink", "schema": { "$ref": "#/backend/entities/MapLink" }, "description": "Stores the Google My Maps links for each Service Area.", "params": [{ "name": "mapLinkId", "description": "The unique identifier for the map link." }] } },
       { "path": "/mancore-links/{mancoreLinkId}", "definition": { "entityName": "MancoreLink", "schema": { "$ref": "#/backend/entities/MancoreLink" }, "description": "Stores labeled links to external resources (like Google Drive) for each Service Area.", "params": [{ "name": "mancoreLinkId", "description": "The unique identifier for the mancore link." }] } },
       { "path": "/pelanggan/{pelangganId}", "definition": { "entityName": "Pelanggan", "schema": { "$ref": "#/backend/entities/Pelanggan" }, "description": "Stores customer data including location and photos.", "params": [{ "name": "pelangganId", "description": "The unique identifier for the customer." }] } },
+      { "path": "/laporan-gangguan/{gangguanId}", "definition": { "entityName": "LaporanGangguan", "schema": { "$ref": "#/backend/entities/LaporanGangguan" }, "description": "Stores disruption reports for customers.", "params": [{ "name": "gangguanId", "description": "The unique ID for the disruption report." }] } },
       { "path": "/network-stats/{statId}", "definition": { "entityName": "NetworkStats", "schema": { "$ref": "#/backend/entities/NetworkStats" }, "description": "Stores a single document with aggregated network asset statistics.", "params": [{ "name": "statId", "description": "The unique identifier for the summary document, typically 'summary'." }] } },
       { "path": "/schedules/{scheduleId}", "definition": { "entityName": "Schedule", "schema": {"$ref": "#/backend/entities/Schedule"}, "description": "Stores work schedules for users.", "params": [{"name": "scheduleId", "description": "The unique ID for the schedule."}] } },
       { "path": "/attendances/{attendanceId}", "definition": { "entityName": "Attendance", "schema": {"$ref": "#/backend/entities/Attendance"}, "description": "Stores attendance records for scheduled shifts.", "params": [{"name": "attendanceId", "description": "The unique ID for the attendance record."}] } },
