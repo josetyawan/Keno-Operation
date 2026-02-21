@@ -17,16 +17,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -46,19 +36,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Edit, PlusCircle, Trash2, MapPin, Loader2, Upload, Search, History } from 'lucide-react';
+import { Bot, PlusCircle, MapPin, Loader2, Upload, Search, History } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc, useStorage } from '@/firebase';
-import { collection, query, doc, serverTimestamp, orderBy, where, getDocs } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { UserProfile, Pelanggan, LaporanGangguan } from '@/lib/types';
+import { collection, query, doc, serverTimestamp, where, getDocs, limit } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import type { UserProfile, Pelanggan } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { format } from 'date-fns';
+import * as XLSX from 'xlsx';
+
 
 const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
 
@@ -194,10 +184,10 @@ export default function AdminPelangganPage() {
 
   const [searchNoService, setSearchNoService] = useState('');
   const [searchedPelanggan, setSearchedPelanggan] = useState<Pelanggan | null>(null);
-  const [gangguanHistory, setGangguanHistory] = useState<LaporanGangguan[]>([]);
+  const [sheetHistory, setSheetHistory] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchPerformed, setSearchPerformed] = useState(false);
-  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+  const [isSheetHistoryLoading, setIsSheetHistoryLoading] = useState(false);
   
   const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -217,20 +207,45 @@ export default function AdminPelangganPage() {
   }, [user, currentUserProfile, isUserLoading, isProfileLoading, router]);
   
   useEffect(() => {
-      const fetchHistory = async () => {
-          if (!searchedPelanggan) {
-              setGangguanHistory([]);
-              return;
-          };
-          setIsHistoryLoading(true);
-          const q = query(collection(firestore, 'laporan-gangguan'), where('pelangganId', '==', searchedPelanggan.id), orderBy('tanggalLapor', 'desc'));
-          const querySnapshot = await getDocs(q);
-          const history = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LaporanGangguan));
-          setGangguanHistory(history);
-          setIsHistoryLoading(false);
+      if (!searchedPelanggan?.noService) {
+        setSheetHistory([]);
+        return;
       }
-      fetchHistory();
-  }, [firestore, searchedPelanggan]);
+
+      const fetchSheetHistory = async () => {
+        setIsSheetHistoryLoading(true);
+        const serviceNumberToFind = searchedPelanggan.noService.trim();
+        try {
+            // Appending a timestamp to bypass caches
+            const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS6GU4F_Iqvw7u1pkL06KQjDrrdGCu_DshWT0QWeozGpwpUIAc757COSNEnkhrRKH1RnPDqNeXDDNjU/export?format=csv&gid=0&t=' + new Date().getTime());
+            if (!response.ok) {
+                throw new Error('Gagal mengambil data dari Google Sheet.');
+            }
+            const data = await response.arrayBuffer();
+            const workbook = XLSX.read(data);
+            const sheetName = workbook.SheetNames[0];
+            const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+            const history = jsonData.filter((row: any) => 
+                row['No Service']?.toString().trim() === serviceNumberToFind
+            ).sort((a: any, b: any) => new Date(b.Timestamp).getTime() - new Date(a.Timestamp).getTime());
+
+            setSheetHistory(history);
+        } catch (error: any) {
+            console.error(error);
+            toast({
+                variant: 'destructive',
+                title: 'Gagal Memuat Riwayat',
+                description: 'Tidak dapat mengambil riwayat laporan dari Google Sheet.'
+            });
+            setSheetHistory([]);
+        } finally {
+            setIsSheetHistoryLoading(false);
+        }
+    };
+
+    fetchSheetHistory();
+  }, [searchedPelanggan, toast]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -271,7 +286,12 @@ export default function AdminPelangganPage() {
         
         const pelangganCollection = collection(firestore, 'pelanggan');
         const newDocRef = await addDocumentNonBlocking(pelangganCollection, dataToSave);
-        toast({ title: 'Pelanggan Dibuat' });
+        
+        toast({ 
+            title: 'Pelanggan Dibuat',
+            description: 'Lanjutkan proses laporan di bot Telegram.',
+            duration: 7000,
+        });
         
         setIsFormDialogOpen(false);
         setSearchedPelanggan({ ...dataToSave, id: newDocRef.id } as Pelanggan);
@@ -336,25 +356,37 @@ export default function AdminPelangganPage() {
               </Card>
 
               <Card>
+                <CardHeader>
+                    <CardTitle>Lanjutkan Laporan di Bot</CardTitle>
+                    <CardDescription>Gunakan bot Telegram untuk membuat laporan gangguan baru bagi pelanggan ini.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Button asChild className="w-full">
+                        <Link href="https://t.me/B2BLapor_bot" target="_blank" rel="noopener noreferrer">
+                            <Bot className="mr-2 h-4 w-4" /> Buka @B2BLapor_bot
+                        </Link>
+                    </Button>
+                </CardContent>
+            </Card>
+
+              <Card>
                   <CardHeader>
                       <div className="flex justify-between items-center">
-                         <CardTitle className="flex items-center gap-2"><History /> Riwayat Gangguan</CardTitle>
-                         {/* TODO: Add button to report new disruption */}
+                         <CardTitle className="flex items-center gap-2"><History /> Riwayat Laporan (dari Bot)</CardTitle>
                       </div>
                   </CardHeader>
                   <CardContent>
-                      {isHistoryLoading ? <Skeleton className="h-24" /> : (
+                      {isSheetHistoryLoading ? <Skeleton className="h-24" /> : (
                           <Table>
-                              <TableHeader><TableRow><TableHead>Tanggal Lapor</TableHead><TableHead>No. Tiket</TableHead><TableHead>Keterangan</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+                              <TableHeader><TableRow><TableHead>Tanggal Lapor</TableHead><TableHead>No. Tiket DSC</TableHead><TableHead>Keluhan</TableHead></TableRow></TableHeader>
                               <TableBody>
-                                  {gangguanHistory.length > 0 ? gangguanHistory.map(g => (
-                                      <TableRow key={g.id}>
-                                          <TableCell>{format(g.tanggalLapor.toDate(), 'dd MMM yyyy')}</TableCell>
-                                          <TableCell>{g.noTiket || '-'}</TableCell>
-                                          <TableCell className="max-w-xs truncate">{g.keterangan}</TableCell>
-                                          <TableCell><Badge variant={g.status === 'open' ? 'destructive' : 'secondary'}>{g.status}</Badge></TableCell>
+                                  {sheetHistory.length > 0 ? sheetHistory.map((g, i) => (
+                                      <TableRow key={i}>
+                                          <TableCell>{g['Timestamp'] || '-'}</TableCell>
+                                          <TableCell>{g['No Tiket DSC'] || '-'}</TableCell>
+                                          <TableCell className="max-w-xs truncate">{g['Keluhan']}</TableCell>
                                       </TableRow>
-                                  )) : <TableRow><TableCell colSpan={4} className="text-center h-24">Belum ada riwayat gangguan.</TableCell></TableRow>}
+                                  )) : <TableRow><TableCell colSpan={3} className="text-center h-24">Belum ada riwayat laporan dari bot untuk pelanggan ini.</TableCell></TableRow>}
                               </TableBody>
                           </Table>
                       )}

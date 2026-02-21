@@ -142,17 +142,6 @@ export type Pelanggan = {
   dateAdded: any;
 };
 
-export type LaporanGangguan = {
-  id: string;
-  pelangganId: string;
-  noService: string;
-  noTiket?: string;
-  keterangan: string;
-  status: 'open' | 'closed';
-  tanggalLapor: any; // Timestamp
-  tanggalSelesai?: any; // Timestamp
-};
-
 export type ServiceAreaStats = {
   olt: { miniOlt: number; olt: number };
   ftm: { ea: number; oa: number };
