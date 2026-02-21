@@ -142,6 +142,8 @@ export type Pelanggan = {
   serviceArea: string;
   dateAdded: any;
   odpName?: string;
+  odpPort?: string;
+  odpQRCodeUrl?: string;
 };
 
 export type ServiceAreaStats = {
@@ -236,5 +238,3 @@ export type PrivateMessage = {
   userId: string;
   createdAt: any; // Timestamp
 };
-
-    

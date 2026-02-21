@@ -36,9 +36,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Bot, PlusCircle, MapPin, Loader2, Upload, Search, History, Phone, Pencil, Wrench } from 'lucide-react';
+import { Bot, PlusCircle, MapPin, Loader2, Upload, Search, History, Phone, Pencil, Wrench, QrCode, FileSpreadsheet } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, useDoc, useStorage } from '@/firebase';
-import { collection, query, doc, serverTimestamp, where, getDocs, limit } from 'firebase/firestore';
+import { collection, query, doc, serverTimestamp, where, getDocs, limit, orderBy } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { UserProfile, Pelanggan } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -48,6 +48,7 @@ import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import * as XLSX from 'xlsx';
+import { format } from 'date-fns';
 
 const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
 
@@ -78,6 +79,8 @@ function NewPelangganDialog({ isOpen, onOpenChange, onFinished }: { isOpen: bool
     const [koordinat, setKoordinat] = useState('');
     const [serviceArea, setServiceArea] = useState('');
     const [odpName, setOdpName] = useState('');
+    const [odpPort, setOdpPort] = useState('');
+    const [odpQRCodeUrl, setOdpQRCodeUrl] = useState('');
     const [fotoCp, setFotoCp] = useState<File | null>(null);
     const [fotoCpPreview, setFotoCpPreview] = useState<string | null>(null);
     const [isGettingLocation, setIsGettingLocation] = useState(false);
@@ -130,6 +133,8 @@ function NewPelangganDialog({ isOpen, onOpenChange, onFinished }: { isOpen: bool
                 koordinat,
                 serviceArea,
                 odpName: odpName.trim(),
+                odpPort: odpPort.trim(),
+                odpQRCodeUrl: odpQRCodeUrl.trim(),
                 fotoCpUrl,
                 dateAdded: serverTimestamp(),
             };
@@ -186,6 +191,14 @@ function NewPelangganDialog({ isOpen, onOpenChange, onFinished }: { isOpen: bool
                    <div className="grid gap-2">
                     <Label htmlFor="new-odpName">Nama ODP</Label>
                     <Input id="new-odpName" value={odpName} onChange={(e) => setOdpName(e.target.value)} placeholder="Contoh: ODP-KDS-FA/001" />
+                  </div>
+                   <div className="grid gap-2">
+                    <Label htmlFor="new-odpPort">Port ODP</Label>
+                    <Input id="new-odpPort" value={odpPort} onChange={(e) => setOdpPort(e.target.value)} placeholder="Contoh: 5" />
+                  </div>
+                   <div className="grid gap-2">
+                    <Label htmlFor="new-odpQRCodeUrl">URL QR Code ODP</Label>
+                    <Input id="new-odpQRCodeUrl" value={odpQRCodeUrl} onChange={(e) => setOdpQRCodeUrl(e.target.value)} placeholder="https://..." />
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="new-fotoCp">Foto Lokasi</Label>
@@ -327,16 +340,22 @@ function UpdateAssetDialog({ pelanggan, isOpen, onOpenChange, onFinished }: { pe
     const firestore = useFirestore();
     const { toast } = useToast();
     const [odpName, setOdpName] = useState(pelanggan.odpName || '');
+    const [odpPort, setOdpPort] = useState(pelanggan.odpPort || '');
+    const [odpQRCodeUrl, setOdpQRCodeUrl] = useState(pelanggan.odpQRCodeUrl || '');
     const [isSaving, setIsSaving] = useState(false);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         setIsSaving(true);
         try {
-            const updatedData = { odpName: odpName.trim() };
+            const updatedData = { 
+                odpName: odpName.trim(),
+                odpPort: odpPort.trim(),
+                odpQRCodeUrl: odpQRCodeUrl.trim(),
+            };
             const docRef = doc(firestore, 'pelanggan', pelanggan.id);
             updateDocumentNonBlocking(docRef, updatedData);
-            toast({ title: 'Aset berhasil diperbarui' });
+            toast({ title: 'Info Aset berhasil diperbarui' });
             onFinished(updatedData);
         } catch (error: any) {
              toast({ variant: 'destructive', title: 'Gagal menyimpan', description: error.message });
@@ -349,13 +368,21 @@ function UpdateAssetDialog({ pelanggan, isOpen, onOpenChange, onFinished }: { pe
          <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Ubah Aset Terhubung (ODP)</DialogTitle>
-                    <DialogDescription>Masukkan nama ODP baru yang terhubung dengan pelanggan ini. Kosongkan jika tidak ada.</DialogDescription>
+                    <DialogTitle>Ubah Info Aset (ODP)</DialogTitle>
+                    <DialogDescription>Perbarui nama ODP, port, dan QR Code yang terhubung dengan pelanggan ini.</DialogDescription>
                 </DialogHeader>
                  <form onSubmit={handleSubmit} className="grid gap-4 py-4">
                     <div className="grid gap-2">
-                        <Label htmlFor="update-odp">Nama ODP</Label>
-                        <Input id="update-odp" value={odpName} onChange={(e) => setOdpName(e.target.value)} placeholder="Contoh: ODP-KDS-FA/001" />
+                        <Label htmlFor="update-odp-name">Nama ODP</Label>
+                        <Input id="update-odp-name" value={odpName} onChange={(e) => setOdpName(e.target.value)} placeholder="Contoh: ODP-KDS-FA/001" />
+                    </div>
+                     <div className="grid gap-2">
+                        <Label htmlFor="update-odp-port">Port ODP</Label>
+                        <Input id="update-odp-port" value={odpPort} onChange={(e) => setOdpPort(e.target.value)} placeholder="Contoh: 5" />
+                    </div>
+                     <div className="grid gap-2">
+                        <Label htmlFor="update-odp-qr">URL QR Code ODP</Label>
+                        <Input id="update-odp-qr" value={odpQRCodeUrl} onChange={(e) => setOdpQRCodeUrl(e.target.value)} placeholder="https://..." />
                     </div>
                     <DialogFooter>
                         <DialogClose asChild><Button variant="secondary">Batal</Button></DialogClose>
@@ -392,6 +419,7 @@ export default function AdminPelangganPage() {
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
     useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
   );
+  const isAdmin = currentUserProfile?.role === 'admin';
 
   useEffect(() => {
     if (!isUserLoading && !isProfileLoading) {
@@ -456,6 +484,50 @@ export default function AdminPelangganPage() {
     }
     setIsSearching(false);
   };
+
+  const handleExportToExcel = async () => {
+    if (!isAdmin || !firestore) {
+      toast({ variant: 'destructive', title: 'Akses Ditolak' });
+      return;
+    }
+
+    toast({ title: 'Mempersiapkan Ekspor...', description: 'Mengambil semua data pelanggan.' });
+
+    try {
+      const pelangganCollection = collection(firestore, 'pelanggan');
+      const q = query(pelangganCollection, orderBy('dateAdded', 'desc'));
+      const querySnapshot = await getDocs(q);
+      const allPelanggan = querySnapshot.docs.map(doc => doc.data() as Pelanggan);
+      
+      if (allPelanggan.length === 0) {
+        toast({ variant: 'destructive', title: 'Tidak Ada Data', description: 'Tidak ada data pelanggan untuk diekspor.' });
+        return;
+      }
+      
+      const dataToExport = allPelanggan.map(p => ({
+        'No. Service': p.noService,
+        'Nama Pelanggan': p.namaPelanggan,
+        'Service Area': p.serviceArea,
+        'Alamat': p.alamat || '',
+        'Koordinat': p.koordinat,
+        'Nomor Telepon': Array.isArray(p.nomorTelepon) ? p.nomorTelepon.join(', ') : p.nomorTelepon || '',
+        'Nama ODP': p.odpName || '',
+        'Port ODP': p.odpPort || '',
+        'QR Code ODP': p.odpQRCodeUrl || '',
+        'Ditambahkan Oleh': p.userEmail,
+        'Tanggal Ditambahkan': p.dateAdded?.toDate ? format(p.dateAdded.toDate(), 'yyyy-MM-dd HH:mm') : '',
+      }));
+      
+      const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Data Pelanggan');
+      XLSX.writeFile(workbook, `Data_Pelanggan_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+      
+    } catch (error: any) {
+      console.error('Export failed:', error);
+      toast({ variant: 'destructive', title: 'Ekspor Gagal', description: 'Gagal mengambil data dari database.' });
+    }
+  };
   
   const isLoading = isUserLoading || isProfileLoading;
 
@@ -465,8 +537,14 @@ export default function AdminPelangganPage() {
 
   return (
     <>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
         <div><h1 className="text-3xl font-bold tracking-tight">Data Pelanggan & Riwayat Gangguan</h1><p className="text-muted-foreground mt-1">Cari pelanggan berdasarkan No. Service untuk melihat riwayat atau menambah data.</p></div>
+         {isAdmin && (
+            <Button onClick={handleExportToExcel} variant="outline">
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Export Semua Data
+            </Button>
+        )}
       </div>
       
       <Card className="mb-6">
@@ -506,7 +584,7 @@ export default function AdminPelangganPage() {
                      <div className="flex gap-2">
                         <Button variant="outline" size="sm" onClick={() => setIsAddContactDialogOpen(true)}><Phone className="mr-2 h-4 w-4"/>Tambah Kontak</Button>
                         <Button variant="outline" size="sm" onClick={() => setIsUpdateLocationDialogOpen(true)}><Pencil className="mr-2 h-4 w-4"/>Ubah Lokasi</Button>
-                        <Button variant="outline" size="sm" onClick={() => setIsUpdateAssetDialogOpen(true)}><Wrench className="mr-2 h-4 w-4"/>Ubah Aset</Button>
+                        <Button variant="outline" size="sm" onClick={() => setIsUpdateAssetDialogOpen(true)}><Wrench className="mr-2 h-4 w-4"/>Ubah Info Aset</Button>
                     </div>
                 </CardHeader>
                 <CardContent>
@@ -530,6 +608,16 @@ export default function AdminPelangganPage() {
                             </dd>
                         </div>
                          <div className="flex flex-col"><dt className="text-muted-foreground">ODP Terhubung</dt><dd>{searchedPelanggan.odpName || '-'}</dd></div>
+                         <div className="flex flex-col"><dt className="text-muted-foreground">Port ODP</dt><dd>{searchedPelanggan.odpPort || '-'}</dd></div>
+                         <div className="flex flex-col"><dt className="text-muted-foreground">QR Code ODP</dt>
+                            <dd>
+                                {searchedPelanggan.odpQRCodeUrl ? (
+                                    <Link href={searchedPelanggan.odpQRCodeUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
+                                        <QrCode className="h-4 w-4" /> Lihat QR Code
+                                    </Link>
+                                ) : '-'}
+                            </dd>
+                         </div>
                     </dl>
                 </CardContent>
               </Card>
@@ -609,5 +697,3 @@ export default function AdminPelangganPage() {
     </>
   );
 }
-
-    
