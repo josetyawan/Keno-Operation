@@ -44,6 +44,7 @@ const adminNavGroups = [
       { href: '/dashboard/hr/work-schedule', label: 'Jadwal Kerja', icon: CalendarDays, access: 'korlap' },
       { href: '/dashboard/hr/attendance/rekap', label: 'Rekap Absensi', icon: ClipboardCheck, access: 'korlap' },
       { href: '/dashboard/alker/rekap', label: 'Rekap Alker', icon: ClipboardCheck, access: 'korlap' },
+      { href: '/dashboard/admin/hr/manual-rekap', label: 'Trigger Rekap Manual', icon: Bot, access: 'korlap' },
     ]
   },
   {
