@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -14,6 +13,7 @@ import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Adsense } from '@/components/adsense';
 
 export default function DashboardSelectorPage() {
   const { user, isUserLoading: isAuthLoading } = useUser();
@@ -229,6 +229,15 @@ export default function DashboardSelectorPage() {
                 </CardContent>
             </Card>
         </Link>
+      </div>
+      <div className="mt-8 w-full overflow-hidden">
+        <Adsense
+          data-ad-client="ca-pub-6478281232505590"
+          data-ad-slot="YOUR_AD_SLOT_ID_1"
+          data-ad-format="auto"
+          className="block"
+          data-full-width-responsive="true"
+        />
       </div>
     </>
   );
