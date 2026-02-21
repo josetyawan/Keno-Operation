@@ -3,18 +3,30 @@ import { initializeFirebase } from '@/firebase/init';
 import { addDoc, collection, Timestamp } from 'firebase/firestore';
 
 export async function POST(request: Request) {
-    const authHeader = request.headers.get('authorization');
-    const expectedAuthHeader = `Bearer ${process.env.BOT_SECRET_KEY}`;
+    const secretKey = process.env.BOT_SECRET_KEY;
 
-    if (!process.env.BOT_SECRET_KEY || authHeader !== expectedAuthHeader) {
-        return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    // 1. Check if the secret key is configured on the server
+    if (!secretKey) {
+        console.error("API Error: BOT_SECRET_KEY environment variable is not set on the server.");
+        return NextResponse.json({ success: false, error: 'Server configuration error: Missing secret key.' }, { status: 500 });
+    }
+
+    // 2. Check the authorization header from the client
+    const authHeader = request.headers.get('authorization');
+    const expectedAuthHeader = `Bearer ${secretKey}`;
+
+    if (authHeader !== expectedAuthHeader) {
+        console.warn(`Unauthorized access attempt. Provided header: ${authHeader}`);
+        return NextResponse.json({ success: false, error: 'Unauthorized: Invalid secret key provided.' }, { status: 401 });
     }
 
     try {
+        console.log("Received authorized request for /api/gangguan");
         const { firestore } = initializeFirebase();
         const body = await request.json();
+        console.log("Request body:", body);
 
-        // Basic validation
+        // 3. Basic validation of the incoming data
         if (!body.no_service || !body.keterangan) {
             return NextResponse.json({ success: false, error: 'Data tidak lengkap. Field no_service dan keterangan wajib diisi.' }, { status: 400 });
         }
@@ -32,6 +44,7 @@ export async function POST(request: Request) {
         };
 
         await addDoc(riwayatCollection, newRiwayatData);
+        console.log("Successfully saved data to Firestore for no_service:", body.no_service);
 
         return NextResponse.json({ success: true, message: 'Data riwayat gangguan berhasil disimpan.' });
     } catch (error: any) {
