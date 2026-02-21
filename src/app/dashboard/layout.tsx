@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home, Network, Search, BarChart3, Map, FolderGit2, Contact, CalendarClock, ClipboardCheck, CalendarOff, UserCircle, Briefcase, Settings, Building, Wrench, CalendarDays } from 'lucide-react';
+import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home, Network, Search, BarChart3, Map, FolderGit2, Contact, CalendarClock, ClipboardCheck, CalendarOff, UserCircle, Briefcase, Settings, Building, Wrench, CalendarDays, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -25,6 +25,7 @@ import { cn } from '@/lib/utils';
 
 const navLinks = [
   { href: '/dashboard', label: 'Home', icon: Home, access: 'public' },
+  { href: '/dashboard/chat', label: 'Chat', icon: MessageSquare, access: 'public' },
   { href: '/dashboard/nota', label: 'Laporan Nota', icon: LayoutGrid, access: 'nota' },
   { href: '/dashboard/search-assets', label: 'Network Cek', icon: Search, access: 'allpro' },
   { href: '/dashboard/allpro', label: 'Network Service Area', icon: BarChart3, access: 'allpro' },

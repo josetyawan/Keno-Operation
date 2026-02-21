@@ -274,6 +274,20 @@
         }
       },
       "required": ["id", "userId", "userName", "userJabatan", "dateSubmitted", "tools"]
+    },
+    "Message": {
+      "title": "Chat Message",
+      "type": "object",
+      "description": "Represents a single chat message in the application.",
+      "properties": {
+        "id": { "type": "string" },
+        "text": { "type": "string", "description": "The content of the message." },
+        "userId": { "type": "string", "description": "The ID of the user who sent the message." },
+        "userName": { "type": "string", "description": "Denormalized name of the user for display." },
+        "userAvatar": { "type": "string", "description": "URL of the user's avatar.", "format": "uri" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp when the message was sent." }
+      },
+      "required": ["id", "text", "userId", "userName", "createdAt"]
     }
   },
   "auth": { "providers": ["password", "anonymous"] },
@@ -290,7 +304,8 @@
       { "path": "/schedules/{scheduleId}", "definition": { "entityName": "Schedule", "schema": {"$ref": "#/backend/entities/Schedule"}, "description": "Stores work schedules for users.", "params": [{"name": "scheduleId", "description": "The unique ID for the schedule."}] } },
       { "path": "/attendances/{attendanceId}", "definition": { "entityName": "Attendance", "schema": {"$ref": "#/backend/entities/Attendance"}, "description": "Stores attendance records for scheduled shifts.", "params": [{"name": "attendanceId", "description": "The unique ID for the attendance record."}] } },
       { "path": "/holidays/{holidayId}", "definition": { "entityName": "Holiday", "schema": {"$ref": "#/backend/entities/Holiday"}, "description": "Stores national holidays and collective leave dates.", "params": [{"name": "holidayId", "description": "The unique ID for the holiday."}] } },
-      { "path": "/tool-checklists/{checklistId}", "definition": { "entityName": "AlkerChecklist", "schema": { "$ref": "#/backend/entities/AlkerChecklist" }, "description": "Stores tool checklist submissions from technicians.", "params": [{ "name": "checklistId", "description": "The unique ID for the checklist." }] } }
+      { "path": "/tool-checklists/{checklistId}", "definition": { "entityName": "AlkerChecklist", "schema": { "$ref": "#/backend/entities/AlkerChecklist" }, "description": "Stores tool checklist submissions from technicians.", "params": [{ "name": "checklistId", "description": "The unique ID for the checklist." }] } },
+      { "path": "/messages/{messageId}", "definition": { "entityName": "Message", "schema": { "$ref": "#/backend/entities/Message" }, "description": "Stores all chat messages for the real-time chat.", "params": [{ "name": "messageId", "description": "The unique ID for the message." }] } }
     ],
     "reasoning": "The data is structured with a top-level `users` collection for profiles and a top-level `notas` collection for all user-generated notes. This flat structure for `notas` simplifies querying, allowing all users to view all notes easily, which aligns with the application's requirements. Security is enforced within the rules: while reads are permissive, writes (create, update, delete) are strictly controlled. A user can only create a nota with their own `userId`, and can only update or delete notas they own. Admins are granted special privileges to update any nota for verification purposes. A `network-assets` collection is added for managing network equipment, with admin-only write access. This design is efficient and secure for the specified use case."
   }

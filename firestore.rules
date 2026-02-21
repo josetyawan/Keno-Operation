@@ -118,5 +118,12 @@ service cloud.firestore {
       allow create: if isApproved() && isCreatingOwn('userId');
       allow update, delete: if (isApproved() && isUpdatingOwn('userId')) || isAdmin() || isKorlap();
     }
+
+    match /messages/{messageId} {
+      allow read: if isApproved();
+      allow create: if isApproved() && isCreatingOwn('userId');
+      allow update: if false; // Disallow message editing
+      allow delete: if isOwner(resource.data.userId) || isAdmin();
+    }
   }
 }

@@ -209,3 +209,12 @@ export type AlkerChecklist = {
   dateSubmitted: any; // Timestamp
   tools: AlkerTool[];
 };
+
+export type Message = {
+    id: string;
+    text: string;
+    userId: string;
+    userName: string;
+    userAvatar?: string;
+    createdAt: any; // Timestamp
+};
