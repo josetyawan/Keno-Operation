@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -9,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { BookCopy, BarChart3, Search } from 'lucide-react';
+import { BookCopy, BarChart3, Search, ClipboardCheck, Wrench, Bot } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
@@ -126,6 +125,88 @@ export default function DashboardSelectorPage() {
             </Card>
             </Link>
         )}
+
+        {canAccessAllpro && (
+            <Link href="/dashboard/hr/attendance">
+            <Card className="hover:border-primary hover:shadow-lg transition-all duration-200 h-full">
+                <CardHeader className="flex flex-row items-center gap-4">
+                <div className="p-3 rounded-full bg-primary/10 text-primary">
+                    <ClipboardCheck className="h-8 w-8" />
+                </div>
+                <div>
+                    <CardTitle>Absensi Jaga</CardTitle>
+                    <CardDescription>Lakukan absensi untuk jadwal jaga.</CardDescription>
+                </div>
+                </CardHeader>
+                <CardContent>
+                <p className="text-sm text-muted-foreground">
+                    Ambil foto dan catat kehadiran Anda untuk shift jaga hari ini.
+                </p>
+                </CardContent>
+            </Card>
+            </Link>
+        )}
+
+        {canAccessAllpro && (
+            <Link href="/dashboard/alker">
+            <Card className="hover:border-primary hover:shadow-lg transition-all duration-200 h-full">
+                <CardHeader className="flex flex-row items-center gap-4">
+                <div className="p-3 rounded-full bg-primary/10 text-primary">
+                    <ClipboardCheck className="h-8 w-8" />
+                </div>
+                <div>
+                    <CardTitle>Daftar Pengecekan Alker</CardTitle>
+                    <CardDescription>Lihat riwayat pengecekan alat kerja.</CardDescription>
+                </div>
+                </CardHeader>
+                <CardContent>
+                <p className="text-sm text-muted-foreground">
+                    Tampilkan semua laporan pengecekan alat kerja yang telah dikirim.
+                </p>
+                </CardContent>
+            </Card>
+            </Link>
+        )}
+
+        {canAccessAllpro && (
+            <Link href="/dashboard/alker/new">
+            <Card className="hover:border-primary hover:shadow-lg transition-all duration-200 h-full">
+                <CardHeader className="flex flex-row items-center gap-4">
+                <div className="p-3 rounded-full bg-primary/10 text-primary">
+                    <Wrench className="h-8 w-8" />
+                </div>
+                <div>
+                    <CardTitle>Input Pengecekan Alker</CardTitle>
+                    <CardDescription>Buat laporan pengecekan alat kerja baru.</CardDescription>
+                </div>
+                </CardHeader>
+                <CardContent>
+                <p className="text-sm text-muted-foreground">
+                    Isi formulir untuk melaporkan kondisi alat kerja Anda saat ini.
+                </p>
+                </CardContent>
+            </Card>
+            </Link>
+        )}
+        
+        <Link href="/dashboard/bots">
+            <Card className="hover:border-primary hover:shadow-lg transition-all duration-200 h-full">
+                <CardHeader className="flex flex-row items-center gap-4">
+                <div className="p-3 rounded-full bg-primary/10 text-primary">
+                    <Bot className="h-8 w-8" />
+                </div>
+                <div>
+                    <CardTitle>Daftar Bot</CardTitle>
+                    <CardDescription>Kumpulan bot Telegram yang digunakan.</CardDescription>
+                </div>
+                </CardHeader>
+                <CardContent>
+                <p className="text-sm text-muted-foreground">
+                    Akses cepat ke bot-bot penting untuk alur kerja harian Anda.
+                </p>
+                </CardContent>
+            </Card>
+        </Link>
       </div>
     </>
   );
