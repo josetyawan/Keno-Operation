@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -429,7 +430,7 @@ export default function SearchAssetsPage() {
                       )}
                       {a.assetType === 'ODP' && a.serviceArea === 'SA KUDUS' && (
                         <Button asChild variant="ghost" size="icon" title={`Cek ${a.name} di LembarSA Bot`}>
-                            <Link href={`https://t.me/LembarSA_bot?start=searchodp_${a.name}`} target="_blank" rel="noopener noreferrer">
+                            <Link href={`https://t.me/LembarSA_bot?start=${a.name}`} target="_blank" rel="noopener noreferrer">
                                 <Bot className="h-4 w-4 text-sky-600" />
                             </Link>
                         </Button>
