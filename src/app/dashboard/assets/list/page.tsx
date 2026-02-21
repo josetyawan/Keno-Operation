@@ -72,6 +72,9 @@ function AssetList() {
   const [searchName, setSearchName] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
+  
+  const isNodeB = assetType === 'NODE-B';
+  const isMitratel = assetType === 'MITRATEL';
 
   const userProfileRef = useMemoFirebase(
     () => (user ? doc(firestore, 'users', user.uid) : null),
@@ -88,12 +91,10 @@ function AssetList() {
     const constraints: QueryConstraint[] = [];
     constraints.push(where('assetType', '==', assetType));
     
-    // Add server-side filtering for service area
     if (serviceArea) {
       constraints.push(where('serviceArea', '==', serviceArea));
     }
 
-    // SubType filter is also efficient and can be done server-side
     if (subType) {
         constraints.push(where('subType', '==', subType));
     }
@@ -105,19 +106,20 @@ function AssetList() {
 
   const { data: assets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(assetsQuery);
   
-  // This performs client-side filtering only for the search name.
   const clientFilteredAssets = useMemo(() => {
       if (!assets) return [];
 
-      // Filter by name search query
       const lowercasedSearchName = searchName.toLowerCase().trim();
       if (searchName && lowercasedSearchName.length > 0) {
-        return assets.filter(asset => 
-            asset.name.toLowerCase().includes(lowercasedSearchName)
-        );
+        return assets.filter(asset => {
+            const nameMatch = asset.name.toLowerCase().includes(lowercasedSearchName);
+            // Specifically check for siteId if it exists
+            const siteIdMatch = asset.siteId && asset.siteId.toLowerCase().includes(lowercasedSearchName);
+            return nameMatch || siteIdMatch;
+        });
       }
       
-      return assets; // Return all server-filtered assets if no name search
+      return assets;
 
   }, [assets, searchName]);
 
@@ -161,7 +163,7 @@ function AssetList() {
           </CardTitle>
            <div className="pt-2">
             <Label htmlFor="search-name" className="sr-only">Nama Aset</Label>
-            <Input id="search-name" placeholder={`Cari nama ${assetType || 'aset'}...`} value={searchName} onChange={(e) => setSearchName(e.target.value)} />
+            <Input id="search-name" placeholder={isNodeB ? `Cari berdasarkan Site ID atau Nama Site...` : `Cari nama ${assetType || 'aset'}...`} value={searchName} onChange={(e) => setSearchName(e.target.value)} />
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -174,47 +176,90 @@ function AssetList() {
           ) : paginatedAssets.length > 0 ? (
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Sub-Type</TableHead>
-                  <TableHead>Service Area</TableHead>
-                  <TableHead>STO</TableHead>
-                  <TableHead>Coordinates</TableHead>
-                  <TableHead>Mitratel ID</TableHead>
-                  <TableHead>Tenant ID</TableHead>
-                  <TableHead>Avail</TableHead>
-                  <TableHead>Used</TableHead>
-                  <TableHead className="text-right">Lokasi</TableHead>
-                </TableRow>
+                {isNodeB ? (
+                    <TableRow>
+                        <TableHead>Site ID</TableHead>
+                        <TableHead>Site Name</TableHead>
+                        <TableHead>OLT Merk</TableHead>
+                        <TableHead>Splitter OLT</TableHead>
+                        <TableHead>SN ONT</TableHead>
+                        <TableHead>EQP Port</TableHead>
+                        <TableHead>Cascade</TableHead>
+                        <TableHead>Cascade At</TableHead>
+                        <TableHead>CATBTS</TableHead>
+                        <TableHead>RNC/BSC</TableHead>
+                        <TableHead>Router/RAN</TableHead>
+                        <TableHead>Alamat</TableHead>
+                        <TableHead className="text-right">Lokasi</TableHead>
+                    </TableRow>
+                ) : (
+                    <TableRow>
+                        <TableHead>{isMitratel ? 'Site Name' : 'Name'}</TableHead>
+                        <TableHead>Type</TableHead>
+                        {!isMitratel && <TableHead>Sub-Type</TableHead>}
+                        <TableHead>Service Area</TableHead>
+                        {!isMitratel && <TableHead>STO</TableHead>}
+                        <TableHead>Coordinates</TableHead>
+                        {isMitratel && <TableHead>Mitratel ID</TableHead>}
+                        {isMitratel && <TableHead>Tenant ID</TableHead>}
+                        {!isMitratel && <TableHead>Avail</TableHead>}
+                        {!isMitratel && <TableHead>Used</TableHead>}
+                        <TableHead className="text-right">Lokasi</TableHead>
+                    </TableRow>
+                )}
               </TableHeader>
               <TableBody>
                 {paginatedAssets.map(a => {
                     const coords = a.coordinates?.split(',').map(c => c.trim());
                     const googleMapsUrl = coords && coords.length === 2 ? `https://www.google.com/maps/search/?api=1&query=${coords[0]},${coords[1]}` : null;
-                    return (
-                  <TableRow key={a.id}>
-                    <TableCell className="font-medium">{a.name}</TableCell>
-                    <TableCell>{a.assetType}</TableCell>
-                    <TableCell>{a.subType}</TableCell>
-                    <TableCell>{a.serviceArea}</TableCell>
-                    <TableCell>{a.sto}</TableCell>
-                    <TableCell>{a.coordinates || '-'}</TableCell>
-                    <TableCell>{a.mitratelSiteId || '-'}</TableCell>
-                    <TableCell>{a.tenantSiteId || '-'}</TableCell>
-                    <TableCell>{a.portAvai || '-'}</TableCell>
-                    <TableCell>{a.portUsed || '-'}</TableCell>
-                    <TableCell className="text-right">
-                      {googleMapsUrl && (
-                        <Button asChild variant="ghost" size="icon" title="Lihat di Google Maps">
-                          <Link href={googleMapsUrl} target="_blank" rel="noopener noreferrer">
-                            <MapPin className="h-4 w-4 text-blue-600" />
-                          </Link>
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                )})}
+                    return isNodeB ? (
+                     <TableRow key={a.id}>
+                        <TableCell className="font-medium">{a.siteId}</TableCell>
+                        <TableCell>{a.name}</TableCell>
+                        <TableCell>{a.oltMerk}</TableCell>
+                        <TableCell>{a.splitterOlt}</TableCell>
+                        <TableCell>{a.snOnt}</TableCell>
+                        <TableCell>{a.eqpPort}</TableCell>
+                        <TableCell>{a.cascade}</TableCell>
+                        <TableCell>{a.cascadeAt}</TableCell>
+                        <TableCell>{a.catbts}</TableCell>
+                        <TableCell>{a.rncBsc}</TableCell>
+                        <TableCell>{a.routerRan}</TableCell>
+                        <TableCell>{a.alamat}</TableCell>
+                        <TableCell className="text-right">
+                           {googleMapsUrl && (
+                            <Button asChild variant="ghost" size="icon" title="Lihat di Google Maps">
+                              <Link href={googleMapsUrl} target="_blank" rel="noopener noreferrer">
+                                <MapPin className="h-4 w-4 text-blue-600" />
+                              </Link>
+                            </Button>
+                          )}
+                        </TableCell>
+                    </TableRow>
+                  ) : (
+                    <TableRow key={a.id}>
+                        <TableCell className="font-medium">{a.name}</TableCell>
+                        <TableCell>{a.assetType}</TableCell>
+                        {!isMitratel && <TableCell>{a.subType}</TableCell>}
+                        <TableCell>{a.serviceArea}</TableCell>
+                        {!isMitratel && <TableCell>{a.sto}</TableCell>}
+                        <TableCell>{a.coordinates || '-'}</TableCell>
+                        {isMitratel && <TableCell>{a.mitratelSiteId || '-'}</TableCell>}
+                        {isMitratel && <TableCell>{a.tenantSiteId || '-'}</TableCell>}
+                        {!isMitratel && <TableCell>{a.portAvai || '-'}</TableCell>}
+                        {!isMitratel && <TableCell>{a.portUsed || '-'}</TableCell>}
+                        <TableCell className="text-right">
+                          {googleMapsUrl && (
+                            <Button asChild variant="ghost" size="icon" title="Lihat di Google Maps">
+                              <Link href={googleMapsUrl} target="_blank" rel="noopener noreferrer">
+                                <MapPin className="h-4 w-4 text-blue-600" />
+                              </Link>
+                            </Button>
+                          )}
+                        </TableCell>
+                    </TableRow>
+                  )
+                })}
               </TableBody>
             </Table>
           ) : (
@@ -267,3 +312,5 @@ export default function AssetListPage() {
         </Suspense>
     );
 }
+
+    
