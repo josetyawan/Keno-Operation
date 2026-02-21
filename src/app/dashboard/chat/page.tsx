@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 
 export default function ChatHubPage() {
   const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
 
   const usersQuery = useMemoFirebase(() => {
     if (!user) return null;
@@ -25,10 +26,9 @@ export default function ChatHubPage() {
       orderBy('id'), // Firestore requires an orderBy when using inequality filters
       orderBy('displayName')
     );
-  }, [user]);
+  }, [user, firestore]);
 
   const { data: users, isLoading: areUsersLoading } = useCollection<UserProfile>(usersQuery);
-  const firestore = useFirestore();
 
   const isLoading = isUserLoading || areUsersLoading;
 
