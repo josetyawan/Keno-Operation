@@ -446,7 +446,7 @@ export default function AdminPelangganPage() {
     setSheetHistory([]); // Clear previous history
     const serviceNumberToFind = searchedPelanggan.noService.trim();
     try {
-      const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS6GU4F_Iqvw7u1pkL06KQjDrrdGCu_DshWT0QWeozGpwpUIAc757COSNEnkhrRKH1RnPDqNeXDDNjU/pub?gid=0&single=true&output=csv&t=' + new Date().getTime());
+      const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vS6GU4F_Iqvw7u1pkL06KQjDrrdGCu_DshWT0QWeozGpwpUIAc757COSNEnkhrRKH1RnPDqNeXDDNjU/pub?output=csv');
       if (!response.ok) {
         throw new Error(`Gagal mengambil data dari Google Sheet. Status: ${response.status}`);
       }
