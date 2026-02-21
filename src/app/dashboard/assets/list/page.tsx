@@ -113,9 +113,9 @@ function AssetList() {
       if (searchName && lowercasedSearchName.length > 0) {
         return assets.filter(asset => {
             const nameMatch = asset.name.toLowerCase().includes(lowercasedSearchName);
-            // Specifically check for siteId if it exists
             const siteIdMatch = asset.siteId && asset.siteId.toLowerCase().includes(lowercasedSearchName);
-            return nameMatch || siteIdMatch;
+            const tenantIdMatch = asset.tenantSiteId && asset.tenantSiteId.toLowerCase().includes(lowercasedSearchName);
+            return nameMatch || siteIdMatch || tenantIdMatch;
         });
       }
       
@@ -163,7 +163,7 @@ function AssetList() {
           </CardTitle>
            <div className="pt-2">
             <Label htmlFor="search-name" className="sr-only">Nama Aset</Label>
-            <Input id="search-name" placeholder={isNodeB ? `Cari berdasarkan Site ID atau Nama Site...` : `Cari nama ${assetType || 'aset'}...`} value={searchName} onChange={(e) => setSearchName(e.target.value)} />
+            <Input id="search-name" placeholder={isNodeB ? `Cari berdasarkan Site ID...` : isMitratel ? `Cari berdasarkan Tenant ID...` : `Cari nama ${assetType || 'aset'}...`} value={searchName} onChange={(e) => setSearchName(e.target.value)} />
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -179,7 +179,6 @@ function AssetList() {
                 {isNodeB ? (
                     <TableRow>
                         <TableHead>Site ID</TableHead>
-                        <TableHead>Site Name</TableHead>
                         <TableHead>OLT Merk</TableHead>
                         <TableHead>Splitter OLT</TableHead>
                         <TableHead>SN ONT</TableHead>
@@ -215,7 +214,6 @@ function AssetList() {
                     return isNodeB ? (
                      <TableRow key={a.id}>
                         <TableCell className="font-medium">{a.siteId}</TableCell>
-                        <TableCell>{a.name}</TableCell>
                         <TableCell>{a.oltMerk}</TableCell>
                         <TableCell>{a.splitterOlt}</TableCell>
                         <TableCell>{a.snOnt}</TableCell>

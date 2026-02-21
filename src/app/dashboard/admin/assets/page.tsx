@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -128,13 +127,11 @@ export default function AdminAssetsPage() {
 
   const { data: queriedAssets, isLoading: areAssetsLoading } = useCollection<NetworkAsset>(assetsQuery);
 
-  // Perform client-side filtering for name AND inferred type for better performance
   const filteredAssets = useMemo(() => {
     if (!queriedAssets) return [];
     
     const lowercasedSearchName = searchName.toLowerCase().trim();
     
-    // Also infer type on client to refine filtering
     const upperSearch = searchName.toUpperCase().trim();
     const assetPrefixes = ['ODP', 'ODC', 'OLT', 'FTM', 'MITRATEL', 'NODE-B'];
     let inferredType: string | null = null;
@@ -148,13 +145,10 @@ export default function AdminAssetsPage() {
 
     return queriedAssets.filter(asset => {
         const nameMatch = asset.name.toLowerCase().includes(lowercasedSearchName);
-        
-        let specificMatch = false;
-        // As requested, siteId is the primary identifier for NODE-B, not siteName.
         const siteIdMatch = asset.siteId?.toLowerCase().includes(lowercasedSearchName);
-        specificMatch = !!(siteIdMatch);
+        const tenantIdMatch = asset.tenantSiteId?.toLowerCase().includes(lowercasedSearchName);
 
-        const fullMatch = nameMatch || specificMatch;
+        const fullMatch = nameMatch || !!siteIdMatch || !!tenantIdMatch;
 
         if (inferredType) {
             return asset.assetType === inferredType && fullMatch;
@@ -179,15 +173,12 @@ export default function AdminAssetsPage() {
     if (upperSearch.startsWith('NODE-B')) return true;
 
     const siteIdPatterns = ['JPA', 'KDS', 'DMK', 'PAT', 'RBG', 'GRO', 'BLA'];
-    // Check if the search query looks like a site ID
     if (siteIdPatterns.some(p => upperSearch.includes(p))) {
-        // To avoid false positives (e.g., searching for a person named 'Pat'), check if it contains numbers.
         if (/\d/.test(upperSearch)) {
             return true;
         }
     }
     
-    // Also consider if the found assets are of type NODE-B, even if search term is ambiguous
     if (paginatedAssets.length > 0 && paginatedAssets.every(a => a.assetType === 'NODE-B')) {
         return true;
     }
@@ -575,7 +566,7 @@ export default function AdminAssetsPage() {
             }
 
             if (importAssetType === 'NODE-B') {
-                const siteIdCol = findColumn(firstRowKeys, ['site id', 'site_id', 'base id']);
+                const siteIdCol = findColumn(firstRowKeys, ['site id', 'base id']);
                 const siteNameCol = findColumn(firstRowKeys, ['site name', 'site_name']);
                 const oltMerkCol = findColumn(firstRowKeys, ['olt merk']);
                 const splitterOltCol = findColumn(firstRowKeys, ['splitter olt']);
@@ -947,8 +938,8 @@ export default function AdminAssetsPage() {
                     </Select>
                 </div>
                 <div className="grid gap-1.5 md:col-span-2">
-                    <Label htmlFor="search-name">2. Cari Nama atau ID Aset</Label>
-                    <Input id="search-name" placeholder="Ketik nama aset (e.g., ODP-KDS-FA/001) atau Site ID..." value={searchName} onChange={(e) => setSearchName(e.target.value)} disabled={!canSearch}/>
+                    <Label htmlFor="search-name">2. Cari Nama, Site ID, atau Tenant ID</Label>
+                    <Input id="search-name" placeholder="Ketik nama aset, Site ID, atau Tenant ID..." value={searchName} onChange={(e) => setSearchName(e.target.value)} disabled={!canSearch}/>
                 </div>
             </div>
         </CardContent>

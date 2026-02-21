@@ -159,7 +159,8 @@ export default function SearchAssetsPage() {
         return queriedAssets.filter(asset => {
             const nameMatch = asset.name.toLowerCase().includes(lowercasedSearchName);
             const siteIdMatch = asset.siteId?.toLowerCase().includes(lowercasedSearchName);
-            return nameMatch || !!siteIdMatch;
+            const tenantIdMatch = asset.tenantSiteId?.toLowerCase().includes(lowercasedSearchName);
+            return nameMatch || !!siteIdMatch || !!tenantIdMatch;
         });
     }
     
@@ -243,8 +244,8 @@ export default function SearchAssetsPage() {
                     </Select>
                 </div>
                 <div className="grid gap-1.5 md:col-span-2">
-                    <Label htmlFor="search-name">2. Cari Nama Aset atau Site ID</Label>
-                    <Input id="search-name" placeholder="Ketik nama aset (e.g., ODP-KUD-FA/001) atau Site ID..." value={searchName} onChange={(e) => setSearchName(e.target.value)} disabled={!canSearch}/>
+                    <Label htmlFor="search-name">2. Cari Nama, Site ID, atau Tenant ID</Label>
+                    <Input id="search-name" placeholder="Ketik nama aset, Site ID, atau Tenant ID..." value={searchName} onChange={(e) => setSearchName(e.target.value)} disabled={!canSearch}/>
                 </div>
             </div>
              {(currentMancoreLinks.length > 0 || currentMapUrl || (isMitratelSearch && mitratelMapUrl)) && (
@@ -383,7 +384,7 @@ export default function SearchAssetsPage() {
                     {!canSearch 
                       ? "Silakan pilih Service Area untuk memulai." 
                       : !hasSearched 
-                      ? "Ketik nama aset atau Site ID di atas untuk mencari." 
+                      ? "Ketik nama aset, Site ID, atau Tenant ID di atas untuk mencari." 
                       : "Tidak ada aset yang cocok dengan filter Anda."}
                   </TableCell>
                 </TableRow>
