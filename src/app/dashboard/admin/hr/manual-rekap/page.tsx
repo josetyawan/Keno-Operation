@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useState, useEffect, useMemo } from 'react';
+import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { doc } from 'firebase/firestore';
-import type { UserProfile } from '@/lib/types';
+import { doc, collection, query, where, Timestamp, getDocs } from 'firebase/firestore';
+import type { UserProfile, Schedule, Attendance, Holiday } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -12,9 +12,58 @@ import { triggerDailyRekapAction } from '@/app/actions/triggerDailyRekapAction';
 import { Bot, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
+import { format, isWeekend } from 'date-fns';
+import { id as idLocale } from 'date-fns/locale';
+
+type DailyStatus = 'Hadir' | 'Izin' | 'Cuti' | 'Libur' | 'Shift Malam';
+
+type UserDailyInfo = {
+    user: UserProfile;
+    status: DailyStatus;
+    sto: string;
+};
+
+// Helper function to generate the report string, now on the client
+function generateRekapString(userInfos: UserDailyInfo[], title: string, dateHeader: string): string {
+    const total = userInfos.length;
+    const hadir = userInfos.filter(u => u.status === 'Hadir').sort((a,b) => (a.user.displayName || '').localeCompare(b.user.displayName || ''));
+    const ijin = userInfos.filter(u => u.status === 'Izin' || u.status === 'Cuti').sort((a,b) => (a.user.displayName || '').localeCompare(b.user.displayName || ''));
+    const libur = userInfos.filter(u => u.status === 'Libur').sort((a,b) => (a.user.displayName || '').localeCompare(b.user.displayName || ''));
+    const shiftMalam = userInfos.filter(u => u.status === 'Shift Malam').sort((a,b) => (a.user.displayName || '').localeCompare(b.user.displayName || ''));
+    
+    const persenHadir = total > 0 ? ((hadir.length / total) * 100).toFixed(1) : '0.0';
+
+    let rekap = `📊 ${title}\n`;
+    rekap += `SA KUDUS ${dateHeader}\n`;
+    rekap += `PT TELKOM AKSES\n`;
+    rekap += `=============================\n`;
+    rekap += `TOTAL : ${total}\n`;
+    rekap += `HADIR : ${hadir.length}\n`;
+    rekap += `IJIN  : ${ijin.length}\n`;
+    rekap += `LIBUR : ${libur.length}\n`;
+    rekap += `% HADIR : ${persenHadir}%\n\n`;
+
+    rekap += `👷 MASUK\n`;
+    rekap += hadir.length > 0 ? hadir.map(u => `▸ ${u.user.displayName} (${u.sto})`).join('\n') : '-';
+    rekap += `\n\n`;
+
+    rekap += `👷 LIBUR\n`;
+    rekap += libur.length > 0 ? libur.map(u => `✖️ ▸ ${u.user.displayName} (${u.sto})`).join('\n') : '-';
+    rekap += `\n\n`;
+
+    rekap += `👷 IJIN/CUTI\n`;
+    rekap += ijin.length > 0 ? ijin.map(u => `▸ ${u.user.displayName} (${u.sto})`).join('\n') : '-';
+    rekap += `\n\n`;
+
+    rekap += `🌙 SHIFT MALAM\n`;
+    rekap += shiftMalam.length > 0 ? shiftMalam.map(u => `🌙 ▸ ${u.user.displayName} (${u.sto})`).join('\n') : '-';
+
+    return rekap;
+}
+
 
 export default function ManualRekapPage() {
-    const [isLoading, setIsLoading] = useState(false);
+    const [isTriggering, setIsTriggering] = useState(false);
     const { toast } = useToast();
     const router = useRouter();
     const { user, isUserLoading } = useUser();
@@ -23,6 +72,24 @@ export default function ManualRekapPage() {
     const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
         useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
     );
+    
+    // --- Data fetching moved to client ---
+    const today = useMemo(() => new Date(), []);
+    const startOfToday = useMemo(() => new Date(today.setHours(0, 0, 0, 0)), [today]);
+    const endOfToday = useMemo(() => new Date(today.setHours(23, 59, 59, 999)), [today]);
+    const dateForScheduleQuery = useMemo(() => new Date(startOfToday.getTime()), [startOfToday]);
+
+    const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users'), where('registrationStatus', '==', 'approved')), [firestore]);
+    const schedulesQuery = useMemoFirebase(() => query(collection(firestore, 'schedules'), where('date', '==', Timestamp.fromDate(dateForScheduleQuery))), [firestore, dateForScheduleQuery]);
+    const attendancesQuery = useMemoFirebase(() => query(collection(firestore, 'attendances'), where('checkInTime', '>=', Timestamp.fromDate(startOfToday)), where('checkInTime', '<=', Timestamp.fromDate(endOfToday))), [firestore, startOfToday, endOfToday]);
+    const holidaysQuery = useMemoFirebase(() => query(collection(firestore, 'holidays'), where('date', '==', Timestamp.fromDate(dateForScheduleQuery))), [firestore, dateForScheduleQuery]);
+
+    const { data: users, isLoading: areUsersLoading } = useCollection<UserProfile>(usersQuery);
+    const { data: schedules, isLoading: areSchedulesLoading } = useCollection<Schedule>(schedulesQuery);
+    const { data: attendances, isLoading: areAttendancesLoading } = useCollection<Attendance>(attendancesQuery);
+    const { data: holidays, isLoading: areHolidaysLoading } = useCollection<Holiday>(holidaysQuery);
+    
+    const isDataLoading = areUsersLoading || areSchedulesLoading || areAttendancesLoading || areHolidaysLoading;
 
     useEffect(() => {
         if (!isUserLoading && !isProfileLoading) {
@@ -34,9 +101,84 @@ export default function ManualRekapPage() {
     }, [user, currentUserProfile, isUserLoading, isProfileLoading, router]);
 
     const handleTrigger = async () => {
-        setIsLoading(true);
+        setIsTriggering(true);
+        if (!users || !schedules || !attendances || !holidays) {
+            toast({ variant: 'destructive', title: 'Data Belum Siap', description: 'Data yang diperlukan untuk rekap belum termuat sepenuhnya.' });
+            setIsTriggering(false);
+            return;
+        }
+
         try {
-            const result = await triggerDailyRekapAction();
+            // --- Logic moved from server action ---
+            const formattedDateHeader = format(today, 'dd/MM/yyyy', { locale: idLocale });
+            const isTodayHoliday = holidays.length > 0;
+            const isTodayWeekend = isWeekend(today);
+
+            const scheduleMap = new Map(schedules.map(s => [s.userId, s]));
+            const attendanceMap = new Map(attendances.map(a => [a.userId, a]));
+
+            const allUserStatuses: UserDailyInfo[] = users
+                .filter(u => u.role === 'teknisi')
+                .map(user => {
+                    const schedule = scheduleMap.get(user.id);
+                    const attendance = attendanceMap.get(user.id);
+                    const sto = user.psa || 'KDS'; 
+
+                    let status: DailyStatus = 'Libur';
+
+                    if (schedule) {
+                        if (schedule.shiftType === 'ijin') status = 'Izin';
+                        else if (schedule.shiftType === 'cuti') status = 'Cuti';
+                        else if (schedule.shiftType === 'malam') status = 'Shift Malam';
+                        else if (['piket-demak', 'siang-malam', 'weekend-duty', 'holiday-duty'].includes(schedule.shiftType)) {
+                            status = attendance ? 'Hadir' : 'Libur';
+                        }
+                    } else {
+                        if (!isTodayWeekend && !isTodayHoliday) {
+                        status = attendance ? 'Hadir' : 'Libur';
+                        } else {
+                        status = 'Libur';
+                        }
+                    }
+                    
+                    if (attendance && status !== 'Izin' && status !== 'Cuti') {
+                        status = 'Hadir';
+                    }
+
+                    return { user, status, sto };
+                });
+            
+            const assuranceB2CUsers = allUserStatuses.filter(u => u.user.unit === 'B2C' || u.user.unit === 'MTC');
+            const assuranceB2BUsers = allUserStatuses.filter(u => u.user.unit === 'B2B');
+            const provisioningUsers = allUserStatuses.filter(u => u.user.unit === 'Provisioning');
+
+            const rekapMessages: string[] = [];
+            if (provisioningUsers.length > 0) rekapMessages.push(generateRekapString(provisioningUsers, 'PROVI', formattedDateHeader));
+            if (assuranceB2CUsers.length > 0) rekapMessages.push(generateRekapString(assuranceB2CUsers, 'ASSURANCE - B2C', formattedDateHeader));
+            if (assuranceB2BUsers.length > 0) rekapMessages.push(generateRekapString(assuranceB2BUsers, 'ASSURANCE - B2B', formattedDateHeader));
+            
+            let photosToSend: string[] = [];
+            const hasNightShift = allUserStatuses.some(u => u.status === 'Shift Malam');
+            const isJagaDay = isTodayWeekend || isTodayHoliday || hasNightShift;
+            
+            if (isJagaDay) {
+                photosToSend = attendances.map(a => a.checkInPhotoUrl).filter((url): url is string => !!url);
+            }
+            
+            if (rekapMessages.length === 0 && photosToSend.length === 0) {
+                 toast({ title: 'Tidak Ada Data', description: 'Tidak ada data rekap untuk dikirim hari ini.' });
+                 setIsTriggering(false);
+                 return;
+            }
+            // --- End of moved logic ---
+            
+            // Call the simplified server action
+            const result = await triggerDailyRekapAction({
+                rekapMessages: rekapMessages,
+                photos: photosToSend,
+                photoCaption: isJagaDay ? "Rekap Foto Absen Jaga" : undefined,
+            });
+
             if (result.success) {
                 toast({
                     title: 'Sukses',
@@ -52,7 +194,7 @@ export default function ManualRekapPage() {
                 description: error.message || 'Terjadi kesalahan yang tidak diketahui.',
             });
         }
-        setIsLoading(false);
+        setIsTriggering(false);
     };
 
     if (isUserLoading || isProfileLoading) {
@@ -77,9 +219,9 @@ export default function ManualRekapPage() {
                            Fungsi ini akan mengambil data absensi hari ini, membuat rekap, dan langsung mengirimkannya. Pastikan Anda hanya menekannya saat diperlukan untuk menghindari spam di grup.
                         </AlertDescription>
                     </Alert>
-                    <Button onClick={handleTrigger} disabled={isLoading} className="w-full mt-6" size="lg">
-                        {isLoading ? <Loader2 className="mr-2 animate-spin" /> : <Bot className="mr-2" />}
-                        {isLoading ? 'Mengirim...' : 'Kirim Rekap Hari Ini ke Telegram'}
+                    <Button onClick={handleTrigger} disabled={isTriggering || isDataLoading} className="w-full mt-6" size="lg">
+                        {(isTriggering || isDataLoading) ? <Loader2 className="mr-2 animate-spin" /> : <Bot className="mr-2" />}
+                        {(isTriggering) ? 'Mengirim...' : (isDataLoading ? 'Memuat Data...' : 'Kirim Rekap Hari Ini ke Telegram')}
                     </Button>
                 </CardContent>
              </Card>
