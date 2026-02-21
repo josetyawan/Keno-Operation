@@ -393,12 +393,23 @@ export default function AdminSchedulesPage() {
                 }
             });
 
+            // Expanded shift code map to recognize more variations
             const shiftCodeMap: Record<string, ValidShiftType> = {
+                // Piket Siang/Malam
                 'smc': 'siang-malam', 's/mc': 'siang-malam', 'sm': 'siang-malam',
+                // Piket Malam
                 'm': 'malam',
+                // Piket Demak
                 'pt/bd': 'piket-demak', 'pdm': 'piket-demak', 'ptm': 'piket-demak', 'pu': 'piket-demak', 'pb': 'piket-demak',
+                // Izin & Cuti
                 'i': 'ijin',
                 'c': 'cuti',
+                // Jaga (Duty on off-days) / Hadir (Present on workdays)
+                'h': 'weekend-duty', // Using 'weekend-duty' as a generic "on-duty" status
+                'p': 'weekend-duty', // 'P' for Pagi (Morning)
+                'jaga': 'weekend-duty',
+                'weekend': 'weekend-duty',
+                'holiday': 'holiday-duty',
             };
             
             let processedRows = 0;
@@ -414,6 +425,7 @@ export default function AdminSchedulesPage() {
             });
     
             for (const row of jsonData) {
+                // Ensure NIK is read as a string for reliable matching
                 const nikFromExcel = String(row[nikHeader] || '').trim();
                 if (!nikFromExcel) {
                     continue;
