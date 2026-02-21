@@ -100,12 +100,14 @@ service cloud.firestore {
     match /schedules/{scheduleId} {
       allow get: if isOwner(resource.data.userId) || isAdmin() || isKorlap();
       allow list: if isApproved();
-      allow write: if isAdmin() || isKorlap();
+      allow create: if isAdmin() || isKorlap();
+      allow update: if isOwner(resource.data.userId) || isAdmin() || isKorlap();
+      allow delete: if isAdmin() || isKorlap();
     }
 
     match /attendances/{attendanceId} {
       allow get: if isOwner(resource.data.userId) || isAdmin() || isKorlap();
-      allow list: if isApproved();
+      allow list: if isAdmin() || isKorlap();
       allow create: if isCreatingOwn('userId');
       allow update, delete: if isAdmin();
     }

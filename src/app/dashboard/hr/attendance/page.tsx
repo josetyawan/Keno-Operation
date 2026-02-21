@@ -1,20 +1,32 @@
-
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { useUser, useFirestore, useCollection, useStorage, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, Timestamp, limit } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useStorage, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { collection, query, where, Timestamp, limit, doc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Camera, Clock, MapPin, Loader2, VideoOff, AlertTriangle, Coffee, Info } from 'lucide-react';
+import { Camera, Clock, MapPin, Loader2, VideoOff, AlertTriangle, Coffee, Info, FileWarning } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { format, set, add, sub } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import Image from 'next/image';
 import type { Schedule, Attendance } from '@/lib/types';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 
 // Helper function to get the start of the day
 const getStartOfDay = () => {
@@ -92,6 +104,13 @@ export default function AttendancePage() {
     const [hasCameraPermission, setHasCameraPermission] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    
+    // Leave request state
+    const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
+    const [leaveType, setLeaveType] = useState<'ijin' | 'cuti'>('ijin');
+    const [leaveReason, setLeaveReason] = useState('');
+    const [isRequestingLeave, setIsRequestingLeave] = useState(false);
+
 
     // --- Data Fetching ---
     const today = useMemo(() => getStartOfDay(), []);
@@ -176,6 +195,29 @@ export default function AttendancePage() {
             stream?.getTracks().forEach(track => track.stop());
         };
     }, [todaySchedule, todayAttendance, toast, checkInWindow]);
+    
+     const handleLeaveRequest = async () => {
+        if (!todaySchedule || !leaveReason.trim()) {
+            toast({ variant: 'destructive', title: 'Alasan Diperlukan', description: 'Silakan isi alasan pengajuan Anda.' });
+            return;
+        }
+        setIsRequestingLeave(true);
+        try {
+            const scheduleDocRef = doc(firestore, 'schedules', todaySchedule.id);
+            await updateDocumentNonBlocking(scheduleDocRef, {
+                shiftType: leaveType,
+                notes: leaveReason,
+            });
+            toast({ title: 'Pengajuan Terkirim', description: 'Status jadwal Anda telah diperbarui.' });
+            setIsLeaveDialogOpen(false);
+            setLeaveReason('');
+        } catch (error: any) {
+            console.error('Failed to submit leave request:', error);
+            toast({ variant: 'destructive', title: 'Gagal Mengajukan Izin', description: 'Terjadi kesalahan saat menyimpan data.' });
+        } finally {
+            setIsRequestingLeave(false);
+        }
+    };
 
     const handleCheckIn = async () => {
         if (!todaySchedule || !videoRef.current || !canvasRef.current || !user) {
@@ -293,7 +335,7 @@ export default function AttendancePage() {
         if (!checkInWindow) { // This means it's an 'ijin' or 'cuti' day
             return (
                 <Alert><Coffee className="h-4 w-4" /><AlertTitle>Status Hari Ini: {shiftTypeLabels[todaySchedule.shiftType]}</AlertTitle>
-                    <AlertDescription>Anda tidak perlu melakukan absen hari ini. Selamat beristirahat.</AlertDescription>
+                    <AlertDescription>Anda tidak perlu melakukan absen hari ini. {todaySchedule.notes && `Catatan: ${todaySchedule.notes}`}</AlertDescription>
                 </Alert>
             );
         }
@@ -336,6 +378,52 @@ export default function AttendancePage() {
                     {isCheckingIn ? <Loader2 className="animate-spin" /> : <Camera className="mr-2" />}
                     {isCheckingIn ? 'Memproses...' : 'Ambil Foto & Check In Sekarang'}
                 </Button>
+                 <Dialog open={isLeaveDialogOpen} onOpenChange={setIsLeaveDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button variant="outline" className="w-full">
+                            <FileWarning className="mr-2 h-4 w-4" /> Tidak Bisa Hadir? (Ajukan Izin/Cuti)
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Pengajuan Izin/Cuti</DialogTitle>
+                            <DialogDescription>
+                                Pilih jenis pengajuan dan berikan alasan. Pengajuan ini akan mengubah status jadwal Anda.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="leave-type">Jenis Pengajuan</Label>
+                                <Select value={leaveType} onValueChange={(v: 'ijin' | 'cuti') => setLeaveType(v)}>
+                                    <SelectTrigger id="leave-type">
+                                        <SelectValue placeholder="Pilih jenis..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="ijin">Izin Sakit / Keperluan Mendesak</SelectItem>
+                                        <SelectItem value="cuti">Cuti</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="leave-reason">Alasan (Wajib Diisi)</Label>
+                                <Textarea
+                                    id="leave-reason"
+                                    placeholder="Contoh: Sakit demam, perlu istirahat."
+                                    value={leaveReason}
+                                    onChange={(e) => setLeaveReason(e.target.value)}
+                                    rows={4}
+                                />
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <DialogClose asChild><Button variant="ghost">Batal</Button></DialogClose>
+                            <Button onClick={handleLeaveRequest} disabled={isRequestingLeave || !leaveReason.trim()}>
+                                {isRequestingLeave && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Kirim Pengajuan
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
         );
     };
@@ -348,7 +436,7 @@ export default function AttendancePage() {
             </p>
             <Card>
                 <CardHeader>
-                    <CardTitle>{!todaySchedule ? 'Tidak Ada Jadwal Hari Ini' : shiftTypeLabels[todaySchedule.shiftType]}</CardTitle>
+                    <CardTitle>{!todaySchedule ? 'Tidak Ada Jadwal Hari Ini' : shiftTypeLabels[todaySchedule.shiftType] || 'Jadwal Hari Ini'}</CardTitle>
                     {todaySchedule && <CardDescription>{todaySchedule.notes || 'Tidak ada catatan khusus untuk jadwal ini.'}</CardDescription>}
                 </CardHeader>
                 <CardContent>
@@ -358,4 +446,3 @@ export default function AttendancePage() {
         </div>
     );
 }
-
