@@ -79,8 +79,8 @@ service cloud.firestore {
 
     match /riwayat-gangguan/{riwayatId} {
       allow read: if isApproved();
-      // Writes should come from the bot (service account), but we can allow admin writes for manual correction.
-      allow write: if isAdmin(); 
+      allow create: if true;
+      allow update, delete: if isAdmin();
     }
 
     match /map-links/{mapLinkId} {

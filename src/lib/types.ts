@@ -148,7 +148,7 @@ export type Pelanggan = {
 
 export type RiwayatGangguan = {
   id: string;
-  pelangganId: string;
+  pelangganId?: string;
   noService: string;
   tanggalLapor: any; // Firestore Timestamp
   noTiket?: string;
