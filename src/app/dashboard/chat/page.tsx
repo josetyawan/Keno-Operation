@@ -1,147 +1,95 @@
 
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, useDoc } from '@/firebase';
-import { collection, query, orderBy, serverTimestamp, doc } from 'firebase/firestore';
+import { useState, useEffect } from 'react';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where, orderBy } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Send, ArrowLeft } from 'lucide-react';
-import { format } from 'date-fns';
-import { id as idLocale } from 'date-fns/locale';
-import type { Message, UserProfile } from '@/lib/types';
-import { cn } from '@/lib/utils';
-import { useRouter } from 'next/navigation';
+import { Users, MessageSquare } from 'lucide-react';
+import type { UserProfile } from '@/lib/types';
+import Link from 'next/link';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
-export default function ChatPage() {
+export default function ChatHubPage() {
   const { user, isUserLoading } = useUser();
+
+  const usersQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    // Fetch all approved users except the current user
+    return query(
+      collection(firestore, 'users'),
+      where('registrationStatus', '==', 'approved'),
+      where('id', '!=', user.uid),
+      orderBy('id'), // Firestore requires an orderBy when using inequality filters
+      orderBy('displayName')
+    );
+  }, [user]);
+
+  const { data: users, isLoading: areUsersLoading } = useCollection<UserProfile>(usersQuery);
   const firestore = useFirestore();
-  const router = useRouter();
-  const [newMessage, setNewMessage] = useState('');
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
-    useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
-  );
-
-  const messagesQuery = useMemoFirebase(() => {
-    if (!userProfile || userProfile.registrationStatus !== 'approved') {
-        return null;
-    }
-    return query(collection(firestore, 'messages'), orderBy('createdAt', 'asc'));
-  }, [firestore, userProfile]);
-
-  const { data: messages, isLoading: areMessagesLoading } = useCollection<Message>(messagesQuery);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMessage.trim() || !user || !userProfile) return;
-
-    const messageData = {
-      text: newMessage.trim(),
-      userId: user.uid,
-      userName: userProfile.displayName || user.email,
-      userAvatar: userProfile.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile.displayName || user.email!)}&background=random`,
-      createdAt: serverTimestamp(),
-    };
-
-    try {
-      await addDocumentNonBlocking(collection(firestore, 'messages'), messageData);
-      setNewMessage('');
-    } catch (error) {
-      console.error("Error sending message:", error);
-    }
-  };
-
-  const isLoading = isUserLoading || isProfileLoading || areMessagesLoading;
+  const isLoading = isUserLoading || areUsersLoading;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-100px)] max-h-[calc(100vh-100px)]">
-        <div className="flex items-center gap-4 mb-4">
-            <Button onClick={() => router.back()} variant="outline" size="icon" className="h-8 w-8">
-                <ArrowLeft className="h-4 w-4" />
-                <span className="sr-only">Kembali</span>
-            </Button>
-            <div>
-                <h1 className="text-xl font-bold tracking-tight">Chat Internal</h1>
-                <p className="text-sm text-muted-foreground">Komunikasi antar tim secara real-time.</p>
-            </div>
+    <div className="mx-auto grid w-full max-w-4xl flex-1 auto-rows-max gap-6">
+      <div className="flex items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Pilih Obrolan</h1>
+          <p className="text-muted-foreground mt-1">Pilih untuk masuk ke group chat atau memulai percakapan pribadi.</p>
         </div>
-
-      <div className="flex-1 overflow-y-auto p-4 bg-muted/50 rounded-lg space-y-4">
-        {isLoading ? (
-          <div className="space-y-4">
-            <Skeleton className="h-16 w-3/4" />
-            <Skeleton className="h-16 w-3/4 ml-auto" />
-            <Skeleton className="h-12 w-1/2" />
-          </div>
-        ) : messages && messages.length > 0 ? (
-          messages.map((msg, index) => {
-            const isCurrentUser = msg.userId === user?.uid;
-            const showAvatarAndName = index === 0 || messages[index - 1]?.userId !== msg.userId;
-            const messageDate = msg.createdAt?.toDate ? format(msg.createdAt.toDate(), 'p', { locale: idLocale }) : '';
-
-            return (
-              <div
-                key={msg.id}
-                className={cn('flex items-end gap-2', isCurrentUser ? 'justify-end' : 'justify-start')}
-              >
-                {!isCurrentUser && (
-                  <div className="w-8 shrink-0">
-                    {showAvatarAndName && (
-                        <Avatar className="h-8 w-8">
-                            <AvatarImage src={msg.userAvatar} />
-                            <AvatarFallback>{msg.userName?.charAt(0) || 'U'}</AvatarFallback>
-                        </Avatar>
-                    )}
-                  </div>
-                )}
-                <div className={cn("max-w-xs md:max-w-md lg:max-w-lg", isCurrentUser && "text-right")}>
-                  {showAvatarAndName && !isCurrentUser && (
-                    <p className="text-xs text-muted-foreground mb-1">{msg.userName}</p>
-                  )}
-                  <div
-                    className={cn(
-                      'p-3 rounded-lg',
-                      isCurrentUser
-                        ? 'bg-primary text-primary-foreground rounded-br-none'
-                        : 'bg-card border rounded-bl-none'
-                    )}
-                  >
-                    <p className="text-sm break-words">{msg.text}</p>
-                    <p className={cn("text-xs mt-1", isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground/70")}>{messageDate}</p>
-                  </div>
-                </div>
-              </div>
-            );
-          })
-        ) : (
-          <div className="flex justify-center items-center h-full">
-            <p className="text-muted-foreground">Belum ada pesan. Mulai percakapan!</p>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={handleSendMessage} className="mt-4 flex items-center gap-2">
-        <Input
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          placeholder="Ketik pesan..."
-          autoComplete="off"
-          disabled={isLoading}
-        />
-        <Button type="submit" size="icon" disabled={!newMessage.trim() || isLoading}>
-          <Send className="h-4 w-4" />
-          <span className="sr-only">Kirim</span>
-        </Button>
-      </form>
+      <div className="grid gap-6 md:grid-cols-2">
+        <Link href="/dashboard/chat/group">
+          <Card className="hover:border-primary transition-colors">
+            <CardHeader className="flex flex-row items-center gap-4 pb-2">
+              <div className="p-3 rounded-full bg-primary/10 text-primary"><Users /></div>
+              <CardTitle>Group Chat</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">Masuk ke ruang obrolan grup untuk semua pengguna.</p>
+            </CardContent>
+          </Card>
+        </Link>
+      </div>
+      
+      <Card>
+          <CardHeader>
+              <CardTitle>Percakapan Pribadi</CardTitle>
+              <CardDescription>Pilih pengguna untuk memulai percakapan pribadi.</CardDescription>
+          </CardHeader>
+          <CardContent>
+              {isLoading ? (
+                  <div className="space-y-4">
+                      <Skeleton className="h-12 w-full" />
+                      <Skeleton className="h-12 w-full" />
+                      <Skeleton className="h-12 w-full" />
+                  </div>
+              ) : users && users.length > 0 ? (
+                  <div className="space-y-2">
+                      {users.map((otherUser) => (
+                          <Link href={`/dashboard/chat/${otherUser.id}`} key={otherUser.id}>
+                              <div className="flex items-center gap-4 p-2 rounded-lg hover:bg-muted transition-colors">
+                                  <Avatar>
+                                      <AvatarImage src={otherUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(otherUser.displayName || otherUser.email)}&background=random`} />
+                                      <AvatarFallback>{otherUser.displayName?.[0] || otherUser.email[0]}</AvatarFallback>
+                                  </Avatar>
+                                  <div className="flex-grow">
+                                      <p className="font-semibold">{otherUser.displayName}</p>
+                                      <p className="text-sm text-muted-foreground">{otherUser.email}</p>
+                                  </div>
+                                  <MessageSquare className="h-5 w-5 text-muted-foreground" />
+                              </div>
+                          </Link>
+                      ))}
+                  </div>
+              ) : (
+                  <p className="text-muted-foreground text-center py-4">Tidak ada pengguna lain yang ditemukan.</p>
+              )}
+          </CardContent>
+      </Card>
     </div>
   );
 }

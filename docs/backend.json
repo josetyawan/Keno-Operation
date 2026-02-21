@@ -288,6 +288,32 @@
         "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp when the message was sent." }
       },
       "required": ["id", "text", "userId", "userName", "createdAt"]
+    },
+    "ChatRoom": {
+      "title": "Chat Room",
+      "type": "object",
+      "description": "Represents a private chat room between two or more users.",
+      "properties": {
+        "id": { "type": "string" },
+        "participants": { "type": "array", "items": { "type": "string" }, "description": "Array of user IDs participating in the chat." },
+        "participantNames": { "type": "object", "description": "Map of user IDs to display names." },
+        "participantAvatars": { "type": "object", "description": "Map of user IDs to avatar URLs." },
+        "lastMessageText": { "type": "string" },
+        "lastMessageTimestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "participants", "participantNames"]
+    },
+    "PrivateMessage": {
+      "title": "Private Chat Message",
+      "type": "object",
+      "description": "Represents a single message within a private chat room.",
+      "properties": {
+        "id": { "type": "string" },
+        "text": { "type": "string" },
+        "userId": { "type": "string", "description": "The ID of the user who sent the message." },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "text", "userId", "createdAt"]
     }
   },
   "auth": { "providers": ["password", "anonymous"] },
@@ -305,7 +331,9 @@
       { "path": "/attendances/{attendanceId}", "definition": { "entityName": "Attendance", "schema": {"$ref": "#/backend/entities/Attendance"}, "description": "Stores attendance records for scheduled shifts.", "params": [{"name": "attendanceId", "description": "The unique ID for the attendance record."}] } },
       { "path": "/holidays/{holidayId}", "definition": { "entityName": "Holiday", "schema": {"$ref": "#/backend/entities/Holiday"}, "description": "Stores national holidays and collective leave dates.", "params": [{"name": "holidayId", "description": "The unique ID for the holiday."}] } },
       { "path": "/tool-checklists/{checklistId}", "definition": { "entityName": "AlkerChecklist", "schema": { "$ref": "#/backend/entities/AlkerChecklist" }, "description": "Stores tool checklist submissions from technicians.", "params": [{ "name": "checklistId", "description": "The unique ID for the checklist." }] } },
-      { "path": "/messages/{messageId}", "definition": { "entityName": "Message", "schema": { "$ref": "#/backend/entities/Message" }, "description": "Stores all chat messages for the real-time chat.", "params": [{ "name": "messageId", "description": "The unique ID for the message." }] } }
+      { "path": "/messages/{messageId}", "definition": { "entityName": "Message", "schema": { "$ref": "#/backend/entities/Message" }, "description": "Stores all chat messages for the real-time chat.", "params": [{ "name": "messageId", "description": "The unique ID for the message." }] } },
+      { "path": "/chats/{chatId}", "definition": { "entityName": "ChatRoom", "schema": { "$ref": "#/backend/entities/ChatRoom" }, "description": "Stores metadata for private chat rooms.", "params": [{ "name": "chatId", "description": "The unique ID for the chat room, typically a composite of user IDs." }] } },
+      { "path": "/chats/{chatId}/messages/{messageId}", "definition": { "entityName": "PrivateMessage", "schema": { "$ref": "#/backend/entities/PrivateMessage" }, "description": "Stores all messages for a specific private chat room.", "params": [{ "name": "chatId", "description": "The ID of the parent chat room." }, { "name": "messageId", "description": "The unique ID for the message." }] } }
     ],
     "reasoning": "The data is structured with a top-level `users` collection for profiles and a top-level `notas` collection for all user-generated notes. This flat structure for `notas` simplifies querying, allowing all users to view all notes easily, which aligns with the application's requirements. Security is enforced within the rules: while reads are permissive, writes (create, update, delete) are strictly controlled. A user can only create a nota with their own `userId`, and can only update or delete notas they own. Admins are granted special privileges to update any nota for verification purposes. A `network-assets` collection is added for managing network equipment, with admin-only write access. This design is efficient and secure for the specified use case."
   }

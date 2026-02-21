@@ -218,3 +218,19 @@ export type Message = {
     userAvatar?: string;
     createdAt: any; // Timestamp
 };
+
+export type ChatRoom = {
+  id: string;
+  participants: string[];
+  participantNames: { [key: string]: string };
+  participantAvatars: { [key: string]: string };
+  lastMessageText?: string;
+  lastMessageTimestamp?: any;
+};
+
+export type PrivateMessage = {
+  id: string;
+  text: string;
+  userId: string;
+  createdAt: any; // Timestamp
+};
