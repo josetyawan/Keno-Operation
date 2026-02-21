@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { useUser, useFirestore, useCollection, useStorage, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { useUser, useFirestore, useCollection, useStorage, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, useDoc } from '@/firebase';
 import { collection, query, where, Timestamp, limit, doc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format, set, add, sub } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import Image from 'next/image';
-import type { Schedule, Attendance } from '@/lib/types';
+import type { Schedule, Attendance, UserProfile } from '@/lib/types';
 import {
   Dialog,
   DialogContent,
@@ -29,6 +29,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
+import { sendAttendanceNotice } from '@/ai/flows/send-attendance-notification';
 
 // --- Helper Functions ---
 const getStartOfDay = () => {
@@ -241,6 +242,9 @@ export default function AttendancePage() {
     const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
 
     // --- Data Fetching ---
+    const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
+    const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+
     const today = useMemo(() => getStartOfDay(), []);
     const scheduleQuery = useMemoFirebase(() => {
         if (!user) return null;
@@ -260,33 +264,28 @@ export default function AttendancePage() {
         }
     }, [schedules, isScheduleLoading]);
 
-    // Refactored query to avoid composite index
     const allUserAttendancesQuery = useMemoFirebase(() => {
         if (!user) return null;
+        const startOfToday = getStartOfDay();
+        const endOfToday = add(startOfToday, { days: 1 });
         return query(
             collection(firestore, 'attendances'),
-            where('userId', '==', user.uid)
+            where('userId', '==', user.uid),
+            where('checkInTime', '>=', Timestamp.fromDate(startOfToday)),
+            where('checkInTime', '<', Timestamp.fromDate(endOfToday))
         );
-    }, [user, firestore]);
+    }, [user, firestore, today]);
 
     const { data: allAttendances, isLoading: isAttendanceLoading } = useCollection<Attendance>(allUserAttendancesQuery);
 
     useEffect(() => {
-      setIsLoading(isScheduleLoading || isAttendanceLoading);
+      setIsLoading(isScheduleLoading || isAttendanceLoading || isProfileLoading);
       if (!isAttendanceLoading && allAttendances) {
-          const startOfToday = getStartOfDay();
-          const endOfToday = add(startOfToday, { days: 1 });
-          // Find the record for today from all the user's records
-          const attendanceForToday = allAttendances.find(att => {
-              if (!att.checkInTime || !att.checkInTime.toDate) return false;
-              const checkInTime = att.checkInTime.toDate();
-              return checkInTime >= startOfToday && checkInTime < endOfToday;
-          });
-          setTodayAttendance(attendanceForToday || null);
+          setTodayAttendance(allAttendances[0] || null);
       } else if (!isAttendanceLoading) {
           setTodayAttendance(null);
       }
-    }, [allAttendances, isAttendanceLoading, isScheduleLoading, today]);
+    }, [allAttendances, isAttendanceLoading, isScheduleLoading, isProfileLoading]);
     
     // --- Camera Logic for Main Check-in ---
     useEffect(() => {
@@ -314,7 +313,7 @@ export default function AttendancePage() {
     
 
     const handleCheckIn = async () => {
-        if (!todaySchedule || !videoRef.current || !canvasRef.current || !user) return;
+        if (!todaySchedule || !videoRef.current || !canvasRef.current || !user || !userProfile) return;
         
         setIsCheckingIn(true);
         try {
@@ -350,7 +349,15 @@ export default function AttendancePage() {
                 status: 'present',
             };
             
-            addDocumentNonBlocking(collection(firestore, 'attendances'), newAttendance);
+            await addDocumentNonBlocking(collection(firestore, 'attendances'), newAttendance);
+
+            sendAttendanceNotice({
+                userName: userProfile.displayName || user.email!,
+                status: 'Hadir Tepat Waktu',
+                photoUrl: photoUrl,
+                coordinates: coordinates,
+            }).catch(err => console.error("Telegram notification failed:", err));
+
             toast({ title: 'Absen Berhasil!', description: 'Kehadiran Anda telah dicatat.' });
         } catch (error: any) {
             let description = 'Terjadi kesalahan yang tidak diketahui.';
@@ -414,6 +421,9 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished }: { todaySchedul
     const firestore = useFirestore();
     const storage = useStorage();
     const { toast } = useToast();
+    
+    const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
+    const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
 
     const [leaveType, setLeaveType] = useState<'sick-leave' | 'cuti' | 'late' | 'remote-progress'>('sick-leave');
     const [reason, setReason] = useState('');
@@ -466,13 +476,14 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished }: { todaySchedul
     };
 
     const handleSubmit = async () => {
-        if (!user || !user.email) return;
+        if (!user || !user.email || !userProfile) return;
         setIsSubmitting(true);
         
         try {
             if (leaveType === 'sick-leave' || leaveType === 'cuti') {
                 if (!reason.trim() || !evidenceFile) {
                     toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Mohon isi alasan dan unggah foto bukti.' });
+                    setIsSubmitting(false);
                     return;
                 }
                 const filePath = `hr_evidence/${user.uid}/${Date.now()}-${evidenceFile.name}`;
@@ -490,11 +501,20 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished }: { todaySchedul
                     createdAt: todaySchedule?.createdAt || Timestamp.now(),
                 };
                 await setDoc(scheduleDocRef, scheduleData, { merge: true });
+
+                sendAttendanceNotice({
+                    userName: userProfile.displayName || user.email,
+                    status: leaveType === 'sick-leave' ? 'Izin Sakit/Mendesak' : 'Cuti',
+                    reason: reason,
+                    photoUrl: evidenceUrl,
+                }).catch(err => console.error("Telegram notification failed:", err));
+
                 toast({ title: 'Pengajuan Terkirim', description: 'Status jadwal Anda telah diperbarui.' });
 
             } else if (leaveType === 'late' || leaveType === 'remote-progress') {
                 if (!reason.trim() || !selfie) {
                     toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Mohon isi alasan dan ambil swafoto.' });
+                    setIsSubmitting(false);
                     return;
                 }
 
@@ -520,6 +540,15 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished }: { todaySchedul
                     reason: reason,
                 };
                 await addDocumentNonBlocking(collection(firestore, 'attendances'), attendanceData);
+
+                sendAttendanceNotice({
+                    userName: userProfile.displayName || user.email,
+                    status: leaveType === 'late' ? 'Izin Terlambat' : 'Izin Langsung Progres',
+                    reason: reason,
+                    photoUrl: photoUrl,
+                    coordinates: coordinates,
+                }).catch(err => console.error("Telegram notification failed:", err));
+
                 toast({ title: 'Izin Terkirim', description: 'Absensi izin Anda telah tercatat.' });
             }
             onFinished();
