@@ -2,35 +2,59 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, MessageSquare } from 'lucide-react';
+import { Users, MessageSquare, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { UserProfile } from '@/lib/types';
 import Link from 'next/link';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export default function ChatHubPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 5;
+
   const usersQuery = useMemoFirebase(() => {
     if (!user) return null;
-    // Fetch all users and filter on the client to avoid complex index requirements.
     return query(collection(firestore, 'users'));
   }, [user, firestore]);
 
   const { data: allUsers, isLoading: areUsersLoading } = useCollection<UserProfile>(usersQuery);
 
-  // Filter out the current user on the client side
-  const users = useMemo(() => {
+  const sortedUsers = useMemo(() => {
       if (!allUsers || !user) return [];
-      // Filter for approved users and sort by display name, then filter out the current user.
       return allUsers
         .filter(u => u.registrationStatus === 'approved' && u.id !== user.uid)
         .sort((a, b) => (a.displayName || a.email).localeCompare(b.displayName || b.email));
   }, [allUsers, user]);
+
+  const filteredUsers = useMemo(() => {
+      if (!searchQuery) return sortedUsers;
+      const lowercasedQuery = searchQuery.toLowerCase();
+      return sortedUsers.filter(u => 
+        (u.displayName?.toLowerCase().includes(lowercasedQuery)) ||
+        (u.email?.toLowerCase().includes(lowercasedQuery))
+      );
+  }, [sortedUsers, searchQuery]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
+
+  const paginatedUsers = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return filteredUsers.slice(startIndex, endIndex);
+  }, [filteredUsers, currentPage]);
 
   const isLoading = isUserLoading || areUsersLoading;
 
@@ -61,6 +85,15 @@ export default function ChatHubPage() {
           <CardHeader>
               <CardTitle>Percakapan Pribadi</CardTitle>
               <CardDescription>Pilih pengguna untuk memulai percakapan pribadi.</CardDescription>
+              <div className="pt-4">
+                  <Label htmlFor="search-user" className="sr-only">Cari Pengguna</Label>
+                  <Input 
+                      id="search-user"
+                      placeholder="Cari nama atau email pengguna..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+              </div>
           </CardHeader>
           <CardContent>
               {isLoading ? (
@@ -69,9 +102,9 @@ export default function ChatHubPage() {
                       <Skeleton className="h-12 w-full" />
                       <Skeleton className="h-12 w-full" />
                   </div>
-              ) : users && users.length > 0 ? (
+              ) : paginatedUsers && paginatedUsers.length > 0 ? (
                   <div className="space-y-2">
-                      {users.map((otherUser) => (
+                      {paginatedUsers.map((otherUser) => (
                           <Link href={`/dashboard/chat/${otherUser.id}`} key={otherUser.id}>
                               <div className="flex items-center gap-4 p-2 rounded-lg hover:bg-muted transition-colors">
                                   <Avatar>
@@ -88,9 +121,38 @@ export default function ChatHubPage() {
                       ))}
                   </div>
               ) : (
-                  <p className="text-muted-foreground text-center py-4">Tidak ada pengguna lain yang ditemukan.</p>
+                  <p className="text-muted-foreground text-center py-4">
+                    {searchQuery ? 'Tidak ada pengguna yang cocok dengan pencarian Anda.' : 'Tidak ada pengguna lain yang ditemukan.'}
+                  </p>
               )}
           </CardContent>
+           {totalPages > 1 && (
+            <CardFooter>
+                <div className="text-xs text-muted-foreground">
+                    Halaman <strong>{currentPage}</strong> dari <strong>{totalPages}</strong>
+                </div>
+                <div className="flex items-center gap-2 ml-auto">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                        disabled={currentPage === 1}
+                    >
+                        <ChevronLeft className="h-4 w-4" />
+                        Sebelumnya
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                        disabled={currentPage === totalPages}
+                    >
+                        Berikutnya
+                        <ChevronRight className="h-4 w-4" />
+                    </Button>
+                </div>
+            </CardFooter>
+           )}
       </Card>
     </div>
   );
