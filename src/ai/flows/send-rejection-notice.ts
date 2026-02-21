@@ -9,8 +9,8 @@ import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import TelegramBot from 'node-telegram-bot-api';
 
-const TELEGRAM_BOT_TOKEN = '8043290500:AAGxBvwZvkyASJb3a_q8wEBiveyVE2NN9lY';
-const TELEGRAM_CHAT_ID = '-4190909912';
+const TELEGRAM_BOT_TOKEN = 'YOUR_FINANCE_BOT_TOKEN_HERE';
+const TELEGRAM_CHAT_ID = 'YOUR_FINANCE_CHAT_ID_HERE';
 
 const SendRejectionNoticeInputSchema = z.object({
   picName: z.string(),
@@ -38,8 +38,8 @@ const sendRejectionNoticeFlow = ai.defineFlow(
     outputSchema: SendRejectionNoticeOutputSchema,
   },
   async (input) => {
-    if (!TELEGRAM_BOT_TOKEN) {
-      const errorMsg = 'Telegram Bot Token is not configured.';
+    if (!TELEGRAM_BOT_TOKEN || TELEGRAM_BOT_TOKEN === 'YOUR_FINANCE_BOT_TOKEN_HERE') {
+      const errorMsg = 'Telegram Bot Token for Finance is not configured.';
       console.error(errorMsg);
       return { success: false, error: errorMsg };
     }
