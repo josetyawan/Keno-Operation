@@ -32,9 +32,8 @@ export function UserNav() {
   const { data: userProfile } = useDoc<UserProfile>(userDocRef);
   const isAdmin = userProfile?.role === 'admin';
 
-  const handleLogout = async () => {
-    await auth.signOut();
-    router.push('/login');
+  const handleLogout = () => {
+    router.push('/goodbye');
   };
 
   if (!user) {

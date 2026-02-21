@@ -395,7 +395,7 @@ export default function DashboardLayout({
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <Button size="sm" className="w-full" onClick={() => auth.signOut()}>
+                    <Button size="sm" className="w-full" onClick={() => router.push('/goodbye')}>
                         <LogOut className="mr-2 h-4 w-4" />
                         Logout
                     </Button>
