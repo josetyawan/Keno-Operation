@@ -45,6 +45,12 @@ const nextConfig: NextConfig = {
         hostname: 'maps.googleapis.com',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'pagead2.googlesyndication.com',
+        port: '',
+        pathname: '/**',
       }
     ],
   },
