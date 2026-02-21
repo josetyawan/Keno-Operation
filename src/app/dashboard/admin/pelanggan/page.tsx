@@ -53,7 +53,23 @@ import { format } from 'date-fns';
 
 const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
 
-// --- Helper & Sub-components ---
+// --- Helper Functions ---
+
+const parseIndonesianDate = (dateString: string): Date => {
+  if (!dateString) return new Date(0); // For sorting purposes, invalid dates go to the end
+  const months: { [key: string]: number } = {
+    'januari': 0, 'februari': 1, 'maret': 2, 'april': 3, 'mei': 4, 'juni': 5,
+    'juli': 6, 'agustus': 7, 'september': 8, 'oktober': 9, 'november': 10, 'desember': 11
+  };
+  const parts = dateString.toLowerCase().split(' ');
+  if (parts.length !== 3) return new Date(0);
+  const day = parseInt(parts[0], 10);
+  const month = months[parts[1]];
+  const year = parseInt(parts[2], 10);
+
+  if (isNaN(day) || month === undefined || isNaN(year)) return new Date(0);
+  return new Date(year, month, day);
+};
 
 const formatWaNumber = (phone: string) => {
     let cleanPhone = phone.replace(/\D/g, '');
@@ -454,11 +470,11 @@ export default function AdminPelangganPage() {
       const csvData = await response.text();
       const workbook = XLSX.read(csvData, { type: 'string' });
       const sheetName = workbook.SheetNames[0];
-      const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+      const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { raw: false });
 
       const history = jsonData.filter((row: any) =>
         row['No Service']?.toString().trim() === serviceNumberToFind
-      ).sort((a: any, b: any) => new Date(b.Timestamp).getTime() - new Date(a.Timestamp).getTime());
+      ).sort((a: any, b: any) => parseIndonesianDate(b.Tanggal).getTime() - parseIndonesianDate(a.Tanggal).getTime());
 
       setSheetHistory(history);
       if (history.length === 0) {
@@ -661,10 +677,10 @@ export default function AdminPelangganPage() {
                                 <Loader2 className="h-6 w-6 animate-spin" />
                             </div>
                         ) : sheetHistory.length > 0 ? (
-                            <div className="hidden md:block">
+                            <div className="overflow-x-auto">
                                 <Table>
-                                    <TableHeader><TableRow><TableHead>Tanggal Lapor</TableHead><TableHead>No. Tiket DSC</TableHead><TableHead>Keluhan</TableHead></TableRow></TableHeader>
-                                    <TableBody>{sheetHistory.map((g, i) => (<TableRow key={i}><TableCell className="whitespace-nowrap">{g['Timestamp'] || '-'}</TableCell><TableCell>{g['No Tiket DSC'] || '-'}</TableCell><TableCell>{g['Keluhan']}</TableCell></TableRow>))}</TableBody>
+                                    <TableHeader><TableRow><TableHead>Tanggal Lapor</TableHead><TableHead>No. Tiket</TableHead><TableHead>Keterangan</TableHead></TableRow></TableHeader>
+                                    <TableBody>{sheetHistory.map((g, i) => (<TableRow key={i}><TableCell className="whitespace-nowrap">{g['Tanggal'] || '-'}</TableCell><TableCell>{g['No Tiket'] || '-'}</TableCell><TableCell>{g['Keterangan']}</TableCell></TableRow>))}</TableBody>
                                 </Table>
                             </div>
                         ) : (
