@@ -44,7 +44,7 @@ import { format, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import * as XLSX from 'xlsx';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { saveRiwayat } from './actions';
+import { syncRiwayatFromSheet } from './actions';
 
 
 const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
@@ -478,41 +478,9 @@ export default function AdminPelangganPage() {
   };
 
   const handleFetchFromSheet = async () => {
-    const url = process.env.NEXT_PUBLIC_APPS_SCRIPT_WEB_APP_URL;
-    if (!url) {
-        toast({
-            variant: 'destructive',
-            title: 'URL Belum Dikonfigurasi',
-            description: 'URL Apps Script tidak ditemukan di konfigurasi aplikasi.',
-        });
-        return;
-    }
-
     setIsFetchingSheet(true);
     try {
-        const response = await fetch(url);
-        
-        if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) {
-             throw new Error('Respons dari server bukan format JSON. Ini biasanya karena masalah izin di Google Apps Script. Pastikan Web App di-deploy dengan akses "Anyone".');
-        }
-
-        const data = await response.json();
-
-        if (data.error) {
-            throw new Error(`Galat dari skrip Google: ${data.message}`);
-        }
-
-        if (!Array.isArray(data)) {
-            throw new Error('Format data dari Google Sheet tidak valid (bukan array).');
-        }
-
-        if (data.length === 0) {
-            toast({ title: 'Data Terbaru', description: 'Tidak ada data baru untuk disinkronkan dari Google Sheet.' });
-            setIsFetchingSheet(false);
-            return;
-        }
-
-        const result = await saveRiwayat(data);
+        const result = await syncRiwayatFromSheet();
 
         if (result.success) {
             toast({
@@ -524,7 +492,7 @@ export default function AdminPelangganPage() {
         }
 
     } catch (error: any) {
-        console.error("Client-side fetch error:", error);
+        console.error("Client-side fetch trigger error:", error);
         toast({
             variant: 'destructive',
             title: 'Sinkronisasi Gagal',
