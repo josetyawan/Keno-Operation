@@ -744,12 +744,19 @@ export default function AdminPelangganPage() {
             <CardTitle className="flex items-center gap-2"><Search /> Cari Pelanggan (Database Aplikasi)</CardTitle>
         </CardHeader>
         <CardContent>
-            <form onSubmit={handleSearch} className="flex items-end gap-4">
+            <form onSubmit={handleSearch} className="flex items-end gap-4 flex-wrap">
                 <div className="grid gap-2 flex-grow">
                     <Label htmlFor="no-service-search">Nomor Service</Label>
                     <Input id="no-service-search" placeholder="Masukkan No. Service..." value={searchNoService} onChange={(e) => setSearchNoService(e.target.value)} />
                 </div>
-                <Button type="submit" disabled={isSearching}>{isSearching ? <Loader2 className="animate-spin" /> : 'Cari'}</Button>
+                <div className="flex gap-2">
+                    <Button type="submit" disabled={isSearching}>{isSearching ? <Loader2 className="animate-spin" /> : 'Cari'}</Button>
+                    <Button asChild variant="secondary">
+                        <Link href="https://t.me/B2BLapor_bot" target="_blank">
+                            <Bot className="mr-2 h-4 w-4" /> Lanjut ke Bot
+                        </Link>
+                    </Button>
+                </div>
             </form>
         </CardContent>
       </Card>
