@@ -19,6 +19,17 @@ import {
   DialogClose,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,10 +41,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, MapPin, Loader2, Search, History, Phone, Pencil, Wrench, QrCode, FileSpreadsheet, AlertCircle, Info, Upload } from 'lucide-react';
+import { PlusCircle, MapPin, Loader2, Search, History, Phone, Pencil, Wrench, QrCode, FileSpreadsheet, AlertCircle, Info, Upload, Trash2 } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, useDoc, useStorage } from '@/firebase';
-import { collection, query, doc, serverTimestamp, where, getDocs, limit, orderBy, Timestamp, writeBatch } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, useDoc, useStorage, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { collection, query, doc, serverTimestamp, where, getDocs, limit, orderBy, Timestamp, writeBatch, deleteDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { UserProfile, Pelanggan, RiwayatGangguan } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -90,6 +101,23 @@ function NewPelangganDialog({ isOpen, onOpenChange, onFinished }: { isOpen: bool
     const [fotoCpPreview, setFotoCpPreview] = useState<string | null>(null);
     const [isGettingLocation, setIsGettingLocation] = useState(false);
 
+     useEffect(() => {
+        if (!isOpen) {
+            // Reset all state when dialog closes
+            setNoService('');
+            setNamaPelanggan('');
+            setAlamat('');
+            setNomorTelepon('');
+            setKoordinat('');
+            setServiceArea('');
+            setOdpName('');
+            setOdpPort('');
+            setOdpQRCodeUrl('');
+            setFotoCp(null);
+            setFotoCpPreview(null);
+        }
+    }, [isOpen]);
+
     const handleGetLocation = () => {
         setIsGettingLocation(true);
         navigator.geolocation.getCurrentPosition(
@@ -144,7 +172,6 @@ function NewPelangganDialog({ isOpen, onOpenChange, onFinished }: { isOpen: bool
                 dateAdded: serverTimestamp(),
             };
             const docRef = await addDocumentNonBlocking(collection(firestore, 'pelanggan'), newPelangganData);
-            toast({ title: 'Pelanggan berhasil dibuat' });
             onFinished({ ...newPelangganData, id: docRef.id } as Pelanggan);
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Gagal menyimpan', description: error.message });
@@ -419,6 +446,7 @@ export default function AdminPelangganPage() {
   const [isUpdateAssetDialogOpen, setIsUpdateAssetDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
     useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
@@ -479,6 +507,39 @@ export default function AdminPelangganPage() {
     }
     setIsSearching(false);
   };
+  
+  const handleDeletePelanggan = async () => {
+    if (!searchedPelanggan || !isAdminOrKorlap) return;
+
+    setIsDeleting(true);
+    try {
+        const docRef = doc(firestore, 'pelanggan', searchedPelanggan.id);
+        await deleteDoc(docRef);
+
+        toast({
+            title: 'Pelanggan Dihapus',
+            description: `Pelanggan ${searchedPelanggan.namaPelanggan} telah dihapus.`,
+        });
+        
+        setSearchedPelanggan(null);
+        setSearchNoService('');
+        setSearchPerformed(false);
+    } catch (error: any) {
+        const contextualError = new FirestorePermissionError({
+            operation: 'delete',
+            path: `pelanggan/${searchedPelanggan.id}`,
+        }, error);
+        errorEmitter.emit('permission-error', contextualError);
+        toast({
+            variant: 'destructive',
+            title: 'Gagal Menghapus',
+            description: error.message,
+        });
+    } finally {
+        setIsDeleting(false);
+    }
+};
+
 
   const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files || event.target.files.length === 0) {
@@ -700,6 +761,27 @@ export default function AdminPelangganPage() {
                         <CardDescription>Data pelanggan yang tersimpan di database aplikasi.</CardDescription>
                     </div>
                      <div className="flex gap-2">
+                        {isAdminOrKorlap && (
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive" size="sm" disabled={isDeleting}><Trash2 className="mr-2 h-4 w-4"/>Hapus</Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Anda Yakin?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            Tindakan ini akan menghapus pelanggan "{searchedPelanggan.namaPelanggan}" secara permanen. Ini tidak dapat dibatalkan.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Batal</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleDeletePelanggan} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                                            {isDeleting ? <Loader2 className="animate-spin" /> : 'Ya, Hapus'}
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        )}
                         <Button variant="outline" size="sm" onClick={() => setIsAddContactDialogOpen(true)}><Phone className="mr-2 h-4 w-4"/>Tambah Kontak</Button>
                         <Button variant="outline" size="sm" onClick={() => setIsUpdateLocationDialogOpen(true)}><Pencil className="mr-2 h-4 w-4"/>Ubah Lokasi</Button>
                         <Button variant="outline" size="sm" onClick={() => setIsUpdateAssetDialogOpen(true)}><Wrench className="mr-2 h-4 w-4"/>Ubah Info Aset</Button>
@@ -786,6 +868,15 @@ export default function AdminPelangganPage() {
         onFinished={(newPelanggan) => {
             setSearchedPelanggan(newPelanggan);
             setIsNewPelangganDialogOpen(false);
+            toast({
+                title: 'Pelanggan Dibuat',
+                description: `${newPelanggan.namaPelanggan} telah berhasil ditambahkan.`,
+                action: (
+                    <Button asChild>
+                        <Link href="https://t.me/B2BLapor_bot" target="_blank">Lanjut ke Bot</Link>
+                    </Button>
+                )
+            });
         }}
       />
       {searchedPelanggan && (
