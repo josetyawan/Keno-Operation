@@ -64,7 +64,7 @@
 //     - **Pastikan Langkah 0 sudah selesai.**
 //     - Di editor Apps Script, klik ikon "+" di sebelah "Libraries".
 //     - Masukkan ID Skrip berikut: `1VUSl4b1r1L51_C5Yh-dC6a5M93wopeAi_hG-ZFNdqPEB1lT59i_lA2sT` (Ini adalah library "FirestoreGoogleAppsScript"). Klik "Cari".
-//     - Jika tidak ditemukan, pastikan Langkah 0 benar-benar sudah berhasil.
+//     - **TROUBLESHOOTING**: Jika tidak ditemukan, artinya Langkah 0 belum berhasil. **Ulangi Langkah 0 dengan sangat teliti.**
 //     - Pastikan identifier-nya adalah `Firestore`. Pilih versi terbaru, lalu klik "Tambahkan".
 
 // ================== LANGKAH 2: KODE APPS SCRIPT BARU ==================
