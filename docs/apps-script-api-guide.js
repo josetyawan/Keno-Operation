@@ -3,6 +3,13 @@
 // Metode BARU ini menggunakan SERVICE ACCOUNT untuk menulis data dari bot Telegram langsung ke Firestore.
 // Ini lebih andal, aman, dan merupakan praktik terbaik.
 
+// ================== LANGKAH 0: HUBUNGKAN KE PROYEK GOOGLE CLOUD (WAJIB) ==================
+// 1.  Di editor Apps Script, klik ikon **Pengaturan Proyek** (roda gigi ⚙️) di sebelah kiri.
+// 2.  Scroll ke bawah hingga Anda menemukan bagian "Proyek Google Cloud Platform (GCP)".
+// 3.  Klik tombol **"Ubah proyek"**.
+// 4.  Masukkan **Nomor Proyek GCP** Anda. Nomor Proyek untuk `studio-7759201113-b7263` adalah `536501296484`. Tempelkan nomor tersebut, lalu klik **"Setel proyek"**.
+// 5.  Setelah terhubung, Anda bisa melanjutkan ke langkah berikutnya. Ini akan mengatasi galat "Tidak dapat mencari library".
+
 // ================== LANGKAH 1: PERSIAPAN DI GOOGLE CLOUD & FIREBASE ==================
 // 1.  **Aktifkan Firestore API**:
 //     - Buka Google Cloud Console: https://console.cloud.google.com/
