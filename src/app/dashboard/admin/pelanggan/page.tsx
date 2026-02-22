@@ -41,7 +41,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, MapPin, Loader2, Search, History, Phone, Pencil, Wrench, QrCode, FileSpreadsheet, AlertCircle, Info, Upload, Trash2 } from 'lucide-react';
+import { PlusCircle, MapPin, Loader2, Search, History, Phone, Pencil, Wrench, QrCode, FileSpreadsheet, AlertCircle, Info, Upload, Trash2, Bot } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, useDoc, useStorage, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, query, doc, serverTimestamp, where, getDocs, limit, orderBy, Timestamp, writeBatch, deleteDoc } from 'firebase/firestore';
@@ -509,16 +509,29 @@ export default function AdminPelangganPage() {
   };
   
   const handleDeletePelanggan = async () => {
-    if (!searchedPelanggan || !isAdminOrKorlap) return;
+    if (!searchedPelanggan || !isAdminOrKorlap || !firestore) return;
 
     setIsDeleting(true);
     try {
-        const docRef = doc(firestore, 'pelanggan', searchedPelanggan.id);
-        await deleteDoc(docRef);
+        const batch = writeBatch(firestore);
+
+        const pelangganDocRef = doc(firestore, 'pelanggan', searchedPelanggan.id);
+        batch.delete(pelangganDocRef);
+        
+        const riwayatQuery = query(collection(firestore, 'riwayat-gangguan'), where('noService', '==', searchedPelanggan.noService));
+        const riwayatSnapshot = await getDocs(riwayatQuery);
+        
+        if (!riwayatSnapshot.empty) {
+            riwayatSnapshot.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+        }
+
+        await batch.commit();
 
         toast({
-            title: 'Pelanggan Dihapus',
-            description: `Pelanggan ${searchedPelanggan.namaPelanggan} telah dihapus.`,
+            title: 'Pelanggan & Riwayat Dihapus',
+            description: `Pelanggan ${searchedPelanggan.namaPelanggan} dan ${riwayatSnapshot.size} riwayat laporannya telah dihapus.`,
         });
         
         setSearchedPelanggan(null);
@@ -747,7 +760,14 @@ export default function AdminPelangganPage() {
           <Card>
               <CardContent className="p-6 text-center">
                   <p className="text-muted-foreground mb-4">Pelanggan dengan No. Service "{searchNoService}" tidak ditemukan di database aplikasi.</p>
-                  <Button onClick={() => setIsNewPelangganDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/>Tambah Pelanggan Baru</Button>
+                  <div className="flex justify-center gap-2">
+                    <Button onClick={() => setIsNewPelangganDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/>Tambah Pelanggan Baru</Button>
+                     <Button asChild variant="secondary">
+                        <Link href="https://t.me/B2BLapor_bot" target="_blank">
+                            <Bot className="mr-2 h-4 w-4" /> Lanjut Lapor ke Bot
+                        </Link>
+                    </Button>
+                  </div>
               </CardContent>
           </Card>
       )}
@@ -760,7 +780,7 @@ export default function AdminPelangganPage() {
                         <CardTitle>Detail Pelanggan</CardTitle>
                         <CardDescription>Data pelanggan yang tersimpan di database aplikasi.</CardDescription>
                     </div>
-                     <div className="flex gap-2">
+                     <div className="flex flex-wrap gap-2">
                         {isAdminOrKorlap && (
                             <AlertDialog>
                                 <AlertDialogTrigger asChild>
@@ -770,7 +790,7 @@ export default function AdminPelangganPage() {
                                     <AlertDialogHeader>
                                         <AlertDialogTitle>Anda Yakin?</AlertDialogTitle>
                                         <AlertDialogDescription>
-                                            Tindakan ini akan menghapus pelanggan "{searchedPelanggan.namaPelanggan}" secara permanen. Ini tidak dapat dibatalkan.
+                                            Tindakan ini akan menghapus pelanggan "{searchedPelanggan.namaPelanggan}" dan semua riwayat laporannya secara permanen. Ini tidak dapat dibatalkan.
                                         </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
@@ -782,6 +802,11 @@ export default function AdminPelangganPage() {
                                 </AlertDialogContent>
                             </AlertDialog>
                         )}
+                        <Button asChild variant="outline" size="sm">
+                            <Link href="https://t.me/B2BLapor_bot" target="_blank">
+                                <Bot className="mr-2 h-4 w-4" /> Lanjut ke Bot
+                            </Link>
+                        </Button>
                         <Button variant="outline" size="sm" onClick={() => setIsAddContactDialogOpen(true)}><Phone className="mr-2 h-4 w-4"/>Tambah Kontak</Button>
                         <Button variant="outline" size="sm" onClick={() => setIsUpdateLocationDialogOpen(true)}><Pencil className="mr-2 h-4 w-4"/>Ubah Lokasi</Button>
                         <Button variant="outline" size="sm" onClick={() => setIsUpdateAssetDialogOpen(true)}><Wrench className="mr-2 h-4 w-4"/>Ubah Info Aset</Button>

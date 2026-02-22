@@ -78,9 +78,8 @@ service cloud.firestore {
     }
 
     match /riwayat-gangguan/{riwayatId} {
-      // Allow write access for the bot API, which is protected by a secret key.
-      // Read access is still protected.
-      allow write: if true;
+      // Admins/Korlaps can write via file import. Server can write via webhook.
+      allow write: if isAdmin() || isKorlap(); 
       allow read: if hasAllProAccess() || isKorlap();
     }
 
@@ -124,6 +123,18 @@ service cloud.firestore {
       allow list: if isApproved();
       allow create: if isApproved() && isCreatingOwn('userId');
       allow update, delete: if (isApproved() && isUpdatingOwn('userId')) || isAdmin() || isKorlap();
+    }
+    
+    match /messages/{messageId} {
+      allow read: if isApproved();
+      allow create: if isApproved() && isCreatingOwn('userId');
+    }
+
+    match /chats/{chatId} {
+      allow read, write: if request.auth.uid in resource.data.participants;
+      match /messages/{messageId} {
+        allow read, write: if request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+      }
     }
   }
 }
