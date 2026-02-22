@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -645,7 +646,7 @@ export default function AdminPelangganPage() {
                   <DialogHeader>
                       <DialogTitle>Import Riwayat Gangguan</DialogTitle>
                       <DialogDescription>
-                          Unggah file Excel (.xlsx) dengan riwayat gangguan. Pastikan file Anda memiliki kolom "No Service" dan "Tanggal Lapor".
+                          Unggah file Excel (.xlsx) atau CSV (.csv) dengan riwayat gangguan. Pastikan file Anda memiliki kolom "No Service" dan "Tanggal Lapor".
                       </DialogDescription>
                   </DialogHeader>
                   <div className="py-4">
