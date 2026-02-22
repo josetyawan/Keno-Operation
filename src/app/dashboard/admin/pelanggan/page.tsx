@@ -29,7 +29,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, MapPin, Loader2, Search, History, Phone, Pencil, Wrench, QrCode, FileSpreadsheet, DownloadCloud } from 'lucide-react';
+import { PlusCircle, MapPin, Loader2, Search, History, Phone, Pencil, Wrench, QrCode, FileSpreadsheet, DownloadCloud, AlertCircle } from 'lucide-react';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, useDoc, useStorage } from '@/firebase';
 import { collection, query, doc, serverTimestamp, where, getDocs, limit, orderBy, Timestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -413,6 +414,7 @@ export default function AdminPelangganPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchPerformed, setSearchPerformed] = useState(false);
   const [isFetchingSheet, setIsFetchingSheet] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
   
   const [isNewPelangganDialogOpen, setIsNewPelangganDialogOpen] = useState(false);
   const [isAddContactDialogOpen, setIsAddContactDialogOpen] = useState(false);
@@ -479,6 +481,7 @@ export default function AdminPelangganPage() {
 
   const handleFetchFromSheet = async () => {
     setIsFetchingSheet(true);
+    setSyncError(null);
     try {
         const result = await syncRiwayatFromSheet();
 
@@ -488,17 +491,12 @@ export default function AdminPelangganPage() {
                 description: result.message,
             });
         } else {
-            throw new Error(result.message);
+            setSyncError(result.message);
         }
 
     } catch (error: any) {
         console.error("Client-side fetch trigger error:", error);
-        toast({
-            variant: 'destructive',
-            title: 'Sinkronisasi Gagal',
-            description: error.message,
-            duration: 9000,
-        });
+        setSyncError(error.message || 'Terjadi kesalahan pada sisi klien saat memanggil server.');
     } finally {
         setIsFetchingSheet(false);
     }
@@ -572,6 +570,18 @@ export default function AdminPelangganPage() {
         </div>
       </div>
       
+       {syncError && (
+        <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Sinkronisasi Gagal</AlertTitle>
+            <AlertDescription>
+                {syncError}
+                <br />
+                <span className="text-xs">Pastikan pengaturan deployment Apps Script Anda sudah benar (di-deploy sebagai Web App dengan akses untuk "Anyone").</span>
+            </AlertDescription>
+        </Alert>
+      )}
+
       <Card className="mb-6">
         <CardHeader>
             <CardTitle className="flex items-center gap-2"><Search /> Cari Pelanggan (Database Aplikasi)</CardTitle>
