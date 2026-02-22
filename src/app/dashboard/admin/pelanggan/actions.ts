@@ -6,15 +6,13 @@ import { initializeFirebase } from '@/firebase/init';
 import type { RiwayatGangguan } from '@/lib/types';
 import { isValid, parse } from 'date-fns';
 
-const APPS_SCRIPT_URL = process.env.APPS_SCRIPT_WEB_APP_URL;
-
-export async function fetchFromSheet(): Promise<{ success: boolean; message: string; count: number }> {
-    if (!APPS_SCRIPT_URL) {
-        return { success: false, message: 'URL Apps Script belum diatur di file .env server.', count: 0 };
+export async function fetchFromSheet(url: string): Promise<{ success: boolean; message: string; count: number }> {
+    if (!url) {
+        return { success: false, message: 'URL Apps Script belum diatur.', count: 0 };
     }
 
     try {
-        const response = await fetch(APPS_SCRIPT_URL, {
+        const response = await fetch(url, {
             method: 'GET',
             redirect: 'manual', // Do not follow redirects automatically
         });

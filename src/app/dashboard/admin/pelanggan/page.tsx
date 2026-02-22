@@ -29,7 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Bot, PlusCircle, MapPin, Loader2, Upload, Search, History, Phone, Pencil, Wrench, QrCode, FileSpreadsheet, DownloadCloud } from 'lucide-react';
+import { PlusCircle, MapPin, Loader2, Search, History, Phone, Pencil, Wrench, QrCode, FileSpreadsheet, DownloadCloud } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, useDoc, useStorage } from '@/firebase';
 import { collection, query, doc, serverTimestamp, where, getDocs, limit, orderBy, Timestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -413,6 +413,7 @@ export default function AdminPelangganPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchPerformed, setSearchPerformed] = useState(false);
   const [isFetchingSheet, setIsFetchingSheet] = useState(false);
+  const [appsScriptUrl, setAppsScriptUrl] = useState('');
   
   const [isNewPelangganDialogOpen, setIsNewPelangganDialogOpen] = useState(false);
   const [isAddContactDialogOpen, setIsAddContactDialogOpen] = useState(false);
@@ -478,9 +479,17 @@ export default function AdminPelangganPage() {
   };
 
   const handleFetchFromSheet = async () => {
+    if (!appsScriptUrl.trim()) {
+        toast({
+            variant: 'destructive',
+            title: 'URL Diperlukan',
+            description: 'Silakan masukkan URL Google Apps Script Anda terlebih dahulu.',
+        });
+        return;
+    }
     setIsFetchingSheet(true);
     try {
-      const result = await fetchFromSheet();
+      const result = await fetchFromSheet(appsScriptUrl.trim());
       if (result.success) {
         toast({
           title: 'Sinkronisasi Berhasil',
@@ -560,10 +569,6 @@ export default function AdminPelangganPage() {
       <div className="flex items-start justify-between mb-8 flex-wrap gap-4">
         <div><h1 className="text-3xl font-bold tracking-tight">Data Pelanggan & Riwayat Gangguan</h1><p className="text-muted-foreground mt-1">Cari pelanggan berdasarkan No. Service untuk melihat riwayat atau menambah data.</p></div>
         <div className="flex flex-wrap gap-2">
-            <Button onClick={handleFetchFromSheet} variant="secondary" disabled={isFetchingSheet}>
-              {isFetchingSheet ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Bot className="mr-2 h-4 w-4" />}
-              {isFetchingSheet ? 'Mengambil Data...' : 'Ambil Riwayat dari Sheet'}
-            </Button>
           {isAdmin && (
               <Button onClick={handleExportToExcel} variant="outline">
                   <FileSpreadsheet className="mr-2 h-4 w-4" />
@@ -572,6 +577,25 @@ export default function AdminPelangganPage() {
           )}
         </div>
       </div>
+
+       <Card className="mb-6">
+        <CardHeader>
+            <CardTitle>Konfigurasi API Google Sheet</CardTitle>
+            <CardDescription>Masukkan URL Web App dari Google Apps Script Anda untuk mengaktifkan sinkronisasi riwayat gangguan.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <div className="flex items-end gap-4">
+                 <div className="grid gap-2 flex-grow">
+                    <Label htmlFor="apps-script-url">URL Web App</Label>
+                    <Input id="apps-script-url" placeholder="https://script.google.com/macros/s/..." value={appsScriptUrl} onChange={(e) => setAppsScriptUrl(e.target.value)} />
+                </div>
+                <Button onClick={handleFetchFromSheet} variant="secondary" disabled={isFetchingSheet}>
+                  {isFetchingSheet ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <DownloadCloud className="mr-2 h-4 w-4" />}
+                  {isFetchingSheet ? 'Mengambil...' : 'Ambil Riwayat dari Sheet'}
+                </Button>
+            </div>
+        </CardContent>
+      </Card>
       
       <Card className="mb-6">
         <CardHeader>
