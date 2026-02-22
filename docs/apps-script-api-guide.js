@@ -31,14 +31,30 @@
 //
 // 4.  **Konfigurasi Skrip Apps Script**:
 //     - Buka editor Apps Script Anda.
-//     - Buat file baru di Apps Script dengan memilih **File > Baru > File Skrip**. Beri nama file `service-account-key.gs` (atau nama lain yang mudah diingat).
-//     - **PENTING**: Di dalam file baru tersebut, salin seluruh konten file JSON yang Anda unduh, lalu tempelkan dengan format berikut:
+//     - Buat file baru dengan memilih **File > Baru > File Skrip**. Beri nama file `service-account-key.gs`.
+//     - **HAPUS SEMUA** isi default di file baru tersebut.
+//     - Salin baris kode **di bawah ini** dan tempelkan ke dalam file `service-account-key.gs`:
 //
-//       `const service_account_key_json = { ... [TEMPEL SELURUH KONTEN JSON ANDA DI SINI] ... };`
+//       `const service_account_key_json = `
 //
-//       (Ganti `... [TEMPEL SELURUH KONTEN JSON ANDA DI SINI] ...` dengan isi file JSON Anda).
-//
-//     - Pastikan seluruh JSON berada di dalam kurung kurawal `{}` setelah tanda `=`.
+//     - **LANGSUNG SETELAH** tanda `=`, salin dan tempel **SELURUH ISI** file JSON yang Anda unduh dari Google Cloud.
+//     - **PENTING**: Jangan menambahkan karakter `...` atau kurung siku `[]`.
+//     - Hasil akhir di file `service-account-key.gs` Anda harus terlihat persis seperti ini (dengan nilai yang berbeda):
+//       ```javascript
+//       const service_account_key_json = {
+//         "type": "service_account",
+//         "project_id": "...",
+//         "private_key_id": "...",
+//         "private_key": "...",
+//         "client_email": "...",
+//         "client_id": "...",
+//         "auth_uri": "...",
+//         "token_uri": "...",
+//         "auth_provider_x509_cert_url": "...",
+//         "client_x509_cert_url": "...",
+//         "universe_domain": "..."
+//       };
+//       ```
 //
 // 5.  **Tambahkan Library Firestore**:
 //     - Di editor Apps Script, klik ikon "+" di sebelah "Libraries".
