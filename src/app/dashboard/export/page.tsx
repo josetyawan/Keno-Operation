@@ -83,6 +83,7 @@ const getProjectType = (segmen: string): ProjectType => {
 const getStatusVariant = (status: Nota['status']): VariantProps<typeof badgeVariants>['variant'] => {
     switch (status) {
         case 'verified':
+        case 'verified-tif':
             return 'outline';
         case 'rejected':
             return 'destructive';
@@ -93,6 +94,15 @@ const getStatusVariant = (status: Nota['status']): VariantProps<typeof badgeVari
             return 'secondary';
     }
 };
+
+const statusLabels: Record<string, string> = {
+  pending: 'Pending',
+  verified: 'Verified',
+  'verified-tif': 'Verified (TIF)',
+  rejected: 'Rejected',
+  paid: 'Paid',
+};
+
 
 // --- Report Generation Logic ---
 
@@ -558,7 +568,6 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
         </div>
     </div>`;
 };
-
 
 const generateBBMReport = (notas: Nota[], title: string): string => {
     // Group notas by date
@@ -1757,6 +1766,7 @@ export default function ExportPage() {
                                             <SelectItem value="all">Semua Status</SelectItem>
                                             <SelectItem value="pending">Pending</SelectItem>
                                             <SelectItem value="verified">Verified</SelectItem>
+                                            <SelectItem value="verified-tif">Verified (TIF)</SelectItem>
                                             <SelectItem value="rejected">Rejected</SelectItem>
                                             <SelectItem value="paid">Paid</SelectItem>
                                         </SelectContent>
@@ -1827,7 +1837,7 @@ export default function ExportPage() {
                                                 <div className="flex justify-between items-start flex-wrap gap-x-4 gap-y-1">
                                                     <div className="flex items-center gap-2 flex-wrap">
                                                         <span className="font-medium">{nota.namaPic}</span>
-                                                        <Badge variant={getStatusVariant(nota.status)} className="capitalize">{nota.status}</Badge>
+                                                        <Badge variant={getStatusVariant(nota.status)} className="capitalize">{statusLabels[nota.status] || nota.status}</Badge>
                                                         <Badge variant={nota.segmen.includes('BBM') ? 'destructive' : 'secondary'}>{nota.segmen}</Badge>
                                                     </div>
                                                     <div className="font-semibold text-base whitespace-nowrap">
@@ -1873,5 +1883,3 @@ export default function ExportPage() {
         </>
     );
 }
-
-    

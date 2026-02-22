@@ -17,7 +17,7 @@ export type Nota = {
   namaPic: string;
   fotoEvidenUrls?: (string | null)[];
   dateCreated: any; // Using `any` to accommodate Firestore's serverTimestamp
-  status: 'pending' | 'verified' | 'rejected' | 'paid';
+  status: 'pending' | 'verified' | 'rejected' | 'paid' | 'verified-tif';
   tanggalVerifikasi?: any;
   rejectionReason?: string;
   tanggalPembayaran?: any;

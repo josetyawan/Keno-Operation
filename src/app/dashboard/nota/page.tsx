@@ -113,6 +113,7 @@ function NotaActions({ nota }: { nota: Nota }) {
 const getStatusVariant = (status: Nota['status']): VariantProps<typeof badgeVariants>['variant'] => {
     switch (status) {
         case 'verified':
+        case 'verified-tif':
             return 'outline';
         case 'rejected':
             return 'destructive';
@@ -123,6 +124,15 @@ const getStatusVariant = (status: Nota['status']): VariantProps<typeof badgeVari
             return 'secondary';
     }
 };
+
+const statusLabels: Record<string, string> = {
+  pending: 'Pending',
+  verified: 'Verified',
+  'verified-tif': 'Verified (TIF)',
+  rejected: 'Rejected',
+  paid: 'Paid',
+};
+
 
 const safeToDate = (timestamp: any): Date | null => {
     if (!timestamp) return null;
@@ -317,6 +327,7 @@ export default function DashboardPage() {
                 <SelectItem value="all">Semua Status</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="verified">Verified</SelectItem>
+                <SelectItem value="verified-tif">Verified (TIF)</SelectItem>
                 <SelectItem value="rejected">Rejected</SelectItem>
                 <SelectItem value="paid">Paid</SelectItem>
               </SelectContent>
@@ -370,7 +381,7 @@ export default function DashboardPage() {
                     <TableCell className="text-muted-foreground">{nota.segmen}</TableCell>
                     <TableCell>
                       <Badge variant={getStatusVariant(nota.status)} className="capitalize">
-                        {nota.status}
+                        {statusLabels[nota.status] || nota.status}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right font-semibold">

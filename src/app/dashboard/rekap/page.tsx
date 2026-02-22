@@ -105,8 +105,8 @@ export default function RekapPage() {
 
     const notas = useMemo(() => {
         if (!notasFromQuery) return [];
-        // Also filter by status client-side to be safe
-        return notasFromQuery.filter(nota => nota.status === 'verified');
+        // Also filter by status client-side to be safe, including the new TIF status
+        return notasFromQuery.filter(nota => nota.status === 'verified' || nota.status === 'verified-tif');
     }, [notasFromQuery]);
     
     const usersCollection = useMemoFirebase(() => {

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { notFound, useRouter, useParams } from 'next/navigation';
@@ -53,6 +54,7 @@ const safeToDate = (timestamp: any): Date | null => {
 const getStatusVariant = (status: Nota['status']): VariantProps<typeof badgeVariants>['variant'] => {
     switch (status) {
         case 'verified':
+        case 'verified-tif':
             return 'outline';
         case 'rejected':
             return 'destructive';
@@ -62,6 +64,14 @@ const getStatusVariant = (status: Nota['status']): VariantProps<typeof badgeVari
         default:
             return 'secondary';
     }
+};
+
+const statusLabels: Record<string, string> = {
+  pending: 'Pending',
+  verified: 'Verified',
+  'verified-tif': 'Verified (TIF)',
+  rejected: 'Rejected',
+  paid: 'Paid',
 };
 
 
@@ -100,13 +110,20 @@ export default function NotaDetailPage() {
 
   const handleConfirmVerify = () => {
     if (!isAdmin || !notaRef || !verificationDate) return;
+    
+    const isBbmGenset = nota?.segmen === 'BBM Genset';
+    const newStatus = isBbmGenset ? 'verified-tif' : 'verified';
+    const descriptionText = isBbmGenset 
+        ? 'Status laporan telah diperbarui menjadi "verified-tif" untuk pengajuan ke TIF.'
+        : 'Status laporan telah diperbarui menjadi "verified".';
+
     updateDocumentNonBlocking(notaRef, { 
-        status: 'verified',
+        status: newStatus,
         tanggalVerifikasi: verificationDate
     });
     toast({
       title: 'Laporan Diverifikasi',
-      description: 'Status laporan telah diperbarui menjadi "verified".',
+      description: descriptionText,
     });
     setIsVerifyDialogOpen(false);
   };
@@ -230,6 +247,7 @@ export default function NotaDetailPage() {
   const tanggalLaporan = safeToDate(nota.tanggal) || new Date();
   const tanggalVerifikasi = safeToDate(nota.tanggalVerifikasi);
   const tanggalPembayaran = safeToDate(nota.tanggalPembayaran);
+  const isBbmGenset = nota.segmen === 'BBM Genset';
   
   const notaContentForSummary = `
   Tanggal: ${format(tanggalLaporan, 'dd MMMM yyyy')}
@@ -259,7 +277,7 @@ export default function NotaDetailPage() {
             variant={getStatusVariant(nota.status)}
             className="ml-auto sm:ml-0 capitalize"
           >
-            {nota.status}
+            {statusLabels[nota.status] || nota.status}
           </Badge>
         </div>
 
@@ -270,6 +288,9 @@ export default function NotaDetailPage() {
                 Oleh {nota.userEmail} di <strong>{nota.serviceArea}</strong> pada {format(tanggalLaporan, 'PPPPp')}
                 {nota.status === 'verified' && tanggalVerifikasi && (
                       ` | Diverifikasi pada: ${format(tanggalVerifikasi, 'dd MMM yyyy')}`
+                  )}
+                 {(nota.status === 'verified-tif' && tanggalVerifikasi) && (
+                      ` | Diajukan ke TIF pada: ${format(tanggalVerifikasi, 'dd MMM yyyy')}`
                   )}
                 {nota.status === 'paid' && tanggalPembayaran && (
                         ` | Dibayar pada: ${format(tanggalPembayaran, 'dd MMM yyyy')}`
@@ -422,14 +443,16 @@ export default function NotaDetailPage() {
                       <AlertDialog open={isVerifyDialogOpen} onOpenChange={setIsVerifyDialogOpen}>
                           <AlertDialogTrigger asChild>
                               <Button>
-                                  <CheckCircle /> Verifikasi
+                                  <CheckCircle /> {isBbmGenset ? 'Verifikasi (Pengajuan TIF)' : 'Verifikasi'}
                               </Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                               <AlertDialogHeader>
-                                  <AlertDialogTitle>Pilih Tanggal Verifikasi</AlertDialogTitle>
+                                  <AlertDialogTitle>{isBbmGenset ? 'Verifikasi Pengajuan TIF' : 'Pilih Tanggal Verifikasi'}</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                      Pilih tanggal kapan laporan ini dianggap telah diverifikasi. Tanggal ini akan digunakan untuk filter laporan terverifikasi.
+                                      {isBbmGenset
+                                          ? 'Pilih tanggal verifikasi untuk pengajuan ke TIF. Status akan diubah menjadi "verified-tif".'
+                                          : 'Pilih tanggal kapan laporan ini dianggap telah diverifikasi. Tanggal ini akan digunakan untuk filter laporan terverifikasi.'}
                                   </AlertDialogDescription>
                               </AlertDialogHeader>
                               <div className="flex justify-center py-4">
