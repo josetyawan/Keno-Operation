@@ -538,14 +538,6 @@ export default function AdminPelangganPage() {
         </div>
       </div>
       
-       <Alert variant="destructive" className="mb-6">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Metode Sinkronisasi Diperbarui</AlertTitle>
-            <AlertDescription>
-                Tombol "Ambil Riwayat dari Sheet" telah dinonaktifkan. Untuk mengimpor data dari bot Telegram, harap ikuti panduan baru yang diperbarui di file <strong>`docs/apps-script-api-guide.js`</strong>. Metode baru ini menggunakan Service Account untuk menulis data langsung ke database, yang lebih andal dan aman.
-            </AlertDescription>
-        </Alert>
-
       <Card className="mb-6">
         <CardHeader>
             <CardTitle className="flex items-center gap-2"><Search /> Cari Pelanggan (Database Aplikasi)</CardTitle>

@@ -78,8 +78,8 @@ service cloud.firestore {
     }
 
     match /riwayat-gangguan/{riwayatId} {
-      // Allow admins and korlaps to create/update/delete records (e.g., via CSV import or future UI).
-      // Service accounts bypass these rules, so the bot will still be able to write.
+      // Allow admins and korlaps to create/update/delete records.
+      // The server-side bot API bypasses these client rules.
       allow write: if isAdmin() || isKorlap();
       allow read: if hasAllProAccess() || isKorlap();
     }
@@ -124,6 +124,18 @@ service cloud.firestore {
       allow list: if isApproved();
       allow create: if isApproved() && isCreatingOwn('userId');
       allow update, delete: if (isApproved() && isUpdatingOwn('userId')) || isAdmin() || isKorlap();
+    }
+    
+    match /messages/{messageId} {
+      allow read: if isApproved();
+      allow create: if isApproved() && isCreatingOwn('userId');
+    }
+
+    match /chats/{chatId} {
+      allow read, write: if request.auth.uid in resource.data.participants;
+      match /messages/{messageId} {
+        allow read, write: if request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+      }
     }
   }
 }
