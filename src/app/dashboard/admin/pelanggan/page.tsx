@@ -44,7 +44,7 @@ import { format, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import * as XLSX from 'xlsx';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { fetchFromSheet } from './actions';
+import { saveRiwayat } from './actions';
 
 
 const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
@@ -413,7 +413,6 @@ export default function AdminPelangganPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchPerformed, setSearchPerformed] = useState(false);
   const [isFetchingSheet, setIsFetchingSheet] = useState(false);
-  const [appsScriptUrl, setAppsScriptUrl] = useState('');
   
   const [isNewPelangganDialogOpen, setIsNewPelangganDialogOpen] = useState(false);
   const [isAddContactDialogOpen, setIsAddContactDialogOpen] = useState(false);
@@ -479,40 +478,63 @@ export default function AdminPelangganPage() {
   };
 
   const handleFetchFromSheet = async () => {
-    if (!appsScriptUrl.trim()) {
+    const url = process.env.NEXT_PUBLIC_APPS_SCRIPT_WEB_APP_URL;
+    if (!url) {
         toast({
             variant: 'destructive',
-            title: 'URL Diperlukan',
-            description: 'Silakan masukkan URL Google Apps Script Anda terlebih dahulu.',
+            title: 'URL Belum Dikonfigurasi',
+            description: 'URL Apps Script tidak ditemukan di konfigurasi aplikasi.',
         });
         return;
     }
+
     setIsFetchingSheet(true);
     try {
-      const result = await fetchFromSheet(appsScriptUrl.trim());
-      if (result.success) {
-        toast({
-          title: 'Sinkronisasi Berhasil',
-          description: `${result.count} data riwayat gangguan berhasil diambil dan disimpan.`,
-        });
-      } else {
-        toast({
-          variant: 'destructive',
-          title: 'Sinkronisasi Gagal',
-          description: result.message,
-          duration: 9000,
-        });
-      }
+        const response = await fetch(url);
+        
+        if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) {
+             throw new Error('Respons dari server bukan format JSON. Ini biasanya karena masalah izin di Google Apps Script. Pastikan Web App di-deploy dengan akses "Anyone".');
+        }
+
+        const data = await response.json();
+
+        if (data.error) {
+            throw new Error(`Galat dari skrip Google: ${data.message}`);
+        }
+
+        if (!Array.isArray(data)) {
+            throw new Error('Format data dari Google Sheet tidak valid (bukan array).');
+        }
+
+        if (data.length === 0) {
+            toast({ title: 'Data Terbaru', description: 'Tidak ada data baru untuk disinkronkan dari Google Sheet.' });
+            setIsFetchingSheet(false);
+            return;
+        }
+
+        const result = await saveRiwayat(data);
+
+        if (result.success) {
+            toast({
+                title: 'Sinkronisasi Berhasil',
+                description: result.message,
+            });
+        } else {
+            throw new Error(result.message);
+        }
+
     } catch (error: any) {
-       toast({
-          variant: 'destructive',
-          title: 'Terjadi Kesalahan',
-          description: error.message,
-          duration: 9000,
+        console.error("Client-side fetch error:", error);
+        toast({
+            variant: 'destructive',
+            title: 'Sinkronisasi Gagal',
+            description: error.message,
+            duration: 9000,
         });
+    } finally {
+        setIsFetchingSheet(false);
     }
-    setIsFetchingSheet(false);
-  };
+};
   
     const handleExportToExcel = async () => {
     if (!isAdmin || !firestore) {
@@ -569,6 +591,10 @@ export default function AdminPelangganPage() {
       <div className="flex items-start justify-between mb-8 flex-wrap gap-4">
         <div><h1 className="text-3xl font-bold tracking-tight">Data Pelanggan & Riwayat Gangguan</h1><p className="text-muted-foreground mt-1">Cari pelanggan berdasarkan No. Service untuk melihat riwayat atau menambah data.</p></div>
         <div className="flex flex-wrap gap-2">
+            <Button onClick={handleFetchFromSheet} variant="secondary" disabled={isFetchingSheet}>
+              {isFetchingSheet ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <DownloadCloud className="mr-2 h-4 w-4" />}
+              {isFetchingSheet ? 'Mengambil...' : 'Ambil Riwayat dari Sheet'}
+            </Button>
           {isAdmin && (
               <Button onClick={handleExportToExcel} variant="outline">
                   <FileSpreadsheet className="mr-2 h-4 w-4" />
@@ -577,25 +603,6 @@ export default function AdminPelangganPage() {
           )}
         </div>
       </div>
-
-       <Card className="mb-6">
-        <CardHeader>
-            <CardTitle>Konfigurasi API Google Sheet</CardTitle>
-            <CardDescription>Masukkan URL Web App dari Google Apps Script Anda untuk mengaktifkan sinkronisasi riwayat gangguan.</CardDescription>
-        </CardHeader>
-        <CardContent>
-            <div className="flex items-end gap-4">
-                 <div className="grid gap-2 flex-grow">
-                    <Label htmlFor="apps-script-url">URL Web App</Label>
-                    <Input id="apps-script-url" placeholder="https://script.google.com/macros/s/..." value={appsScriptUrl} onChange={(e) => setAppsScriptUrl(e.target.value)} />
-                </div>
-                <Button onClick={handleFetchFromSheet} variant="secondary" disabled={isFetchingSheet}>
-                  {isFetchingSheet ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <DownloadCloud className="mr-2 h-4 w-4" />}
-                  {isFetchingSheet ? 'Mengambil...' : 'Ambil Riwayat dari Sheet'}
-                </Button>
-            </div>
-        </CardContent>
-      </Card>
       
       <Card className="mb-6">
         <CardHeader>
