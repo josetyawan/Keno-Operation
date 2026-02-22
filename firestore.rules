@@ -78,11 +78,10 @@ service cloud.firestore {
     }
 
     match /riwayat-gangguan/{riwayatId} {
-      // Allow admins and korlaps to create records (e.g., via CSV import).
-      allow create: if isAdmin() || isKorlap();
+      // Allow admins and korlaps to create/update/delete records (e.g., via CSV import or future UI).
+      // Service accounts bypass these rules, so the bot will still be able to write.
+      allow write: if isAdmin() || isKorlap();
       allow read: if hasAllProAccess() || isKorlap();
-      // Only admins can update or delete existing records.
-      allow update, delete: if isAdmin();
     }
 
     match /map-links/{mapLinkId} {

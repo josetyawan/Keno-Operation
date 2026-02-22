@@ -1,90 +1,135 @@
-// ================== PENTING: KONFIGURASI ==================
-// Ganti dengan ID Spreadsheet dan Nama Sheet Anda yang benar.
-const SPREADSHEET_ID = "1I_5nlRnoumDktvvIB6LbNKTfSLP-1G5xsYyjpRuDL5s";
-const SHEET_NAME = "Februari 2026"; // Contoh: 'Riwayat Gangguan'
+// ================== PENTING: ARSITEKTUR BARU ==================
+// Metode lama menggunakan Web App (doGet) sudah tidak digunakan karena masalah izin yang tidak stabil.
+// Metode BARU ini menggunakan SERVICE ACCOUNT untuk menulis data dari bot Telegram langsung ke Firestore.
+// Ini lebih andal, aman, dan merupakan praktik terbaik.
+
+// ================== LANGKAH 1: PERSIAPAN DI GOOGLE CLOUD & FIREBASE ==================
+// 1.  **Aktifkan Firestore API**:
+//     - Buka Google Cloud Console: https://console.cloud.google.com/
+//     - Pastikan Anda berada di proyek yang benar (ID proyek: studio-7759201113-b7263).
+//     - Cari "Firestore API" dan pastikan API tersebut sudah diaktifkan (Enabled).
+//
+// 2.  **Buat Service Account**:
+//     - Di Google Cloud Console, navigasi ke "IAM & Admin" -> "Service Accounts".
+//     - Klik "+ CREATE SERVICE ACCOUNT".
+//     - Beri nama (misal: "bot-firestore-writer") dan deskripsi. Klik "CREATE AND CONTINUE".
+//     - Di bagian "Grant this service account access to project", berikan peran (Role) **"Cloud Datastore User"**. Ini memberikan izin untuk membaca/menulis ke Firestore. Klik "CONTINUE".
+//     - Lewati langkah ketiga (opsional), lalu klik "DONE".
+//
+// 3.  **Buat dan Unduh Kunci (Key)**:
+//     - Temukan service account yang baru Anda buat di daftar, klik, lalu buka tab "KEYS".
+//     - Klik "ADD KEY" -> "Create new key".
+//     - Pilih tipe **JSON** dan klik "CREATE".
+//     - Sebuah file JSON akan terunduh. **JAGA FILE INI DENGAN AMAN!** Ini adalah password untuk service account Anda.
+//
+// 4.  **Konfigurasi Skrip Apps Script**:
+//     - Buka editor Apps Script Anda.
+//     - Buka file JSON yang baru saja diunduh. Salin seluruh isinya.
+//     - Buat file baru di Apps Script dengan nama `service-account-key.json.gs` dan tempel konten JSON di sana.
+//     - Di Apps Script, klik ikon "+" di sebelah "Libraries".
+//     - Masukkan ID Skrip berikut: `1VUSl4b1r1L51_C5Yh-dC6a5M93wopeAi_hG-ZFNdqPEB1lT59i_lA2sT` (Ini adalah library "FirestoreGoogleAppsScript"). Klik "Look up".
+//     - Pastikan identifier-nya adalah `Firestore`. Pilih versi terbaru, lalu klik "Add".
+
+// ================== LANGKAH 2: KODE APPS SCRIPT BARU ==================
+// Ganti kode di file skrip utama Anda dengan kode di bawah ini.
+// Fungsi `doGet` lama tidak lagi diperlukan.
+
+const key = JSON.parse(ContentService.createTextOutput(JSON.stringify(global.service_account_key_json)).getContent());
+const SERVICE_ACCOUNT_KEY = key.private_key;
+const SERVICE_ACCOUNT_EMAIL = key.client_email;
+const PROJECT_ID = key.project_id;
+
 
 /**
- * Fungsi ini akan dijalankan setiap kali Web App URL Anda diakses dengan metode GET.
- * Ini berfungsi sebagai API untuk aplikasi Firebase Anda.
- * 
- * @param {GoogleAppsScript.Events.DoGet} e - Objek event dari permintaan GET.
- * @returns {GoogleAppsScript.Content.TextOutput} - Data dalam format JSON.
+ * Fungsi utama yang dipanggil oleh bot Telegram.
+ * Menerima data gangguan dan menyimpannya ke Firestore.
+ * @param {object} data - Objek berisi detail gangguan (noService, noTiket, teknisi, keterangan, tanggalLapor).
  */
-function doGet(e) {
+function simpanRiwayatGangguan(data) {
   try {
-    // 1. Buka spreadsheet berdasarkan ID dan nama sheet.
-    const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME);
+    const firestore = FirestoreApp.getFirestore(SERVICE_ACCOUNT_EMAIL, SERVICE_ACCOUNT_KEY, PROJECT_ID);
+
+    // Konversi tanggal jika ada, jika tidak biarkan null
+    let tanggalLaporTimestamp = null;
+    if (data.tanggalLapor) {
+      const parsedDate = new Date(data.tanggalLapor);
+      if (!isNaN(parsedDate.getTime())) {
+        tanggalLaporTimestamp = parsedDate;
+      }
+    }
     
-    // Periksa apakah sheet ditemukan
-    if (!sheet) {
-      return createJsonResponse({ error: true, message: `Sheet dengan nama "${SHEET_NAME}" tidak ditemukan.` });
-    }
+    // Data yang akan disimpan. Firestore akan otomatis membuat ID unik.
+    const riwayatData = {
+      noService: data.noService || '',
+      noTiket: data.noTiket || '',
+      teknisi: data.teknisi || '',
+      keterangan: data.keterangan || '',
+      tanggalLapor: tanggalLaporTimestamp, // Bisa jadi null atau objek Date
+    };
 
-    // 2. Ambil semua data dari sheet.
-    const data = sheet.getDataRange().getValues();
-
-    // Periksa apakah ada data
-    if (data.length <= 1) { // <= 1 untuk menghitung baris header
-      return createJsonResponse([]); // Kembalikan array kosong jika hanya ada header atau tidak ada data sama sekali
-    }
-
-    // 3. Ubah data menjadi format JSON yang lebih mudah digunakan.
-    // Baris pertama (data[0]) dianggap sebagai header (kunci).
-    const headers = data[0];
-    const jsonData = data.slice(1).map(row => {
-      const obj = {};
-      headers.forEach((header, index) => {
-        obj[header] = row[index];
-      });
-      return obj;
-    });
-
-    // 4. Kembalikan data sebagai respons JSON.
-    return createJsonResponse(jsonData);
+    // 'riwayat-gangguan' adalah nama koleksi di Firestore.
+    firestore.createDocument('riwayat-gangguan', riwayatData);
+    
+    return { success: true, message: `Data untuk tiket ${data.noTiket} berhasil disimpan.` };
 
   } catch (error) {
-    // Tangani jika terjadi error saat proses
-    Logger.log("Error di doGet: " + error.toString());
-    return createJsonResponse({ error: true, message: "Terjadi kesalahan di server Apps Script: " + error.toString() });
+    Logger.log("Error di simpanRiwayatGangguan: " + error.toString());
+    return { success: false, message: "Gagal menyimpan ke Firestore: " + error.toString() };
   }
 }
 
-/**
- * Helper function untuk membuat respons JSON.
- * @param {object | any[]} data - Objek atau array yang akan diubah menjadi JSON.
- * @returns {GoogleAppsScript.Content.TextOutput} - Objek TextOutput.
- */
-function createJsonResponse(data) {
-  return ContentService
-    .createTextOutput(JSON.stringify(data))
-    .setMimeType(ContentService.MimeType.JSON);
+// ================== CONTOH PENGGUNAAN DI BOT TELEGRAM ==================
+/*
+
+// Di dalam kode bot Telegram Anda (setelah mem-parsing pesan dari user):
+
+function handleUserInput(text) {
+    // ... logika parsing text dari user untuk mendapatkan detail gangguan ...
+    const dataGangguan = {
+        noService: '123456789',
+        noTiket: 'INC12345',
+        teknisi: 'Budi',
+        keterangan: 'Kabel putus di tiang',
+        tanggalLapor: new Date().toISOString() // Kirim sebagai string ISO 8601
+    };
+
+    // Panggil fungsi Apps Script yang sudah di-deploy
+    const url = "APPS_SCRIPT_URL"; // Ganti dengan URL eksekusi skrip Anda
+    const options = {
+        method: 'post',
+        contentType: 'application/json',
+        payload: JSON.stringify({
+            function: 'simpanRiwayatGangguan',
+            parameters: [dataGangguan]
+        })
+    };
+
+    const response = UrlFetchApp.fetch(url, options);
+    const result = JSON.parse(response.getContentText());
+
+    if (result.success) {
+        // Kirim konfirmasi ke user
+        bot.sendMessage(chatId, result.message);
+    } else {
+        // Kirim pesan error ke user
+        bot.sendMessage(chatId, `Terjadi kesalahan: ${result.message}`);
+    }
 }
 
-// ============== CARA DEPLOY SEBAGAI WEB APP ==============
-// 1. Simpan file ini (Ctrl + S).
-// 2. Klik tombol biru "Deploy" di pojok kanan atas, lalu pilih "New deployment".
-// 3. Klik ikon Roda Gigi (⚙️) di sebelah "Select type", lalu pilih "Web app".
-// 4. Di bagian "Configuration":
-//    - Beri deskripsi (opsional, misal: "API Data Riwayat Gangguan v1").
-//    - "Execute as": Biarkan "Me".
-//    - "Who has access": **WAJIB** pilih "Anyone". Ini penting agar aplikasi Anda bisa mengaksesnya.
-// 5. Klik tombol biru "Deploy".
-// 6. Jika diminta, klik "Authorize access" dan ikuti alur untuk memberikan izin pada akun Google Anda.
-// 7. Setelah selesai, Anda akan mendapatkan "Web app URL". **SALIN ULANG URL INI** bahkan jika terlihat sama.
-// 8. Tempelkan URL tersebut ke dalam file `apphosting.yaml` di aplikasi Anda pada variabel `APPS_SCRIPT_WEB_APP_URL`.
-// =========================================================
+// Anda juga perlu fungsi `doPost` di Apps Script untuk menangani pemanggilan ini:
+function doPost(e) {
+  const params = JSON.parse(e.postData.contents);
+  const functionName = params.function;
+  const args = params.parameters;
+  
+  let result;
+  if (functionName === 'simpanRiwayatGangguan') {
+    result = simpanRiwayatGangguan.apply(null, args);
+  } else {
+    result = { success: false, message: 'Fungsi tidak ditemukan.' };
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+}
 
-// =========== CARA MEMPERBARUI DEPLOYMENT (SANGAT PENTING!) ===========
-// Setiap kali Anda mengubah KODE atau IZIN, Anda HARUS membuat deployment versi baru.
-// Jika tidak, URL Web App Anda akan tetap menjalankan KODE LAMA.
-// 
-// 1. Simpan file ini jika ada perubahan (Ctrl + S).
-// 2. Klik "Deploy" -> "Manage deployments".
-// 3. Pilih deployment aktif Anda (biasanya hanya ada satu).
-// 4. Klik ikon pensil (Edit ✎).
-// 5. Di bagian "Version", klik dropdown dan pilih "New version".
-// 6. Beri deskripsi singkat (opsional, misal: "Perbaikan izin akses").
-// 7. Klik tombol biru "Deploy".
-//
-// URL Web App Anda akan tetap sama, tetapi sekarang akan menjalankan kode terbaru.
-// =======================================================================
+*/

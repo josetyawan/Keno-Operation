@@ -16,7 +16,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogClose,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, MapPin, Loader2, Search, History, Phone, Pencil, Wrench, QrCode, FileSpreadsheet, DownloadCloud, AlertCircle } from 'lucide-react';
+import { PlusCircle, MapPin, Loader2, Search, History, Phone, Pencil, Wrench, QrCode, FileSpreadsheet, AlertCircle, Info } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, useDoc, useStorage } from '@/firebase';
 import { collection, query, doc, serverTimestamp, where, getDocs, limit, orderBy, Timestamp } from 'firebase/firestore';
@@ -45,8 +44,6 @@ import { format, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import * as XLSX from 'xlsx';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { syncRiwayatFromSheet } from './actions';
-
 
 const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
 
@@ -413,8 +410,6 @@ export default function AdminPelangganPage() {
   const [searchedPelanggan, setSearchedPelanggan] = useState<Pelanggan | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [searchPerformed, setSearchPerformed] = useState(false);
-  const [isFetchingSheet, setIsFetchingSheet] = useState(false);
-  const [syncError, setSyncError] = useState<string | null>(null);
   
   const [isNewPelangganDialogOpen, setIsNewPelangganDialogOpen] = useState(false);
   const [isAddContactDialogOpen, setIsAddContactDialogOpen] = useState(false);
@@ -478,29 +473,6 @@ export default function AdminPelangganPage() {
     }
     setIsSearching(false);
   };
-
-  const handleFetchFromSheet = async () => {
-    setIsFetchingSheet(true);
-    setSyncError(null);
-    try {
-        const result = await syncRiwayatFromSheet();
-
-        if (result.success) {
-            toast({
-                title: 'Sinkronisasi Berhasil',
-                description: result.message,
-            });
-        } else {
-            setSyncError(result.message);
-        }
-
-    } catch (error: any) {
-        console.error("Client-side fetch trigger error:", error);
-        setSyncError(error.message || 'Terjadi kesalahan pada sisi klien saat memanggil server.');
-    } finally {
-        setIsFetchingSheet(false);
-    }
-};
   
     const handleExportToExcel = async () => {
     if (!isAdmin || !firestore) {
@@ -557,10 +529,6 @@ export default function AdminPelangganPage() {
       <div className="flex items-start justify-between mb-8 flex-wrap gap-4">
         <div><h1 className="text-3xl font-bold tracking-tight">Data Pelanggan & Riwayat Gangguan</h1><p className="text-muted-foreground mt-1">Cari pelanggan berdasarkan No. Service untuk melihat riwayat atau menambah data.</p></div>
         <div className="flex flex-wrap gap-2">
-            <Button onClick={handleFetchFromSheet} variant="secondary" disabled={isFetchingSheet}>
-              {isFetchingSheet ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <DownloadCloud className="mr-2 h-4 w-4" />}
-              {isFetchingSheet ? 'Mengambil...' : 'Ambil Riwayat dari Sheet'}
-            </Button>
           {isAdmin && (
               <Button onClick={handleExportToExcel} variant="outline">
                   <FileSpreadsheet className="mr-2 h-4 w-4" />
@@ -570,17 +538,13 @@ export default function AdminPelangganPage() {
         </div>
       </div>
       
-       {syncError && (
-        <Alert variant="destructive" className="mb-6">
+       <Alert variant="destructive" className="mb-6">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Sinkronisasi Gagal</AlertTitle>
+            <AlertTitle>Metode Sinkronisasi Diperbarui</AlertTitle>
             <AlertDescription>
-                {syncError}
-                <br />
-                <span className="text-xs">Pastikan pengaturan deployment Apps Script Anda sudah benar (di-deploy sebagai Web App dengan akses untuk "Anyone").</span>
+                Tombol "Ambil Riwayat dari Sheet" telah dinonaktifkan. Untuk mengimpor data dari bot Telegram, harap ikuti panduan baru yang diperbarui di file <strong>`docs/apps-script-api-guide.js`</strong>. Metode baru ini menggunakan Service Account untuk menulis data langsung ke database, yang lebih andal dan aman.
             </AlertDescription>
         </Alert>
-      )}
 
       <Card className="mb-6">
         <CardHeader>
