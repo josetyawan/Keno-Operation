@@ -141,9 +141,13 @@ service cloud.firestore {
                       request.resource.data.participants.size() == 2;
       
       match /messages/{messageId} {
-        // To read/write messages, the user must be a participant in the parent chat room document.
-        // We must check if the parent document exists before trying to access its data.
-        allow read, write: if isSignedIn() &&
+        // Allow listing messages if the user is part of the chat, based on the chatId.
+        // This is safe because it only checks the UIDs in the chat ID string.
+        allow list: if isSignedIn() && request.auth.uid in chatId.split('_');
+        
+        // For getting a specific message or writing a message, the parent chat document must exist
+        // to confirm the user is a valid participant.
+        allow get, write: if isSignedIn() &&
                               exists(/databases/$(database)/documents/chats/$(chatId)) &&
                               request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
       }
