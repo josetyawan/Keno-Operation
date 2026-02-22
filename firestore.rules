@@ -131,9 +131,18 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
-      allow read, write: if request.auth.uid in resource.data.participants;
+      // Allow read if the user's UID is part of the chatId. This works even if the document doesn't exist yet.
+      allow read: if isSignedIn() && request.auth.uid in chatId.split('_');
+
+      // Allow write (create/update) if the user is a participant and the participants list is valid.
+      allow write: if isSignedIn() &&
+                      request.auth.uid in chatId.split('_') &&
+                      request.resource.data.participants.hasAll(chatId.split('_')) &&
+                      request.resource.data.participants.size() == 2;
+      
       match /messages/{messageId} {
-        allow read, write: if request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+        // To read/write messages, the user must be a participant in the parent chat room document.
+        allow read, write: if isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
       }
     }
   }
