@@ -388,7 +388,7 @@ export default function SearchAssetsPage() {
               ) : paginatedAssets.length > 0 ? (
                 paginatedAssets.map(a => {
                   const coords = a.coordinates?.split(',').map(c => c.trim());
-                  const googleMapsUrl = coords && coords.length === 2 ? `https://www.google.com/maps/search/?api=1&amp;query=${coords[0]},${coords[1]}` : null;
+                  const googleMapsUrl = coords && coords.length === 2 ? `https://www.google.com/maps/search/?api=1&query=${coords[0]},${coords[1]}` : null;
                   return isNodeBSearch ? (
                      <TableRow key={a.id}>
                         <TableCell className="font-medium">{a.siteId}</TableCell>
@@ -477,5 +477,3 @@ export default function SearchAssetsPage() {
     </>
   );
 }
-
-    

@@ -611,6 +611,9 @@ export default function AdminAssetsPage() {
             if (importAssetType === 'NODE-B') {
                 const siteIdCol = findColumn(firstRowKeys, ['site id', 'base id']);
                 const siteNameCol = findColumn(firstRowKeys, ['site name', 'site_name']);
+                const coordinatesCol = findColumn(firstRowKeys, ['koordinat', 'coordinate', 'location', 'lokasi', 'gps']);
+                const latCol = findColumn(firstRowKeys, ['lat', 'latitude']);
+                const longCol = findColumn(firstRowKeys, ['long', 'longitude', 'longitud']);
                 const oltMerkCol = findColumn(firstRowKeys, ['olt merk']);
                 const splitterOltCol = findColumn(firstRowKeys, ['splitter olt']);
                 const snOntCol = findColumn(firstRowKeys, ['sn ont']);
@@ -677,7 +680,12 @@ export default function AdminAssetsPage() {
                                 siteName: siteNameCol && row[siteNameCol] ? row[siteNameCol].toString().trim() : '',
                             };
 
-                            if (latValue && longValue) assetData.coordinates = `${latValue}, ${longValue}`;
+                            if (latValue && longValue) {
+                                assetData.coordinates = `${latValue}, ${longValue}`;
+                            } else if (coordinatesCol && row[coordinatesCol]) {
+                                assetData.coordinates = String(row[coordinatesCol]);
+                            }
+                            
                             if (oltMerkCol && row[oltMerkCol] !== undefined) assetData.oltMerk = String(row[oltMerkCol]);
                             if (splitterOltCol && row[splitterOltCol] !== undefined) assetData.splitterOlt = String(row[splitterOltCol]);
                             if (snOntCol && row[snOntCol] !== undefined) assetData.snOnt = String(row[snOntCol]);
@@ -1173,5 +1181,3 @@ export default function AdminAssetsPage() {
     </>
   );
 }
-
-    
