@@ -31,17 +31,25 @@
 //
 // 4.  **Konfigurasi Skrip Apps Script**:
 //     - Buka editor Apps Script Anda.
-//     - Buka file JSON yang baru saja diunduh. Salin seluruh isinya.
-//     - Buat file baru di Apps Script dengan nama `service-account-key.json.gs` dan tempel konten JSON di sana.
-//     - Di Apps Script, klik ikon "+" di sebelah "Libraries".
-//     - Masukkan ID Skrip berikut: `1VUSl4b1r1L51_C5Yh-dC6a5M93wopeAi_hG-ZFNdqPEB1lT59i_lA2sT` (Ini adalah library "FirestoreGoogleAppsScript"). Klik "Look up".
-//     - Pastikan identifier-nya adalah `Firestore`. Pilih versi terbaru, lalu klik "Add".
+//     - Buat file baru di Apps Script dengan memilih **File > Baru > File Skrip**. Beri nama file `service-account-key.gs` (atau nama lain yang mudah diingat).
+//     - **PENTING**: Di dalam file baru tersebut, salin seluruh konten file JSON yang Anda unduh, lalu tempelkan dengan format berikut:
+//
+//       `const service_account_key_json = { ... [TEMPEL SELURUH KONTEN JSON ANDA DI SINI] ... };`
+//
+//       (Ganti `... [TEMPEL SELURUH KONTEN JSON ANDA DI SINI] ...` dengan isi file JSON Anda).
+//
+//     - Pastikan seluruh JSON berada di dalam kurung kurawal `{}` setelah tanda `=`.
+//
+// 5.  **Tambahkan Library Firestore**:
+//     - Di editor Apps Script, klik ikon "+" di sebelah "Libraries".
+//     - Masukkan ID Skrip berikut: `1VUSl4b1r1L51_C5Yh-dC6a5M93wopeAi_hG-ZFNdqPEB1lT59i_lA2sT` (Ini adalah library "FirestoreGoogleAppsScript"). Klik "Cari".
+//     - Pastikan identifier-nya adalah `Firestore`. Pilih versi terbaru, lalu klik "Tambahkan".
 
 // ================== LANGKAH 2: KODE APPS SCRIPT BARU ==================
-// Ganti kode di file skrip utama Anda dengan kode di bawah ini.
-// Fungsi `doGet` lama tidak lagi diperlukan.
+// Ganti kode di file skrip utama Anda (biasanya `Code.gs`) dengan kode di bawah ini.
 
-const key = JSON.parse(ContentService.createTextOutput(JSON.stringify(global.service_account_key_json)).getContent());
+// **PENTING**: Pastikan file `service-account-key.gs` Anda ada dan berisi variabel `service_account_key_json`.
+const key = service_account_key_json;
 const SERVICE_ACCOUNT_KEY = key.private_key;
 const SERVICE_ACCOUNT_EMAIL = key.client_email;
 const PROJECT_ID = key.project_id;
@@ -87,6 +95,34 @@ function simpanRiwayatGangguan(data) {
 
 // ================== CONTOH PENGGUNAAN DI BOT TELEGRAM ==================
 /*
+// Fungsi doPost ini memungkinkan bot Telegram Anda memanggil fungsi `simpanRiwayatGangguan`.
+// Tempatkan ini di skrip utama Anda.
+
+function doPost(e) {
+  try {
+    const params = JSON.parse(e.postData.contents);
+    
+    // Verifikasi bahwa fungsi yang diminta ada
+    if (typeof this[params.function] !== 'function') {
+      return ContentService
+        .createTextOutput(JSON.stringify({ success: false, message: 'Fungsi tidak ditemukan.' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    // Panggil fungsi yang diminta dengan argumen yang diberikan
+    const result = this[params.function].apply(null, params.parameters);
+    
+    return ContentService
+      .createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
+      
+  } catch (err) {
+    Logger.log("Error di doPost: " + err.toString());
+    return ContentService
+      .createTextOutput(JSON.stringify({ success: false, message: "Error pada server Apps Script: " + err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
 
 // Di dalam kode bot Telegram Anda (setelah mem-parsing pesan dari user):
 
@@ -100,15 +136,18 @@ function handleUserInput(text) {
         tanggalLapor: new Date().toISOString() // Kirim sebagai string ISO 8601
     };
 
-    // Panggil fungsi Apps Script yang sudah di-deploy
-    const url = "APPS_SCRIPT_URL"; // Ganti dengan URL eksekusi skrip Anda
+    // Ganti dengan URL eksekusi skrip Anda yang sudah di-deploy
+    const url = "URL_DEPLOYMENT_APPS_SCRIPT_ANDA"; 
+    
     const options = {
         method: 'post',
         contentType: 'application/json',
+        // Kirim nama fungsi dan argumennya dalam payload
         payload: JSON.stringify({
             function: 'simpanRiwayatGangguan',
-            parameters: [dataGangguan]
-        })
+            parameters: [dataGangguan] // Argumen harus dalam bentuk array
+        }),
+        muteHttpExceptions: true // Penting untuk menangkap detail error
     };
 
     const response = UrlFetchApp.fetch(url, options);
@@ -122,21 +161,4 @@ function handleUserInput(text) {
         bot.sendMessage(chatId, `Terjadi kesalahan: ${result.message}`);
     }
 }
-
-// Anda juga perlu fungsi `doPost` di Apps Script untuk menangani pemanggilan ini:
-function doPost(e) {
-  const params = JSON.parse(e.postData.contents);
-  const functionName = params.function;
-  const args = params.parameters;
-  
-  let result;
-  if (functionName === 'simpanRiwayatGangguan') {
-    result = simpanRiwayatGangguan.apply(null, args);
-  } else {
-    result = { success: false, message: 'Fungsi tidak ditemukan.' };
-  }
-  
-  return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
-}
-
 */
