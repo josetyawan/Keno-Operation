@@ -4,11 +4,15 @@
 // Ini lebih andal, aman, dan merupakan praktik terbaik.
 
 // ================== LANGKAH 0: HUBUNGKAN KE PROYEK GOOGLE CLOUD (WAJIB) ==================
+// !! PENTING: Langkah ini WAJIB dilakukan untuk memperbaiki galat "Tidak dapat mencari library" !!
+// Library Firestore memerlukan koneksi ke Proyek Google Cloud. Tanpa ini, Anda tidak akan bisa menambahkannya.
+//
 // 1.  Di editor Apps Script, klik ikon **Pengaturan Proyek** (roda gigi ⚙️) di sebelah kiri.
 // 2.  Scroll ke bawah hingga Anda menemukan bagian "Proyek Google Cloud Platform (GCP)".
 // 3.  Klik tombol **"Ubah proyek"**.
-// 4.  Masukkan **Nomor Proyek GCP** Anda. Nomor Proyek untuk `studio-7759201113-b7263` adalah `536501296484`. Tempelkan nomor tersebut, lalu klik **"Setel proyek"**.
-// 5.  Setelah terhubung, Anda bisa melanjutkan ke langkah berikutnya. Ini akan mengatasi galat "Tidak dapat mencari library".
+// 4.  Masukkan **Nomor Proyek GCP** Anda. Nomor Proyek untuk `studio-7759201113-b7263` adalah `536501296484`.
+// 5.  Tempelkan nomor `536501296484`, lalu klik **"Setel proyek"**.
+// 6.  Setelah berhasil terhubung, Anda bisa melanjutkan ke Langkah 1.
 
 // ================== LANGKAH 1: PERSIAPAN DI GOOGLE CLOUD & FIREBASE ==================
 // 1.  **Aktifkan Firestore API**:
@@ -37,7 +41,7 @@
 //
 //       `const service_account_key_json = `
 //
-//     - **LANGSUNG SETELAH** tanda `=`, salin dan tempel **SELURUH ISI** file JSON yang Anda unduh dari Google Cloud.
+//     - **LANGSUNG SETELAH** tanda backtick (`), salin dan tempel **SELURUH ISI** file JSON yang Anda unduh dari Google Cloud.
 //     - **PENTING**: Jangan menambahkan karakter `...` atau kurung siku `[]`.
 //     - Hasil akhir di file `service-account-key.gs` Anda harus terlihat persis seperti ini (dengan nilai yang berbeda):
 //       ```javascript
@@ -57,8 +61,10 @@
 //       ```
 //
 // 5.  **Tambahkan Library Firestore**:
+//     - **Pastikan Langkah 0 sudah selesai.**
 //     - Di editor Apps Script, klik ikon "+" di sebelah "Libraries".
 //     - Masukkan ID Skrip berikut: `1VUSl4b1r1L51_C5Yh-dC6a5M93wopeAi_hG-ZFNdqPEB1lT59i_lA2sT` (Ini adalah library "FirestoreGoogleAppsScript"). Klik "Cari".
+//     - Jika tidak ditemukan, pastikan Langkah 0 benar-benar sudah berhasil.
 //     - Pastikan identifier-nya adalah `Firestore`. Pilih versi terbaru, lalu klik "Tambahkan".
 
 // ================== LANGKAH 2: KODE APPS SCRIPT BARU ==================
