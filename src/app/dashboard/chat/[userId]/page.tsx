@@ -1,9 +1,8 @@
-
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, useDoc, setDocumentNonBlocking } from '@/firebase';
-import { collection, query, orderBy, serverTimestamp, doc, writeBatch } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query, orderBy, serverTimestamp, doc, addDoc, setDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -14,12 +13,14 @@ import { id as idLocale } from 'date-fns/locale';
 import type { PrivateMessage, UserProfile, ChatRoom } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useRouter, useParams } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
 
 export default function PrivateChatPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
   const params = useParams();
+  const { toast } = useToast();
   const otherUserId = params.userId as string;
 
   const [newMessage, setNewMessage] = useState('');
@@ -70,49 +71,48 @@ export default function PrivateChatPage() {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !user || !currentUserProfile || !otherUserProfile || !chatId) return;
-
-    const batch = writeBatch(firestore);
-
-    // 1. Create the new message document
-    const messageRef = doc(collection(firestore, 'chats', chatId, 'messages'));
-    const messageData: Omit<PrivateMessage, 'id'> = {
-      text: newMessage.trim(),
-      userId: user.uid,
-      createdAt: serverTimestamp(),
-    };
-    batch.set(messageRef, messageData);
+    if (!newMessage.trim() || !user || !currentUserProfile || !otherUserProfile || !chatId || !chatRoomRef) return;
     
-    // 2. Create or update the chat room metadata
+    const textToSend = newMessage.trim();
+    setNewMessage('');
+
     const chatRoomData: Partial<ChatRoom> = {
-      participants: [user.uid, otherUserProfile.id],
-      participantNames: {
-          [user.uid]: currentUserProfile.displayName || currentUserProfile.email,
-          [otherUserProfile.id]: otherUserProfile.displayName || otherUserProfile.email,
-      },
-      participantAvatars: {
-          [user.uid]: currentUserProfile.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserProfile.displayName || currentUserProfile.email)}&background=random`,
-          [otherUserProfile.id]: otherUserProfile.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(otherUserProfile.displayName || otherUserProfile.email)}&background=random`,
-      },
-      lastMessageText: newMessage.trim(),
-      lastMessageTimestamp: serverTimestamp(),
+        id: chatId,
+        participants: [user.uid, otherUserProfile.id],
+        participantNames: {
+            [user.uid]: currentUserProfile.displayName || currentUserProfile.email,
+            [otherUserProfile.id]: otherUserProfile.displayName || otherUserProfile.email,
+        },
+        participantAvatars: {
+            [user.uid]: currentUserProfile.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserProfile.displayName || currentUserProfile.email || ' ')}&background=random`,
+            [otherUserProfile.id]: otherUserProfile.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(otherUserProfile.displayName || otherUserProfile.email || ' ')}&background=random`,
+        },
+        lastMessageText: textToSend,
+        lastMessageTimestamp: serverTimestamp(),
     };
 
-    if (!chatRoom) { // If chat room doesn't exist, create it with ID
-        const newChatRoomData: ChatRoom = {
-            id: chatId,
-            ...chatRoomData
-        } as ChatRoom;
-        batch.set(chatRoomRef!, newChatRoomData);
-    } else { // Otherwise, update it
-        batch.update(chatRoomRef!, chatRoomData);
-    }
+    const messageData: Omit<PrivateMessage, 'id'> = {
+        text: textToSend,
+        userId: user.uid,
+        createdAt: serverTimestamp(),
+    };
 
     try {
-      await batch.commit();
-      setNewMessage('');
-    } catch (error) {
-      console.error("Error sending private message:", error);
+        // First, ensure the chat room document exists before adding a message to its subcollection.
+        await setDoc(chatRoomRef, chatRoomData, { merge: true });
+
+        // Now that the parent doc is guaranteed to exist, add the message.
+        const messagesCollectionRef = collection(firestore, 'chats', chatId, 'messages');
+        await addDoc(messagesCollectionRef, messageData);
+    } catch (error: any) {
+        console.error("Error sending private message:", error);
+        toast({
+            variant: "destructive",
+            title: "Gagal Mengirim Pesan",
+            description: "Tidak dapat mengirim pesan Anda. Silakan coba lagi.",
+        });
+        // If sending fails, restore the input so the user doesn't lose their message
+        setNewMessage(textToSend);
     }
   };
   
