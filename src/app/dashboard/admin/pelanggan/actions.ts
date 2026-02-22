@@ -1,18 +1,13 @@
 
 'use server';
 
-import { collection, writeBatch, getDocs, query, where, doc } from 'firebase/firestore';
-import { initializeFirebase } from '@/firebase/init';
-import type { RiwayatGangguan } from '@/lib/types';
-import { isValid, parse } from 'date-fns';
-
 /**
- * @deprecated This function is deprecated and no longer functional. The web app sync method is unreliable due to Google's auth redirects. The recommended method is to have the Apps Script bot write directly to Firestore using a Service Account. Please refer to the updated guide in `docs/apps-script-api-guide.js`.
+ * @deprecated This function is deprecated and is no longer used. The feature has been replaced by a direct file upload on the 'Data Pelanggan' page.
  */
 export async function syncRiwayatFromSheet(): Promise<{ success: boolean; message: string; count: number }> {
     return {
         success: false,
-        message: 'Metode sinkronisasi ini tidak lagi digunakan. Silakan ikuti panduan baru di docs/apps-script-api-guide.js untuk mengizinkan bot menulis langsung ke Firestore.',
+        message: 'Fungsi ini tidak lagi digunakan. Silakan gunakan fitur "Import Riwayat" untuk mengunggah file Excel.',
         count: 0
     };
 }

@@ -16,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogClose,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,10 +29,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, MapPin, Loader2, Search, History, Phone, Pencil, Wrench, QrCode, FileSpreadsheet, AlertCircle, Info } from 'lucide-react';
+import { PlusCircle, MapPin, Loader2, Search, History, Phone, Pencil, Wrench, QrCode, FileSpreadsheet, AlertCircle, Info, Upload } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, useDoc, useStorage } from '@/firebase';
-import { collection, query, doc, serverTimestamp, where, getDocs, limit, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, query, doc, serverTimestamp, where, getDocs, limit, orderBy, Timestamp, writeBatch } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { UserProfile, Pelanggan, RiwayatGangguan } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -40,7 +41,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { format, isValid } from 'date-fns';
+import { format, isValid, parse } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import * as XLSX from 'xlsx';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -415,11 +416,15 @@ export default function AdminPelangganPage() {
   const [isAddContactDialogOpen, setIsAddContactDialogOpen] = useState(false);
   const [isUpdateLocationDialogOpen, setIsUpdateLocationDialogOpen] = useState(false);
   const [isUpdateAssetDialogOpen, setIsUpdateAssetDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
 
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
     useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
   );
   const isAdmin = currentUserProfile?.role === 'admin';
+  const isAdminOrKorlap = isAdmin || currentUserProfile?.role === 'korlap';
+
 
   useEffect(() => {
     if (!isUserLoading && !isProfileLoading) {
@@ -473,6 +478,108 @@ export default function AdminPelangganPage() {
     }
     setIsSearching(false);
   };
+
+  const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || event.target.files.length === 0) {
+        toast({ title: "Tidak ada file dipilih.", variant: "destructive" });
+        return;
+    }
+    const file = event.target.files[0];
+    setIsImporting(true);
+    toast({ title: "Membaca file...", description: "Mohon tunggu, proses impor sedang dimulai." });
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        try {
+            const data = e.target?.result;
+            if (!data) throw new Error("Gagal membaca file.");
+
+            const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+            const sheetName = workbook.SheetNames[0];
+            if (!sheetName) throw new Error("File Excel tidak memiliki sheet yang dapat dibaca.");
+            
+            const worksheet = workbook.Sheets[sheetName];
+            const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
+
+            if (jsonData.length === 0) throw new Error("Sheet Excel yang Anda unggah kosong.");
+
+            const headers = Object.keys(jsonData[0]);
+            const findHeader = (aliases: string[]) => headers.find(h => aliases.includes(h.toLowerCase().trim()));
+            
+            const noServiceCol = findHeader(['no service', 'nomor service', 'no_service', 'service number']);
+            const tanggalLaporCol = findHeader(['tanggal lapor', 'tanggal', 'date']);
+            const noTiketCol = findHeader(['no tiket', 'nomor tiket', 'ticket_id', 'ticket number', 'tiket']);
+            const teknisiCol = findHeader(['teknisi', 'pic']);
+            const keteranganCol = findHeader(['keterangan', 'deskripsi', 'description']);
+
+            if (!noServiceCol || !tanggalLaporCol) {
+                throw new Error("Kolom wajib 'No Service' dan 'Tanggal Lapor' tidak ditemukan di file Excel Anda.");
+            }
+
+            const batchSize = 400;
+            let batch = writeBatch(firestore);
+            let writtenCount = 0;
+            let totalProcessed = 0;
+
+            for (const row of jsonData) {
+                const noService = row[noServiceCol]?.toString().trim();
+                const tanggalLaporRaw = row[tanggalLaporCol];
+                
+                if (!noService || !tanggalLaporRaw) continue;
+
+                let tanggalLapor: Date;
+                if (tanggalLaporRaw instanceof Date && isValid(tanggalLaporRaw)) {
+                    tanggalLapor = tanggalLaporRaw;
+                } else {
+                    const parsedDate = parse(String(tanggalLaporRaw), 'dd/MM/yyyy', new Date());
+                    if (isValid(parsedDate)) {
+                        tanggalLapor = parsedDate;
+                    } else {
+                        const directDate = new Date(tanggalLaporRaw);
+                        if(isValid(directDate)) {
+                           tanggalLapor = directDate;
+                        } else {
+                           continue; // Skip rows with invalid dates
+                        }
+                    }
+                }
+                
+                const riwayatData: Omit<RiwayatGangguan, 'id'> = {
+                    noService: noService,
+                    tanggalLapor: Timestamp.fromDate(tanggalLapor),
+                    noTiket: noTiketCol && row[noTiketCol] ? row[noTiketCol].toString().trim() : '',
+                    teknisi: teknisiCol && row[teknisiCol] ? row[teknisiCol].toString().trim() : '',
+                    keterangan: keteranganCol && row[keteranganCol] ? row[keteranganCol].toString().trim() : '',
+                };
+
+                const docRef = doc(collection(firestore, 'riwayat-gangguan'));
+                batch.set(docRef, riwayatData);
+                writtenCount++;
+
+                if (writtenCount >= batchSize) {
+                    await batch.commit();
+                    batch = writeBatch(firestore);
+                    writtenCount = 0;
+                }
+                totalProcessed++;
+            }
+            
+            if (writtenCount > 0) {
+                await batch.commit();
+            }
+
+            toast({ title: "Impor Berhasil!", description: `${totalProcessed} data riwayat gangguan telah berhasil diimpor.` });
+
+        } catch (error: any) {
+            toast({ title: "Impor Gagal", description: error.message, variant: "destructive" });
+        } finally {
+            setIsImporting(false);
+            setIsImportDialogOpen(false);
+            if (event.target) event.target.value = '';
+        }
+    };
+    reader.readAsArrayBuffer(file);
+};
   
     const handleExportToExcel = async () => {
     if (!isAdmin || !firestore) {
@@ -529,6 +636,25 @@ export default function AdminPelangganPage() {
       <div className="flex items-start justify-between mb-8 flex-wrap gap-4">
         <div><h1 className="text-3xl font-bold tracking-tight">Data Pelanggan & Riwayat Gangguan</h1><p className="text-muted-foreground mt-1">Cari pelanggan berdasarkan No. Service untuk melihat riwayat atau menambah data.</p></div>
         <div className="flex flex-wrap gap-2">
+          {isAdminOrKorlap && (
+            <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+              <DialogTrigger asChild>
+                  <Button variant="secondary"><Upload className="mr-2 h-4 w-4" /> Import Riwayat</Button>
+              </DialogTrigger>
+              <DialogContent>
+                  <DialogHeader>
+                      <DialogTitle>Import Riwayat Gangguan</DialogTitle>
+                      <DialogDescription>
+                          Unggah file Excel (.xlsx) dengan riwayat gangguan. Pastikan file Anda memiliki kolom "No Service" dan "Tanggal Lapor".
+                      </DialogDescription>
+                  </DialogHeader>
+                  <div className="py-4">
+                      <Input id="excel-file" type="file" accept=".xlsx, .xls, .csv" onChange={handleFileImport} disabled={isImporting} />
+                      {isImporting && <p className="text-sm mt-2 text-muted-foreground flex items-center gap-2"><Loader2 className="animate-spin" /> Mengimpor data...</p>}
+                  </div>
+              </DialogContent>
+            </Dialog>
+          )}
           {isAdmin && (
               <Button onClick={handleExportToExcel} variant="outline">
                   <FileSpreadsheet className="mr-2 h-4 w-4" />

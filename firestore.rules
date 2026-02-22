@@ -78,8 +78,7 @@ service cloud.firestore {
     }
 
     match /riwayat-gangguan/{riwayatId} {
-      // Allow admins and korlaps to create/update/delete records.
-      // The server-side bot API bypasses these client rules.
+      // Admins and Korlaps can import history data.
       allow write: if isAdmin() || isKorlap();
       allow read: if hasAllProAccess() || isKorlap();
     }
