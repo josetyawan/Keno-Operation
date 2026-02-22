@@ -78,8 +78,8 @@ service cloud.firestore {
     }
 
     match /riwayat-gangguan/{riwayatId} {
-      // Admins and Korlaps can import history data.
-      allow write: if isAdmin() || isKorlap();
+      // Admins/Korlaps can write via file import. Server can write via webhook.
+      allow write: if isAdmin() || isKorlap(); 
       allow read: if hasAllProAccess() || isKorlap();
     }
 
@@ -142,7 +142,10 @@ service cloud.firestore {
       
       match /messages/{messageId} {
         // To read/write messages, the user must be a participant in the parent chat room document.
-        allow read, write: if isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+        // We must check if the parent document exists before trying to access its data.
+        allow read, write: if isSignedIn() &&
+                              exists(/databases/$(database)/documents/chats/$(chatId)) &&
+                              request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
       }
     }
   }
