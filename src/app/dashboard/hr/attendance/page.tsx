@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
@@ -213,6 +212,15 @@ function CheckInUI({
                <canvas ref={canvasRef} className="hidden"></canvas>
                {!hasCameraPermission && <VideoOff className="h-12 w-12 text-muted-foreground absolute" />}
            </div>
+           {!hasCameraPermission && isWithinCheckInWindow && (
+                <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Izin Kamera Diperlukan</AlertTitle>
+                    <AlertDescription>
+                        Anda harus mengizinkan akses kamera untuk melakukan absensi. Silakan periksa pengaturan browser atau perangkat Anda.
+                    </AlertDescription>
+                </Alert>
+            )}
            <Button onClick={handleCheckIn} disabled={isCheckingIn || !hasCameraPermission || !isWithinCheckInWindow} className="w-full" size="lg">
                {isCheckingIn ? <Loader2 className="animate-spin" /> : <Camera className="mr-2" />}
                {isCheckingIn ? 'Memproses...' : 'Ambil Foto & Check In Sekarang'}
@@ -301,7 +309,14 @@ export default function AttendancePage() {
                     setHasCameraPermission(true);
                     if (videoRef.current) videoRef.current.srcObject = stream;
                 } catch (error) {
+                    console.error("Camera access error:", error);
                     setHasCameraPermission(false);
+                    toast({
+                        variant: 'destructive',
+                        title: 'Izin Kamera Ditolak',
+                        description: 'Aplikasi memerlukan izin untuk menggunakan kamera Anda. Mohon aktifkan izin kamera di pengaturan browser atau perangkat Anda.',
+                        duration: 9000,
+                    });
                 }
             }
         }
@@ -310,7 +325,7 @@ export default function AttendancePage() {
         return () => {
             stream?.getTracks().forEach(track => track.stop());
         };
-    }, [todaySchedule, todayAttendance]);
+    }, [todaySchedule, todayAttendance, toast]);
     
 
     const handleCheckIn = async () => {
@@ -609,6 +624,13 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished }: { todaySchedul
                             )}
                             <canvas ref={dialogCanvasRef} className="hidden"></canvas>
                         </div>
+                        {!dialogHasCamera && (
+                            <Alert variant="destructive" className="mt-2">
+                                <AlertTriangle className="h-4 w-4" />
+                                <AlertTitle>Kamera Tidak Tersedia</AlertTitle>
+                                <AlertDescription>Mohon izinkan akses kamera untuk melanjutkan.</AlertDescription>
+                            </Alert>
+                        )}
                         <Button type="button" onClick={selfie ? () => setSelfie(null) : handleTakePhoto} variant="secondary" disabled={!dialogHasCamera}>
                             {selfie ? 'Ambil Ulang' : 'Ambil Foto'}
                         </Button>
