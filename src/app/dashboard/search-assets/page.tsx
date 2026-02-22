@@ -76,6 +76,12 @@ export default function SearchAssetsPage() {
     const mitratelLink = mapLinks.find(link => link.serviceArea.toUpperCase().includes('MITRATEL'));
     return mitratelLink?.url || null;
   }, [mapLinks]);
+
+  const nodeBMapUrl = useMemo(() => {
+    if (!mapLinks) return null;
+    const nodeBLink = mapLinks.find(link => link.serviceArea.toUpperCase() === 'NODE-B');
+    return nodeBLink?.url || null;
+  }, [mapLinks]);
   
   const dynamicServiceAreas = useMemo(() => {
     const serviceAreaSet = new Set<string>(baseServiceAreas);
@@ -293,7 +299,7 @@ export default function SearchAssetsPage() {
                     <Input id="search-name" placeholder="Ketik nama aset, Site ID, atau Tenant ID..." value={searchName} onChange={(e) => setSearchName(e.target.value)} disabled={!canSearch}/>
                 </div>
             </div>
-             {(currentMancoreLinks.length > 0 || currentMapUrl || (isMitratelSearch && mitratelMapUrl)) && (
+             {(currentMancoreLinks.length > 0 || currentMapUrl || (isMitratelSearch && mitratelMapUrl) || (isNodeBSearch && nodeBMapUrl)) && (
                 <div className="mt-4 border-t pt-4">
                      <h4 className="text-sm font-medium mb-2">Tautan Eksternal {searchServiceArea !== 'all' && `untuk ${searchServiceArea}`}</h4>
                      <div className="max-w-2xl">
@@ -311,6 +317,14 @@ export default function SearchAssetsPage() {
                                     <Link href={mitratelMapUrl} target="_blank" rel="noopener noreferrer">
                                         <MapPin className="mr-2 h-4 w-4" />
                                         Buka Peta Mitratel
+                                    </Link>
+                                </Button>
+                            )}
+                            {isNodeBSearch && nodeBMapUrl && (
+                                <Button asChild key="nodeb-map" variant="outline">
+                                    <Link href={nodeBMapUrl} target="_blank" rel="noopener noreferrer">
+                                        <MapPin className="mr-2 h-4 w-4" />
+                                        Buka Peta NODE-B
                                     </Link>
                                 </Button>
                             )}
