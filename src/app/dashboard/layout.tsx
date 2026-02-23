@@ -64,7 +64,6 @@ const adminNavGroups = [
     icon: Network,
     links: [
       { href: '/dashboard/admin/assets', label: 'Manajemen Aset', icon: Settings, access: 'admin' },
-      { href: '/dashboard/admin/inventory/orbit', label: 'Inventory Orbit', icon: Component, access: 'admin' },
       { href: '/dashboard/admin/map-links', label: 'Manajemen Peta', icon: Map, access: 'admin' },
       { href: '/dashboard/admin/mancore', label: 'Manajemen Mancore', icon: FolderGit2, access: 'admin' },
     ]
@@ -74,6 +73,7 @@ const adminNavGroups = [
     icon: Building,
     links: [
       { href: '/dashboard/admin/pelanggan', label: 'Data Pelanggan', icon: Contact, access: 'korlap' },
+      { href: '/dashboard/admin/inventory/orbit', label: 'Inventory Orbit', icon: Component, access: 'admin' },
     ]
   }
 ];
@@ -358,5 +358,3 @@ export default function DashboardLayout({
     </div>
   );
 }
-
-    
