@@ -85,6 +85,25 @@ export default function DashboardSelectorPage() {
             </Link>
         )}
         
+        <Link href="/dashboard/hr/performance">
+            <Card className="hover:border-primary hover:shadow-lg transition-all duration-200 h-full">
+                <CardHeader className="flex flex-row items-center gap-4">
+                <div className="p-3 rounded-full bg-primary/10 text-primary">
+                    <BarChart3 className="h-8 w-8" />
+                </div>
+                <div>
+                    <CardTitle>Performa Teknisi</CardTitle>
+                    <CardDescription>Lihat laporan performa bulanan.</CardDescription>
+                </div>
+                </CardHeader>
+                <CardContent>
+                <p className="text-sm text-muted-foreground">
+                    Analisis rincian performa kualitas, kontribusi, dan kedisiplinan Anda.
+                </p>
+                </CardContent>
+            </Card>
+        </Link>
+
         {canAccessAllpro && (
            <Link href="/dashboard/search-assets">
             <Card className="hover:border-primary hover:shadow-lg transition-all duration-200 h-full">
