@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home, Network, Search, BarChart3, Map, FolderGit2, Contact, CalendarClock, ClipboardCheck, CalendarOff, UserCircle, Briefcase, Settings, Building, Wrench, CalendarDays, MessageSquare, Upload } from 'lucide-react';
+import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home, Network, Search, BarChart3, Map, FolderGit2, Contact, CalendarClock, ClipboardCheck, CalendarOff, UserCircle, Briefcase, Settings, Building, Wrench, CalendarDays, MessageSquare, Upload, Component } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -64,6 +64,7 @@ const adminNavGroups = [
     icon: Network,
     links: [
       { href: '/dashboard/admin/assets', label: 'Manajemen Aset', icon: Settings, access: 'admin' },
+      { href: '/dashboard/admin/inventory/orbit', label: 'Inventory Orbit', icon: Component, access: 'admin' },
       { href: '/dashboard/admin/map-links', label: 'Manajemen Peta', icon: Map, access: 'admin' },
       { href: '/dashboard/admin/mancore', label: 'Manajemen Mancore', icon: FolderGit2, access: 'admin' },
     ]
@@ -166,7 +167,7 @@ export default function DashboardLayout({
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
-  const handleSignOutAndRedirect = useCallback((title: string, description: string) => {
+   const handleSignOutAndRedirect = useCallback((title: string, description: string) => {
     if (auth.currentUser) {
         auth.signOut().then(() => {
             toast({
@@ -175,10 +176,10 @@ export default function DashboardLayout({
                 variant: title.includes('Gagal') ? 'destructive' : 'default',
                 duration: 9000,
             });
-            if (router) router.push('/login');
+             if (router) router.push('/login');
         });
     } else if (router) {
-        router.push('/login');
+         router.push('/login');
     }
   }, [auth, router, toast]);
 
@@ -196,7 +197,6 @@ export default function DashboardLayout({
       }
       
       // If the user is authenticated but their profile document is missing, sign them out with an error.
-      // Do NOT create a new profile automatically as this can overwrite existing data.
       if (!userProfile) {
           handleSignOutAndRedirect('Profil Tidak Ditemukan', 'Data profil Anda tidak dapat ditemukan di database. Hubungi admin.');
           return;
@@ -358,3 +358,5 @@ export default function DashboardLayout({
     </div>
   );
 }
+
+    

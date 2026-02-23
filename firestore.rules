@@ -97,6 +97,11 @@ service cloud.firestore {
       allow get, list: if hasAllProAccess() || isKorlap();
       allow write: if isAdmin();
     }
+    
+    match /orbit-inventory/{inventoryId} {
+      allow get, list: if hasAllProAccess() || isKorlap();
+      allow create, update, delete: if isAdmin();
+    }
 
     match /holidays/{holidayId} {
       allow get, list: if isApproved();
@@ -131,12 +136,18 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
-      allow read: if isSignedIn() && request.auth.uid in chatId.split('_');
-      allow write: if isSignedIn() && request.auth.uid in chatId.split('_') && request.resource.data.participants.hasAll(chatId.split('_')) && request.resource.data.participants.size() == 2;
+      allow list: if false; // Deny listing chat rooms directly
+      allow get: if isSignedIn() && request.auth.uid in chatId.split('_');
+      allow write: if isSignedIn() &&
+                      request.auth.uid in chatId.split('_') &&
+                      request.resource.data.participants.hasAll(chatId.split('_')) &&
+                      request.resource.data.participants.size() == 2;
       
       match /messages/{messageId} {
         allow list: if isSignedIn() && request.auth.uid in chatId.split('_');
-        allow get, write: if isSignedIn() && exists(/databases/$(database)/documents/chats/$(chatId)) && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+        allow get, write: if isSignedIn() &&
+                              exists(/databases/$(database)/documents/chats/$(chatId)) &&
+                              request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
       }
     }
     
@@ -146,3 +157,5 @@ service cloud.firestore {
     }
   }
 }
+
+    

@@ -116,6 +116,15 @@ export type NetworkAsset = {
   alamat?: string;
 };
 
+export type OrbitInventory = {
+  id: string;
+  snOrbit: string;
+  snMikrotik?: string;
+  noSimCard: string;
+  dateAdded: any; // Timestamp
+  addedBy: string; // User's email
+};
+
 export type MapLink = {
   id: string;
   serviceArea: string;
@@ -265,3 +274,5 @@ export type Performance = {
   totalPerformance: string;
   date: any; // Timestamp
 };
+
+    
