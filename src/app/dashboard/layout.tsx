@@ -157,7 +157,7 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const firestore = useFirestore();
   const { toast } = useToast();
-  const [isReady, setIsReady] = useState(false); // New state to control rendering
+  const [isReady, setIsReady] = useState(false);
 
   const userDocRef = useMemoFirebase(() => {
     if (!user) return null;
@@ -183,55 +183,43 @@ export default function DashboardLayout({
   }, [auth, router, toast]);
 
   useEffect(() => {
-    const checkUserStatus = async () => {
+    const checkUserStatus = () => {
+      // Wait until both auth and profile loading are complete
       if (isUserLoading || isProfileLoading) {
         return; 
       }
 
+      // If there's no authenticated user, redirect to login
       if (!user) {
         router.push('/login');
         return;
       }
       
+      // If the user is authenticated but their profile document is missing, sign them out with an error.
+      // Do NOT create a new profile automatically as this can overwrite existing data.
       if (!userProfile) {
-          console.warn(`User profile for ${user.uid} is missing. Creating new default profile.`);
-          const newUserDocRef = doc(firestore, 'users', user.uid);
-          const newUserProfileData: Partial<UserProfile> = {
-            id: user.uid,
-            email: user.email!,
-            role: 'teknisi',
-            registrationStatus: 'pending',
-            appAccess: 'nota', // Default access level
-            displayName: user.email?.split('@')[0] || 'New User',
-          };
-
-          try {
-            await setDoc(newUserDocRef, newUserProfileData);
-            handleSignOutAndRedirect(
-              'Profil Baru Dibuat',
-              'Profil Anda telah dibuat & menunggu persetujuan. Silakan coba masuk lagi nanti.'
-            );
-          } catch (err) {
-            console.error("CRITICAL: Failed to create missing user profile document.", err);
-            handleSignOutAndRedirect('Gagal Membuat Profil', 'Terjadi kesalahan kritis saat membuat akun Anda.');
-          }
+          handleSignOutAndRedirect('Profil Tidak Ditemukan', 'Data profil Anda tidak dapat ditemukan di database. Hubungi admin.');
           return;
-        }
+      }
 
-        if (userProfile.registrationStatus === 'pending') {
-          handleSignOutAndRedirect(
-            'Akun Menunggu Persetujuan',
-            'Akun Anda sedang menunggu persetujuan dari admin.'
-          );
+      // If the profile exists but is not approved, sign out with an explanation.
+      if (userProfile.registrationStatus !== 'approved') {
+          const title = userProfile.registrationStatus === 'pending' ? 'Akun Menunggu Persetujuan' : 'Akses Ditolak';
+          const description = userProfile.registrationStatus === 'pending' 
+              ? 'Akun Anda sedang menunggu persetujuan dari admin.'
+              : `Status akun Anda adalah "${userProfile.registrationStatus}". Silakan hubungi admin.`;
+          
+          handleSignOutAndRedirect(title, description);
           return;
-        }
+      }
       
+      // If all checks pass, the layout is ready
       setIsReady(true);
     };
 
     checkUserStatus();
 
-  }, [user, userProfile, isUserLoading, isProfileLoading, router, firestore, handleSignOutAndRedirect, toast]);
+  }, [user, userProfile, isUserLoading, isProfileLoading, router, handleSignOutAndRedirect]);
 
   if (!isReady) {
     return <DashboardSkeleton />;
