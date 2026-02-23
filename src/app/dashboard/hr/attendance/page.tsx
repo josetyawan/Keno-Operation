@@ -29,6 +29,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { sendAttendanceNotice } from '@/ai/flows/send-attendance-notification';
+import { useRouter } from 'next/navigation';
 
 // --- Helper Functions ---
 const getStartOfDay = () => {
@@ -235,6 +236,7 @@ export default function AttendancePage() {
     const firestore = useFirestore();
     const storage = useStorage();
     const { toast } = useToast();
+    const router = useRouter();
 
     const [todaySchedule, setTodaySchedule] = useState<Schedule | null>(null);
     const [todayAttendance, setTodayAttendance] = useState<Attendance | null>(null);
@@ -374,7 +376,8 @@ export default function AttendancePage() {
                 coordinates: coordinates,
             }).catch(err => console.error("Telegram notification failed:", err));
 
-            toast({ title: 'Absen Berhasil!', description: 'Kehadiran Anda telah dicatat.' });
+            router.push('/dashboard/hr/attendance/goodbye');
+
         } catch (error: any) {
             let description = 'Terjadi kesalahan yang tidak diketahui.';
             if (error.code === 1) description = 'Gagal mendapatkan lokasi: Izin ditolak.';
@@ -437,6 +440,7 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished }: { todaySchedul
     const firestore = useFirestore();
     const storage = useStorage();
     const { toast } = useToast();
+    const router = useRouter();
     
     const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
     const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
@@ -526,6 +530,7 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished }: { todaySchedul
                 }).catch(err => console.error("Telegram notification failed:", err));
 
                 toast({ title: 'Pengajuan Terkirim', description: 'Status jadwal Anda telah diperbarui.' });
+                onFinished();
 
             } else if (leaveType === 'late' || leaveType === 'remote-progress') {
                 if (!reason.trim() || !selfie) {
@@ -565,9 +570,8 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished }: { todaySchedul
                     coordinates: coordinates,
                 }).catch(err => console.error("Telegram notification failed:", err));
 
-                toast({ title: 'Izin Terkirim', description: 'Absensi izin Anda telah tercatat.' });
+                router.push('/dashboard/hr/attendance/goodbye');
             }
-            onFinished();
         } catch (error: any) {
             console.error("Failed to submit leave request:", error);
             toast({ variant: 'destructive', title: 'Gagal Mengajukan', description: error.message || 'Terjadi kesalahan.' });
