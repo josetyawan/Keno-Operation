@@ -33,12 +33,6 @@ export default function DashboardSelectorPage() {
   );
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
-  const orbitInventoryQuery = useMemoFirebase(
-    () => user ? query(collection(firestore, 'orbit-inventory'), orderBy('dateAdded', 'desc')) : null,
-    [user, firestore]
-  );
-  const { data: inventory, isLoading: isInventoryLoading } = useCollection<OrbitInventory>(orbitInventoryQuery);
-
   const isLoading = isAuthLoading || isProfileLoading;
   
   const canAccessNota = !isLoading && (userProfile?.role === 'admin' || userProfile?.appAccess === 'nota' || userProfile?.appAccess === 'all');
@@ -263,6 +257,25 @@ export default function DashboardSelectorPage() {
             </Card>
         </Link>
         
+        <Link href="/dashboard/inventory/orbit">
+          <Card className="hover:border-primary hover:shadow-lg transition-all duration-200 h-full">
+              <CardHeader className="flex flex-row items-center gap-4">
+              <div className="p-3 rounded-full bg-primary/10 text-primary">
+                  <Component className="h-8 w-8" />
+              </div>
+              <div>
+                  <CardTitle>Inventaris Orbit</CardTitle>
+                  <CardDescription>Lihat data inventaris Orbit & Mikrotik.</CardDescription>
+              </div>
+              </CardHeader>
+              <CardContent>
+              <p className="text-sm text-muted-foreground">
+                  Lihat daftar SN Orbit, SN Mikrotik, dan nomor SIM card yang terdaftar.
+              </p>
+              </CardContent>
+          </Card>
+        </Link>
+
         <Link href="/dashboard/bots">
             <Card className="hover:border-primary hover:shadow-lg transition-all duration-200 h-full">
                 <CardHeader className="flex flex-row items-center gap-4">
@@ -282,50 +295,6 @@ export default function DashboardSelectorPage() {
             </Card>
         </Link>
       </div>
-
-      <Card className="mt-8">
-        <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-                <Component className="h-6 w-6" />
-                Inventaris Orbit
-            </CardTitle>
-            <CardDescription>
-                Daftar perangkat Orbit & Mikrotik yang terdaftar.
-            </CardDescription>
-        </CardHeader>
-        <CardContent>
-            {isInventoryLoading ? (
-                <div className="space-y-2">
-                    <Skeleton className="h-8 w-full" />
-                    <Skeleton className="h-8 w-full" />
-                    <Skeleton className="h-8 w-full" />
-                </div>
-            ) : inventory && inventory.length > 0 ? (
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>SN Orbit</TableHead>
-                            <TableHead>SN Mikrotik</TableHead>
-                            <TableHead>No. SIM Card</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {inventory.map((item) => (
-                            <TableRow key={item.id}>
-                                <TableCell className="font-medium">{item.snOrbit}</TableCell>
-                                <TableCell>{item.snMikrotik || '-'}</TableCell>
-                                <TableCell>{item.noSimCard}</TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                    Belum ada data inventaris Orbit.
-                </p>
-            )}
-        </CardContent>
-      </Card>
 
       <div className="mt-8 w-full overflow-hidden">
         <Adsense
