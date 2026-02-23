@@ -410,7 +410,7 @@ export default function NotaDetailPage() {
                           </AlertDialog>
                       </>
                   )}
-                  {isAdmin && nota.status === 'pending' && (
+                  {isAdmin && (nota.status === 'pending' || nota.status === 'verified' || nota.status === 'verified-tif') && (
                     <div className="flex gap-2">
                       <AlertDialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
                         <AlertDialogTrigger asChild>
@@ -440,40 +440,43 @@ export default function NotaDetailPage() {
                             </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
-                      <AlertDialog open={isVerifyDialogOpen} onOpenChange={setIsVerifyDialogOpen}>
-                          <AlertDialogTrigger asChild>
-                              <Button>
-                                  <CheckCircle /> {isBbmGenset ? 'Verifikasi (Pengajuan TIF)' : 'Verifikasi'}
-                              </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                              <AlertDialogHeader>
-                                  <AlertDialogTitle>{isBbmGenset ? 'Verifikasi Pengajuan TIF' : 'Pilih Tanggal Verifikasi'}</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                      {isBbmGenset
-                                          ? 'Pilih tanggal verifikasi untuk pengajuan ke TIF. Status akan diubah menjadi "verified-tif".'
-                                          : 'Pilih tanggal kapan laporan ini dianggap telah diverifikasi. Tanggal ini akan digunakan untuk filter laporan terverifikasi.'}
-                                  </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <div className="flex justify-center py-4">
-                                  <Calendar
-                                      mode="single"
-                                      selected={verificationDate}
-                                      onSelect={setVerificationDate}
-                                      initialFocus
-                                      captionLayout="dropdown-buttons"
-                                      fromYear={new Date().getFullYear() - 1}
-                                      toYear={new Date().getFullYear()}
-                                  />
-                              </div>
-                              <AlertDialogFooter>
-                                  <AlertDialogCancel>Batal</AlertDialogCancel>
-                                  <AlertDialogAction onClick={handleConfirmVerify} disabled={!verificationDate}>
-                                      Konfirmasi Verifikasi
-                                  </AlertDialogAction>
-                              </AlertDialogFooter>
-                          </AlertDialogContent>
-                      </AlertDialog>
+                      
+                      {nota.status === 'pending' && (
+                        <AlertDialog open={isVerifyDialogOpen} onOpenChange={setIsVerifyDialogOpen}>
+                            <AlertDialogTrigger asChild>
+                                <Button>
+                                    <CheckCircle /> {isBbmGenset ? 'Verifikasi (Pengajuan TIF)' : 'Verifikasi'}
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>{isBbmGenset ? 'Verifikasi Pengajuan TIF' : 'Pilih Tanggal Verifikasi'}</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        {isBbmGenset
+                                            ? 'Pilih tanggal verifikasi untuk pengajuan ke TIF. Status akan diubah menjadi "verified-tif".'
+                                            : 'Pilih tanggal kapan laporan ini dianggap telah diverifikasi. Tanggal ini akan digunakan untuk filter laporan terverifikasi.'}
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <div className="flex justify-center py-4">
+                                    <Calendar
+                                        mode="single"
+                                        selected={verificationDate}
+                                        onSelect={setVerificationDate}
+                                        initialFocus
+                                        captionLayout="dropdown-buttons"
+                                        fromYear={new Date().getFullYear() - 1}
+                                        toYear={new Date().getFullYear()}
+                                    />
+                                </div>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleConfirmVerify} disabled={!verificationDate}>
+                                        Konfirmasi Verifikasi
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                      )}
                     </div>
                   )}
               </div>
