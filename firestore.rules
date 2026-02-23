@@ -131,26 +131,18 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
-      // Allow read if the user's UID is part of the chatId. This works even if the document doesn't exist yet.
       allow read: if isSignedIn() && request.auth.uid in chatId.split('_');
-
-      // Allow write (create/update) if the user is a participant and the participants list is valid.
-      allow write: if isSignedIn() &&
-                      request.auth.uid in chatId.split('_') &&
-                      request.resource.data.participants.hasAll(chatId.split('_')) &&
-                      request.resource.data.participants.size() == 2;
+      allow write: if isSignedIn() && request.auth.uid in chatId.split('_') && request.resource.data.participants.hasAll(chatId.split('_')) && request.resource.data.participants.size() == 2;
       
       match /messages/{messageId} {
-        // Allow listing messages if the user is part of the chat, based on the chatId.
-        // This is safe because it only checks the UIDs in the chat ID string.
         allow list: if isSignedIn() && request.auth.uid in chatId.split('_');
-        
-        // For getting a specific message or writing a message, the parent chat document must exist
-        // to confirm the user is a valid participant.
-        allow get, write: if isSignedIn() &&
-                              exists(/databases/$(database)/documents/chats/$(chatId)) &&
-                              request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+        allow get, write: if isSignedIn() && exists(/databases/$(database)/documents/chats/$(chatId)) && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
       }
+    }
+    
+    match /performance/{performanceId} {
+      allow read: if (isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.nik == resource.data.nik) || isAdmin() || isKorlap();
+      allow write: if isAdmin() || isKorlap();
     }
   }
 }

@@ -248,3 +248,20 @@ export type PrivateMessage = {
   userId: string;
   createdAt: any; // Timestamp
 };
+
+export type Performance = {
+  id: string;
+  nik: string;
+  userId: string;
+  nama: string;
+  service: string;
+  bulan: number;
+  tahun: number;
+  nilaiKualitas: string;
+  nilaiKontribusi: string;
+  nilaiKedisiplinan: string;
+  performance1: string;
+  performance2: string;
+  totalPerformance: string;
+  date: any; // Timestamp
+};

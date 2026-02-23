@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home, Network, Search, BarChart3, Map, FolderGit2, Contact, CalendarClock, ClipboardCheck, CalendarOff, UserCircle, Briefcase, Settings, Building, Wrench, CalendarDays, MessageSquare } from 'lucide-react';
+import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home, Network, Search, BarChart3, Map, FolderGit2, Contact, CalendarClock, ClipboardCheck, CalendarOff, UserCircle, Briefcase, Settings, Building, Wrench, CalendarDays, MessageSquare, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -29,6 +29,7 @@ const navLinks = [
   { href: '/dashboard/nota', label: 'Laporan Nota', icon: LayoutGrid, access: 'nota' },
   { href: '/dashboard/search-assets', label: 'Network Cek', icon: Search, access: 'allpro' },
   { href: '/dashboard/allpro', label: 'Network Service Area', icon: BarChart3, access: 'allpro' },
+  { href: '/dashboard/hr/performance', label: 'Performa Teknisi', icon: BarChart3, access: 'public' },
   { href: '/dashboard/hr/attendance', label: 'Absensi Jaga', icon: ClipboardCheck, access: 'allpro' },
   { href: '/dashboard/alker', label: 'Daftar Pengecekan', icon: ClipboardCheck, access: 'allpro' },
   { href: '/dashboard/alker/new', label: 'Input Pengecekan Alker', icon: Wrench, access: 'allpro' },
@@ -43,6 +44,7 @@ const adminNavGroups = [
       { href: '/dashboard/admin/users', label: 'Manajemen User', icon: Users, access: 'admin' },
       { href: '/dashboard/admin/hr/schedules', label: 'Manajemen Jadwal', icon: CalendarClock, access: 'korlap' },
       { href: '/dashboard/admin/hr/holidays', label: 'Manajemen Hari Libur', icon: CalendarOff, access: 'admin' },
+      { href: '/dashboard/admin/hr/performance', label: 'Impor Performa', icon: Upload, access: 'korlap' },
       { href: '/dashboard/hr/work-schedule', label: 'Jadwal Kerja', icon: CalendarDays, access: 'korlap' },
       { href: '/dashboard/hr/attendance/rekap', label: 'Rekap Absensi', icon: ClipboardCheck, access: 'korlap' },
       { href: '/dashboard/alker/rekap', label: 'Rekap Alker', icon: ClipboardCheck, access: 'korlap' },
@@ -191,54 +193,7 @@ export default function DashboardLayout({
         return;
       }
       
-      const isSuperAdmin = user.email === 'jokowahyusisnaker123@gmail.com';
-      if (isSuperAdmin) {
-        const userToUpgradeRef = doc(firestore, 'users', user.uid);
-        
-        if (!userProfile) {
-          console.log("Super admin profile not found. Creating new profile...");
-          try {
-            await setDoc(userToUpgradeRef, {
-              id: user.uid,
-              email: user.email,
-              role: 'admin',
-              registrationStatus: 'approved',
-              appAccess: 'all',
-              displayName: 'J. Wahyu Setyawan',
-            }, { merge: true });
-            
-            toast({
-              title: "Profil Admin Dibuat",
-              description: "Profil super admin Anda telah dibuat. Silakan muat ulang jika perlu.",
-            });
-          } catch (err) {
-             console.error("CRITICAL: Failed to create super admin profile.", err);
-             handleSignOutAndRedirect('Gagal Membuat Profil Admin', 'Terjadi kesalahan kritis.');
-          }
-          return; 
-        } else {
-          const needsCorrection = userProfile.role !== 'admin' || userProfile.registrationStatus !== 'approved' || userProfile.appAccess !== 'all';
-          if (needsCorrection) {
-            console.log("Correcting super admin privileges...");
-            try {
-              await updateDoc(userToUpgradeRef, {
-                role: 'admin',
-                registrationStatus: 'approved',
-                appAccess: 'all'
-              });
-              toast({
-                  title: "Hak Akses Admin Diperbarui",
-                  description: "Hak akses super admin Anda telah dikembalikan ke default.",
-              });
-            } catch (err) {
-              console.error("CRITICAL: Failed to correct super admin privileges.", err);
-              handleSignOutAndRedirect('Gagal Memperbarui Hak Akses', 'Terjadi kesalahan kritis.');
-              return;
-            }
-          }
-        }
-      } else {
-        if (!userProfile) {
+      if (!userProfile) {
           console.warn(`User profile for ${user.uid} is missing. Creating new default profile.`);
           const newUserDocRef = doc(firestore, 'users', user.uid);
           const newUserProfileData: Partial<UserProfile> = {
@@ -270,7 +225,6 @@ export default function DashboardLayout({
           );
           return;
         }
-      }
       
       setIsReady(true);
     };

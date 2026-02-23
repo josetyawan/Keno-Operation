@@ -333,6 +333,28 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "text", "userId", "createdAt"]
+    },
+    "Performance": {
+      "title": "Performance",
+      "type": "object",
+      "description": "Represents a monthly performance record for a technician.",
+      "properties": {
+        "id": { "type": "string" },
+        "nik": { "type": "string", "description": "Technician's NIK, used as a foreign key to the User entity." },
+        "userId": { "type": "string", "description": "The user ID of the technician." },
+        "nama": { "type": "string" },
+        "service": { "type": "string" },
+        "bulan": { "type": "number" },
+        "tahun": { "type": "number" },
+        "nilaiKualitas": { "type": "string" },
+        "nilaiKontribusi": { "type": "string" },
+        "nilaiKedisiplinan": { "type": "string" },
+        "performance1": { "type": "string" },
+        "performance2": { "type": "string" },
+        "totalPerformance": { "type": "string" },
+        "date": { "type": "string", "format": "date-time", "description": "The date representing the performance period (e.g., first day of the month)." }
+      },
+      "required": ["id", "nik", "userId", "bulan", "tahun", "date"]
     }
   },
   "auth": { "providers": ["password", "anonymous"] },
@@ -353,7 +375,8 @@
       { "path": "/tool-checklists/{checklistId}", "definition": { "entityName": "AlkerChecklist", "schema": { "$ref": "#/backend/entities/AlkerChecklist" }, "description": "Stores tool checklist submissions from technicians.", "params": [{ "name": "checklistId", "description": "The unique ID for the checklist." }] } },
       { "path": "/messages/{messageId}", "definition": { "entityName": "Message", "schema": { "$ref": "#/backend/entities/Message" }, "description": "Stores all chat messages for the real-time chat.", "params": [{ "name": "messageId", "description": "The unique ID for the message." }] } },
       { "path": "/chats/{chatId}", "definition": { "entityName": "ChatRoom", "schema": { "$ref": "#/backend/entities/ChatRoom" }, "description": "Stores metadata for private chat rooms.", "params": [{ "name": "chatId", "description": "The unique ID for the chat room, typically a composite of user IDs." }] } },
-      { "path": "/chats/{chatId}/messages/{messageId}", "definition": { "entityName": "PrivateMessage", "schema": { "$ref": "#/backend/entities/PrivateMessage" }, "description": "Stores all messages for a specific private chat room.", "params": [{ "name": "chatId", "description": "The ID of the parent chat room." }, { "name": "messageId", "description": "The unique ID for the message." }] } }
+      { "path": "/chats/{chatId}/messages/{messageId}", "definition": { "entityName": "PrivateMessage", "schema": { "$ref": "#/backend/entities/PrivateMessage" }, "description": "Stores all messages for a specific private chat room.", "params": [{ "name": "chatId", "description": "The ID of the parent chat room." }, { "name": "messageId", "description": "The unique ID for the message." }] } },
+      { "path": "/performance/{performanceId}", "definition": { "entityName": "Performance", "schema": { "$ref": "#/backend/entities/Performance" }, "description": "Stores monthly performance data for technicians.", "params": [{ "name": "performanceId", "description": "The unique ID for the performance record." }] } }
     ],
     "reasoning": "The data is structured with a top-level `users` collection for profiles and a top-level `notas` collection for all user-generated notes. This flat structure for `notas` simplifies querying, allowing all users to view all notes easily, which aligns with the application's requirements. Security is enforced within the rules: while reads are permissive, writes (create, update, delete) are strictly controlled. A user can only create a nota with their own `userId`, and can only update or delete notas they own. Admins are granted special privileges to update any nota for verification purposes. A `network-assets` collection is added for managing network equipment, with admin-only write access. This design is efficient and secure for the specified use case."
   }
