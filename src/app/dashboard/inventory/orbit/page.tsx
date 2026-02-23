@@ -21,16 +21,15 @@ import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
 import type { OrbitInventory } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useRouter } from 'next/navigation';
 import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import Link from 'next/link';
 
 export default function ViewOrbitInventoryPage() {
   const firestore = useFirestore();
-  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
 
   const inventoryQuery = useMemoFirebase(() => {
@@ -58,9 +57,11 @@ export default function ViewOrbitInventoryPage() {
           <h1 className="text-3xl font-bold tracking-tight">Inventaris Orbit & Mikrotik</h1>
           <p className="text-muted-foreground mt-1">Daftar perangkat yang terdaftar di sistem.</p>
         </div>
-        <Button onClick={() => router.back()} variant="outline">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Kembali
-        </Button>
+        <Link href="/dashboard/inventory/orbit/goodbye">
+          <Button variant="outline">
+              <ArrowLeft className="mr-2 h-4 w-4" /> Kembali ke Dashboard
+          </Button>
+        </Link>
       </div>
       <Card>
         <CardHeader>
