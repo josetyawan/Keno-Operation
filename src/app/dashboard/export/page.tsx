@@ -109,10 +109,13 @@ const statusLabels: Record<string, string> = {
 const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectType: ProjectType, pids: ProjectID[]): string => {
     const today = new Date();
     const firstNotaDate = (notas.length > 0) ? safeToDate(notas[0].tanggal) : null;
-    const reportDate = firstNotaDate || today;
-
-    const monthName = format(reportDate, 'MMM', { locale: idLocale });
-    const formattedDate = format(reportDate, 'dd/MM/yyyy');
+    
+    // Use today's date for signature and document dates, as requested.
+    const formattedDate = format(today, 'dd/MM/yyyy');
+    
+    // Use the nota's period for the project name month.
+    const periodDate = firstNotaDate || today;
+    const monthName = format(periodDate, 'MMM', { locale: idLocale });
     
     const saShort = serviceArea.replace('SA ', '');
     const projectName = projectType === 'WAREHOUSE'
@@ -349,7 +352,7 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
         if (lowerSegmen === 'bbm r4 pengiriman warehouse') {
             return false;
         }
-        return lowerSegmen.includes('jasa') || lowerSegmen.includes('pengiriman') || lowerSegmen.includes('ekspedisi');
+        return lowerSegmen.includes('jasa') || lowerSegmen.includes('pengiriman');
     };
 
     let grandTotalJumlah = 0;
