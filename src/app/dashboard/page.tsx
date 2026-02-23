@@ -8,10 +8,18 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { BookCopy, BarChart3, Search, ClipboardCheck, Wrench, Bot, Contact, MessageSquare } from 'lucide-react';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
-import type { UserProfile } from '@/lib/types';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { BookCopy, BarChart3, Search, ClipboardCheck, Wrench, Bot, Contact, MessageSquare, Component } from 'lucide-react';
+import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { doc, collection, query, orderBy } from 'firebase/firestore';
+import type { UserProfile, OrbitInventory } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Adsense } from '@/components/adsense';
 
@@ -24,6 +32,12 @@ export default function DashboardSelectorPage() {
     [user, firestore]
   );
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+
+  const orbitInventoryQuery = useMemoFirebase(
+    () => user ? query(collection(firestore, 'orbit-inventory'), orderBy('dateAdded', 'desc')) : null,
+    [user, firestore]
+  );
+  const { data: inventory, isLoading: isInventoryLoading } = useCollection<OrbitInventory>(orbitInventoryQuery);
 
   const isLoading = isAuthLoading || isProfileLoading;
   
@@ -268,6 +282,51 @@ export default function DashboardSelectorPage() {
             </Card>
         </Link>
       </div>
+
+      <Card className="mt-8">
+        <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+                <Component className="h-6 w-6" />
+                Inventaris Orbit
+            </CardTitle>
+            <CardDescription>
+                Daftar perangkat Orbit & Mikrotik yang terdaftar.
+            </CardDescription>
+        </CardHeader>
+        <CardContent>
+            {isInventoryLoading ? (
+                <div className="space-y-2">
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-full" />
+                </div>
+            ) : inventory && inventory.length > 0 ? (
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>SN Orbit</TableHead>
+                            <TableHead>SN Mikrotik</TableHead>
+                            <TableHead>No. SIM Card</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {inventory.map((item) => (
+                            <TableRow key={item.id}>
+                                <TableCell className="font-medium">{item.snOrbit}</TableCell>
+                                <TableCell>{item.snMikrotik || '-'}</TableCell>
+                                <TableCell>{item.noSimCard}</TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                    Belum ada data inventaris Orbit.
+                </p>
+            )}
+        </CardContent>
+      </Card>
+
       <div className="mt-8 w-full overflow-hidden">
         <Adsense
           data-ad-client="ca-pub-6478281232505590"

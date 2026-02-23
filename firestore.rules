@@ -99,7 +99,7 @@ service cloud.firestore {
     }
     
     match /orbit-inventory/{inventoryId} {
-      allow get, list: if hasAllProAccess() || isKorlap();
+      allow get, list: if isApproved();
       allow create, update, delete: if isAdmin();
     }
 
@@ -157,5 +157,3 @@ service cloud.firestore {
     }
   }
 }
-
-    
