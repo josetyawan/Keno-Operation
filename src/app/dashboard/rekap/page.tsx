@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -43,6 +42,8 @@ import { sendLinkAjaPayment } from '@/ai/flows/send-linkaja-payment';
 import { sendPaidNotice } from '@/ai/flows/send-paid-notice';
 import type { DateRange } from 'react-day-picker';
 import { useRouter } from 'next/navigation';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 type RekapDataItem = {
     phone: string;
@@ -51,6 +52,7 @@ type RekapDataItem = {
     tanggal: string;
     nominal: number;
     userId: string;
+    notaId?: string;
 };
 
 const safeToDate = (timestamp: any): Date | null => {
@@ -69,6 +71,7 @@ export default function RekapPage() {
     const [verificationDateRange, setVerificationDateRange] = useState<DateRange | undefined>();
     const [rekapData, setRekapData] = useState<RekapDataItem[]>([]);
     const [grandTotal, setGrandTotal] = useState(0);
+    const [selectedNotaIds, setSelectedNotaIds] = useState<string[]>([]);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSending, setIsSending] = useState(false);
     const [isPaying, setIsPaying] = useState(false);
@@ -165,6 +168,7 @@ export default function RekapPage() {
                     tanggal: notaDate ? format(notaDate, 'dd/MM/yy') : '??/??/??',
                     nominal: nota.nominal,
                     userId: userId,
+                    notaId: nota.id,
                 });
                 userSubtotal += nota.nominal;
             });
@@ -195,6 +199,25 @@ export default function RekapPage() {
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [notas, users]);
+
+    useEffect(() => {
+        if (rekapData.length > 0) {
+            const allNotaIds = rekapData.filter(item => !!item.notaId).map(item => item.notaId!);
+            setSelectedNotaIds(allNotaIds);
+        } else {
+            setSelectedNotaIds([]);
+        }
+    }, [rekapData]);
+
+    const selectedTotal = useMemo(() => {
+        if (!notas || selectedNotaIds.length === 0) return 0;
+        return notas.reduce((sum, nota) => {
+            if (selectedNotaIds.includes(nota.id)) {
+                return sum + nota.nominal;
+            }
+            return sum;
+        }, 0);
+    }, [notas, selectedNotaIds]);
     
     const rekapDateString = useMemo(() => {
         if (!verificationDateRange?.from) return '...';
@@ -205,37 +228,80 @@ export default function RekapPage() {
     }, [verificationDateRange]);
 
     const handleManualPayment = async () => {
-        if (rekapData.length === 0 || grandTotal <= 0 || !notas) {
-            toast({ variant: 'destructive', title: 'Tidak ada data untuk ditandai lunas', description: 'Pastikan ada rekap dengan total lebih dari nol.' });
+        if (selectedNotaIds.length === 0) {
+            toast({ variant: 'destructive', title: 'Tidak ada data untuk ditandai lunas', description: 'Pilih setidaknya satu laporan untuk ditandai lunas.' });
             return;
         }
         setIsMarkingAsPaid(true);
-
+    
         try {
             const paymentDate = new Date();
-
-            for (const nota of notas) {
-                const notaDocRef = doc(firestore, 'notas', nota.id);
+    
+            for (const notaId of selectedNotaIds) {
+                const notaDocRef = doc(firestore, 'notas', notaId);
                 updateDocumentNonBlocking(notaDocRef, {
                     status: 'paid',
                     tanggalPembayaran: paymentDate
                 });
             }
-
+    
+            const selectedNotas = notas.filter(n => selectedNotaIds.includes(n.id));
+            const userMap = new Map(users.map(u => [u.id, u]));
+    
+            const groupedByUser = selectedNotas.reduce((acc, nota) => {
+                const userId = nota.userId;
+                if (!acc[userId]) acc[userId] = [];
+                acc[userId].push(nota);
+                return acc;
+            }, {} as Record<string, Nota[]>);
+            
+            const paidNoticeData: RekapDataItem[] = [];
+            const sortedUserIds = Object.keys(groupedByUser).sort((a, b) => (userMap.get(a)?.displayName || '').localeCompare(userMap.get(b)?.displayName || ''));
+    
+            for (const userId of sortedUserIds) {
+                const userNotas = groupedByUser[userId].sort((a, b) => (safeToDate(a.tanggal)?.getTime() ?? 0) - (safeToDate(b.tanggal)?.getTime() ?? 0));
+                const user = userMap.get(userId);
+                let userSubtotal = 0;
+                const userName = (user?.displayName || 'Unknown').replace(/\s/g, '');
+                const paymentNumber = user?.paymentInfo || (user as any)?.phone || 'No-Pembayaran';
+    
+                userNotas.forEach(nota => {
+                    paidNoticeData.push({
+                        phone: paymentNumber,
+                        name: userName,
+                        segmen: nota.segmen,
+                        tanggal: nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd/MM/yy') : '??/??/??',
+                        nominal: nota.nominal,
+                        userId: userId,
+                    });
+                    userSubtotal += nota.nominal;
+                });
+                if (userNotas.length > 0) {
+                     paidNoticeData.push({
+                        phone: paymentNumber,
+                        name: `TOTAL ${userName}`,
+                        segmen: '',
+                        tanggal: '',
+                        nominal: userSubtotal,
+                        userId: userId,
+                    });
+                }
+            }
+    
             await sendPaidNotice({
-                paidData: rekapData,
-                grandTotal: grandTotal,
+                paidData: paidNoticeData,
+                grandTotal: selectedTotal,
                 paidDate: format(paymentDate, 'dd MMMM yyyy', { locale: idLocale }),
             });
-
+    
             toast({ 
                 title: 'Laporan Telah Ditandai Lunas', 
-                description: 'Status laporan telah diperbarui menjadi "paid" dan notifikasi telah dikirim.',
+                description: `${selectedNotaIds.length} laporan telah diperbarui menjadi "paid" dan notifikasi telah dikirim.`,
                 duration: 5000,
             });
             
             setIsManualPayDialogOpen(false);
-
+    
         } catch (error: any) {
             console.error('Manual payment marking error:', error);
             toast({ variant: 'destructive', title: 'Gagal Memperbarui Status', description: error.message });
@@ -246,17 +312,16 @@ export default function RekapPage() {
 
 
     const handleLinkAjaPayment = async () => {
-        if (rekapData.length === 0 || grandTotal <= 0 || !notas) {
-            toast({ variant: 'destructive', title: 'Tidak ada data pembayaran', description: 'Pastikan ada rekap dengan total lebih dari nol.' });
+        if (selectedNotaIds.length === 0 || selectedTotal <= 0) {
+            toast({ variant: 'destructive', title: 'Tidak ada data pembayaran', description: 'Pilih laporan dengan total lebih dari nol.' });
             return;
         }
         setIsPaying(true);
         try {
-            // Logika saat ini adalah membuat satu pembayaran untuk total keseluruhan.
             const uniqueInvoiceId = `REKAP-${format(new Date(), 'yyyyMMdd-HHmmss')}`;
 
             const result = await sendLinkAjaPayment({ 
-                amount: grandTotal,
+                amount: selectedTotal,
                 description: `Pembayaran rekap untuk ${rekapDateString}`,
                 invoiceId: uniqueInvoiceId,
             });
@@ -270,26 +335,59 @@ export default function RekapPage() {
                     duration: 5000,
                 });
                 
-                // Mark all notas in the current filtered list as 'paid'
-                for (const nota of notas) {
-                    const notaDocRef = doc(firestore, 'notas', nota.id);
+                for (const notaId of selectedNotaIds) {
+                    const notaDocRef = doc(firestore, 'notas', notaId);
                     updateDocumentNonBlocking(notaDocRef, {
                         status: 'paid',
                         tanggalPembayaran: paymentDate
                     });
                 }
 
-                // Send Telegram Notification for Paid Status
+                const selectedNotas = notas.filter(n => selectedNotaIds.includes(n.id));
+                const userMap = new Map(users.map(u => [u.id, u]));
+
+                const groupedByUser = selectedNotas.reduce((acc, nota) => {
+                    const userId = nota.userId;
+                    if (!acc[userId]) acc[userId] = [];
+                    acc[userId].push(nota);
+                    return acc;
+                }, {} as Record<string, Nota[]>);
+                
+                const paidNoticeData: RekapDataItem[] = [];
+                const sortedUserIds = Object.keys(groupedByUser).sort((a,b) => (userMap.get(a)?.displayName || '').localeCompare(userMap.get(b)?.displayName || ''));
+        
+                for (const userId of sortedUserIds) {
+                    const userNotas = groupedByUser[userId].sort((a,b) => (safeToDate(a.tanggal)?.getTime() ?? 0) - (safeToDate(b.tanggal)?.getTime() ?? 0));
+                    const user = userMap.get(userId);
+                    let userSubtotal = 0;
+                    const userName = (user?.displayName || 'Unknown').replace(/\s/g, '');
+                    const paymentNumber = user?.paymentInfo || (user as any)?.phone || 'No-Pembayaran';
+        
+                    userNotas.forEach(nota => {
+                        paidNoticeData.push({
+                            phone: paymentNumber, name: userName, segmen: nota.segmen,
+                            tanggal: nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd/MM/yy') : '??/??/??',
+                            nominal: nota.nominal, userId: userId
+                        });
+                        userSubtotal += nota.nominal;
+                    });
+                    if (userNotas.length > 0) {
+                         paidNoticeData.push({
+                            phone: paymentNumber, name: `TOTAL ${userName}`, segmen: '',
+                            tanggal: '', nominal: userSubtotal, userId: userId
+                        });
+                    }
+                }
+                
                 sendPaidNotice({
-                    paidData: rekapData,
-                    grandTotal: grandTotal,
+                    paidData: paidNoticeData,
+                    grandTotal: selectedTotal,
                     paidDate: format(paymentDate, 'dd MMMM yyyy', { locale: idLocale }),
                 }).catch(err => {
                     console.error("Failed to send paid notification:", err);
                 });
                 
                 if (result.redirectUrl) {
-                    // Jika API mengembalikan URL, arahkan pengguna ke sana untuk konfirmasi
                     window.open(result.redirectUrl, '_blank');
                 }
             } else {
@@ -304,19 +402,55 @@ export default function RekapPage() {
     }
 
     const handleSendToTelegram = async () => {
-        if (rekapData.length === 0) {
-            toast({ variant: 'destructive', title: 'Tidak ada data', description: 'Buat rekap terlebih dahulu.' });
+        if (selectedNotaIds.length === 0) {
+            toast({ variant: 'destructive', title: 'Tidak ada data', description: 'Pilih setidaknya satu laporan untuk dikirim.' });
             return;
         }
         setIsSending(true);
         try {
+            const selectedNotas = notas.filter(n => selectedNotaIds.includes(n.id));
+            const userMap = new Map(users.map(u => [u.id, u]));
+    
+            const groupedByUser = selectedNotas.reduce((acc, nota) => {
+                const userId = nota.userId;
+                if (!acc[userId]) acc[userId] = [];
+                acc[userId].push(nota);
+                return acc;
+            }, {} as Record<string, Nota[]>);
+            
+            const telegramRekapData: RekapDataItem[] = [];
+            const sortedUserIds = Object.keys(groupedByUser).sort((a,b) => (userMap.get(a)?.displayName || '').localeCompare(userMap.get(b)?.displayName || ''));
+    
+            for (const userId of sortedUserIds) {
+                const userNotas = groupedByUser[userId].sort((a,b) => (safeToDate(a.tanggal)?.getTime() ?? 0) - (safeToDate(b.tanggal)?.getTime() ?? 0));
+                const user = userMap.get(userId);
+                let userSubtotal = 0;
+                const userName = (user?.displayName || 'Unknown').replace(/\s/g, '');
+                const paymentNumber = user?.paymentInfo || (user as any)?.phone || 'No-Pembayaran';
+    
+                userNotas.forEach(nota => {
+                    telegramRekapData.push({
+                        phone: paymentNumber, name: userName, segmen: nota.segmen,
+                        tanggal: nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd/MM/yy') : '??/??/??',
+                        nominal: nota.nominal, userId: userId
+                    });
+                    userSubtotal += nota.nominal;
+                });
+                if (userNotas.length > 0) {
+                     telegramRekapData.push({
+                        phone: paymentNumber, name: `TOTAL ${userName}`, segmen: '',
+                        tanggal: '', nominal: userSubtotal, userId: userId
+                    });
+                }
+            }
+
             const result = await sendTelegramReport({ 
-                rekapData, // Pass the aggregated data
-                grandTotal,
+                rekapData: telegramRekapData,
+                grandTotal: selectedTotal,
                 rekapDate: rekapDateString
              });
             if (result.success) {
-                toast({ title: 'Terkirim!', description: 'Rekap berhasil dikirim ke Telegram.' });
+                toast({ title: 'Terkirim!', description: 'Rekap item terpilih berhasil dikirim ke Telegram.' });
             } else {
                 throw new Error(result.error || 'Unknown error');
             }
@@ -449,22 +583,33 @@ export default function RekapPage() {
                             <Skeleton className="h-4 w-2/3" />
                          </div>
                     ) : (notas && notas.length > 0) ? (
-                        <div className="space-y-1 text-sm font-mono bg-muted p-4 rounded-md overflow-x-auto">
+                        <div className="space-y-2 text-sm font-mono bg-muted p-4 rounded-md overflow-x-auto">
                             {rekapData.map((item, index) => {
-                                // Subtotal row
-                                if (item.name.startsWith('TOTAL ')) {
+                                if (item.notaId) {
                                     return (
-                                        <p key={index} className="font-bold pt-2 mt-1 border-t border-dashed border-muted-foreground/30">
-                                            {`${item.phone} ${item.name} ${item.nominal.toLocaleString('id-ID')}`}
-                                        </p>
-                                    )
+                                        <div key={`${item.notaId}-${index}`} className="flex items-center gap-3">
+                                            <Checkbox
+                                                id={item.notaId}
+                                                checked={selectedNotaIds.includes(item.notaId)}
+                                                onCheckedChange={(checked) => {
+                                                    setSelectedNotaIds(prev =>
+                                                        checked
+                                                            ? [...prev, item.notaId!]
+                                                            : prev.filter(id => id !== item.notaId)
+                                                    );
+                                                }}
+                                            />
+                                            <Label htmlFor={item.notaId} className="flex-1 cursor-pointer font-normal">
+                                                {`${item.phone} ${item.name} ${item.segmen} ${item.tanggal} ${item.nominal.toLocaleString('id-ID')}`}
+                                            </Label>
+                                        </div>
+                                    );
                                 }
-                                // Individual item row
                                 return (
-                                    <p key={index}>
-                                        {`${item.phone} ${item.name} ${item.segmen} ${item.tanggal} ${item.nominal.toLocaleString('id-ID')}`}
+                                    <p key={index} className="font-bold pt-2 mt-2 border-t border-dashed border-muted-foreground/30">
+                                        {`${item.phone} ${item.name} ${item.nominal.toLocaleString('id-ID')}`}
                                     </p>
-                                );
+                                )
                             })}
                         </div>
                     ) : (
@@ -476,7 +621,12 @@ export default function RekapPage() {
                 {(notas && notas.length > 0 && rekapData.length > 0) && (
                      <CardFooter className="border-t pt-6 flex flex-col sm:flex-row gap-4 justify-between items-center">
                         <div className="text-lg font-bold">
-                            Total: Rp {grandTotal.toLocaleString('id-ID')}
+                            Total Terpilih: Rp {selectedTotal.toLocaleString('id-ID')}
+                            {selectedNotaIds.length !== (notas || []).length && (
+                                <span className="text-sm font-normal text-muted-foreground ml-2">
+                                    (dari total Rp {grandTotal.toLocaleString('id-ID')})
+                                </span>
+                            )}
                         </div>
                         <div className="flex flex-wrap justify-end gap-2">
                             <Button onClick={handleSendToTelegram} disabled={isActionInProgress}>
@@ -486,7 +636,7 @@ export default function RekapPage() {
                             
                             <AlertDialog open={isManualPayDialogOpen} onOpenChange={setIsManualPayDialogOpen}>
                                 <AlertDialogTrigger asChild>
-                                    <Button variant="outline" disabled={isActionInProgress || rekapData.length === 0}>
+                                    <Button variant="outline" disabled={isActionInProgress || selectedNotaIds.length === 0}>
                                         <CheckCircle className="mr-2" />
                                         Tandai Lunas (Manual)
                                     </Button>
@@ -495,7 +645,7 @@ export default function RekapPage() {
                                     <AlertDialogHeader>
                                         <AlertDialogTitle>Konfirmasi Pembayaran Manual</AlertDialogTitle>
                                         <AlertDialogDescription>
-                                            Anda akan menandai {notas?.length || 0} laporan dengan total Rp {grandTotal.toLocaleString('id-ID')} sebagai "LUNAS". Notifikasi akan dikirim ke Telegram. Tindakan ini tidak dapat dibatalkan.
+                                            Anda akan menandai {selectedNotaIds.length} laporan dengan total Rp {selectedTotal.toLocaleString('id-ID')} sebagai "LUNAS". Notifikasi akan dikirim ke Telegram. Tindakan ini tidak dapat dibatalkan.
                                         </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
@@ -508,7 +658,7 @@ export default function RekapPage() {
                                 </AlertDialogContent>
                             </AlertDialog>
 
-                             <Button onClick={handleLinkAjaPayment} disabled={isActionInProgress} variant="destructive">
+                             <Button onClick={handleLinkAjaPayment} disabled={isActionInProgress || selectedNotaIds.length === 0} variant="destructive">
                                 {isPaying ? <Loader2 className="mr-2 animate-spin"/> : <Wallet className="mr-2" />}
                                 {isPaying ? 'Membayar...' : 'Bayar via Finpay'}
                             </Button>
