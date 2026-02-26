@@ -27,7 +27,7 @@ export default function AdminPerformancePage() {
     const { toast } = useToast();
     
     const [isImporting, setIsImporting] = useState(false);
-    const [importProgress, setImportProgress] = useState(0);
+    const [importProgress, setImportProgress] = 0);
 
     const [searchQuery, setSearchQuery] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
@@ -99,7 +99,6 @@ export default function AdminPerformancePage() {
                 const worksheet = workbook.Sheets[sheetName];
                 const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-                // Find header row dynamically
                 let headerRowIndex = -1;
                 let headers: string[] = [];
                 for(let i=0; i < jsonData.length; i++) {
@@ -117,17 +116,39 @@ export default function AdminPerformancePage() {
 
                 const dataRows = jsonData.slice(headerRowIndex + 1);
                 
-                const nikIndex = headers.findIndex(h => h.toLowerCase() === 'nik');
-                const nameIndex = headers.findIndex(h => h.toLowerCase() === 'nama');
-                const serviceIndex = headers.findIndex(h => h.toLowerCase() === 'service');
-                const bulanIndex = headers.findIndex(h => h.toLowerCase() === 'bulan');
-                const tahunIndex = headers.findIndex(h => h.toLowerCase() === 'tahun');
-                const nilaiKuIndex = headers.findIndex(h => h.toLowerCase() === 'nilai ku');
-                const nilaiKoIndex = headers.findIndex(h => h.toLowerCase() === 'nilai ko');
-                const nilaiKdIndex = headers.findIndex(h => h.toLowerCase() === 'nilai kd');
-                const perform1Index = headers.findIndex(h => h.toLowerCase() === 'perforn');
-                const perform2Index = headers.findIndex(h => h.toLowerCase().startsWith('perforn') && headers.indexOf('Perforn') !== headers.lastIndexOf('Perforn'));
-                const totalPerformIndex = headers.findIndex(h => h.toLowerCase().startsWith('total performar'));
+                const findHeaderIndex = (aliases: string[]) => {
+                    const lowerAliases = aliases.map(a => a.toLowerCase().trim());
+                    return headers.findIndex(h => lowerAliases.includes(h.toLowerCase().trim()));
+                };
+                
+                const findHeaderIndices = (aliases: string[]) => {
+                    const lowerAliases = aliases.map(a => a.toLowerCase().trim());
+                    const indices: number[] = [];
+                    headers.forEach((h, index) => {
+                        if (lowerAliases.includes(h.toLowerCase().trim())) {
+                            indices.push(index);
+                        }
+                    });
+                    return indices;
+                }
+
+                const nikIndex = findHeaderIndex(['nik']);
+                const nameIndex = findHeaderIndex(['nama']);
+                const serviceIndex = findHeaderIndex(['service', 'service ar']);
+                const bulanIndex = findHeaderIndex(['bulan']);
+                const tahunIndex = findHeaderIndex(['tahun']);
+                const nilaiKuIndex = findHeaderIndex(['nilai kuan', 'nilai ku']);
+                const nilaiKoIndex = findHeaderIndex(['nilai kuali', 'nilai ko']);
+                const nilaiKdIndex = findHeaderIndex(['nilai kecukupan', 'nilai kd']);
+                const performIndices = findHeaderIndices(['performar', 'perforn']);
+                const perform1Index = performIndices[0] ?? -1;
+                const perform2Index = performIndices[1] ?? -1;
+                const totalPerformIndex = findHeaderIndex(['total performansi', 'total performar']);
+
+                if ([nikIndex, nameIndex, bulanIndex, tahunIndex, nilaiKuIndex, nilaiKoIndex, nilaiKdIndex, perform1Index, perform2Index, totalPerformIndex].some(index => index === -1)) {
+                    throw new Error("Satu atau lebih kolom yang diperlukan tidak ditemukan. Pastikan file Excel Anda memiliki header yang sesuai (e.g., NIK, Nama, Bulan, Tahun, Nilai Kuan, Nilai Kuali, Nilai Kecukupan, Performar, Total Performansi).");
+                }
+
 
                 let createdCount = 0;
                 let skippedCount = 0;
