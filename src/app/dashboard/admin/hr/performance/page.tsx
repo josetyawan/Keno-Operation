@@ -123,25 +123,20 @@ export default function AdminPerformancePage() {
                 
                 const nikIndex = findHeaderIndex(['nik']);
                 const nameIndex = findHeaderIndex(['nama']);
-                const serviceIndex = findHeaderIndex(['service', 'service ar', 'service area']);
+                const serviceIndex = findHeaderIndex(['service', 'service area']);
                 const bulanIndex = findHeaderIndex(['bulan']);
                 const tahunIndex = findHeaderIndex(['tahun']);
-                const nilaiKuIndex = findHeaderIndex(['nilai kuan', 'nilai kuantitas']);
-                const nilaiKoIndex = findHeaderIndex(['nilai kuali', 'nilai kualitas']);
-                const nilaiKdIndex = findHeaderIndex(['nilai kecukupan']);
+                const nilaiKuIndex = findHeaderIndex(['nilai kuantitas', 'nilai kuan']);
+                const nilaiKoIndex = findHeaderIndex(['nilai kualitas', 'nilai kuali']);
+                const nilaiKdIndex = findHeaderIndex(['nilai kecukupan', 'nilai kd']);
                 const totalPerformIndex = findHeaderIndex(['total performansi']);
 
                 // Flexible logic for performance columns
-                let perform1Index = -1;
-                let perform2Index = -1;
-                
-                const unitIndex = findHeaderIndex(['performa unit', 'performansi unit']);
-                const individuIndex = findHeaderIndex(['performa individu', 'performansi individu']);
+                let perform1Index = findHeaderIndex(['performansi unit', 'performa unit']);
+                let perform2Index = findHeaderIndex(['performansi individu', 'performa individu']);
 
-                if (unitIndex !== -1 && individuIndex !== -1) {
-                    perform1Index = unitIndex;
-                    perform2Index = individuIndex;
-                } else {
+                // Fallback to generic "Performa" if specific ones are not found
+                if (perform1Index === -1 || perform2Index === -1) {
                     const performaIndexes = headers.reduce((acc, h, i) => {
                         if (h && h.toLowerCase().trim() === 'performa') {
                             acc.push(i);
@@ -273,40 +268,61 @@ export default function AdminPerformancePage() {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>NIK</TableHead>
-                                <TableHead>Nama</TableHead>
-                                <TableHead>Periode</TableHead>
-                                <TableHead className="text-right">Total Performa</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {isLoading ? (
-                                Array.from({length: 5}).map((_, i) => (
-                                    <TableRow key={i}>
-                                        <TableCell colSpan={4}><Skeleton className="h-5 w-full"/></TableCell>
-                                    </TableRow>
-                                ))
-                            ) : paginatedRecords.length > 0 ? (
-                                paginatedRecords.map(record => (
-                                    <TableRow key={record.id}>
-                                        <TableCell className="font-mono">{record.nik}</TableCell>
-                                        <TableCell className="font-medium">{record.nama}</TableCell>
-                                        <TableCell>{format(record.date.toDate(), 'MMMM yyyy', {locale: idLocale})}</TableCell>
-                                        <TableCell className="text-right font-bold">{record.totalPerformance}</TableCell>
-                                    </TableRow>
-                                ))
-                            ) : (
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader>
                                 <TableRow>
-                                    <TableCell colSpan={4} className="h-24 text-center">
-                                        {searchQuery ? 'Tidak ada data yang cocok.' : 'Belum ada data performa.'}
-                                    </TableCell>
+                                    <TableHead>NIK</TableHead>
+                                    <TableHead>Nama</TableHead>
+                                    <TableHead>Periode</TableHead>
+                                    <TableHead className="text-right">Kuantitas</TableHead>
+                                    <TableHead className="text-right">Kualitas</TableHead>
+                                    <TableHead className="text-right">Kecukupan</TableHead>
+                                    <TableHead className="text-right">Perf. Unit</TableHead>
+                                    <TableHead className="text-right">Perf. Individu</TableHead>
+                                    <TableHead className="text-right">Total Performa</TableHead>
                                 </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {isLoading ? (
+                                    Array.from({length: 5}).map((_, i) => (
+                                        <TableRow key={i}>
+                                            <TableCell colSpan={9}><Skeleton className="h-5 w-full"/></TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : paginatedRecords.length > 0 ? (
+                                    paginatedRecords.map(record => (
+                                        <TableRow key={record.id}>
+                                            <TableCell className="font-mono">{record.nik}</TableCell>
+                                            <TableCell className="font-medium">{record.nama}</TableCell>
+                                            <TableCell>{format(record.date.toDate(), 'MMMM yyyy', {locale: idLocale})}</TableCell>
+                                            <TableCell className="text-right">{record.nilaiKualitas}</TableCell>
+                                            <TableCell className="text-right">{record.nilaiKontribusi}</TableCell>
+                                            <TableCell className="text-right">{record.nilaiKedisiplinan}</TableCell>
+                                            <TableCell className="text-right">{record.performance1}</TableCell>
+                                            <TableCell className="text-right">{record.performance2}</TableCell>
+                                            <TableCell className="text-right font-bold">
+                                                {(() => {
+                                                    const value = record.totalPerformance;
+                                                    if (typeof value !== 'string' || !value.trim()) return '-';
+                                                    if (value.trim().endsWith('%')) return value;
+                                                    const num = parseFloat(value);
+                                                    if (isNaN(num)) return value;
+                                                    return `${(num * 100).toFixed(2)}%`;
+                                                })()}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow>
+                                        <TableCell colSpan={9} className="h-24 text-center">
+                                            {searchQuery ? 'Tidak ada data yang cocok.' : 'Belum ada data performa.'}
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </CardContent>
                  <CardFooter>
                     <div className="text-xs text-muted-foreground">
