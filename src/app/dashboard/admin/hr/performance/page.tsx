@@ -105,7 +105,7 @@ export default function AdminPerformancePage() {
                     const row = jsonData[i] as string[];
                     if (row.some(cell => typeof cell === 'string' && cell.toLowerCase().trim() === 'nik')) {
                         headerRowIndex = i;
-                        headers = row.map(cell => String(cell).trim());
+                        headers = row.map(cell => String(cell || '').trim());
                         break;
                     }
                 }
@@ -118,7 +118,7 @@ export default function AdminPerformancePage() {
                 
                 const findHeaderIndex = (aliases: string[]) => {
                     const lowerAliases = aliases.map(a => a.toLowerCase().trim());
-                    return headers.findIndex(h => lowerAliases.includes(h.toLowerCase().trim()));
+                    return headers.findIndex(h => lowerAliases.includes((h || '').toLowerCase().trim()));
                 };
                 
                 const nikIndex = findHeaderIndex(['nik']);
@@ -312,5 +312,3 @@ export default function AdminPerformancePage() {
         </div>
     );
 }
-
-    
