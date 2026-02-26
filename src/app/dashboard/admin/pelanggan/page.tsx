@@ -170,6 +170,8 @@ function NewPelangganDialog({ isOpen, onOpenChange, onFinished }: { isOpen: bool
                 odpQRCodeUrl: odpQRCodeUrl.trim(),
                 fotoCpUrl,
                 dateAdded: serverTimestamp(),
+                lastEditedBy: user.email,
+                lastEditedDate: serverTimestamp(),
             };
             const docRef = await addDocumentNonBlocking(collection(firestore, 'pelanggan'), newPelangganData);
             onFinished({ ...newPelangganData, id: docRef.id } as Pelanggan);
@@ -247,7 +249,7 @@ function NewPelangganDialog({ isOpen, onOpenChange, onFinished }: { isOpen: bool
     );
 }
 
-function AddContactDialog({ pelanggan, isOpen, onOpenChange, onFinished }: { pelanggan: Pelanggan, isOpen: boolean, onOpenChange: (open: boolean) => void, onFinished: (data: Partial<Pelanggan>) => void }) {
+function AddContactDialog({ pelanggan, isOpen, onOpenChange, onFinished, currentUserEmail }: { pelanggan: Pelanggan, isOpen: boolean, onOpenChange: (open: boolean) => void, onFinished: (data: Partial<Pelanggan>) => void, currentUserEmail: string }) {
     const firestore = useFirestore();
     const { toast } = useToast();
     const [newPhone, setNewPhone] = useState('');
@@ -263,7 +265,11 @@ function AddContactDialog({ pelanggan, isOpen, onOpenChange, onFinished }: { pel
         try {
             const currentPhones = Array.isArray(pelanggan.nomorTelepon) ? pelanggan.nomorTelepon : (pelanggan.nomorTelepon ? [pelanggan.nomorTelepon] : []);
             const updatedPhones = [...currentPhones, newPhone.trim()];
-            const updatedData = { nomorTelepon: updatedPhones };
+            const updatedData: Partial<Pelanggan> = { 
+                nomorTelepon: updatedPhones,
+                lastEditedBy: currentUserEmail,
+                lastEditedDate: serverTimestamp(),
+            };
 
             const docRef = doc(firestore, 'pelanggan', pelanggan.id);
             updateDocumentNonBlocking(docRef, updatedData);
@@ -300,7 +306,7 @@ function AddContactDialog({ pelanggan, isOpen, onOpenChange, onFinished }: { pel
     );
 }
 
-function UpdateLocationDialog({ pelanggan, isOpen, onOpenChange, onFinished }: { pelanggan: Pelanggan, isOpen: boolean, onOpenChange: (open: boolean) => void, onFinished: (data: Partial<Pelanggan>) => void }) {
+function UpdateLocationDialog({ pelanggan, isOpen, onOpenChange, onFinished, currentUserEmail }: { pelanggan: Pelanggan, isOpen: boolean, onOpenChange: (open: boolean) => void, onFinished: (data: Partial<Pelanggan>) => void, currentUserEmail: string }) {
     const firestore = useFirestore();
     const { toast } = useToast();
     const [alamat, setAlamat] = useState(pelanggan.alamat || '');
@@ -326,7 +332,12 @@ function UpdateLocationDialog({ pelanggan, isOpen, onOpenChange, onFinished }: {
         e.preventDefault();
         setIsSaving(true);
         try {
-            const updatedData = { alamat, koordinat };
+            const updatedData: Partial<Pelanggan> = { 
+                alamat, 
+                koordinat,
+                lastEditedBy: currentUserEmail,
+                lastEditedDate: serverTimestamp(),
+            };
             const docRef = doc(firestore, 'pelanggan', pelanggan.id);
             updateDocumentNonBlocking(docRef, updatedData);
             toast({ title: 'Lokasi berhasil diperbarui' });
@@ -368,7 +379,7 @@ function UpdateLocationDialog({ pelanggan, isOpen, onOpenChange, onFinished }: {
     );
 }
 
-function UpdateAssetDialog({ pelanggan, isOpen, onOpenChange, onFinished }: { pelanggan: Pelanggan, isOpen: boolean, onOpenChange: (open: boolean) => void, onFinished: (data: Partial<Pelanggan>) => void }) {
+function UpdateAssetDialog({ pelanggan, isOpen, onOpenChange, onFinished, currentUserEmail }: { pelanggan: Pelanggan, isOpen: boolean, onOpenChange: (open: boolean) => void, onFinished: (data: Partial<Pelanggan>) => void, currentUserEmail: string }) {
     const firestore = useFirestore();
     const { toast } = useToast();
     const [odpName, setOdpName] = useState(pelanggan.odpName || '');
@@ -380,10 +391,12 @@ function UpdateAssetDialog({ pelanggan, isOpen, onOpenChange, onFinished }: { pe
         e.preventDefault();
         setIsSaving(true);
         try {
-            const updatedData = { 
+            const updatedData: Partial<Pelanggan> = { 
                 odpName: odpName.trim(),
                 odpPort: odpPort.trim(),
                 odpQRCodeUrl: odpQRCodeUrl.trim(),
+                lastEditedBy: currentUserEmail,
+                lastEditedDate: serverTimestamp(),
             };
             const docRef = doc(firestore, 'pelanggan', pelanggan.id);
             updateDocumentNonBlocking(docRef, updatedData);
@@ -850,6 +863,14 @@ export default function AdminPelangganPage() {
                                 ) : '-'}
                             </dd>
                          </div>
+                        {searchedPelanggan.lastEditedBy && searchedPelanggan.lastEditedDate && (
+                            <div className="flex flex-col md:col-span-3 border-t pt-4 mt-2">
+                                <dt className="text-muted-foreground">Terakhir Diubah</dt>
+                                <dd>
+                                    Oleh {searchedPelanggan.lastEditedBy} pada {format(safeToDate(searchedPelanggan.lastEditedDate)!, 'd MMM yyyy, HH:mm', { locale: idLocale })}
+                                </dd>
+                            </div>
+                         )}
                     </dl>
                 </CardContent>
               </Card>
@@ -911,7 +932,7 @@ export default function AdminPelangganPage() {
             });
         }}
       />
-      {searchedPelanggan && (
+      {searchedPelanggan && currentUserProfile && (
           <>
             <AddContactDialog 
                 pelanggan={searchedPelanggan}
@@ -921,6 +942,7 @@ export default function AdminPelangganPage() {
                     setSearchedPelanggan(prev => prev ? { ...prev, ...updatedData } : null);
                     setIsAddContactDialogOpen(false);
                 }}
+                currentUserEmail={currentUserProfile.email}
             />
             <UpdateLocationDialog
                  pelanggan={searchedPelanggan}
@@ -930,6 +952,7 @@ export default function AdminPelangganPage() {
                     setSearchedPelanggan(prev => prev ? { ...prev, ...updatedData } : null);
                     setIsUpdateLocationDialogOpen(false);
                  }}
+                 currentUserEmail={currentUserProfile.email}
             />
             <UpdateAssetDialog
                  pelanggan={searchedPelanggan}
@@ -939,6 +962,7 @@ export default function AdminPelangganPage() {
                     setSearchedPelanggan(prev => prev ? { ...prev, ...updatedData } : null);
                     setIsUpdateAssetDialogOpen(false);
                  }}
+                 currentUserEmail={currentUserProfile.email}
             />
           </>
       )}

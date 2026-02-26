@@ -181,7 +181,9 @@
         "dateAdded": { "type": "string", "format": "date-time", "description": "The date the customer was added." },
         "odpName": { "type": "string", "description": "The name of the ODP asset connected to the customer (e.g., ODP-KDS-FA/001)." },
         "odpPort": { "type": "string", "description": "The ODP port number the customer is connected to." },
-        "odpQRCodeUrl": { "type": "string", "description": "The URL of the ODP's QR code.", "format": "uri" }
+        "odpQRCodeUrl": { "type": "string", "description": "The URL of the ODP's QR code.", "format": "uri" },
+        "lastEditedBy": { "type": "string", "description": "Email of the user who last edited the record." },
+        "lastEditedDate": { "type": "string", "format": "date-time", "description": "Timestamp of the last edit." }
       },
       "required": ["id", "userId", "userEmail", "noService", "namaPelanggan", "koordinat", "serviceArea", "dateAdded"]
     },
@@ -413,7 +415,5 @@
     "reasoning": "The data is structured with a top-level `users` collection for profiles and a top-level `notas` collection for all user-generated notes. This flat structure for `notas` simplifies querying, allowing all users to view all notes easily, which aligns with the application's requirements. Security is enforced within the rules: while reads are permissive, writes (create, update, delete) are strictly controlled. A user can only create a nota with their own `userId`, and can only update or delete notas they own. Admins are granted special privileges to update any nota for verification purposes. A `network-assets` collection is added for managing network equipment, with admin-only write access. This design is efficient and secure for the specified use case."
   }
 }
-
-    
 
     

@@ -165,6 +165,8 @@ export type Pelanggan = {
   odpName?: string;
   odpPort?: string;
   odpQRCodeUrl?: string;
+  lastEditedBy?: string;
+  lastEditedDate?: any;
 };
 
 export type RiwayatGangguan = {
@@ -286,7 +288,5 @@ export type Performance = {
   totalPerformance: string;
   date: any; // Timestamp
 };
-
-    
 
     
