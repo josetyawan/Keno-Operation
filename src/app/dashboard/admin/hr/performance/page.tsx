@@ -102,7 +102,7 @@ export default function AdminPerformancePage() {
                 let headerRowIndex = -1;
                 let headers: string[] = [];
                 for(let i=0; i < jsonData.length; i++) {
-                    const row = jsonData[i] as string[];
+                    const row = jsonData[i] as any[];
                     if (row && row.some(cell => typeof cell === 'string' && cell.toLowerCase().trim() === 'nik')) {
                         headerRowIndex = i;
                         headers = row.map(cell => String(cell || '').trim());
@@ -123,11 +123,11 @@ export default function AdminPerformancePage() {
                 
                 const nikIndex = findHeaderIndex(['nik']);
                 const nameIndex = findHeaderIndex(['nama']);
-                const serviceIndex = findHeaderIndex(['service', 'service ar']);
+                const serviceIndex = findHeaderIndex(['service', 'service ar', 'service area']);
                 const bulanIndex = findHeaderIndex(['bulan']);
                 const tahunIndex = findHeaderIndex(['tahun']);
-                const nilaiKuIndex = findHeaderIndex(['nilai kuan']);
-                const nilaiKoIndex = findHeaderIndex(['nilai kuali']);
+                const nilaiKuIndex = findHeaderIndex(['nilai kuan', 'nilai kuantitas']);
+                const nilaiKoIndex = findHeaderIndex(['nilai kuali', 'nilai kualitas']);
                 const nilaiKdIndex = findHeaderIndex(['nilai kecukupan']);
                 const totalPerformIndex = findHeaderIndex(['total performansi']);
 
@@ -135,15 +135,13 @@ export default function AdminPerformancePage() {
                 let perform1Index = -1;
                 let perform2Index = -1;
                 
-                const unitIndex = findHeaderIndex(['performa unit']);
-                const individuIndex = findHeaderIndex(['performa individu']);
+                const unitIndex = findHeaderIndex(['performa unit', 'performansi unit']);
+                const individuIndex = findHeaderIndex(['performa individu', 'performansi individu']);
 
                 if (unitIndex !== -1 && individuIndex !== -1) {
-                    // Case 1: Both specific headers "Performa Unit" and "Performa Individu" are found
                     perform1Index = unitIndex;
                     perform2Index = individuIndex;
                 } else {
-                    // Case 2: Look for two generic 'Performa' headers if specific ones aren't found
                     const performaIndexes = headers.reduce((acc, h, i) => {
                         if (h && h.toLowerCase().trim() === 'performa') {
                             acc.push(i);
@@ -159,7 +157,7 @@ export default function AdminPerformancePage() {
 
 
                 if ([nikIndex, nameIndex, bulanIndex, tahunIndex, nilaiKuIndex, nilaiKoIndex, nilaiKdIndex, perform1Index, perform2Index, totalPerformIndex].some(index => index === -1)) {
-                    throw new Error("Satu atau lebih kolom yang diperlukan tidak ditemukan. Pastikan file Excel Anda memiliki header: NIK, Nama, Bulan, Tahun, Nilai Kuan, Nilai Kuali, Nilai Kecukupan, (Performa Unit & Performa Individu, atau 2 kolom 'Performa'), dan Total Performansi.");
+                     throw new Error("Satu atau lebih kolom yang diperlukan tidak ditemukan. Pastikan file Excel Anda memiliki header seperti: NIK, Nama, Bulan, Tahun, Nilai Kuantitas, Nilai Kualitas, Nilai Kecukupan, Performansi Unit, Performansi Individu, dan Total Performansi.");
                 }
 
 
@@ -169,6 +167,8 @@ export default function AdminPerformancePage() {
 
                 for(let i = 0; i < dataRows.length; i++) {
                     const row = dataRows[i] as any[];
+                    if (!row || row.length === 0) continue;
+
                     const nik = String(row[nikIndex] || '').trim();
                     if (!nik) continue;
 
@@ -190,7 +190,7 @@ export default function AdminPerformancePage() {
                         nik: nik,
                         userId: user.id,
                         nama: String(row[nameIndex] || ''),
-                        service: String(row[serviceIndex] || ''),
+                        service: serviceIndex !== -1 ? String(row[serviceIndex] || '') : '',
                         bulan: bulan,
                         tahun: tahun,
                         date: Timestamp.fromDate(new Date(tahun, bulan - 1, 1)),
