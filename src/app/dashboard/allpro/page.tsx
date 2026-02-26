@@ -79,7 +79,7 @@ export default function AllproPage() {
   const { data: networkStats, isLoading: areStatsLoading } = useDoc<NetworkStats>(summaryDocRef);
 
   const handleRecalculate = async () => {
-    if (userProfile?.role !== 'admin') return;
+    if (userProfile?.role !== 'admin' || userProfile?.nik !== '876858') return;
     setIsRecalculating(true);
     toast({ title: 'Memulai penghitungan ulang...', description: 'Ini mungkin membutuhkan waktu beberapa saat.' });
 
@@ -263,7 +263,7 @@ export default function AllproPage() {
           </h1>
           <p className="text-muted-foreground text-sm">Ringkasan data OLT, ODC, ODP, dan FTM per Service Area.</p>
         </div>
-         {userProfile?.role === 'admin' && (
+         {userProfile?.role === 'admin' && userProfile?.nik === '876858' && (
             <Button onClick={handleRecalculate} disabled={isRecalculating}>
                 {isRecalculating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
                 {isRecalculating ? 'Menghitung...' : 'Hitung Ulang Statistik'}
