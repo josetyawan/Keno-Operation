@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home, Network, Search, BarChart3, Map, FolderGit2, Contact, CalendarClock, ClipboardCheck, CalendarOff, UserCircle, Briefcase, Settings, Building, Wrench, CalendarDays, MessageSquare, Upload, Component } from 'lucide-react';
+import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home, Network, Search, BarChart3, Map, FolderGit2, Contact, CalendarClock, ClipboardCheck, CalendarOff, UserCircle, Briefcase, Settings, Building, Wrench, CalendarDays, MessageSquare, Upload, Component, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -75,6 +75,7 @@ const adminNavGroups = [
     links: [
       { href: '/dashboard/admin/pelanggan', label: 'Data Pelanggan', icon: Contact, access: 'korlap' },
       { href: '/dashboard/admin/inventory/orbit', label: 'Inventory Orbit', icon: Component, access: 'admin' },
+      { href: '/dashboard/admin/broadcast', label: 'Broadcast Pesan', icon: Send, access: 'admin' },
     ]
   }
 ];
