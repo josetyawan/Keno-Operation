@@ -93,7 +93,8 @@ export default function AdminPerformancePage() {
                 const bulanIndex = headers.findIndex(h => h.toLowerCase() === 'bulan');
                 const tahunIndex = headers.findIndex(h => h.toLowerCase() === 'tahun');
                 const nilaiKuIndex = headers.findIndex(h => h.toLowerCase() === 'nilai ku');
-                const nilaiKeIndex = headers.findIndex(h => h.toLowerCase() === 'nilai ke');
+                const nilaiKoIndex = headers.findIndex(h => h.toLowerCase() === 'nilai ko');
+                const nilaiKdIndex = headers.findIndex(h => h.toLowerCase() === 'nilai kd');
                 const perform1Index = headers.findIndex(h => h.toLowerCase() === 'perforn');
                 const perform2Index = headers.findIndex(h => h.toLowerCase().startsWith('perforn') && headers.indexOf('Perforn') !== headers.lastIndexOf('Perforn'));
                 const totalPerformIndex = headers.findIndex(h => h.toLowerCase().startsWith('total performar'));
@@ -130,8 +131,8 @@ export default function AdminPerformancePage() {
                         tahun: tahun,
                         date: Timestamp.fromDate(new Date(tahun, bulan - 1, 1)),
                         nilaiKualitas: String(row[nilaiKuIndex] || '0%'),
-                        nilaiKontribusi: String(row[nilaiKeIndex] || '0%'), // Assuming Nilai Ke is Kontribusi
-                        nilaiKedisiplinan: '15.00%', // Placeholder as per image
+                        nilaiKontribusi: String(row[nilaiKoIndex] || '0%'),
+                        nilaiKedisiplinan: String(row[nilaiKdIndex] || '0%'),
                         performance1: String(row[perform1Index] || '0%'),
                         performance2: String(row[perform2Index] || '0%'),
                         totalPerformance: String(row[totalPerformIndex] || '0%')
