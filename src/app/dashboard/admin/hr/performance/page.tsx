@@ -103,8 +103,10 @@ export default function AdminPerformancePage() {
                 let headers: string[] = [];
                 for(let i=0; i < jsonData.length; i++) {
                     const row = jsonData[i] as string[];
+                    // Find a row that looks like a header row (e.g., contains 'NIK')
                     if (row.some(cell => typeof cell === 'string' && cell.toLowerCase().trim() === 'nik')) {
                         headerRowIndex = i;
+                        // Sanitize headers: convert to string and trim. Handle null/undefined cells.
                         headers = row.map(cell => String(cell || '').trim());
                         break;
                     }
@@ -118,7 +120,8 @@ export default function AdminPerformancePage() {
                 
                 const findHeaderIndex = (aliases: string[]) => {
                     const lowerAliases = aliases.map(a => a.toLowerCase().trim());
-                    return headers.findIndex(h => lowerAliases.includes((h || '').toLowerCase().trim()));
+                    // Check for header existence safely
+                    return headers.findIndex(h => h && lowerAliases.includes(h.toLowerCase().trim()));
                 };
                 
                 const nikIndex = findHeaderIndex(['nik']);
@@ -129,12 +132,29 @@ export default function AdminPerformancePage() {
                 const nilaiKuIndex = findHeaderIndex(['nilai kuan']);
                 const nilaiKoIndex = findHeaderIndex(['nilai kuali']);
                 const nilaiKdIndex = findHeaderIndex(['nilai kecukupan']);
-                const perform1Index = findHeaderIndex(['performa unit']);
-                const perform2Index = findHeaderIndex(['performa individu']);
                 const totalPerformIndex = findHeaderIndex(['total performansi']);
 
+                // Flexible logic for performance columns
+                let perform1Index = findHeaderIndex(['performa unit']);
+                let perform2Index = findHeaderIndex(['performa individu']);
+
+                // Fallback logic: if specific names aren't found, look for two 'performa' columns.
+                if (perform1Index === -1 || perform2Index === -1) {
+                    const performaIndexes = headers.reduce((acc, h, i) => {
+                        if (h && h.toLowerCase().trim() === 'performa') {
+                            acc.push(i);
+                        }
+                        return acc;
+                    }, [] as number[]);
+
+                    if (performaIndexes.length >= 2) {
+                        perform1Index = performaIndexes[0];
+                        perform2Index = performaIndexes[1];
+                    }
+                }
+
                 if ([nikIndex, nameIndex, bulanIndex, tahunIndex, nilaiKuIndex, nilaiKoIndex, nilaiKdIndex, perform1Index, perform2Index, totalPerformIndex].some(index => index === -1)) {
-                    throw new Error("Satu atau lebih kolom yang diperlukan tidak ditemukan. Pastikan file Excel Anda memiliki header: NIK, Nama, Bulan, Tahun, Nilai Kuan, Nilai Kuali, Nilai Kecukupan, Performa Unit, Performa Individu, Total Performansi.");
+                    throw new Error("Satu atau lebih kolom yang diperlukan tidak ditemukan. Pastikan file Excel Anda memiliki header: NIK, Nama, Bulan, Tahun, Nilai Kuan, Nilai Kuali, Nilai Kecukupan, (Performa Unit & Performa Individu, atau 2 kolom 'Performa'), dan Total Performansi.");
                 }
 
 
