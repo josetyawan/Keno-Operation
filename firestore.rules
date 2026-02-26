@@ -162,10 +162,10 @@ service cloud.firestore {
                       request.resource.data.participants.size() == 2;
       
       match /messages/{messageId} {
-        allow list: if isSignedIn() && request.auth.uid in chatId.split('_');
-        allow get, write: if isSignedIn() &&
-                              exists(/databases/$(database)/documents/chats/$(chatId)) &&
-                              request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+        allow list, get: if isSignedIn() && request.auth.uid in chatId.split('_');
+        allow write: if isSignedIn() &&
+                       request.auth.uid in chatId.split('_') &&
+                       request.resource.data.userId == request.auth.uid;
       }
     }
     
@@ -175,5 +175,3 @@ service cloud.firestore {
     }
   }
 }
-
-    
