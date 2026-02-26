@@ -121,32 +121,20 @@ export default function AdminPerformancePage() {
                     return headers.findIndex(h => lowerAliases.includes(h.toLowerCase().trim()));
                 };
                 
-                const findHeaderIndices = (aliases: string[]) => {
-                    const lowerAliases = aliases.map(a => a.toLowerCase().trim());
-                    const indices: number[] = [];
-                    headers.forEach((h, index) => {
-                        if (lowerAliases.includes(h.toLowerCase().trim())) {
-                            indices.push(index);
-                        }
-                    });
-                    return indices;
-                }
-
                 const nikIndex = findHeaderIndex(['nik']);
                 const nameIndex = findHeaderIndex(['nama']);
                 const serviceIndex = findHeaderIndex(['service', 'service ar']);
                 const bulanIndex = findHeaderIndex(['bulan']);
                 const tahunIndex = findHeaderIndex(['tahun']);
-                const nilaiKuIndex = findHeaderIndex(['nilai kuan', 'nilai ku']);
-                const nilaiKoIndex = findHeaderIndex(['nilai kuali', 'nilai ko']);
-                const nilaiKdIndex = findHeaderIndex(['nilai kecukupan', 'nilai kd']);
-                const performIndices = findHeaderIndices(['performar', 'perforn']);
-                const perform1Index = performIndices[0] ?? -1;
-                const perform2Index = performIndices[1] ?? -1;
-                const totalPerformIndex = findHeaderIndex(['total performansi', 'total performar']);
+                const nilaiKuIndex = findHeaderIndex(['nilai kuan']);
+                const nilaiKoIndex = findHeaderIndex(['nilai kuali']);
+                const nilaiKdIndex = findHeaderIndex(['nilai kecukupan']);
+                const perform1Index = findHeaderIndex(['performa unit']);
+                const perform2Index = findHeaderIndex(['performa individu']);
+                const totalPerformIndex = findHeaderIndex(['total performansi']);
 
                 if ([nikIndex, nameIndex, bulanIndex, tahunIndex, nilaiKuIndex, nilaiKoIndex, nilaiKdIndex, perform1Index, perform2Index, totalPerformIndex].some(index => index === -1)) {
-                    throw new Error("Satu atau lebih kolom yang diperlukan tidak ditemukan. Pastikan file Excel Anda memiliki header yang sesuai (e.g., NIK, Nama, Bulan, Tahun, Nilai Kuan, Nilai Kuali, Nilai Kecukupan, Performar, Total Performansi).");
+                    throw new Error("Satu atau lebih kolom yang diperlukan tidak ditemukan. Pastikan file Excel Anda memiliki header: NIK, Nama, Bulan, Tahun, Nilai Kuan, Nilai Kuali, Nilai Kecukupan, Performa Unit, Performa Individu, Total Performansi.");
                 }
 
 
@@ -324,3 +312,5 @@ export default function AdminPerformancePage() {
         </div>
     );
 }
+
+    
