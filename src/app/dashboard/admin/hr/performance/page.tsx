@@ -4,17 +4,21 @@
 import { useState, useMemo } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { collection, query, doc, setDoc, Timestamp } from 'firebase/firestore';
+import { collection, query, doc, setDoc, Timestamp, orderBy } from 'firebase/firestore';
 import type { UserProfile, Performance } from '@/lib/types';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, Loader2 } from 'lucide-react';
+import { Upload, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
+import { id as idLocale } from 'date-fns/locale';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
+
 
 export default function AdminPerformancePage() {
     const { user, isUserLoading } = useUser();
@@ -25,12 +29,19 @@ export default function AdminPerformancePage() {
     const [isImporting, setIsImporting] = useState(false);
     const [importProgress, setImportProgress] = useState(0);
 
+    const [searchQuery, setSearchQuery] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 10;
+
     const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
         useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
     );
     
     const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
     const { data: allUsers, isLoading: areUsersLoading } = useCollection<UserProfile>(usersQuery);
+
+    const performanceQuery = useMemoFirebase(() => query(collection(firestore, 'performance'), orderBy('date', 'desc')), [firestore]);
+    const { data: performanceRecords, isLoading: areRecordsLoading } = useCollection<Performance>(performanceQuery);
     
     const userMapByNik = useMemo(() => {
         if (!allUsers) return new Map<string, UserProfile>();
@@ -40,6 +51,25 @@ export default function AdminPerformancePage() {
         });
         return map;
     }, [allUsers]);
+
+    const filteredRecords = useMemo(() => {
+        if (!performanceRecords) return [];
+        if (!searchQuery) return performanceRecords;
+        
+        const lowercasedQuery = searchQuery.toLowerCase();
+        return performanceRecords.filter(record => 
+            record.nik.toLowerCase().includes(lowercasedQuery) ||
+            record.nama.toLowerCase().includes(lowercasedQuery)
+        );
+    }, [performanceRecords, searchQuery]);
+
+    const paginatedRecords = useMemo(() => {
+        const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+        const endIndex = startIndex + ITEMS_PER_PAGE;
+        return filteredRecords.slice(startIndex, endIndex);
+    }, [filteredRecords, currentPage]);
+
+    const totalPages = Math.ceil(filteredRecords.length / ITEMS_PER_PAGE);
 
     const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -159,8 +189,18 @@ export default function AdminPerformancePage() {
         reader.readAsArrayBuffer(file);
     };
 
-    if (isUserLoading || isProfileLoading) {
-        return <div>Memuat...</div>;
+    const isLoading = isUserLoading || isProfileLoading || areUsersLoading || areRecordsLoading;
+
+    if (isLoading && !performanceRecords) {
+        return (
+             <div className="space-y-6">
+                <Skeleton className="h-8 w-64" />
+                <Card>
+                    <CardHeader><Skeleton className="h-24 w-full" /></CardHeader>
+                    <CardContent><Skeleton className="h-40 w-full" /></CardContent>
+                </Card>
+            </div>
+        );
     }
     
     return (
@@ -183,6 +223,82 @@ export default function AdminPerformancePage() {
                         </div>
                     )}
                 </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Data Performa Saat Ini</CardTitle>
+                    <CardDescription>Menampilkan semua data performa yang ada di database.</CardDescription>
+                    <div className="pt-4">
+                        <Input 
+                            placeholder="Cari berdasarkan NIK atau Nama..."
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                            className="max-w-sm"
+                        />
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>NIK</TableHead>
+                                <TableHead>Nama</TableHead>
+                                <TableHead>Periode</TableHead>
+                                <TableHead className="text-right">Total Performa</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {isLoading ? (
+                                Array.from({length: 5}).map((_, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell colSpan={4}><Skeleton className="h-5 w-full"/></TableCell>
+                                    </TableRow>
+                                ))
+                            ) : paginatedRecords.length > 0 ? (
+                                paginatedRecords.map(record => (
+                                    <TableRow key={record.id}>
+                                        <TableCell className="font-mono">{record.nik}</TableCell>
+                                        <TableCell className="font-medium">{record.nama}</TableCell>
+                                        <TableCell>{format(record.date.toDate(), 'MMMM yyyy', {locale: idLocale})}</TableCell>
+                                        <TableCell className="text-right font-bold">{record.totalPerformance}</TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="h-24 text-center">
+                                        {searchQuery ? 'Tidak ada data yang cocok.' : 'Belum ada data performa.'}
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+                 <CardFooter>
+                    <div className="text-xs text-muted-foreground">
+                        Halaman <strong>{totalPages > 0 ? currentPage : 0}</strong> dari <strong>{totalPages}</strong>
+                    </div>
+                    <div className="flex items-center gap-2 ml-auto">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                            disabled={currentPage === 1 || totalPages === 0}
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                            Sebelumnya
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                            disabled={currentPage === totalPages || totalPages === 0}
+                        >
+                            Berikutnya
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </CardFooter>
             </Card>
         </div>
     );
