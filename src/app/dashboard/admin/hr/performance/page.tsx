@@ -27,7 +27,7 @@ export default function AdminPerformancePage() {
     const { toast } = useToast();
     
     const [isImporting, setIsImporting] = useState(false);
-    const [importProgress, setImportProgress] = 0);
+    const [importProgress, setImportProgress] = useState(0);
 
     const [searchQuery, setSearchQuery] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
