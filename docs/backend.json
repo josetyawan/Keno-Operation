@@ -366,9 +366,26 @@
         "snMikrotik": { "type": "string", "description": "Serial number for the Mikrotik device." },
         "noSimCard": { "type": "string", "description": "The SIM card number associated with the Orbit." },
         "dateAdded": { "type": "string", "format": "date-time" },
-        "addedBy": { "type": "string", "description": "Email of the user who added the entry." }
+        "addedBy": { "type": "string", "description": "Email of the user who added the entry." },
+        "status": { "type": "string", "enum": ["available", "borrowed"], "description": "The current status of the device." },
+        "borrowedByUserId": { "type": "string", "description": "The UID of the user who borrowed the device." },
+        "borrowedByName": { "type": "string", "description": "The name of the user who borrowed the device." },
+        "borrowedDate": { "type": "string", "format": "date-time", "description": "The date the device was borrowed." },
+        "loanHistory": {
+          "type": "array",
+          "description": "A log of all borrowing and return events for this device.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "status": { "type": "string", "enum": ["borrowed", "returned"] },
+              "userId": { "type": "string" },
+              "userName": { "type": "string" },
+              "date": { "type": "string", "format": "date-time" }
+            }
+          }
+        }
       },
-      "required": ["id", "snOrbit", "noSimCard"]
+      "required": ["id", "snOrbit", "noSimCard", "status"]
     }
   },
   "auth": { "providers": ["password", "anonymous"] },
@@ -391,10 +408,12 @@
       { "path": "/chats/{chatId}", "definition": { "entityName": "ChatRoom", "schema": { "$ref": "#/backend/entities/ChatRoom" }, "description": "Stores metadata for private chat rooms.", "params": [{ "name": "chatId", "description": "The unique ID for the chat room, typically a composite of user IDs." }] } },
       { "path": "/chats/{chatId}/messages/{messageId}", "definition": { "entityName": "PrivateMessage", "schema": { "$ref": "#/backend/entities/PrivateMessage" }, "description": "Stores all messages for a specific private chat room.", "params": [{ "name": "chatId", "description": "The ID of the parent chat room." }, { "name": "messageId", "description": "The unique ID for the message." }] } },
       { "path": "/performance/{performanceId}", "definition": { "entityName": "Performance", "schema": { "$ref": "#/backend/entities/Performance" }, "description": "Stores monthly performance data for technicians.", "params": [{ "name": "performanceId", "description": "The unique ID for the performance record." }] } },
-      { "path": "/orbit-inventory/{inventoryId}", "definition": { "entityName": "OrbitInventory", "schema": { "$ref": "#/backend/entities/OrbitInventory" }, "description": "Stores inventory of Orbit and Mikrotik devices.", "params": [{ "name": "inventoryId", "description": "The unique ID for the inventory item." }] } }
+      { "path": "/orbit-inventory/{inventoryId}", "definition": { "entityName": "OrbitInventory", "schema": { "$ref": "#/backend/entities/OrbitInventory" }, "description": "Stores inventory of Orbit and Mikrotik devices, including loan status.", "params": [{ "name": "inventoryId", "description": "The unique ID for the inventory item." }] } }
     ],
     "reasoning": "The data is structured with a top-level `users` collection for profiles and a top-level `notas` collection for all user-generated notes. This flat structure for `notas` simplifies querying, allowing all users to view all notes easily, which aligns with the application's requirements. Security is enforced within the rules: while reads are permissive, writes (create, update, delete) are strictly controlled. A user can only create a nota with their own `userId`, and can only update or delete notas they own. Admins are granted special privileges to update any nota for verification purposes. A `network-assets` collection is added for managing network equipment, with admin-only write access. This design is efficient and secure for the specified use case."
   }
 }
+
+    
 
     

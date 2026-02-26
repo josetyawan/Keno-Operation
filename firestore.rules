@@ -40,6 +40,22 @@ service cloud.firestore {
       return isApproved() && (userProfile.role == 'admin' || userProfile.appAccess == 'allpro' || userProfile.appAccess == 'all');
     }
 
+    function isBorrowingDevice() {
+      return request.resource.data.status == 'borrowed' 
+          && resource.data.status == 'available'
+          && request.resource.data.borrowedByUserId == request.auth.uid;
+    }
+
+    function isReturningDevice() {
+        return request.resource.data.status == 'available'
+            && resource.data.status == 'borrowed'
+            && resource.data.borrowedByUserId == request.auth.uid;
+    }
+
+    function isChangingLoanStatus() {
+        return isApproved() && (isBorrowingDevice() || isReturningDevice());
+    }
+
     // -------------------------------------------------------------------------
     // Rules
     // -------------------------------------------------------------------------
@@ -100,7 +116,9 @@ service cloud.firestore {
     
     match /orbit-inventory/{inventoryId} {
       allow get, list: if isApproved();
-      allow create, update, delete: if isAdmin();
+      allow create, delete: if isAdmin();
+      // Allow admin to update anything, and approved users to borrow/return.
+      allow update: if isAdmin() || isChangingLoanStatus();
     }
 
     match /holidays/{holidayId} {
@@ -157,3 +175,5 @@ service cloud.firestore {
     }
   }
 }
+
+    

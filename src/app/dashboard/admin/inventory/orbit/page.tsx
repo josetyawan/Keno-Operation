@@ -49,6 +49,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
+import { Badge } from '@/components/ui/badge';
 
 function InventoryForm({ item, onFormSubmit }: { item?: OrbitInventory | null, onFormSubmit: (data: Partial<Omit<OrbitInventory, 'id' | 'dateAdded' | 'addedBy'>>) => void }) {
   const [snOrbit, setSnOrbit] = useState('');
@@ -70,7 +71,7 @@ function InventoryForm({ item, onFormSubmit }: { item?: OrbitInventory | null, o
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!snOrbit || !noSimCard) return;
-    onFormSubmit({ snOrbit, snMikrotik, noSimCard });
+    onFormSubmit({ snOrbit, snMikrotik, noSimCard, status: 'available' });
   };
 
   return (
@@ -191,21 +192,34 @@ export default function AdminOrbitInventoryPage() {
               <TableRow>
                 <TableHead>SN Orbit</TableHead>
                 <TableHead>SN Mikrotik</TableHead>
-                <TableHead>No. SIM Card</TableHead>
-                <TableHead>Tanggal Ditambahkan</TableHead>
+                <TableHead>No. SIM</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Dipinjam Oleh</TableHead>
                 <TableHead className="text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isInventoryLoading && (!inventory || inventory.length === 0) ? (
-                Array.from({length: 3}).map((_, i) => <TableRow key={i}><TableCell colSpan={5}><Skeleton className="h-6 w-full" /></TableCell></TableRow>)
+                Array.from({length: 3}).map((_, i) => <TableRow key={i}><TableCell colSpan={6}><Skeleton className="h-6 w-full" /></TableCell></TableRow>)
               ) : inventory && inventory.length > 0 ? (
                 inventory.map(item => (
                   <TableRow key={item.id}>
                     <TableCell className="font-medium">{item.snOrbit}</TableCell>
                     <TableCell>{item.snMikrotik || '-'}</TableCell>
                     <TableCell>{item.noSimCard}</TableCell>
-                    <TableCell>{item.dateAdded?.toDate ? format(item.dateAdded.toDate(), 'dd MMM yyyy, HH:mm', { locale: idLocale }) : 'Baru saja'}</TableCell>
+                    <TableCell>
+                        <Badge variant={item.status === 'borrowed' ? 'destructive' : 'default'}>
+                          {item.status === 'borrowed' ? 'Dipinjam' : 'Tersedia'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {item.status === 'borrowed' && (
+                          <div className="text-xs">
+                            <p className="font-semibold">{item.borrowedByName || 'N/A'}</p>
+                            <p className="text-muted-foreground">{item.borrowedDate ? format(item.borrowedDate.toDate(), 'dd MMM yy', { locale: idLocale }) : ''}</p>
+                          </div>
+                        )}
+                      </TableCell>
                     <TableCell className="text-right">
                        <Button variant="ghost" size="icon" onClick={() => handleEdit(item)}><Edit className="h-4 w-4" /></Button>
                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDelete(item)}><Trash2 className="h-4 w-4" /></Button>
@@ -213,7 +227,7 @@ export default function AdminOrbitInventoryPage() {
                   </TableRow>
                 ))
               ) : (
-                <TableRow><TableCell colSpan={5} className="h-24 text-center">Tidak ada data inventaris. Klik "Tambah Inventaris" untuk memulai.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="h-24 text-center">Tidak ada data inventaris. Klik "Tambah Inventaris" untuk memulai.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
@@ -229,5 +243,7 @@ export default function AdminOrbitInventoryPage() {
     </>
   );
 }
+
+    
 
     

@@ -116,6 +116,13 @@ export type NetworkAsset = {
   alamat?: string;
 };
 
+export type LoanEvent = {
+  status: 'borrowed' | 'returned';
+  userId: string;
+  userName: string;
+  date: any; // Timestamp
+};
+
 export type OrbitInventory = {
   id: string;
   snOrbit: string;
@@ -123,6 +130,11 @@ export type OrbitInventory = {
   noSimCard: string;
   dateAdded: any; // Timestamp
   addedBy: string; // User's email
+  status?: 'available' | 'borrowed';
+  borrowedByUserId?: string;
+  borrowedByName?: string;
+  borrowedDate?: any; // Timestamp
+  loanHistory?: LoanEvent[];
 };
 
 export type MapLink = {
@@ -274,5 +286,7 @@ export type Performance = {
   totalPerformance: string;
   date: any; // Timestamp
 };
+
+    
 
     
