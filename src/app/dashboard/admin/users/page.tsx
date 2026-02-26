@@ -299,12 +299,12 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
                   </div>
               )}
             </div>
-            <div className="grid md:grid-cols-2 gap-4">
+             <div className="grid md:grid-cols-2 gap-4">
               <div className="grid gap-2"><Label htmlFor="noSimC">No. SIM C</Label><Input id="noSimC" value={noSimC} onChange={e => setNoSimC(e.target.value)} /></div>
-                {noSimC && (
+               {noSimC && (
                   <div className="grid gap-2">
                     <Label htmlFor="masaBerlakuSimC">Masa Berlaku SIM C</Label>
-                    <DatePickerDropdowns
+                     <DatePickerDropdowns
                         value={masaBerlakuSimC}
                         onChange={setMasaBerlakuSimC}
                         fromYear={new Date().getFullYear()}
@@ -313,6 +313,7 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
                   </div>
                 )}
             </div>
+            
              <div className="grid md:grid-cols-2 gap-4">
                 <div className="grid gap-2"><Label htmlFor="noBpjsKetenagakerjaan">No. BPJS Ketenagakerjaan</Label><Input id="noBpjsKetenagakerjaan" value={noBpjsKetenagakerjaan} onChange={e => setNoBpjsKetenagakerjaan(e.target.value)} /></div>
                 <div className="grid gap-2"><Label htmlFor="noBpjsKesehatan">No. BPJS Kesehatan</Label><Input id="noBpjsKesehatan" value={noBpjsKesehatan} onChange={e => setNoBpjsKesehatan(e.target.value)} /></div>
@@ -338,12 +339,13 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
   );
 }
 
-function UserActions({ userToManage, currentUserId, onEdit }: { userToManage: UserProfile, currentUserId: string, onEdit: (user: UserProfile) => void }) {
+function UserActions({ userToManage, currentUserProfile, onEdit }: { userToManage: UserProfile, currentUserProfile: UserProfile, onEdit: (user: UserProfile) => void }) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
   const [isAccessDialogOpen, setIsAccessDialogOpen] = useState(false);
   const [selectedAccess, setSelectedAccess] = useState<'nota' | 'allpro' | 'all'>('nota');
+  const isSuperAdmin = currentUserProfile.nik === '876858';
 
   const handleUpdate = async (data: Partial<UserProfile>) => {
     const userDocRef = doc(firestore, 'users', userToManage.id);
@@ -392,7 +394,7 @@ function UserActions({ userToManage, currentUserId, onEdit }: { userToManage: Us
     setIsAccessDialogOpen(false);
   }
   
-  if (userToManage.id === currentUserId) {
+  if (userToManage.id === currentUserProfile.id) {
       return null;
   }
 
@@ -425,7 +427,9 @@ function UserActions({ userToManage, currentUserId, onEdit }: { userToManage: Us
             </DropdownMenuSubTrigger>
             <DropdownMenuPortal>
               <DropdownMenuSubContent>
-                <DropdownMenuItem onClick={() => handleUpdate({ role: 'admin' })}>Admin</DropdownMenuItem>
+                {isSuperAdmin && (
+                  <DropdownMenuItem onClick={() => handleUpdate({ role: 'admin' })}>Admin</DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={() => handleUpdate({ role: 'korlap' })}>Korlap</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleUpdate({ role: 'teknisi' })}>Teknisi</DropdownMenuItem>
               </DropdownMenuSubContent>
@@ -821,7 +825,7 @@ export default function AdminUsersPage() {
                       })()}
                     </TableCell>
                     <TableCell className="text-right">
-                       {user && <UserActions userToManage={u} currentUserId={user.uid} onEdit={handleEditUser} />}
+                       {user && currentUserProfile && <UserActions userToManage={u} currentUserProfile={currentUserProfile} onEdit={handleEditUser} />}
                     </TableCell>
                   </TableRow>
                 ))
