@@ -5,11 +5,11 @@ import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@
 import { collection, query, where, orderBy } from 'firebase/firestore';
 import { doc } from 'firebase/firestore';
 import type { UserProfile, Performance } from '@/lib/types';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { BarChart3, TrendingUp, TrendingDown, ArrowLeft } from 'lucide-react';
+import { BarChart3, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, useMemo, useEffect } from 'react';
 import { format } from 'date-fns';
@@ -66,6 +66,14 @@ export default function UserPerformancePage() {
         );
     }
     
+    const formatAsPercent = (value: string) => {
+        if (typeof value !== 'string' || !value.trim()) return '-';
+        if (value.trim().endsWith('%')) return value;
+        const num = parseFloat(value);
+        if (isNaN(num)) return value;
+        return `${(num * 100).toFixed(2)}%`;
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex items-center gap-4">
@@ -101,51 +109,49 @@ export default function UserPerformancePage() {
                         </Select>
                     </CardHeader>
                 </Card>
+
                 {displayedRecord && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Laporan Kinerja - {format(displayedRecord.date.toDate(), 'MMMM yyyy', {locale: idLocale})}</CardTitle>
-                            <CardDescription>Detail kinerja Anda untuk periode yang dipilih.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead className="w-[60%]">Komponen Penilaian</TableHead>
-                                        <TableHead className="text-right">Nilai</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    <TableRow>
-                                        <TableCell className="font-medium">Nilai Kualitas</TableCell>
-                                        <TableCell className="text-right">{displayedRecord.nilaiKualitas}</TableCell>
-                                    </TableRow>
-                                     <TableRow>
-                                        <TableCell className="font-medium">Nilai Kontribusi</TableCell>
-                                        <TableCell className="text-right">{displayedRecord.nilaiKontribusi}</TableCell>
-                                    </TableRow>
-                                    <TableRow>
-                                        <TableCell className="font-medium">Nilai Kedisiplinan</TableCell>
-                                        <TableCell className="text-right">{displayedRecord.nilaiKedisiplinan}</TableCell>
-                                    </TableRow>
-                                     <TableRow>
-                                        <TableCell className="font-medium">Performance 1</TableCell>
-                                        <TableCell className="text-right">{displayedRecord.performance1}</TableCell>
-                                    </TableRow>
-                                     <TableRow>
-                                        <TableCell className="font-medium">Performance 2</TableCell>
-                                        <TableCell className="text-right">{displayedRecord.performance2}</TableCell>
-                                    </TableRow>
-                                </TableBody>
-                                <TableFooter>
-                                    <TableRow className="bg-primary/10 hover:bg-primary/20">
-                                        <TableCell className="text-lg font-bold text-primary">Total Performa</TableCell>
-                                        <TableCell className="text-right text-lg font-bold text-primary">{displayedRecord.totalPerformance}</TableCell>
-                                    </TableRow>
-                                </TableFooter>
-                            </Table>
-                        </CardContent>
-                    </Card>
+                    <div className="grid gap-6">
+                        <Card className="bg-primary text-primary-foreground text-center">
+                             <CardHeader>
+                                <CardDescription className="text-primary-foreground/80">Total Performa - {format(displayedRecord.date.toDate(), 'MMMM yyyy', {locale: idLocale})}</CardDescription>
+                                <CardTitle className="text-6xl font-bold tracking-tighter">
+                                    {formatAsPercent(displayedRecord.totalPerformance)}
+                                </CardTitle>
+                            </CardHeader>
+                        </Card>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Rincian Nilai</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <Table>
+                                    <TableBody>
+                                        <TableRow>
+                                            <TableCell className="font-medium">Nilai Kualitas</TableCell>
+                                            <TableCell className="text-right">{displayedRecord.nilaiKualitas}</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                            <TableCell className="font-medium">Nilai Kontribusi</TableCell>
+                                            <TableCell className="text-right">{displayedRecord.nilaiKontribusi}</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                            <TableCell className="font-medium">Nilai Kedisiplinan</TableCell>
+                                            <TableCell className="text-right">{displayedRecord.nilaiKedisiplinan}</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                            <TableCell className="font-medium">Performansi Unit</TableCell>
+                                            <TableCell className="text-right">{formatAsPercent(displayedRecord.performance1)}</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                            <TableCell className="font-medium">Performansi Individu</TableCell>
+                                            <TableCell className="text-right">{formatAsPercent(displayedRecord.performance2)}</TableCell>
+                                        </TableRow>
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    </div>
                 )}
                 </>
             ) : (

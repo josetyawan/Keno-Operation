@@ -126,16 +126,14 @@ export default function AdminPerformancePage() {
                 const serviceIndex = findHeaderIndex(['service', 'service area']);
                 const bulanIndex = findHeaderIndex(['bulan']);
                 const tahunIndex = findHeaderIndex(['tahun']);
-                const nilaiKuIndex = findHeaderIndex(['nilai kuantitas', 'nilai kuan']);
-                const nilaiKoIndex = findHeaderIndex(['nilai kualitas', 'nilai kuali']);
-                const nilaiKdIndex = findHeaderIndex(['nilai kecukupan', 'nilai kd']);
+                const nilaiKuIndex = findHeaderIndex(['nilai kuantitas']);
+                const nilaiKoIndex = findHeaderIndex(['nilai kualitas']);
+                const nilaiKdIndex = findHeaderIndex(['nilai kecukupan']);
                 const totalPerformIndex = findHeaderIndex(['total performansi']);
 
-                // Flexible logic for performance columns
-                let perform1Index = findHeaderIndex(['performansi unit', 'performa unit']);
-                let perform2Index = findHeaderIndex(['performansi individu', 'performa individu']);
+                let perform1Index = findHeaderIndex(['performansi unit']);
+                let perform2Index = findHeaderIndex(['performansi individu']);
 
-                // Fallback to generic "Performa" if specific ones are not found
                 if (perform1Index === -1 || perform2Index === -1) {
                     const performaIndexes = headers.reduce((acc, h, i) => {
                         if (h && h.toLowerCase().trim() === 'performa') {
@@ -150,11 +148,9 @@ export default function AdminPerformancePage() {
                     }
                 }
 
-
                 if ([nikIndex, nameIndex, bulanIndex, tahunIndex, nilaiKuIndex, nilaiKoIndex, nilaiKdIndex, perform1Index, perform2Index, totalPerformIndex].some(index => index === -1)) {
-                     throw new Error("Satu atau lebih kolom yang diperlukan tidak ditemukan. Pastikan file Excel Anda memiliki header seperti: NIK, Nama, Bulan, Tahun, Nilai Kuantitas, Nilai Kualitas, Nilai Kecukupan, Performansi Unit, Performansi Individu, dan Total Performansi.");
+                     throw new Error("Satu atau lebih kolom yang diperlukan tidak ditemukan. Pastikan file Excel Anda memiliki header seperti: NIK, Nama, Bulan, Tahun, Nilai Kuantitas, Nilai Kualitas, Nilai Kecukupan, Performansi Unit, dan Performansi Individu.");
                 }
-
 
                 let createdCount = 0;
                 let skippedCount = 0;
@@ -299,8 +295,26 @@ export default function AdminPerformancePage() {
                                             <TableCell className="text-right">{record.nilaiKualitas}</TableCell>
                                             <TableCell className="text-right">{record.nilaiKontribusi}</TableCell>
                                             <TableCell className="text-right">{record.nilaiKedisiplinan}</TableCell>
-                                            <TableCell className="text-right">{record.performance1}</TableCell>
-                                            <TableCell className="text-right">{record.performance2}</TableCell>
+                                            <TableCell className="text-right">
+                                                {(() => {
+                                                    const value = record.performance1;
+                                                    if (typeof value !== 'string' || !value.trim()) return '-';
+                                                    if (value.trim().endsWith('%')) return value;
+                                                    const num = parseFloat(value);
+                                                    if (isNaN(num)) return value;
+                                                    return `${(num * 100).toFixed(2)}%`;
+                                                })()}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                {(() => {
+                                                    const value = record.performance2;
+                                                    if (typeof value !== 'string' || !value.trim()) return '-';
+                                                    if (value.trim().endsWith('%')) return value;
+                                                    const num = parseFloat(value);
+                                                    if (isNaN(num)) return value;
+                                                    return `${(num * 100).toFixed(2)}%`;
+                                                })()}
+                                            </TableCell>
                                             <TableCell className="text-right font-bold">
                                                 {(() => {
                                                     const value = record.totalPerformance;
