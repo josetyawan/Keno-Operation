@@ -30,6 +30,7 @@ const navLinks = [
   { href: '/dashboard/search-assets', label: 'Network Cek', icon: Search, access: 'allpro' },
   { href: '/dashboard/allpro', label: 'Network Service Area', icon: BarChart3, access: 'allpro' },
   { href: '/dashboard/hr/performance', label: 'Performa Teknisi', icon: BarChart3, access: 'public' },
+  { href: '/dashboard/hr/work-schedule', label: 'Jadwal Kerja', icon: CalendarDays, access: 'public' },
   { href: '/dashboard/hr/attendance', label: 'Absensi Jaga', icon: ClipboardCheck, access: 'allpro' },
   { href: '/dashboard/alker', label: 'Daftar Pengecekan', icon: ClipboardCheck, access: 'allpro' },
   { href: '/dashboard/alker/new', label: 'Input Pengecekan Alker', icon: Wrench, access: 'allpro' },

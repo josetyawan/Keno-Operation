@@ -55,12 +55,6 @@ export default function WorkSchedulePage() {
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
     useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
   );
-
-  useEffect(() => {
-    if (!isUserLoading && !isProfileLoading && (!user || (currentUserProfile?.role !== 'admin' && currentUserProfile?.role !== 'korlap'))) {
-        router.push('/dashboard');
-    }
-  }, [user, currentUserProfile, isUserLoading, isProfileLoading, router]);
   
   const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
   const { data: allUsers, isLoading: areUsersLoading } = useCollection<UserProfile>(usersQuery);
@@ -73,11 +67,19 @@ export default function WorkSchedulePage() {
 
   // --- Memoized Data Processing ---
   const filteredUsers = useMemo(() => {
-    if (!allUsers) return [];
+    if (!allUsers || !currentUserProfile) return [];
+
+    // If user is a technician, only show their own schedule
+    if (currentUserProfile.role === 'teknisi') {
+        const self = allUsers.find(u => u.id === currentUserProfile.id);
+        return self ? [self] : [];
+    }
+
+    // Original logic for admin/korlap
     const activeUsers = allUsers.filter(u => u.registrationStatus === 'approved' && u.role === 'teknisi').sort((a,b) => (a.displayName || '').localeCompare(b.displayName || ''));
     if (selectedUnit === 'ALL') return activeUsers;
     return activeUsers.filter(u => u.unit === selectedUnit);
-  }, [allUsers, selectedUnit]);
+  }, [allUsers, selectedUnit, currentUserProfile]);
 
   const schedulesMap = useMemo(() => {
     const map = new Map<string, string>(); // Key: 'userId-yyyy-MM-dd', Value: shiftType
@@ -138,8 +140,10 @@ export default function WorkSchedulePage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Jadwal Kerja Teknisi</h1>
-          <p className="text-muted-foreground">Tampilan kalender jadwal kerja bulanan untuk teknisi.</p>
+          <h1 className="text-3xl font-bold tracking-tight">Jadwal Kerja</h1>
+          <p className="text-muted-foreground">
+            {currentUserProfile?.role === 'teknisi' ? 'Tampilan kalender jadwal kerja Anda.' : 'Tampilan kalender jadwal kerja bulanan untuk teknisi.'}
+          </p>
         </div>
       </div>
       
@@ -147,15 +151,21 @@ export default function WorkSchedulePage() {
         <CardHeader className="flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <CardTitle>Filter & Navigasi</CardTitle>
-            <CardDescription>Pilih unit dan bulan untuk menampilkan jadwal.</CardDescription>
+            <CardDescription>
+                {currentUserProfile?.role === 'teknisi' 
+                    ? 'Gunakan panah untuk melihat jadwal bulan lain.'
+                    : 'Pilih unit dan bulan untuk menampilkan jadwal.'}
+            </CardDescription>
           </div>
           <div className="flex items-center gap-4">
-            <Select value={selectedUnit} onValueChange={setSelectedUnit}>
-              <SelectTrigger className="w-[180px]"><SelectValue placeholder="Pilih Unit" /></SelectTrigger>
-              <SelectContent>
-                {units.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            {(currentUserProfile?.role === 'admin' || currentUserProfile?.role === 'korlap') && (
+                <Select value={selectedUnit} onValueChange={setSelectedUnit}>
+                    <SelectTrigger className="w-[180px]"><SelectValue placeholder="Pilih Unit" /></SelectTrigger>
+                    <SelectContent>
+                        {units.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+            )}
             <div className="flex items-center gap-2">
               <Button variant="outline" size="icon" onClick={() => changeMonth(-1)}><ChevronLeft className="h-4 w-4" /></Button>
               <span className="w-40 text-center font-semibold">{format(currentDate, 'MMMM yyyy', { locale: idLocale })}</span>
