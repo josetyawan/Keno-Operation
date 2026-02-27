@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -27,8 +28,8 @@ import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, CalendarIcon, Camera, Upload } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { useFirestore, addDocumentNonBlocking, useUser, useStorage, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, serverTimestamp, doc } from 'firebase/firestore';
+import { useFirestore, useUser, useStorage, useDoc, useMemoFirebase } from '@/firebase';
+import { collection, serverTimestamp, doc, addDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -254,7 +255,7 @@ export default function NewNotaPage() {
           newNota.namaBarang = namaBarang;
       }
 
-      addDocumentNonBlocking(notasCollection, newNota);
+      await addDoc(notasCollection, newNota);
 
       toast({
         title: 'Laporan Dibuat!',
@@ -269,7 +270,8 @@ export default function NewNotaPage() {
         title: "Gagal Menyimpan",
         description: "Terjadi kesalahan saat mengunggah gambar atau menyimpan laporan. Silakan coba lagi.",
       });
-      setIsSaving(false);
+    } finally {
+        setIsSaving(false);
     }
   }
 

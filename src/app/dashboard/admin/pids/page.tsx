@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -39,8 +40,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Edit, PlusCircle, Trash2 } from 'lucide-react';
-import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from '@/firebase';
-import { collection, query, doc } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import type { UserProfile, ProjectID } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -152,8 +153,8 @@ export default function AdminPIDsPage() {
       ];
 
       const pidsCollection = collection(firestore, 'project-ids');
-      initialPids.forEach(pidData => {
-        addDocumentNonBlocking(pidsCollection, pidData);
+      initialPids.forEach(async (pidData) => {
+        await addDoc(pidsCollection, pidData);
       });
       
       setHasBeenSeeded(true);
@@ -181,10 +182,10 @@ export default function AdminPIDsPage() {
     setPidToDelete(pid);
   };
   
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!pidToDelete) return;
     const pidDocRef = doc(firestore, 'project-ids', pidToDelete.id);
-    deleteDocumentNonBlocking(pidDocRef);
+    await deleteDoc(pidDocRef);
     toast({
       title: 'Project ID Deleted',
       description: `The PID for ${pidToDelete.projectType} has been deleted.`,
@@ -192,11 +193,11 @@ export default function AdminPIDsPage() {
     setPidToDelete(null);
   }
 
-  const handleFormSubmit = (data: { projectType: string, pid: string }) => {
+  const handleFormSubmit = async (data: { projectType: string, pid: string }) => {
     if (pidToEdit) {
       // Update existing PID
       const pidDocRef = doc(firestore, 'project-ids', pidToEdit.id);
-      updateDocumentNonBlocking(pidDocRef, data);
+      await updateDoc(pidDocRef, data);
       toast({
         title: 'Project ID Updated',
         description: `PID for ${data.projectType} has been updated.`,
@@ -204,7 +205,7 @@ export default function AdminPIDsPage() {
     } else {
       // Create new PID
       const pidsCollection = collection(firestore, 'project-ids');
-      addDocumentNonBlocking(pidsCollection, data);
+      await addDoc(pidsCollection, data);
       toast({
         title: 'Project ID Created',
         description: `New PID for ${data.projectType} has been created.`,

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useRouter, useParams } from 'next/navigation';
@@ -28,8 +29,8 @@ import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, CalendarIcon, Upload, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { useUser, useFirestore, useDoc, useMemoFirebase, updateDocumentNonBlocking, useStorage } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useUser, useFirestore, useDoc, useMemoFirebase, useStorage } from '@/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { Nota, UserProfile } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -269,7 +270,7 @@ function EditNotaForm({ nota, isAdmin }: { nota: Nota, isAdmin: boolean }) {
             if(isNonBBMKendaraan) updatedData.namaBarang = namaBarang;
             else updatedData.namaBarang = '';
             
-            updateDocumentNonBlocking(notaRef, updatedData);
+            await updateDoc(notaRef, updatedData);
 
             toast({ 
                 title: 'Laporan Diperbarui!', 
@@ -279,6 +280,7 @@ function EditNotaForm({ nota, isAdmin }: { nota: Nota, isAdmin: boolean }) {
         } catch(error) {
             console.error("Error updating nota:", error);
             toast({ variant: "destructive", title: "Gagal Memperbarui", description: "Terjadi kesalahan. Silakan coba lagi." });
+        } finally {
             setIsSaving(false);
         }
     }
