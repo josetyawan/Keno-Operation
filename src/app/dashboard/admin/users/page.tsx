@@ -51,8 +51,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, Shield, User, CheckCircle, Trash2, KeyRound, Edit, Loader2, ChevronLeft, ChevronRight, FileSpreadsheet } from 'lucide-react';
-import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, doc, Timestamp, updateDoc } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, updateDocumentNonBlocking } from '@/firebase';
+import { collection, query, doc, Timestamp } from 'firebase/firestore';
 import type { UserProfile, Pendidikan } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -347,50 +347,32 @@ function UserActions({ userToManage, currentUserProfile, onEdit }: { userToManag
   const [selectedAccess, setSelectedAccess] = useState<'nota' | 'allpro' | 'all'>('nota');
   const isSuperAdmin = currentUserProfile.nik === '876858';
 
-  const handleUpdate = async (data: Partial<UserProfile>) => {
+  const handleUpdate = (data: Partial<UserProfile>) => {
     const userDocRef = doc(firestore, 'users', userToManage.id);
-    try {
-      await updateDoc(userDocRef, data);
-      toast({
+    updateDocumentNonBlocking(userDocRef, data);
+    toast({
         title: 'User Updated',
         description: `User ${userToManage.email} has been updated.`,
-      });
-    } catch(error) {
-        console.error("Failed to update user from actions:", error);
-        toast({
-            variant: 'destructive',
-            title: 'Update Failed',
-            description: 'Could not update user. Please try again.'
-        });
-    }
+    });
   };
   
-  const handleDeleteUser = async () => {
+  const handleDeleteUser = () => {
     const userDocRef = doc(firestore, 'users', userToManage.id);
-    try {
-        await updateDoc(userDocRef, { registrationStatus: 'deleted' }); // Soft delete
-        toast({
-         title: 'User Deactivated',
-         description: `The profile for ${userToManage.email} has been deactivated. They can no longer log in.`,
-         duration: 7000
-       });
-    } catch (error) {
-        console.error('Failed to delete user profile:', error);
-        toast({
-            variant: 'destructive',
-            title: 'Deactivation Failed',
-            description: 'Could not deactivate the user profile.'
-        });
-    }
+    updateDocumentNonBlocking(userDocRef, { registrationStatus: 'deleted' }); // Soft delete
+    toast({
+        title: 'User Deactivated',
+        description: `The profile for ${userToManage.email} has been deactivated. They can no longer log in.`,
+        duration: 7000
+    });
   }
 
-  const handleApprove = async () => {
-    await handleUpdate({ registrationStatus: 'approved', appAccess: selectedAccess });
+  const handleApprove = () => {
+    handleUpdate({ registrationStatus: 'approved', appAccess: selectedAccess });
     setIsApproveDialogOpen(false);
   }
 
-  const handleChangeAccess = async () => {
-    await handleUpdate({ appAccess: selectedAccess });
+  const handleChangeAccess = () => {
+    handleUpdate({ appAccess: selectedAccess });
     setIsAccessDialogOpen(false);
   }
   
@@ -691,29 +673,20 @@ export default function AdminUsersPage() {
     setUserToEdit(user);
   };
   
-  const handleFormSubmit = async (data: Partial<UserProfile>) => {
+  const handleFormSubmit = (data: Partial<UserProfile>) => {
     if (!userToEdit) return;
     setIsSaving(true);
     
     const userDocRef = doc(firestore, 'users', userToEdit.id);
     
-    try {
-      await updateDoc(userDocRef, data);
-      toast({
-        title: 'User Data Updated',
-        description: `Data untuk ${userToEdit.email} telah diperbarui.`,
-      });
-      setUserToEdit(null);
-    } catch (error) {
-      console.error("Failed to update user:", error);
-      toast({
-        variant: "destructive",
-        title: "Update Gagal",
-        description: "Gagal memperbarui data pengguna. Silakan coba lagi."
-      });
-    } finally {
-      setIsSaving(false);
-    }
+    updateDocumentNonBlocking(userDocRef, data);
+
+    toast({
+      title: 'User Data Updated',
+      description: `Data untuk ${userToEdit.email} telah diperbarui.`,
+    });
+    setUserToEdit(null);
+    setIsSaving(false);
   };
 
   const isLoading = isUserLoading || isProfileLoading || areUsersLoading;
