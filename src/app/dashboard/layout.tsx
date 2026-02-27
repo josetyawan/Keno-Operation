@@ -161,7 +161,6 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const firestore = useFirestore();
   const { toast } = useToast();
-  const [isReady, setIsReady] = useState(false);
 
   const userDocRef = useMemoFirebase(() => {
     if (!user) return null;
@@ -187,44 +186,43 @@ export default function DashboardLayout({
   }, [auth, router, toast]);
 
   useEffect(() => {
-    const checkUserStatus = () => {
-      // Wait until both auth and profile loading are complete
-      if (isUserLoading || isProfileLoading) {
-        return; 
-      }
+    // This effect now ONLY handles redirection and sign-out logic.
+    // It no longer manages a separate readiness state.
 
-      // If there's no authenticated user, redirect to login
-      if (!user) {
-        router.push('/login');
+    // Do nothing until all data loading is settled.
+    if (isUserLoading || isProfileLoading) {
+      return;
+    }
+
+    // Case 1: No authenticated user. Redirect to login.
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+    
+    // Case 2: Authenticated user, but no corresponding Firestore profile.
+    // This is an invalid state, so sign out and redirect with an error.
+    if (!userProfile) {
+        handleSignOutAndRedirect('Profil Tidak Ditemukan', 'Data profil Anda tidak dapat ditemukan di database. Hubungi admin.');
         return;
-      }
-      
-      // If the user is authenticated but their profile document is missing, sign them out with an error.
-      if (!userProfile) {
-          handleSignOutAndRedirect('Profil Tidak Ditemukan', 'Data profil Anda tidak dapat ditemukan di database. Hubungi admin.');
-          return;
-      }
+    }
 
-      // If the profile exists but is not approved, sign out with an explanation.
-      if (userProfile.registrationStatus !== 'approved') {
-          const title = userProfile.registrationStatus === 'pending' ? 'Akun Menunggu Persetujuan' : 'Akses Ditolak';
-          const description = userProfile.registrationStatus === 'pending' 
-              ? 'Akun Anda sedang menunggu persetujuan dari admin.'
-              : `Status akun Anda adalah "${userProfile.registrationStatus}". Silakan hubungi admin.`;
-          
-          handleSignOutAndRedirect(title, description);
-          return;
-      }
-      
-      // If all checks pass, the layout is ready
-      setIsReady(true);
-    };
-
-    checkUserStatus();
-
+    // Case 3: User profile exists, but is not approved.
+    if (userProfile.registrationStatus !== 'approved') {
+        const title = userProfile.registrationStatus === 'pending' ? 'Akun Menunggu Persetujuan' : 'Akses Ditolak';
+        const description = userProfile.registrationStatus === 'pending' 
+            ? 'Akun Anda sedang menunggu persetujuan dari admin.'
+            : `Status akun Anda adalah "${userProfile.registrationStatus}". Silakan hubungi admin.`;
+        
+        handleSignOutAndRedirect(title, description);
+        return;
+    }
   }, [user, userProfile, isUserLoading, isProfileLoading, router, handleSignOutAndRedirect]);
 
-  if (!isReady) {
+  // The rendering logic is now separate from the effect.
+  // We show a skeleton if core data is loading or if the user/profile is not yet available.
+  // The useEffect above will handle the redirection if the final state is invalid.
+  if (isUserLoading || isProfileLoading || !user || !userProfile) {
     return <DashboardSkeleton />;
   }
   
