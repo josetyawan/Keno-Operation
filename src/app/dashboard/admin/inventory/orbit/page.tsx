@@ -40,8 +40,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Edit, PlusCircle, Trash2, Loader2 } from 'lucide-react';
-import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from '@/firebase';
-import { collection, query, doc, orderBy, serverTimestamp } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query, doc, orderBy, serverTimestamp, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import type { UserProfile, OrbitInventory } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -141,24 +141,32 @@ export default function AdminOrbitInventoryPage() {
     setItemToDelete(item);
   };
   
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!itemToDelete || !firestore) return;
     const itemDocRef = doc(firestore, 'orbit-inventory', itemToDelete.id);
-    deleteDocumentNonBlocking(itemDocRef);
-    toast({ title: 'Inventaris Dihapus', description: `Item dengan SN Orbit ${itemToDelete.snOrbit} telah dihapus.` });
+    try {
+        await deleteDoc(itemDocRef);
+        toast({ title: 'Inventaris Dihapus', description: `Item dengan SN Orbit ${itemToDelete.snOrbit} telah dihapus.` });
+    } catch(e) {
+        toast({ variant: 'destructive', title: 'Gagal menghapus' });
+    }
     setItemToDelete(null);
   }
 
-  const handleFormSubmit = (data: Partial<Omit<OrbitInventory, 'id' | 'dateAdded' | 'addedBy'>>) => {
+  const handleFormSubmit = async (data: Partial<Omit<OrbitInventory, 'id' | 'dateAdded' | 'addedBy'>>) => {
     if (!firestore || !user?.email) return;
-    if (itemToEdit) {
-      const itemDocRef = doc(firestore, 'orbit-inventory', itemToEdit.id);
-      updateDocumentNonBlocking(itemDocRef, data);
-      toast({ title: 'Inventaris Diperbarui' });
-    } else {
-      const inventoryCollection = collection(firestore, 'orbit-inventory');
-      addDocumentNonBlocking(inventoryCollection, { ...data, dateAdded: serverTimestamp(), addedBy: user.email });
-      toast({ title: 'Inventaris Dibuat' });
+    try {
+        if (itemToEdit) {
+          const itemDocRef = doc(firestore, 'orbit-inventory', itemToEdit.id);
+          await updateDoc(itemDocRef, data);
+          toast({ title: 'Inventaris Diperbarui' });
+        } else {
+          const inventoryCollection = collection(firestore, 'orbit-inventory');
+          await addDoc(inventoryCollection, { ...data, dateAdded: serverTimestamp(), addedBy: user.email });
+          toast({ title: 'Inventaris Dibuat' });
+        }
+    } catch(e) {
+        toast({ variant: 'destructive', title: 'Gagal menyimpan' });
     }
     setIsFormOpen(false);
     setItemToEdit(null);

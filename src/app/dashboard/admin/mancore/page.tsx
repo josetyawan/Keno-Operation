@@ -40,8 +40,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Edit, PlusCircle, Trash2 } from 'lucide-react';
-import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from '@/firebase';
-import { collection, query, doc, orderBy } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query, doc, orderBy, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import type { UserProfile, MancoreLink } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -169,33 +169,41 @@ export default function AdminMancorePage() {
     setLinkToDelete(link);
   };
   
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!linkToDelete || !firestore) return;
     const linkDocRef = doc(firestore, 'mancore-links', linkToDelete.id);
-    deleteDocumentNonBlocking(linkDocRef);
-    toast({
-      title: 'Link Dihapus',
-      description: `Link "${linkToDelete.label}" telah dihapus.`,
-    });
+    try {
+        await deleteDoc(linkDocRef);
+        toast({
+          title: 'Link Dihapus',
+          description: `Link "${linkToDelete.label}" telah dihapus.`,
+        });
+    } catch(e) {
+        toast({ variant: 'destructive', title: 'Gagal Menghapus' });
+    }
     setLinkToDelete(null);
   }
 
-  const handleFormSubmit = (data: { serviceArea: string, label: string, url: string }) => {
+  const handleFormSubmit = async (data: { serviceArea: string, label: string, url: string }) => {
     if (!firestore) return;
-    if (linkToEdit) {
-      const linkDocRef = doc(firestore, 'mancore-links', linkToEdit.id);
-      updateDocumentNonBlocking(linkDocRef, data);
-      toast({
-        title: 'Link Diperbarui',
-        description: `Link "${data.label}" telah diperbarui.`,
-      });
-    } else {
-      const linksCollection = collection(firestore, 'mancore-links');
-      addDocumentNonBlocking(linksCollection, data);
-      toast({
-        title: 'Link Dibuat',
-        description: `Link baru "${data.label}" telah dibuat.`,
-      });
+    try {
+        if (linkToEdit) {
+          const linkDocRef = doc(firestore, 'mancore-links', linkToEdit.id);
+          await updateDoc(linkDocRef, data);
+          toast({
+            title: 'Link Diperbarui',
+            description: `Link "${data.label}" telah diperbarui.`,
+          });
+        } else {
+          const linksCollection = collection(firestore, 'mancore-links');
+          await addDoc(linksCollection, data);
+          toast({
+            title: 'Link Dibuat',
+            description: `Link baru "${data.label}" telah dibuat.`,
+          });
+        }
+    } catch(e) {
+        toast({ variant: 'destructive', title: 'Gagal Menyimpan' });
     }
     setIsFormDialogOpen(false);
     setLinkToEdit(null);

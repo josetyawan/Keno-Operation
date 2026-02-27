@@ -35,8 +35,8 @@ import { Label } from '@/components/ui/label';
 import { MoreHorizontal, PlusCircle, Trash2, ChevronLeft, ChevronRight, Search, ClipboardCheck } from 'lucide-react';
 import { format, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
-import { useUser, useFirestore, useMemoFirebase, useDoc, deleteDocumentNonBlocking, useCollection } from '@/firebase';
-import { collection, query, doc, where, orderBy } from 'firebase/firestore';
+import { useUser, useFirestore, useMemoFirebase, useDoc, useCollection } from '@/firebase';
+import { collection, query, doc, where, orderBy, deleteDoc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useMemo, useState, useEffect } from 'react';
@@ -49,14 +49,18 @@ function AlkerActions({ checklist, isAdminOrKorlap }: { checklist: AlkerChecklis
   const firestore = useFirestore();
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     setIsDeleting(true);
     const docRef = doc(firestore, 'tool-checklists', checklist.id);
-    deleteDocumentNonBlocking(docRef);
-    toast({
-      title: 'Pengecekan Dihapus',
-      description: 'Laporan pengecekan alker telah berhasil dihapus.',
-    });
+    try {
+        await deleteDoc(docRef);
+        toast({
+          title: 'Pengecekan Dihapus',
+          description: 'Laporan pengecekan alker telah berhasil dihapus.',
+        });
+    } catch(e) {
+        toast({ variant: 'destructive', title: 'Gagal Menghapus' });
+    }
   };
 
   return (

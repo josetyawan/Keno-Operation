@@ -48,8 +48,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Trash2, Upload, Search, Loader2, ChevronLeft, ChevronRight, MapPin, QrCode } from 'lucide-react';
 import { Progress } from "@/components/ui/progress";
-import { useUser, useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking, useDoc, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
-import { collection, query, doc, serverTimestamp, writeBatch, where, getDocs, limit, type QueryConstraint } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query, doc, serverTimestamp, writeBatch, where, getDocs, limit, type QueryConstraint, deleteDoc } from 'firebase/firestore';
 import type { UserProfile, NetworkAsset } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -236,14 +236,18 @@ export default function AdminAssetsPage() {
   }, [searchName, searchServiceArea]);
 
 
-  const handleDeleteAsset = (assetId: string, assetName: string) => {
+  const handleDeleteAsset = async (assetId: string, assetName: string) => {
     if (!firestore) return;
     const assetDocRef = doc(firestore, 'network-assets', assetId);
-    deleteDocumentNonBlocking(assetDocRef);
-    toast({
-      title: 'Aset Dihapus',
-      description: `Aset "${assetName}" telah dihapus.`,
-    });
+    try {
+        await deleteDoc(assetDocRef);
+        toast({
+          title: 'Aset Dihapus',
+          description: `Aset "${assetName}" telah dihapus.`,
+        });
+    } catch(e) {
+        toast({ variant: 'destructive', title: 'Gagal Menghapus', description: 'Terjadi kesalahan saat menghapus aset.' });
+    }
   };
   
   const handleViewResultsOnMap = () => {

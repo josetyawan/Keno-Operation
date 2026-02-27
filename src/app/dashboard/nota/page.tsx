@@ -36,8 +36,8 @@ import { Button } from '@/components/ui/button';
 import { MoreHorizontal, PlusCircle, Edit, Trash2, User } from 'lucide-react';
 import { format, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
-import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, query, orderBy, doc, where, type QueryConstraint } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query, orderBy, doc, where, type QueryConstraint, deleteDoc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useMemo, useCallback } from 'react';
@@ -62,13 +62,21 @@ function NotaActions({ nota }: { nota: Nota }) {
   const isAdmin = userProfile?.role === 'admin';
   const isOwner = user?.uid === nota.userId;
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     const notaRef = doc(firestore, 'notas', nota.id);
-    deleteDocumentNonBlocking(notaRef);
-    toast({
-      title: 'Laporan Dihapus',
-      description: 'Laporan telah berhasil dihapus.',
-    });
+    try {
+        await deleteDoc(notaRef);
+        toast({
+          title: 'Laporan Dihapus',
+          description: 'Laporan telah berhasil dihapus.',
+        });
+    } catch (e) {
+        toast({
+            variant: "destructive",
+            title: "Gagal Menghapus",
+            description: "Terjadi kesalahan saat menghapus laporan."
+        });
+    }
   };
 
   if (!isOwner && !isAdmin) {
@@ -100,7 +108,7 @@ function NotaActions({ nota }: { nota: Nota }) {
                 Edit
             </DropdownMenuItem>
             </Link>
-            <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+            <DropdownMenuItem onSelect={(e) => e.preventDefault()} onClick={handleDelete} className="text-destructive focus:text-destructive focus:bg-destructive/10">
             <Trash2 className="mr-2 h-4 w-4" />
             Hapus
             </DropdownMenuItem>

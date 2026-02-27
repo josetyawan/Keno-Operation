@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { useUser, useFirestore, useCollection, useStorage, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, useDoc } from '@/firebase';
-import { collection, query, where, Timestamp, limit, doc, setDoc } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useStorage, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query, where, Timestamp, limit, doc, setDoc, addDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -367,7 +368,7 @@ export default function AttendancePage() {
                 status: 'present',
             };
             
-            await addDocumentNonBlocking(collection(firestore, 'attendances'), newAttendance);
+            await addDoc(collection(firestore, 'attendances'), newAttendance);
 
             sendAttendanceNotice({
                 userName: userProfile.displayName || user.email!,
@@ -560,7 +561,7 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished }: { todaySchedul
                     status: leaveType === 'late' ? 'late' : 'remote-progress',
                     reason: reason,
                 };
-                await addDocumentNonBlocking(collection(firestore, 'attendances'), attendanceData);
+                await addDoc(collection(firestore, 'attendances'), attendanceData);
 
                 sendAttendanceNotice({
                     userName: userProfile.displayName || user.email,

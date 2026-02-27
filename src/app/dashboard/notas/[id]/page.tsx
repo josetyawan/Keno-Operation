@@ -16,8 +16,8 @@ import { Badge, badgeVariants } from '@/components/ui/badge';
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle, Edit, Trash, X, ShieldX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useDoc, useFirestore, useUser, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
+import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import type { Nota, UserProfile } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -108,7 +108,7 @@ export default function NotaDetailPage() {
   const { data: nota, isLoading, error } = useDoc<Nota>(notaRef);
   const isOwner = user?.uid === nota?.userId;
 
-  const handleConfirmVerify = () => {
+  const handleConfirmVerify = async () => {
     if (!isAdmin || !notaRef || !verificationDate) return;
     
     const isBbmGenset = nota?.segmen === 'BBM Genset';
@@ -117,18 +117,22 @@ export default function NotaDetailPage() {
         ? 'Status laporan telah diperbarui menjadi "verified-tif" untuk pengajuan ke TIF.'
         : 'Status laporan telah diperbarui menjadi "verified".';
 
-    updateDocumentNonBlocking(notaRef, { 
-        status: newStatus,
-        tanggalVerifikasi: verificationDate
-    });
-    toast({
-      title: 'Laporan Diverifikasi',
-      description: descriptionText,
-    });
+    try {
+        await updateDoc(notaRef, { 
+            status: newStatus,
+            tanggalVerifikasi: verificationDate
+        });
+        toast({
+          title: 'Laporan Diverifikasi',
+          description: descriptionText,
+        });
+    } catch(e) {
+        toast({ variant: 'destructive', title: 'Gagal Memverifikasi' });
+    }
     setIsVerifyDialogOpen(false);
   };
   
-  const handleConfirmReject = () => {
+  const handleConfirmReject = async () => {
     if (!isAdmin || !notaRef || !rejectionReason.trim()) {
         toast({
             variant: 'destructive',
@@ -149,37 +153,40 @@ export default function NotaDetailPage() {
     }
 
     const reason = rejectionReason.trim();
-    updateDocumentNonBlocking(notaRef, {
-        status: 'rejected',
-        rejectionReason: reason,
-        tanggalVerifikasi: null, // Clear verification date on rejection
-    });
-     toast({
-      title: 'Laporan Ditolak',
-      description: 'Status laporan telah diperbarui menjadi "rejected".',
-    });
-
-    // Send Telegram Notification
-    sendRejectionNotice({
-      picName: nota.namaPic,
-      notaDate: format(notaDate, 'dd MMM yyyy', { locale: idLocale }),
-      segment: nota.segmen,
-      reason: reason,
-    }).catch(err => {
-        console.error("Failed to send rejection notification:", err);
-        // Optionally show a non-blocking toast that the notification failed
-        toast({
-            variant: 'destructive',
-            title: 'Notifikasi Gagal Terkirim',
-            description: 'Gagal mengirim notifikasi penolakan ke Telegram.',
+    try {
+        await updateDoc(notaRef, {
+            status: 'rejected',
+            rejectionReason: reason,
+            tanggalVerifikasi: null, // Clear verification date on rejection
         });
-    });
+        toast({
+          title: 'Laporan Ditolak',
+          description: 'Status laporan telah diperbarui menjadi "rejected".',
+        });
+
+        // Send Telegram Notification
+        sendRejectionNotice({
+          picName: nota.namaPic,
+          notaDate: format(notaDate, 'dd MMM yyyy', { locale: idLocale }),
+          segment: nota.segmen,
+          reason: reason,
+        }).catch(err => {
+            console.error("Failed to send rejection notification:", err);
+            toast({
+                variant: 'destructive',
+                title: 'Notifikasi Gagal Terkirim',
+                description: 'Gagal mengirim notifikasi penolakan ke Telegram.',
+            });
+        });
+    } catch(e) {
+        toast({ variant: 'destructive', title: 'Gagal Menolak' });
+    }
 
     setIsRejectDialogOpen(false);
     setRejectionReason('');
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!notaRef) return;
     if (!isOwner && !isAdmin) {
       toast({
@@ -191,18 +198,22 @@ export default function NotaDetailPage() {
     }
     
     setIsDeleting(true);
-    deleteDocumentNonBlocking(notaRef);
+    try {
+        await deleteDoc(notaRef);
+        toast({
+          title: 'Laporan Dihapus',
+          description: 'Laporan ini telah berhasil dihapus.',
+        });
+        router.push('/dashboard');
+    } catch(e) {
+        toast({ variant: 'destructive', title: 'Gagal Menghapus' });
+    }
     
-    toast({
-      title: 'Laporan Dihapus',
-      description: 'Laporan ini telah berhasil dihapus.',
-    });
-    
+    setIsDeleting(false);
     setIsDeleteDialogOpen(false);
-    router.push('/dashboard');
   };
 
-  const handleDeletePhoto = () => {
+  const handleDeletePhoto = async () => {
     if (!photoToDelete || !notaRef || !nota) return;
     if (!isOwner && !isAdmin) {
       toast({
@@ -216,12 +227,15 @@ export default function NotaDetailPage() {
 
     const newUrls = nota.fotoEvidenUrls?.filter(url => url !== photoToDelete) || [];
     
-    updateDocumentNonBlocking(notaRef, { fotoEvidenUrls: newUrls });
-
-    toast({
-      title: 'Photo Removed',
-      description: 'The evidence photo has been removed from this report.',
-    });
+    try {
+        await updateDoc(notaRef, { fotoEvidenUrls: newUrls });
+        toast({
+          title: 'Photo Removed',
+          description: 'The evidence photo has been removed from this report.',
+        });
+    } catch(e) {
+        toast({ variant: 'destructive', title: 'Gagal Menghapus Foto' });
+    }
 
     setPhotoToDelete(null); // Close the dialog
   };
@@ -293,7 +307,7 @@ export default function NotaDetailPage() {
                       ` | Diajukan ke TIF pada: ${format(tanggalVerifikasi, 'dd MMM yyyy')}`
                   )}
                 {nota.status === 'paid' && tanggalPembayaran && (
-                        ` | Dibayar pada: ${format(tanggalPembayaran, 'dd MMM yyyy')}`
+                        ` | Dibayar pada: ${format(tanggalPembayaran, 'dd MMMM yyyy')}`
                     )}
               </CardDescription>
           </CardHeader>

@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, query, doc, orderBy, Timestamp } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query, doc, orderBy, Timestamp, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -137,22 +138,30 @@ export default function AdminHolidaysPage() {
         setHolidayToDelete(holiday);
     };
 
-    const confirmDelete = () => {
+    const confirmDelete = async () => {
         if (!holidayToDelete || !firestore) return;
         const holidayDocRef = doc(firestore, 'holidays', holidayToDelete.id);
-        deleteDocumentNonBlocking(holidayDocRef);
-        toast({ title: 'Hari Libur Dihapus' });
+        try {
+            await deleteDoc(holidayDocRef);
+            toast({ title: 'Hari Libur Dihapus' });
+        } catch (e) {
+            toast({ variant: 'destructive', title: 'Gagal Menghapus' });
+        }
         setHolidayToDelete(null);
     };
 
-    const handleFormSubmit = (data: Partial<Holiday>) => {
+    const handleFormSubmit = async (data: Partial<Holiday>) => {
         if (!firestore) return;
-        if (holidayToEdit) {
-            updateDocumentNonBlocking(doc(firestore, 'holidays', holidayToEdit.id), data);
-            toast({ title: 'Hari Libur Diperbarui' });
-        } else {
-            addDocumentNonBlocking(collection(firestore, 'holidays'), data);
-            toast({ title: 'Hari Libur Ditambahkan' });
+        try {
+            if (holidayToEdit) {
+                await updateDoc(doc(firestore, 'holidays', holidayToEdit.id), data);
+                toast({ title: 'Hari Libur Diperbarui' });
+            } else {
+                await addDoc(collection(firestore, 'holidays'), data);
+                toast({ title: 'Hari Libur Ditambahkan' });
+            }
+        } catch (e) {
+            toast({ variant: 'destructive', title: 'Gagal Menyimpan' });
         }
         setIsFormDialogOpen(false);
     };

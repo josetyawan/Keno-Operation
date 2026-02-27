@@ -2,8 +2,8 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, useDoc } from '@/firebase';
-import { collection, query, orderBy, serverTimestamp, doc } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query, orderBy, serverTimestamp, doc, addDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -68,7 +68,7 @@ export default function GroupChatPage() {
     };
 
     try {
-      await addDocumentNonBlocking(collection(firestore, 'messages'), messageData);
+      await addDoc(collection(firestore, 'messages'), messageData);
       setNewMessage('');
     } catch (error) {
       console.error("Error sending message:", error);

@@ -40,8 +40,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Edit, PlusCircle, Trash2 } from 'lucide-react';
-import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from '@/firebase';
-import { collection, query, doc } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import type { UserProfile, MapLink } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -154,33 +154,41 @@ export default function AdminMapLinksPage() {
     setMapLinkToDelete(link);
   };
   
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!mapLinkToDelete || !firestore) return;
     const linkDocRef = doc(firestore, 'map-links', mapLinkToDelete.id);
-    deleteDocumentNonBlocking(linkDocRef);
-    toast({
-      title: 'Link Peta Dihapus',
-      description: `Link untuk ${mapLinkToDelete.serviceArea} telah dihapus.`,
-    });
+    try {
+        await deleteDoc(linkDocRef);
+        toast({
+          title: 'Link Peta Dihapus',
+          description: `Link untuk ${mapLinkToDelete.serviceArea} telah dihapus.`,
+        });
+    } catch(e) {
+        toast({ variant: 'destructive', title: 'Gagal Menghapus' });
+    }
     setMapLinkToDelete(null);
   }
 
-  const handleFormSubmit = (data: { serviceArea: string, url: string }) => {
+  const handleFormSubmit = async (data: { serviceArea: string, url: string }) => {
     if (!firestore) return;
-    if (mapLinkToEdit) {
-      const linkDocRef = doc(firestore, 'map-links', mapLinkToEdit.id);
-      updateDocumentNonBlocking(linkDocRef, data);
-      toast({
-        title: 'Link Peta Diperbarui',
-        description: `Link untuk ${data.serviceArea} telah diperbarui.`,
-      });
-    } else {
-      const linksCollection = collection(firestore, 'map-links');
-      addDocumentNonBlocking(linksCollection, data);
-      toast({
-        title: 'Link Peta Dibuat',
-        description: `Link baru untuk ${data.serviceArea} telah dibuat.`,
-      });
+    try {
+        if (mapLinkToEdit) {
+          const linkDocRef = doc(firestore, 'map-links', mapLinkToEdit.id);
+          await updateDoc(linkDocRef, data);
+          toast({
+            title: 'Link Peta Diperbarui',
+            description: `Link untuk ${data.serviceArea} telah diperbarui.`,
+          });
+        } else {
+          const linksCollection = collection(firestore, 'map-links');
+          await addDoc(linksCollection, data);
+          toast({
+            title: 'Link Peta Dibuat',
+            description: `Link baru untuk ${data.serviceArea} telah dibuat.`,
+          });
+        }
+    } catch(e) {
+        toast({ variant: 'destructive', title: 'Gagal Menyimpan' });
     }
     setIsFormDialogOpen(false);
     setMapLinkToEdit(null);
