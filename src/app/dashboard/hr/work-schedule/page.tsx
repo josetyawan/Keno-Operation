@@ -78,7 +78,8 @@ export default function WorkSchedulePage() {
     // Original logic for admin/korlap
     const activeUsers = allUsers.filter(u => u.registrationStatus === 'approved' && u.role === 'teknisi').sort((a,b) => (a.displayName || '').localeCompare(b.displayName || ''));
     if (selectedUnit === 'ALL') return activeUsers;
-    return activeUsers.filter(u => u.unit === selectedUnit);
+    
+    return activeUsers.filter(u => u.unit?.trim().toUpperCase() === selectedUnit.toUpperCase());
   }, [allUsers, selectedUnit, currentUserProfile]);
 
   const schedulesMap = useMemo(() => {
