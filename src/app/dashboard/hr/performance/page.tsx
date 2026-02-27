@@ -53,6 +53,14 @@ export default function UserPerformancePage() {
 
     const isLoading = isUserLoading || isProfileLoading || isPerformanceLoading;
 
+    const formatAsPercent = (value: string) => {
+        if (typeof value !== 'string' || !value.trim()) return '-';
+        if (value.trim().endsWith('%')) return value;
+        const num = parseFloat(value);
+        if (isNaN(num)) return value;
+        return `${(num * 100).toFixed(2)}%`;
+    };
+
     if (isLoading) {
         return (
             <div className="space-y-6">
@@ -66,14 +74,6 @@ export default function UserPerformancePage() {
         );
     }
     
-    const formatAsPercent = (value: string) => {
-        if (typeof value !== 'string' || !value.trim()) return '-';
-        if (value.trim().endsWith('%')) return value;
-        const num = parseFloat(value);
-        if (isNaN(num)) return value;
-        return `${(num * 100).toFixed(2)}%`;
-    };
-
     return (
         <div className="space-y-6">
             <div className="flex items-center gap-4">
