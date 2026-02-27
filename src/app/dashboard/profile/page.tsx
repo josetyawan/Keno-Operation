@@ -156,10 +156,10 @@ export default function ProfilePage() {
     if (tinggiBadan) updatedData.tinggiBadan = Number(tinggiBadan) || 0;
     if (beratBadan) updatedData.beratBadan = Number(beratBadan) || 0;
     
-    if (tanggalLahir) updatedData.tanggalLahir = Timestamp.fromDate(tanggalLahir);
-    if (masaBerlakuSimA) updatedData.masaBerlakuSimA = Timestamp.fromDate(masaBerlakuSimA);
-    if (masaBerlakuSimC) updatedData.masaBerlakuSimC = Timestamp.fromDate(masaBerlakuSimC);
-    if (tanggalMasukKerja) updatedData.tanggalMasukKerja = Timestamp.fromDate(tanggalMasukKerja);
+    updatedData.tanggalLahir = tanggalLahir ? Timestamp.fromDate(tanggalLahir) : null;
+    updatedData.masaBerlakuSimA = masaBerlakuSimA ? Timestamp.fromDate(masaBerlakuSimA) : null;
+    updatedData.masaBerlakuSimC = masaBerlakuSimC ? Timestamp.fromDate(masaBerlakuSimC) : null;
+    updatedData.tanggalMasukKerja = tanggalMasukKerja ? Timestamp.fromDate(tanggalMasukKerja) : null;
 
     try {
       await updateDoc(userDocRef, updatedData);
@@ -341,5 +341,3 @@ export default function ProfilePage() {
     </form>
   );
 }
-
-    
