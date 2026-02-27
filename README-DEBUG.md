@@ -10,7 +10,7 @@ Saya mohon maaf, instruksi saya sebelumnya tidak cukup jelas. Mari kita gunakan 
 
 Anda akan menerima email dengan link yang terlihat seperti ini (ini adalah contoh dari email terakhir Anda):
 
-`https://studio-7759201113-b7263.firebaseapp.com/__/auth/action?mode=resetPassword&oobCode=wL0LPEBWod0L874pzEZeWKUoFYueViK9ZAnUO-z4oqgAAAGcLRK2uQ&apiKey=AIzaSyAcRFFqLjh7vVdJ5a6jy8aJ0f6QmvnlrB4&lang=en`
+`https://studio-7759201113-b7263.firebaseapp.com/__/auth/action?mode=resetPassword&oobCode=jTYTLL5rgaSYS5pYwKxyn2nqlqbW8hE4eCGqGFdbpzUAAAGcmgDijw&apiKey=AIzaSyAcRFFqLjh7vVdJ5a6jy8aJ0f6QmvnlrB4&lang=en`
 
 ---
 
@@ -20,7 +20,7 @@ Anda akan menerima email dengan link yang terlihat seperti ini (ini adalah conto
 
 Dari contoh link di atas, kodenya adalah:
 
-**wL0LPEBWod0L874pzEZeWKUoFYueViK9ZAnUO-z4oqgAAAGcLRK2uQ**
+**jTYTLL5rgaSYS5pYwKxyn2nqlqbW8hE4eCGqGFdbpzUAAAGcmgDijw**
 
 Salin (copy) bagian teks yang dicetak tebal tersebut.
 
