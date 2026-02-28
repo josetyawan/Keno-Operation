@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -14,12 +13,12 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { UserNav } from '@/components/user-nav';
 import { Logo } from '@/components/logo';
-import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useCallback, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { doc, setDoc, updateDoc } from 'firebase/firestore';
-import type { UserProfile } from '@/lib/types';
+import { doc, setDoc, updateDoc, query, collection, where, orderBy, limit } from 'firebase/firestore';
+import type { UserProfile, Message, ChatRoom } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
@@ -169,6 +168,71 @@ export default function DashboardLayout({
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
+  // --- Notification Logic ---
+  const [hasUnread, setHasUnread] = useState(false);
+  const [originalTitle, setOriginalTitle] = useState("NotaKu");
+
+  useEffect(() => {
+    setOriginalTitle(document.title);
+  }, []);
+
+  const groupChatQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(firestore, 'messages'), orderBy('createdAt', 'desc'), limit(1));
+  }, [user, firestore]);
+  const { data: latestGroupMessage } = useCollection<Message>(groupChatQuery);
+
+  const privateChatsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(firestore, 'chats'), where('participants', 'array-contains', user.uid));
+  }, [user, firestore]);
+  const { data: privateChats } = useCollection<ChatRoom>(privateChatsQuery);
+
+  useEffect(() => {
+    if (pathname.startsWith('/dashboard/chat')) {
+      localStorage.setItem('lastChatVisit', new Date().toISOString());
+      setHasUnread(false);
+      return;
+    }
+
+    const lastVisitStr = localStorage.getItem('lastChatVisit');
+    if (!lastVisitStr) {
+      if ((latestGroupMessage && latestGroupMessage.length > 0) || (privateChats && privateChats.length > 0)) {
+        setHasUnread(true);
+      }
+      return;
+    }
+
+    const lastVisitTimestamp = new Date(lastVisitStr).getTime();
+    let foundUnread = false;
+
+    if (latestGroupMessage?.[0]?.createdAt) {
+      const groupMsgTime = latestGroupMessage[0].createdAt.toDate().getTime();
+      if (groupMsgTime > lastVisitTimestamp) {
+        foundUnread = true;
+      }
+    }
+
+    if (!foundUnread && privateChats) {
+      for (const chat of privateChats) {
+        if (chat.lastMessageTimestamp) {
+          const privateMsgTime = chat.lastMessageTimestamp.toDate().getTime();
+          if (privateMsgTime > lastVisitTimestamp) {
+            foundUnread = true;
+            break;
+          }
+        }
+      }
+    }
+    setHasUnread(foundUnread);
+  }, [latestGroupMessage, privateChats, pathname]);
+
+  useEffect(() => {
+    document.title = hasUnread ? `(1) ${originalTitle}` : originalTitle;
+  }, [hasUnread, originalTitle]);
+  // --- End Notification Logic ---
+
+
    const handleSignOutAndRedirect = useCallback((title: string, description: string) => {
     if (auth.currentUser) {
         auth.signOut().then(() => {
@@ -186,28 +250,20 @@ export default function DashboardLayout({
   }, [auth, router, toast]);
 
   useEffect(() => {
-    // This effect now ONLY handles redirection and sign-out logic.
-    // It no longer manages a separate readiness state.
-
-    // Do nothing until all data loading is settled.
     if (isUserLoading || isProfileLoading) {
       return;
     }
 
-    // Case 1: No authenticated user. Redirect to login.
     if (!user) {
       router.push('/login');
       return;
     }
     
-    // Case 2: Authenticated user, but no corresponding Firestore profile.
-    // This is an invalid state, so sign out and redirect with an error.
     if (!userProfile) {
         handleSignOutAndRedirect('Profil Tidak Ditemukan', 'Data profil Anda tidak dapat ditemukan di database. Hubungi admin.');
         return;
     }
 
-    // Case 3: User profile exists, but is not approved.
     if (userProfile.registrationStatus !== 'approved') {
         const title = userProfile.registrationStatus === 'pending' ? 'Akun Menunggu Persetujuan' : 'Akses Ditolak';
         const description = userProfile.registrationStatus === 'pending' 
@@ -219,9 +275,6 @@ export default function DashboardLayout({
     }
   }, [user, userProfile, isUserLoading, isProfileLoading, router, handleSignOutAndRedirect]);
 
-  // The rendering logic is now separate from the effect.
-  // We show a skeleton if core data is loading or if the user/profile is not yet available.
-  // The useEffect above will handle the redirection if the final state is invalid.
   if (isUserLoading || isProfileLoading || !user || !userProfile) {
     return <DashboardSkeleton />;
   }
