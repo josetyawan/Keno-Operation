@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
@@ -260,17 +259,6 @@ export default function AttendancePage() {
     const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
     const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
-    const allUsersQuery = useMemoFirebase(() => {
-        if (!userProfile) return null; // Wait for user profile
-        // Only fetch all users if the current user has permission
-        if (userProfile.role === 'admin' || userProfile.role === 'korlap') {
-            return query(collection(firestore, 'users'), orderBy('displayName'));
-        }
-        return null;
-    }, [firestore, userProfile]);
-
-    const { data: allUsers, isLoading: areUsersLoading } = useCollection<UserProfile>(allUsersQuery);
-
     const today = useMemo(() => getStartOfDay(), []);
     const scheduleQuery = useMemoFirebase(() => {
         if (!user) return null;
@@ -298,7 +286,7 @@ export default function AttendancePage() {
     const { data: allUserAttendances, isLoading: isAttendanceLoading } = useCollection<Attendance>(allUserAttendancesQuery);
 
     useEffect(() => {
-      setIsLoading(isScheduleLoading || isAttendanceLoading || isProfileLoading || areUsersLoading);
+      setIsLoading(isScheduleLoading || isAttendanceLoading || isProfileLoading);
       if (!isAttendanceLoading && allUserAttendances) {
           const startOfToday = getStartOfDay();
           const endOfToday = add(startOfToday, { days: 1 });
@@ -312,7 +300,7 @@ export default function AttendancePage() {
       } else if (!isAttendanceLoading) {
           setTodayAttendance(null);
       }
-    }, [allUserAttendances, isAttendanceLoading, isScheduleLoading, isProfileLoading, areUsersLoading, today]);
+    }, [allUserAttendances, isAttendanceLoading, isScheduleLoading, isProfileLoading, today]);
     
     // --- Camera Logic for Main Check-in ---
     useEffect(() => {
@@ -441,7 +429,6 @@ export default function AttendancePage() {
                                 todaySchedule={todaySchedule}
                                 today={today}
                                 onFinished={() => setIsLeaveDialogOpen(false)}
-                                allUsers={allUsers || []}
                             />
                         </Dialog>
                     </div>
@@ -452,7 +439,7 @@ export default function AttendancePage() {
 }
 
 // --- Dialog Component for Leave/Late/Remote ---
-function LeaveRequestDialog({ todaySchedule, today, onFinished, allUsers }: { todaySchedule: Schedule | null; today: Date; onFinished: () => void; allUsers: UserProfile[] }) {
+function LeaveRequestDialog({ todaySchedule, today, onFinished }: { todaySchedule: Schedule | null; today: Date; onFinished: () => void; }) {
     const { user } = useUser();
     const firestore = useFirestore();
     const storage = useStorage();
@@ -461,6 +448,15 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished, allUsers }: { to
     
     const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
     const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
+
+    const canListUsers = userProfile?.role === 'admin' || userProfile?.role === 'korlap';
+
+    const usersQuery = useMemoFirebase(() => {
+        if (!canListUsers) return null;
+        return query(collection(firestore, 'users'), orderBy('displayName'));
+    }, [firestore, canListUsers]);
+
+    const { data: allUsers } = useCollection<UserProfile>(usersQuery);
 
     const [leaveType, setLeaveType] = useState<'sick-leave' | 'cuti' | 'late' | 'remote-progress' | 'tukar-jaga'>('sick-leave');
     const [reason, setReason] = useState('');
@@ -531,7 +527,7 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished, allUsers }: { to
                     setIsSubmitting(false);
                     return;
                 }
-                const targetUser = allUsers.find(u => u.id === swapTargetUserId);
+                const targetUser = allUsers?.find(u => u.id === swapTargetUserId);
                 if (!targetUser) {
                      toast({ variant: 'destructive', title: 'User Tidak Ditemukan' });
                      setIsSubmitting(false);
