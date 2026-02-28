@@ -1,8 +1,7 @@
-
 'use client';
 
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, where, doc } from 'firebase/firestore';
+import { collection, query, where, doc } from 'firebase/firestore'; // Make sure doc is imported
 import type { UserProfile, Performance } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -27,11 +26,21 @@ export default function UserPerformancePage() {
     );
     
     const performanceQuery = useMemoFirebase(() => {
-        // Query by the current user's ID. This is reliable and secure.
-        // The import/sync process is responsible for ensuring the 'userId' field is populated.
-        if (!user?.uid) return null;
-        return query(collection(firestore, 'performance'), where('userId', '==', user.uid));
-    }, [firestore, user?.uid]);
+        // Wait until we have the user profile, which contains the NIK.
+        if (!userProfile) return null;
+        
+        // If the user has a NIK, query by NIK. This is the primary method.
+        if (userProfile.nik) {
+            return query(collection(firestore, 'performance'), where('nik', '==', userProfile.nik));
+        }
+
+        // As a fallback (e.g., for very old data or if NIK is somehow missing), query by userId.
+        if (user?.uid) {
+            return query(collection(firestore, 'performance'), where('userId', '==', user.uid));
+        }
+
+        return null;
+    }, [firestore, user?.uid, userProfile]);
 
     const { data: performanceRecords, isLoading: isPerformanceLoading } = useCollection<Performance>(performanceQuery);
     
@@ -170,7 +179,7 @@ export default function UserPerformancePage() {
                         <BarChart3 className="mx-auto h-12 w-12 text-muted-foreground" />
                         <h3 className="mt-4 text-lg font-semibold">Data Performa Belum Tersedia</h3>
                         <p className="mt-2 text-sm text-muted-foreground">
-                            Data performa untuk akun Anda belum ditemukan. Jika data sudah diimpor, minta admin untuk menjalankan "Sinkronkan ID Pengguna".
+                            Data performa untuk akun Anda belum ditemukan. Pastikan admin telah mengimpor data untuk NIK Anda.
                         </p>
                     </CardContent>
                 </Card>
