@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -18,13 +17,25 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import { PlusCircle, FileWarning, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { useUser, useFirestore, useMemoFirebase, useDoc, useCollection } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { collection, query, where, orderBy, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 import { useMemo, useState } from 'react';
 import type { GamasReport, UserProfile } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
@@ -52,11 +63,12 @@ export default function GamasListPage() {
     const reportsCollectionRef = collection(firestore, 'gamas-reports');
     const isAdminOrKorlap = userProfile.role === 'admin' || userProfile.role === 'korlap';
 
-    return query(
-      reportsCollectionRef,
-      isAdminOrKorlap ? orderBy('createdAt', 'desc') : where('userId', '==', userProfile.id),
-      !isAdminOrKorlap ? orderBy('createdAt', 'desc') : where('__name__', '!=', ' ') // Dummy where to use orderBy
-    );
+    if (isAdminOrKorlap) {
+        return query(reportsCollectionRef, orderBy('createdAt', 'desc'));
+    }
+    
+    return query(reportsCollectionRef, where('userId', '==', userProfile.id), orderBy('createdAt', 'desc'));
+
   }, [firestore, userProfile, isProfileLoading]);
 
   const { data: reports, isLoading: areReportsLoading } = useCollection<GamasReport>(reportsQuery);
@@ -148,5 +160,3 @@ export default function GamasListPage() {
     </>
   );
 }
-
-    
