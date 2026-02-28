@@ -74,7 +74,7 @@ service cloud.firestore {
       allow create: if request.auth.uid == userId && request.resource.data.email is string && request.resource.data.role == 'teknisi' && request.resource.data.registrationStatus == 'pending';
       // READ: A user can get their own profile. Admins/Korlaps can get any profile.
       allow get: if isOwner(userId) || isAdmin() || isKorlap();
-      allow list: if isAdmin() || isKorlap();
+      allow list: if isApproved();
       allow update: if isAdmin() || (isOwner(userId) && userCanUpdateOwnProfile());
       allow delete: if isAdmin() && request.auth.uid != userId;
     }
