@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -64,7 +65,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { DatePickerDropdowns } from '@/components/ui/date-picker-dropdowns';
 import * as XLSX from 'xlsx';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 
 
 function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onFormSubmit: (data: Partial<UserProfile>) => void, isSaving: boolean }) {
@@ -187,10 +188,10 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
     if (tinggiBadan) updatedData.tinggiBadan = Number(tinggiBadan) || 0;
     if (beratBadan) updatedData.beratBadan = Number(beratBadan) || 0;
     
-    updatedData.tanggalLahir = tanggalLahir ? Timestamp.fromDate(tanggalLahir) : null;
-    updatedData.masaBerlakuSimA = masaBerlakuSimA ? Timestamp.fromDate(masaBerlakuSimA) : null;
-    updatedData.masaBerlakuSimC = masaBerlakuSimC ? Timestamp.fromDate(masaBerlakuSimC) : null;
-    updatedData.tanggalMasukKerja = tanggalMasukKerja ? Timestamp.fromDate(tanggalMasukKerja) : null;
+    updatedData.tanggalLahir = tanggalLahir && isValid(tanggalLahir) ? Timestamp.fromDate(tanggalLahir) : null;
+    updatedData.masaBerlakuSimA = masaBerlakuSimA && isValid(masaBerlakuSimA) ? Timestamp.fromDate(masaBerlakuSimA) : null;
+    updatedData.masaBerlakuSimC = masaBerlakuSimC && isValid(masaBerlakuSimC) ? Timestamp.fromDate(masaBerlakuSimC) : null;
+    updatedData.tanggalMasukKerja = tanggalMasukKerja && isValid(tanggalMasukKerja) ? Timestamp.fromDate(tanggalMasukKerja) : null;
 
     onFormSubmit(updatedData);
   };

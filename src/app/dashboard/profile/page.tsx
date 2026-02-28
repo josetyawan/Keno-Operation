@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
@@ -17,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { UserProfile, Pendidikan } from '@/lib/types';
 import { useState, useEffect } from 'react';
 import { DatePickerDropdowns } from '@/components/ui/date-picker-dropdowns';
+import { isValid } from 'date-fns';
 
 export default function ProfilePage() {
   const { user, isUserLoading: isAuthLoading } = useUser();
@@ -156,10 +158,10 @@ export default function ProfilePage() {
     if (tinggiBadan) updatedData.tinggiBadan = Number(tinggiBadan) || 0;
     if (beratBadan) updatedData.beratBadan = Number(beratBadan) || 0;
     
-    updatedData.tanggalLahir = tanggalLahir ? Timestamp.fromDate(tanggalLahir) : null;
-    updatedData.masaBerlakuSimA = masaBerlakuSimA ? Timestamp.fromDate(masaBerlakuSimA) : null;
-    updatedData.masaBerlakuSimC = masaBerlakuSimC ? Timestamp.fromDate(masaBerlakuSimC) : null;
-    updatedData.tanggalMasukKerja = tanggalMasukKerja ? Timestamp.fromDate(tanggalMasukKerja) : null;
+    updatedData.tanggalLahir = tanggalLahir && isValid(tanggalLahir) ? Timestamp.fromDate(tanggalLahir) : null;
+    updatedData.masaBerlakuSimA = masaBerlakuSimA && isValid(masaBerlakuSimA) ? Timestamp.fromDate(masaBerlakuSimA) : null;
+    updatedData.masaBerlakuSimC = masaBerlakuSimC && isValid(masaBerlakuSimC) ? Timestamp.fromDate(masaBerlakuSimC) : null;
+    updatedData.tanggalMasukKerja = tanggalMasukKerja && isValid(tanggalMasukKerja) ? Timestamp.fromDate(tanggalMasukKerja) : null;
 
     try {
       await updateDoc(userDocRef, updatedData);
