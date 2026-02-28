@@ -32,67 +32,72 @@ export function DatePickerDropdowns({
   const fromYear = fromYearProp || currentYear - 100;
   const toYear = toYearProp || currentYear;
 
+  // Internal state for each part of the date
   const [day, setDay] = useState<string | undefined>();
   const [month, setMonth] = useState<string | undefined>();
   const [year, setYear] = useState<string | undefined>();
 
-  // Effect to synchronize the internal state with the external `value` prop
+  // Effect to sync internal state when the external `value` prop changes.
+  // This runs when the component mounts or when the parent's data loads.
   useEffect(() => {
     if (value && isValid(value)) {
       const date = new Date(value);
-      if (String(getYear(date)) !== year) setYear(String(getYear(date)));
-      if (String(getMonth(date)) !== month) setMonth(String(getMonth(date)));
-      if (String(getDate(date)) !== day) setDay(String(getDate(date)));
+      setYear(String(getYear(date)));
+      setMonth(String(getMonth(date)));
+      setDay(String(getDate(date)));
     } else {
-      // If the external value is cleared, clear our internal state
+      // If the parent component passes undefined, clear the dropdowns.
       setDay(undefined);
       setMonth(undefined);
       setYear(undefined);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
-  // Effect to notify the parent component when a valid date can be formed
+  // This effect calls the parent `onChange` handler whenever a full, valid date can be formed from the internal state.
   useEffect(() => {
-    // Only proceed if all parts are defined
-    if (day && month && year) {
-      const newYear = parseInt(year, 10);
-      const newMonth = parseInt(month, 10);
+    if (year && month && day) {
+      const yearNum = parseInt(year, 10);
+      const monthNum = parseInt(month, 10);
+      const dayNum = parseInt(day, 10);
       
-      // Clamp the day to the maximum number of days in the selected month and year
-      const daysInNewMonth = getDaysInMonth(new Date(newYear, newMonth));
-      const newDay = Math.min(parseInt(day, 10), daysInNewMonth);
+      const newDate = new Date(yearNum, monthNum, dayNum);
 
-      const newDate = new Date(newYear, newMonth, newDay);
-
-      if (isValid(newDate)) {
-        // Only call onChange if the new date is different from the prop value
-        // to prevent an infinite update loop.
-        if (value?.getTime() !== newDate.getTime()) {
-          onChange(newDate);
-        }
+      // We must ensure the constructed date is valid AND that it's different from the parent's `value` to prevent loops.
+      if (isValid(newDate) && newDate.getTime() !== value?.getTime()) {
+        onChange(newDate);
       }
-    } else if (!day && !month && !year && value) {
-        // If all fields have been cleared and there was previously a value, clear the parent state.
-        onChange(undefined);
+    } else if (!year && !month && !day && value !== undefined) {
+      // If all fields are cleared by the user, tell the parent to clear its value.
+      onChange(undefined);
     }
-  // This effect depends on the internal state and the parent's onChange and value.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [day, month, year]);
-
-  const handleDayChange = (newDay: string) => setDay(newDay === 'none' ? undefined : newDay);
-  const handleMonthChange = (newMonth: string) => setMonth(newMonth === 'none' ? undefined : newMonth);
-  const handleYearChange = (newYear: string) => setYear(newYear === 'none' ? undefined : newYear);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [day, month, year]); // `value` and `onChange` are removed from deps to break update loops. We only sync from parent, not to parent in the same effect.
 
   // --- Render logic ---
   const years = Array.from({ length: toYear - fromYear + 1 }, (_, i) => String(toYear - i));
   const months = Array.from({ length: 12 }, (_, i) => ({ value: String(i), label: format(new Date(2000, i, 1), 'MMMM', { locale: idLocale }) }));
-  const daysInSelectedMonth = month && year ? getDaysInMonth(new Date(parseInt(year), parseInt(month))) : 31;
+  
+  // Day options must be recalculated if month or year changes to handle leap years etc.
+  const daysInSelectedMonth = (month && year) ? getDaysInMonth(new Date(parseInt(year), parseInt(month))) : 31;
   const days = Array.from({ length: daysInSelectedMonth }, (_, i) => String(i + 1));
+  
+  // When changing month, if the current day is invalid for the new month, clamp it.
+  const handleMonthChange = (newMonthValue: string) => {
+    const newMonth = newMonthValue === 'none' ? undefined : newMonthValue;
+    setMonth(newMonth);
+
+    if (day && newMonth && year) {
+        const currentDayNum = parseInt(day, 10);
+        const daysInNewMonth = getDaysInMonth(new Date(parseInt(year), parseInt(newMonth)));
+        if(currentDayNum > daysInNewMonth) {
+            setDay(String(daysInNewMonth)); // Clamp the day
+        }
+    }
+  };
 
   return (
     <div className={cn('flex gap-2 items-center', className)}>
-      <Select value={day || 'none'} onValueChange={handleDayChange}>
+      <Select value={day || 'none'} onValueChange={(d) => setDay(d === 'none' ? undefined : d)}>
         <SelectTrigger className="w-[80px]"><SelectValue placeholder="Hari" /></SelectTrigger>
         <SelectContent>
           <SelectItem value="none">Hari</SelectItem>
@@ -106,7 +111,7 @@ export function DatePickerDropdowns({
           {months.map((m) => (<SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>))}
         </SelectContent>
       </Select>
-      <Select value={year || 'none'} onValueChange={handleYearChange}>
+      <Select value={year || 'none'} onValueChange={(y) => setYear(y === 'none' ? undefined : y)}>
         <SelectTrigger className="w-[100px]"><SelectValue placeholder="Tahun" /></SelectTrigger>
         <SelectContent>
           <SelectItem value="none">Tahun</SelectItem>
