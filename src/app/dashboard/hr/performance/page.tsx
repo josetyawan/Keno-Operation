@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
@@ -21,26 +22,12 @@ export default function UserPerformancePage() {
 
     const [selectedPeriod, setSelectedPeriod] = useState<string | undefined>();
     
-    const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
-        useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
-    );
-    
     const performanceQuery = useMemoFirebase(() => {
-        // Wait until we have the user profile, which contains the NIK.
-        if (!userProfile) return null;
-        
-        // If the user has a NIK, query by NIK. This is the primary method.
-        if (userProfile.nik) {
-            return query(collection(firestore, 'performance'), where('nik', '==', userProfile.nik));
-        }
-
-        // As a fallback (e.g., for very old data or if NIK is somehow missing), query by userId.
-        if (user?.uid) {
-            return query(collection(firestore, 'performance'), where('userId', '==', user.uid));
-        }
-
-        return null;
-    }, [firestore, user?.uid, userProfile]);
+        // Querying by userId is more robust as it's guaranteed to exist for an authenticated user.
+        // The admin has a tool to sync older records that might only have a NIK.
+        if (!user?.uid) return null;
+        return query(collection(firestore, 'performance'), where('userId', '==', user.uid));
+    }, [firestore, user?.uid]);
 
     const { data: performanceRecords, isLoading: isPerformanceLoading } = useCollection<Performance>(performanceQuery);
     
@@ -70,7 +57,7 @@ export default function UserPerformancePage() {
         return sortedPerformanceRecords.find(p => `${p.tahun}-${String(p.bulan).padStart(2, '0')}` === selectedPeriod);
     }, [sortedPerformanceRecords, selectedPeriod]);
 
-    const isLoading = isUserLoading || isProfileLoading || isPerformanceLoading;
+    const isLoading = isUserLoading || isPerformanceLoading;
 
     const formatAsPercent = (value: string) => {
         if (typeof value !== 'string' || !value.trim()) return '-';
@@ -179,7 +166,7 @@ export default function UserPerformancePage() {
                         <BarChart3 className="mx-auto h-12 w-12 text-muted-foreground" />
                         <h3 className="mt-4 text-lg font-semibold">Data Performa Belum Tersedia</h3>
                         <p className="mt-2 text-sm text-muted-foreground">
-                            Data performa untuk akun Anda belum ditemukan. Pastikan admin telah mengimpor data untuk NIK Anda.
+                            Data performa untuk akun Anda belum ditemukan. Hubungi admin untuk menjalankan sinkronisasi data.
                         </p>
                     </CardContent>
                 </Card>

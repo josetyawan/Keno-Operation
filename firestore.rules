@@ -180,26 +180,13 @@ service cloud.firestore {
     }
     
     match /performance/{performanceId} {
-       function userCanRead() {
-        if (!isSignedIn()) { return false; }
-        // User's own profile
-        let userProfile = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+       // Allow admin/korlap to read anything.
+       // Allow a regular user to read a document if their UID matches the userId field in the document.
+       // This rule is simple and directly supports the client-side query.
+       allow read: if isAdmin() || isKorlap() || 
+                   (isSignedIn() && resource.data.userId == request.auth.uid);
 
-        // If the performance doc is linked by userId, check ownership
-        if (resource.data.keys().has('userId') && resource.data.userId == request.auth.uid) {
-          return true;
-        }
-        
-        // If the performance doc is linked by NIK, check NIK match
-        if (resource.data.keys().has('nik') && userProfile.keys().has('nik') && resource.data.nik == userProfile.nik) {
-          return true;
-        }
-
-        return false;
-      }
-
-      allow read: if isAdmin() || isKorlap() || userCanRead();
-      allow write: if isAdmin() || isKorlap();
+       allow write: if isAdmin() || isKorlap();
     }
   }
 }
