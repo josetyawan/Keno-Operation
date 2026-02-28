@@ -8,7 +8,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Camera, Clock, MapPin, Loader2, VideoOff, AlertTriangle, Coffee, Info, FileWarning, Upload } from 'lucide-react';
+import { Camera, Clock, MapPin, Loader2, VideoOff, AlertTriangle, Coffee, Info, FileWarning, Upload, Calendar as CalendarIcon } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { format, set, add, sub } from 'date-fns';
@@ -25,12 +25,16 @@ import {
   DialogTrigger,
   DialogClose,
 } from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { sendAttendanceNotice } from '@/ai/flows/send-attendance-notification';
 import { useRouter } from 'next/navigation';
+import { cn } from '@/lib/utils';
+
 
 // --- Helper Functions ---
 const getStartOfDay = () => {
@@ -257,10 +261,12 @@ export default function AttendancePage() {
     const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
     const allUsersQuery = useMemoFirebase(() => {
-        if (!userProfile || (userProfile.role !== 'admin' && userProfile.role !== 'korlap')) {
-            return null;
+        if (!userProfile) return null; // Wait for user profile
+        // Only fetch all users if the current user has permission
+        if (userProfile.role === 'admin' || userProfile.role === 'korlap') {
+            return query(collection(firestore, 'users'), orderBy('displayName'));
         }
-        return query(collection(firestore, 'users'), orderBy('displayName'));
+        return null;
     }, [firestore, userProfile]);
 
     const { data: allUsers, isLoading: areUsersLoading } = useCollection<UserProfile>(allUsersQuery);
@@ -461,6 +467,8 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished, allUsers }: { to
     const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [swapTargetUserId, setSwapTargetUserId] = useState('');
+    const [swapDate, setSwapDate] = useState<Date | undefined>(today);
+
 
     const otherTeknisi = useMemo(() => {
         if (!allUsers || !user) return [];
@@ -518,8 +526,8 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished, allUsers }: { to
         
         try {
             if (leaveType === 'tukar-jaga') {
-                if (!reason.trim() || !swapTargetUserId) {
-                    toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Mohon pilih teknisi pengganti dan isi alasan.' });
+                if (!reason.trim() || !swapTargetUserId || !swapDate) {
+                    toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Mohon pilih tanggal, teknisi pengganti, dan isi alasan.' });
                     setIsSubmitting(false);
                     return;
                 }
@@ -530,11 +538,11 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished, allUsers }: { to
                      return;
                 }
         
-                const scheduleId = `${user.uid}_${format(today, 'yyyy-MM-dd')}`;
+                const scheduleId = `${user.uid}_${format(swapDate, 'yyyy-MM-dd')}`;
                 const scheduleDocRef = doc(firestore, "schedules", scheduleId);
                 const scheduleData = {
                     userId: user.uid, userEmail: user.email,
-                    date: Timestamp.fromDate(today),
+                    date: Timestamp.fromDate(swapDate),
                     shiftType: 'tukar-jaga',
                     notes: reason,
                     swapTargetUserId: targetUser.id,
@@ -543,7 +551,7 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished, allUsers }: { to
                 };
                 await setDoc(scheduleDocRef, scheduleData, { merge: true });
 
-                const notificationReason = `Ingin tukar dengan: ${targetUser.displayName || targetUser.email}.\nAlasan: ${reason}`;
+                const notificationReason = `Ingin tukar jadwal tanggal ${format(swapDate, 'dd MMM yyyy', {locale: idLocale})} dengan: ${targetUser.displayName || targetUser.email}.\nAlasan: ${reason}`;
                 sendAttendanceNotice({
                     userName: userProfile.displayName || user.email,
                     status: 'Request Tukar Jaga',
@@ -657,17 +665,38 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished, allUsers }: { to
                 </div>
 
                 {leaveType === 'tukar-jaga' && (
-                    <div className="grid gap-2">
-                        <Label htmlFor="swap-target">Tukar Dengan</Label>
-                        <Select value={swapTargetUserId} onValueChange={setSwapTargetUserId}>
-                            <SelectTrigger id="swap-target"><SelectValue placeholder="Pilih teknisi pengganti..." /></SelectTrigger>
-                            <SelectContent>
-                                {otherTeknisi.map(t => (
-                                    <SelectItem key={t.id} value={t.id}>{t.displayName}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                    <>
+                        <div className="grid gap-2">
+                            <Label htmlFor="swap-date">Tanggal Tukar Jaga</Label>
+                             <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button variant={'outline'} className={cn('w-full justify-start text-left font-normal', !swapDate && 'text-muted-foreground')}>
+                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                        {swapDate ? format(swapDate, 'dd MMMM yyyy', { locale: idLocale }) : <span>Pilih tanggal</span>}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0">
+                                    <Calendar
+                                        mode="single"
+                                        selected={swapDate}
+                                        onSelect={setSwapDate}
+                                        initialFocus
+                                    />
+                                </PopoverContent>
+                            </Popover>
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="swap-target">Tukar Dengan</Label>
+                            <Select value={swapTargetUserId} onValueChange={setSwapTargetUserId}>
+                                <SelectTrigger id="swap-target"><SelectValue placeholder="Pilih teknisi pengganti..." /></SelectTrigger>
+                                <SelectContent>
+                                    {otherTeknisi.map(t => (
+                                        <SelectItem key={t.id} value={t.id}>{t.displayName}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </>
                 )}
 
                 <div className="grid gap-2">
