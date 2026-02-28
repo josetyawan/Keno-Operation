@@ -31,32 +31,51 @@ export function DatePickerDropdowns({
   const fromYear = fromYearProp || currentYear - 100;
   const toYear = toYearProp || currentYear;
   
-  // Use undefined for the value when no date is selected, which allows the placeholder to show.
   const selectedDay = value && isValid(value) ? String(getDate(value)) : undefined;
   const selectedMonth = value && isValid(value) ? String(getMonth(value)) : undefined;
   const selectedYear = value && isValid(value) ? String(getYear(value)) : undefined;
 
   const handleDatePartChange = (part: 'day' | 'month' | 'year', valueStr: string) => {
-    // If the user selects the placeholder item, clear the date.
     if (valueStr === 'none') {
       onChange(undefined);
       return;
     }
 
-    // Get the current selected values, defaulting to a safe value if they don't exist yet.
-    // This is important for when the user is selecting a date from scratch.
-    const year = part === 'year' ? parseInt(valueStr, 10) : (selectedYear ? parseInt(selectedYear) : toYear);
-    const month = part === 'month' ? parseInt(valueStr, 10) : (selectedMonth ? parseInt(selectedMonth) : 0);
-    let day = part === 'day' ? parseInt(valueStr, 10) : (selectedDay ? parseInt(selectedDay) : 1);
+    const valueAsNumber = parseInt(valueStr, 10);
+
+    // Get the current parts, or use a safe default if they don't exist yet.
+    const currentYear = selectedYear ? parseInt(selectedYear, 10) : toYear;
+    const currentMonth = selectedMonth ? parseInt(selectedMonth, 10) : 0; // Default to January
+    const currentDay = selectedDay ? parseInt(selectedDay, 10) : 1; // Default to the 1st
     
-    // Crucial validation: check if the selected day is valid for the (potentially new) month and year.
-    // If not, adjust the day to the last valid day of that month.
+    let year = currentYear;
+    let month = currentMonth;
+    let day = currentDay;
+    
+    // Update the part that was changed
+    if (part === 'year') {
+        year = valueAsNumber;
+        // If year is being set from scratch, reset month/day for predictability
+        if (!selectedYear) {
+            month = 0;
+            day = 1;
+        }
+    } else if (part === 'month') {
+        month = valueAsNumber;
+        // If month is being set from scratch, reset day
+        if (!selectedMonth) {
+            day = 1;
+        }
+    } else if (part === 'day') {
+        day = valueAsNumber;
+    }
+
+    // Validate the day against the new month and year to prevent invalid dates
     const daysInNewMonth = getDaysInMonth(new Date(year, month));
     if (day > daysInNewMonth) {
         day = daysInNewMonth;
     }
 
-    // Construct the new date and pass it up to the parent component.
     onChange(new Date(year, month, day));
   };
 
@@ -64,7 +83,6 @@ export function DatePickerDropdowns({
   const years = Array.from({ length: toYear - fromYear + 1 }, (_, i) => String(toYear - i));
   const months = Array.from({ length: 12 }, (_, i) => ({ value: String(i), label: format(new Date(2000, i, 1), 'MMMM', { locale: idLocale }) }));
   
-  // Dynamically generate the list of days based on the currently selected month and year.
   const daysInCurrentMonth = (selectedYear && selectedMonth) ? getDaysInMonth(new Date(parseInt(selectedYear), parseInt(selectedMonth))) : 31;
   const days = Array.from({ length: daysInCurrentMonth }, (_, i) => String(i + 1));
 
