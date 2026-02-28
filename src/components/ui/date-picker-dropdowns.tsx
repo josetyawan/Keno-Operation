@@ -31,43 +31,34 @@ export function DatePickerDropdowns({
   const fromYear = fromYearProp || currentYear - 100;
   const toYear = toYearProp || currentYear;
 
-  // These are derived directly from the 'value' prop for rendering
-  const selectedYear = value && isValid(value) ? getYear(value) : undefined;
-  const selectedMonth = value && isValid(value) ? getMonth(value) : undefined;
-  const selectedDay = value && isValid(value) ? getDate(value) : undefined;
+  const selectedDate = value && isValid(value) ? value : undefined;
 
   const handleDatePartChange = (part: 'day' | 'month' | 'year', valueStr: string) => {
     if (valueStr === 'none') {
-        onChange(undefined);
-        return;
+      onChange(undefined);
+      return;
     }
 
     const valueNum = parseInt(valueStr, 10);
     
-    // Get the current values from the state derived from props, or use a safe default.
-    // This avoids using a stale or incorrect base date.
-    const y = selectedYear ?? toYear;
-    const m = selectedMonth ?? 0;
-    const d = selectedDay ?? 1;
+    // Use currently selected values as the base, or a safe default if not selected.
+    let newYear = selectedDate ? getYear(selectedDate) : toYear;
+    let newMonth = selectedDate ? getMonth(selectedDate) : 0; // Default to January
+    let newDay = selectedDate ? getDate(selectedDate) : 1; // Default to the 1st
 
-    let newYear = y;
-    let newMonth = m;
-    let newDay = d;
-
-    // Apply the change from the specific dropdown that was triggered.
     if (part === 'year') {
-        newYear = valueNum;
+      newYear = valueNum;
     } else if (part === 'month') {
-        newMonth = valueNum;
+      newMonth = valueNum;
     } else if (part === 'day') {
-        newDay = valueNum;
+      newDay = valueNum;
     }
     
-    // Clamp the day to be valid for the new month/year to prevent invalid dates.
+    // Clamp day to be valid for the new month/year to prevent invalid dates.
     // e.g., changing from March 31 to February will adjust day to 28/29.
     const daysInNewMonth = getDaysInMonth(new Date(newYear, newMonth));
     if (newDay > daysInNewMonth) {
-        newDay = daysInNewMonth;
+      newDay = daysInNewMonth;
     }
 
     onChange(new Date(newYear, newMonth, newDay));
@@ -77,28 +68,28 @@ export function DatePickerDropdowns({
   const months = Array.from({ length: 12 }, (_, i) => ({ value: String(i), label: format(new Date(2000, i, 1), 'MMMM', { locale: idLocale }) }));
   
   // Day options must be dynamically calculated based on the selected month and year
-  const daysInSelectedMonth = (selectedYear !== undefined && selectedMonth !== undefined)
-    ? getDaysInMonth(new Date(selectedYear, selectedMonth)) 
+  const daysInSelectedMonth = (selectedDate)
+    ? getDaysInMonth(selectedDate) 
     : 31;
   const days = Array.from({ length: daysInSelectedMonth }, (_, i) => String(i + 1));
 
   return (
     <div className={cn('flex gap-2 items-center', className)}>
-      <Select value={selectedDay?.toString()} onValueChange={(val) => handleDatePartChange('day', val)}>
+      <Select value={selectedDate ? getDate(selectedDate).toString() : undefined} onValueChange={(val) => handleDatePartChange('day', val)}>
         <SelectTrigger className="w-[80px]"><SelectValue placeholder="Hari" /></SelectTrigger>
         <SelectContent>
           <SelectItem value="none">Hari</SelectItem>
           {days.map((d) => (<SelectItem key={d} value={d}>{d}</SelectItem>))}
         </SelectContent>
       </Select>
-      <Select value={selectedMonth?.toString()} onValueChange={(val) => handleDatePartChange('month', val)}>
+      <Select value={selectedDate ? getMonth(selectedDate).toString() : undefined} onValueChange={(val) => handleDatePartChange('month', val)}>
         <SelectTrigger className="flex-1"><SelectValue placeholder="Bulan" /></SelectTrigger>
         <SelectContent>
           <SelectItem value="none">Bulan</SelectItem>
           {months.map((m) => (<SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>))}
         </SelectContent>
       </Select>
-      <Select value={selectedYear?.toString()} onValueChange={(val) => handleDatePartChange('year', val)}>
+      <Select value={selectedDate ? getYear(selectedDate).toString() : undefined} onValueChange={(val) => handleDatePartChange('year', val)}>
         <SelectTrigger className="w-[100px]"><SelectValue placeholder="Tahun" /></SelectTrigger>
         <SelectContent>
           <SelectItem value="none">Tahun</SelectItem>
