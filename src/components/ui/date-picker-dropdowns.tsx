@@ -41,50 +41,31 @@ export function DatePickerDropdowns({
       return;
     }
 
-    const valueAsNumber = parseInt(valueStr, 10);
+    const valueNum = parseInt(valueStr, 10);
 
-    // Get the current parts, or use a safe default if they don't exist yet.
-    const currentYear = selectedYear ? parseInt(selectedYear, 10) : toYear;
-    const currentMonth = selectedMonth ? parseInt(selectedMonth, 10) : 0; // Default to January
-    const currentDay = selectedDay ? parseInt(selectedDay, 10) : 1; // Default to the 1st
+    // Get current values or fall back to a safe default if they are not set yet.
+    // This prevents creating dates like "undefined/undefined/2024"
+    const y = part === 'year' ? valueNum : selectedYear ? parseInt(selectedYear) : toYear;
+    const m = part === 'month' ? valueNum : selectedMonth ? parseInt(selectedMonth) : 0;
+    let d = part === 'day' ? valueNum : selectedDay ? parseInt(selectedDay) : 1;
     
-    let year = currentYear;
-    let month = currentMonth;
-    let day = currentDay;
-    
-    // Update the part that was changed
-    if (part === 'year') {
-        year = valueAsNumber;
-        // If year is being set from scratch, reset month/day for predictability
-        if (!selectedYear) {
-            month = 0;
-            day = 1;
-        }
-    } else if (part === 'month') {
-        month = valueAsNumber;
-        // If month is being set from scratch, reset day
-        if (!selectedMonth) {
-            day = 1;
-        }
-    } else if (part === 'day') {
-        day = valueAsNumber;
+    // Crucial validation: if we change month or year, the previously selected day might be invalid.
+    // e.g., changing from March 31st to February. We must clamp the day to the new month's max.
+    const daysInNewMonth = getDaysInMonth(new Date(y, m));
+    if (d > daysInNewMonth) {
+      d = daysInNewMonth;
     }
 
-    // Validate the day against the new month and year to prevent invalid dates
-    const daysInNewMonth = getDaysInMonth(new Date(year, month));
-    if (day > daysInNewMonth) {
-        day = daysInNewMonth;
-    }
-
-    onChange(new Date(year, month, day));
+    onChange(new Date(y, m, d));
   };
 
 
   const years = Array.from({ length: toYear - fromYear + 1 }, (_, i) => String(toYear - i));
   const months = Array.from({ length: 12 }, (_, i) => ({ value: String(i), label: format(new Date(2000, i, 1), 'MMMM', { locale: idLocale }) }));
   
-  const daysInCurrentMonth = (selectedYear && selectedMonth) ? getDaysInMonth(new Date(parseInt(selectedYear), parseInt(selectedMonth))) : 31;
-  const days = Array.from({ length: daysInCurrentMonth }, (_, i) => String(i + 1));
+  // Day options must be dynamically calculated based on the selected month and year
+  const daysInSelectedMonth = (selectedYear && selectedMonth) ? getDaysInMonth(new Date(parseInt(selectedYear), parseInt(selectedMonth))) : 31;
+  const days = Array.from({ length: daysInSelectedMonth }, (_, i) => String(i + 1));
 
   return (
     <div className={cn('flex gap-2 items-center', className)}>
