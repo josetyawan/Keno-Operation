@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -57,12 +56,8 @@ export default function WorkSchedulePage() {
   );
   
   const usersQuery = useMemoFirebase(() => {
-    // Only admins/korlaps should fetch all users
-    if (currentUserProfile?.role === 'admin' || currentUserProfile?.role === 'korlap') {
-        return query(collection(firestore, 'users'));
-    }
-    // A technician doesn't need to query the whole collection
-    return null;
+    if (!currentUserProfile) return null; // Wait for profile to load
+    return query(collection(firestore, 'users'));
   }, [firestore, currentUserProfile]);
   
   const { data: allUsers, isLoading: areUsersLoading } = useCollection<UserProfile>(usersQuery);
@@ -75,20 +70,14 @@ export default function WorkSchedulePage() {
 
   // --- Memoized Data Processing ---
   const filteredUsers = useMemo(() => {
-    if (!currentUserProfile) return [];
+    if (!allUsers) return []; // Wait for allUsers to load for everyone
 
-    // If user is a technician, only show their own schedule
-    if (currentUserProfile.role === 'teknisi') {
-        return [currentUserProfile];
-    }
-
-    // Original logic for admin/korlap
-    if (!allUsers) return []; // Wait for allUsers to load for admins
     const activeUsers = allUsers.filter(u => u.registrationStatus === 'approved' && u.role === 'teknisi').sort((a,b) => (a.displayName || '').localeCompare(b.displayName || ''));
+    
     if (selectedUnit === 'ALL') return activeUsers;
     
     return activeUsers.filter(u => u.unit?.trim().toUpperCase() === selectedUnit.toUpperCase());
-  }, [allUsers, selectedUnit, currentUserProfile]);
+  }, [allUsers, selectedUnit]);
 
   const schedulesMap = useMemo(() => {
     const map = new Map<string, string>(); // Key: 'userId-yyyy-MM-dd', Value: shiftType
@@ -152,7 +141,7 @@ export default function WorkSchedulePage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Jadwal Kerja</h1>
           <p className="text-muted-foreground">
-            {currentUserProfile?.role === 'teknisi' ? 'Tampilan kalender jadwal kerja Anda.' : 'Tampilan kalender jadwal kerja bulanan untuk teknisi.'}
+            Tampilan kalender jadwal kerja bulanan untuk semua teknisi.
           </p>
         </div>
       </div>
@@ -162,20 +151,16 @@ export default function WorkSchedulePage() {
           <div>
             <CardTitle>Filter & Navigasi</CardTitle>
             <CardDescription>
-                {currentUserProfile?.role === 'teknisi' 
-                    ? 'Gunakan panah untuk melihat jadwal bulan lain.'
-                    : 'Pilih unit dan bulan untuk menampilkan jadwal.'}
+                Pilih unit dan bulan untuk menampilkan jadwal.
             </CardDescription>
           </div>
           <div className="flex items-center gap-4">
-            {(currentUserProfile?.role === 'admin' || currentUserProfile?.role === 'korlap') && (
-                <Select value={selectedUnit} onValueChange={setSelectedUnit}>
-                    <SelectTrigger className="w-[180px]"><SelectValue placeholder="Pilih Unit" /></SelectTrigger>
-                    <SelectContent>
-                        {units.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
-                    </SelectContent>
-                </Select>
-            )}
+            <Select value={selectedUnit} onValueChange={setSelectedUnit}>
+                <SelectTrigger className="w-[180px]"><SelectValue placeholder="Pilih Unit" /></SelectTrigger>
+                <SelectContent>
+                    {units.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                </SelectContent>
+            </Select>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="icon" onClick={() => changeMonth(-1)}><ChevronLeft className="h-4 w-4" /></Button>
               <span className="w-40 text-center font-semibold">{format(currentDate, 'MMMM yyyy', { locale: idLocale })}</span>
