@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
-import { FirebaseClientProvider } from '@/firebase';
+import { FirebaseProvider } from '@/firebase';
 
 export const metadata: Metadata = {
   title: 'NotaKu',
@@ -32,9 +32,9 @@ export default function RootLayout({
         ></script>
       </head>
       <body className="font-body antialiased">
-        <FirebaseClientProvider>
+        <FirebaseProvider>
           {children}
-        </FirebaseClientProvider>
+        </FirebaseProvider>
         <Toaster />
       </body>
     </html>
