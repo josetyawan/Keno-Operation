@@ -1,0 +1,222 @@
+
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
+import { ArrowLeft, Loader2, Upload, X, FileWarning } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useFirestore, useUser, useStorage, useDoc, useMemoFirebase } from '@/firebase';
+import { collection, serverTimestamp, doc, addDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import type { GamasReport, UserProfile } from '@/lib/types';
+import Image from 'next/image';
+
+const designatorList = [
+    'ODP-KDS-FA/1', 'ODP-KDS-FA/2', 'ODP-KDS-FA/3',
+    'ODP-PAT-FB/1', 'ODP-PAT-FB/2',
+    'ODP-JPA-FC/1', 'ODP-JPA-FC/2',
+    'ODC-KDS-FAA', 'ODC-PAT-FBB',
+    'OLT-KDS-01', 'OLT-PAT-01'
+];
+
+
+export default function NewGamasReportPage() {
+  const router = useRouter();
+  const { toast } = useToast();
+  const firestore = useFirestore();
+  const { user } = useUser();
+  const storage = useStorage();
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Form state
+  const [designator, setDesignator] = useState('');
+  const [notes, setNotes] = useState('');
+  const [photos, setPhotos] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
+  
+  const userDocRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [user, firestore]);
+  const { data: userProfile } = useDoc<UserProfile>(userDocRef);
+
+  useEffect(() => {
+    // Cleanup preview URLs to prevent memory leaks
+    return () => {
+      previews.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [previews]);
+
+  const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      const newFiles = Array.from(event.target.files);
+      if (photos.length + newFiles.length > 10) {
+        toast({
+          variant: 'destructive',
+          title: 'Maksimal 10 Foto',
+          description: 'Anda hanya dapat mengunggah hingga 10 foto.',
+        });
+        return;
+      }
+      const newPhotos = [...photos, ...newFiles];
+      setPhotos(newPhotos);
+      
+      const newPreviews = newFiles.map(file => URL.createObjectURL(file));
+      setPreviews(prev => [...prev, ...newPreviews]);
+    }
+  };
+  
+  const removePhoto = (indexToRemove: number) => {
+    setPhotos(prev => prev.filter((_, index) => index !== indexToRemove));
+    setPreviews(prev => {
+        const urlToRemove = prev[indexToRemove];
+        URL.revokeObjectURL(urlToRemove); // Clean up memory
+        return prev.filter((_, index) => index !== indexToRemove);
+    });
+  };
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!user || !userProfile) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Pengguna tidak ditemukan.' });
+      return;
+    }
+    if (!designator) {
+      toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Silakan pilih designator.' });
+      return;
+    }
+    if (photos.length < 4) {
+      toast({ variant: 'destructive', title: 'Foto Kurang', description: 'Anda harus mengunggah minimal 4 foto.' });
+      return;
+    }
+    
+    setIsSaving(true);
+    
+    try {
+        const uploadPromises = photos.map(async (file) => {
+            const filePath = `gamas-photos/${user.uid}/${Date.now()}-${file.name}`;
+            const storageRef = ref(storage, filePath);
+            await uploadBytes(storageRef, file);
+            return getDownloadURL(storageRef);
+        });
+
+        const photoUrls = await Promise.all(uploadPromises);
+
+        const gamasCollection = collection(firestore, 'gamas-reports');
+        
+        const newReport: Omit<GamasReport, 'id'> = {
+            userId: user.uid,
+            userName: userProfile.displayName || user.email!,
+            designator,
+            photoUrls,
+            notes,
+            createdAt: serverTimestamp(),
+        };
+
+        await addDoc(gamasCollection, newReport);
+        
+        toast({ title: 'Laporan Berhasil Dibuat', description: 'Laporan eviden gamas Anda telah disimpan.' });
+        router.push('/dashboard/gamas');
+
+    } catch (error) {
+        console.error("Error creating Gamas report:", error);
+        toast({ variant: 'destructive', title: 'Gagal Menyimpan', description: 'Terjadi kesalahan saat menyimpan laporan.' });
+    } finally {
+        setIsSaving(false);
+    }
+  }
+
+
+  return (
+    <div className="mx-auto grid w-full flex-1 auto-rows-max gap-4">
+        <form onSubmit={handleSubmit}>
+            <div className="flex items-center gap-4 mb-4">
+                <Button onClick={() => router.back()} variant="outline" size="icon" className="h-8 w-8" type="button">
+                    <ArrowLeft className="h-5 w-5" /><span className="sr-only">Kembali</span>
+                </Button>
+                <h1 className="flex-1 shrink-0 whitespace-nowrap text-xl font-bold tracking-tight sm:grow-0">
+                    Laporan Eviden Gamas Baru
+                </h1>
+                <div className="hidden items-center gap-2 md:ml-auto md:flex">
+                    <Button onClick={() => router.back()} variant="outline" type="button">Batal</Button>
+                    <Button type="submit" disabled={isSaving}>
+                        {isSaving ? <><Loader2 className="animate-spin mr-2" /> Menyimpan...</> : 'Simpan Laporan'}
+                    </Button>
+                </div>
+            </div>
+            
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><FileWarning /> Detail Laporan</CardTitle>
+                    <CardDescription>Pilih designator dan unggah foto-foto eviden yang diperlukan.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-6">
+                    <div className="grid gap-3">
+                        <Label htmlFor="designator">Designator *</Label>
+                        <Select onValueChange={setDesignator} value={designator} required>
+                            <SelectTrigger><SelectValue placeholder="Pilih designator..." /></SelectTrigger>
+                            <SelectContent>
+                                {designatorList.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="grid gap-3">
+                        <Label htmlFor="notes">Catatan</Label>
+                        <Textarea id="notes" placeholder="Catatan tambahan (opsional)..." value={notes} onChange={(e) => setNotes(e.target.value)} />
+                    </div>
+                    <div className="grid gap-3">
+                        <Label>Foto Eviden (min 4, max 10)</Label>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                            {previews.map((previewUrl, index) => (
+                                <div key={index} className="relative group aspect-square">
+                                    <Image src={previewUrl} alt={`Preview ${index + 1}`} fill className="object-cover rounded-md border" />
+                                    <Button type="button" variant="destructive" size="icon" className="absolute -top-2 -right-2 h-6 w-6 rounded-full z-10" onClick={() => removePhoto(index)}>
+                                        <X className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            ))}
+                             {photos.length < 10 && (
+                                <div className="relative flex justify-center items-center aspect-square w-full rounded-md border-2 border-dashed border-muted-foreground/50">
+                                    <input type="file" id="photo-upload" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={handlePhotoChange} accept="image/*" multiple />
+                                    <div className="text-center text-muted-foreground">
+                                        <Upload className="mx-auto h-8 w-8" />
+                                        <span className="text-sm">Tambah Foto</span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                         {photos.length > 0 && <p className="text-sm text-muted-foreground">{photos.length} / 10 foto terpilih.</p>}
+                    </div>
+                </CardContent>
+            </Card>
+
+            <div className="flex items-center justify-end gap-2 mt-4 md:hidden">
+                <Button onClick={() => router.back()} variant="outline" type="button">Batal</Button>
+                <Button type="submit" disabled={isSaving}>
+                    {isSaving ? <><Loader2 className="animate-spin mr-2" /> Menyimpan...</> : 'Simpan Laporan'}
+                </Button>
+            </div>
+        </form>
+    </div>
+  );
+}
+
+    

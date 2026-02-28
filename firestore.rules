@@ -85,6 +85,12 @@ service cloud.firestore {
       allow update: if (isApproved() && isUpdatingOwn('userId')) || isAdmin();
       allow delete: if (isApproved() && isUpdatingOwn('userId')) || isAdmin();
     }
+    
+    match /gamas-reports/{reportId} {
+      allow get, list: if isApproved();
+      allow create: if isApproved() && isCreatingOwn('userId');
+      allow update, delete: if (isApproved() && isUpdatingOwn('userId')) || isAdmin();
+    }
 
     match /project-ids/{projectId} {
       allow get, list: if isApproved() || isAdmin();
@@ -191,3 +197,6 @@ service cloud.firestore {
     }
   }
 }
+
+
+    

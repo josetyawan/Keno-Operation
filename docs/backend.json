@@ -88,6 +88,21 @@
       },
       "required": ["id", "userId", "userEmail", "tanggal", "segmen", "serviceArea", "nominal", "namaPic", "dateCreated", "status"]
     },
+    "GamasReport": {
+      "title": "Gamas Report",
+      "type": "object",
+      "description": "Represents an evidence report for a service disruption (Gangguan Massal).",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string", "description": "The ID of the user who created the report." },
+        "userName": { "type": "string", "description": "Denormalized name of the user for display." },
+        "designator": { "type": "string", "description": "The selected designator for the report." },
+        "photoUrls": { "type": "array", "items": { "type": "string", "format": "uri" } },
+        "notes": { "type": "string", "description": "Additional notes for the report." },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "userName", "designator", "photoUrls", "createdAt"]
+    },
     "ProjectID": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Project ID",
@@ -395,6 +410,7 @@
     "structure": [
       { "path": "/users/{userId}", "definition": { "entityName": "User", "schema": { "$ref": "#/backend/entities/User" }, "description": "Stores user profiles. The 'userId' parameter corresponds to the Firebase Auth UID.", "params": [{ "name": "userId", "description": "The unique identifier for the user, matching the Firebase Auth UID." }] } },
       { "path": "/notas/{notaId}", "definition": { "entityName": "Nota", "schema": { "$ref": "#/backend/entities/Nota" }, "description": "A global collection of all notas from all users. Access is controlled by security rules based on ownership and roles.", "params": [{ "name": "notaId", "description": "The unique identifier for the nota." }] } },
+      { "path": "/gamas-reports/{reportId}", "definition": { "entityName": "GamasReport", "schema": { "$ref": "#/backend/entities/GamasReport" }, "description": "Stores all Gamas (Gangguan Massal) evidence reports.", "params": [{ "name": "reportId", "description": "The unique ID for the Gamas report." }] } },
       { "path": "/project-ids/{projectID}", "definition": { "entityName": "ProjectID", "schema": { "$ref": "#/backend/entities/ProjectID" }, "description": "Stores the mapping of project types to their specific Project IDs for reporting.", "params": [{ "name": "projectID", "description": "The unique identifier for the Project ID mapping." }] } },
       { "path": "/network-assets/{assetId}", "definition": { "entityName": "NetworkAsset", "schema": { "$ref": "#/backend/entities/NetworkAsset" }, "description": "Stores all individual network assets across all service areas.", "params": [{ "name": "assetId", "description": "The unique identifier for the network asset." }] } },
        { "path": "/map-links/{mapLinkId}", "definition": { "entityName": "MapLink", "schema": { "$ref": "#/backend/entities/MapLink" }, "description": "Stores the Google My Maps links for each Service Area.", "params": [{ "name": "mapLinkId", "description": "The unique identifier for the map link." }] } },
@@ -415,5 +431,7 @@
     "reasoning": "The data is structured with a top-level `users` collection for profiles and a top-level `notas` collection for all user-generated notes. This flat structure for `notas` simplifies querying, allowing all users to view all notes easily, which aligns with the application's requirements. Security is enforced within the rules: while reads are permissive, writes (create, update, delete) are strictly controlled. A user can only create a nota with their own `userId`, and can only update or delete notas they own. Admins are granted special privileges to update any nota for verification purposes. A `network-assets` collection is added for managing network equipment, with admin-only write access. This design is efficient and secure for the specified use case."
   }
 }
+
+    
 
     

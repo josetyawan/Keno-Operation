@@ -1,4 +1,5 @@
 
+
 import { Timestamp } from 'firebase/firestore';
 
 export type Nota = {
@@ -21,6 +22,16 @@ export type Nota = {
   tanggalVerifikasi?: any;
   rejectionReason?: string;
   tanggalPembayaran?: any;
+};
+
+export type GamasReport = {
+  id: string;
+  userId: string;
+  userName: string;
+  designator: string;
+  photoUrls: string[];
+  notes?: string;
+  createdAt: any; // Timestamp
 };
 
 export type Pendidikan = {
@@ -290,5 +301,7 @@ export type Performance = {
   totalPerformance: string;
   date: any; // Timestamp
 };
+
+    
 
     

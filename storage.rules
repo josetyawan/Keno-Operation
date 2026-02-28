@@ -29,6 +29,10 @@ service firebase.storage {
     match /alker-photos/{userId}/{fileName} {
       allow write: if request.auth.uid == userId;
     }
+    
+    match /gamas-photos/{userId}/{fileName} {
+      allow write: if request.auth.uid == userId;
+    }
 
     // Default public read for all files to allow image display in the app.
     match /{allPaths=**} {
@@ -36,3 +40,5 @@ service firebase.storage {
     }
   }
 }
+
+    
