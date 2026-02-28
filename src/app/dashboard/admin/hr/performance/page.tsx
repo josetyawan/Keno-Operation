@@ -241,14 +241,15 @@ export default function AdminPerformancePage() {
     
             performanceSnapshot.forEach(perfDoc => {
                 const perfData = perfDoc.data() as Performance;
-                // Check if userId is missing but nik is present
-                if (!perfData.userId && perfData.nik) {
-                    const userId = userMapByNik.get(perfData.nik.trim());
-                    if (userId) {
-                        // Found a user match, add update to list
+                // Check if the performance record has a NIK
+                if (perfData.nik) {
+                    const expectedUserId = userMapByNik.get(perfData.nik.trim());
+                    // If we found a user with that NIK and the userId in the performance record is missing or incorrect...
+                    if (expectedUserId && perfData.userId !== expectedUserId) {
+                        // ...stage an update.
                         docsToUpdate.push({
                             ref: perfDoc.ref,
-                            data: { userId: userId }
+                            data: { userId: expectedUserId }
                         });
                     }
                 }
