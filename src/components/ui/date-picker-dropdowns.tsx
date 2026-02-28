@@ -36,38 +36,54 @@ export function DatePickerDropdowns({
     value && isValid(value) ? String(value.getFullYear()) : undefined
   );
 
-  // When the external value prop changes, update the internal state of the dropdowns.
+  // Store the latest onChange and value in refs to avoid including them in the effect's dependency array,
+  // which is the source of the infinite loop.
+  const onChangeRef = React.useRef(onChange);
+  const valueRef = React.useRef(value);
+  onChangeRef.current = onChange;
+  valueRef.current = value;
+
+
+  // This effect synchronizes the internal state (day, month, year) FROM the parent's `value` prop.
   React.useEffect(() => {
     if (value && isValid(value)) {
-      setDay(String(value.getDate()));
-      setMonth(String(value.getMonth()));
-      setYear(String(value.getFullYear()));
+      const currentDay = String(value.getDate());
+      const currentMonth = String(value.getMonth());
+      const currentYear = String(value.getFullYear());
+      // Only update state if it has actually changed to prevent loops.
+      if (day !== currentDay) setDay(currentDay);
+      if (month !== currentMonth) setMonth(currentMonth);
+      if (year !== currentYear) setYear(currentYear);
     } else {
       // If the external value is cleared, clear the dropdowns.
-      setDay(undefined);
-      setMonth(undefined);
-      setYear(undefined);
+      if (day !== undefined) setDay(undefined);
+      if (month !== undefined) setMonth(undefined);
+      if (year !== undefined) setYear(undefined);
     }
-  }, [value]);
+  }, [value, day, month, year]); // This effect ONLY runs when the parent `value` prop changes.
 
-  // When one of the dropdowns is changed by the user, update the parent component.
+  // This effect notifies the parent component of changes FROM the internal state.
   React.useEffect(() => {
     // If all three parts of the date are selected...
     if (day && month && year) {
       const newDate = new Date(Number(year), Number(month), Number(day));
-      // ...and the constructed date is valid and different from the current value...
-      if (isValid(newDate) && newDate.getTime() !== value?.getTime()) {
-        // ...tell the parent component about the new date.
-        onChange(newDate);
+      // ...and the constructed date is valid...
+      if (isValid(newDate)) {
+        // ...and it's different from the current value from the parent...
+        if (newDate.getTime() !== valueRef.current?.getTime()) {
+           // ...call the latest version of onChange from the ref.
+          onChangeRef.current(newDate);
+        }
       }
-    } else if (value) {
-      // If any part of the date is missing (e.g., user cleared a dropdown),
-      // but the parent component still thinks there's a date (`value` prop is not undefined),
-      // tell the parent component to clear the date.
-      onChange(undefined);
+    } else {
+      // If any part is missing, but the parent still has a value, clear it.
+      if (valueRef.current) {
+        onChangeRef.current(undefined);
+      }
     }
-    // This effect should run whenever the user changes a dropdown or the props from the parent change.
-  }, [day, month, year, value, onChange]);
+  // This effect ONLY runs when the internal day, month, or year state changes.
+  // It does NOT depend on `value` or `onChange` from props, breaking the loop.
+  }, [day, month, year]);
 
   const years = Array.from({ length: toYear - fromYear + 1 }, (_, i) => toYear - i);
   const months = Array.from({ length: 12 }, (_, i) => ({
