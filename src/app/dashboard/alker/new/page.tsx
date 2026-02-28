@@ -61,6 +61,13 @@ export default function NewAlkerPage() {
   const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
+  const checklistDocRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(firestore, 'tool-checklists', user.uid);
+  }, [user, firestore]);
+  const { data: existingChecklist, isLoading: isChecklistLoading } = useDoc<AlkerChecklist>(checklistDocRef);
+
+
   const canListUsers = useMemo(() => currentUserProfile?.role === 'admin' || currentUserProfile?.role === 'korlap', [currentUserProfile]);
 
   const usersQuery = useMemoFirebase(() => {
@@ -105,7 +112,7 @@ export default function NewAlkerPage() {
   }, [otherTeknisi]);
 
   // --- Form Management ---
-  const { register, control, handleSubmit, formState: { errors } } = useForm<FormValues>({
+  const { register, control, handleSubmit, formState: { errors }, reset } = useForm<FormValues>({
     defaultValues: {
       crewUserId: '',
       tools: toolList.map(name => ({
@@ -119,6 +126,34 @@ export default function NewAlkerPage() {
 
   const { fields } = useFieldArray({ control, name: "tools" });
 
+  useEffect(() => {
+    if (existingChecklist) {
+      const mergedTools = toolList.map(toolName => {
+        const existingTool = existingChecklist.tools.find(t => t.toolName === toolName);
+        if (existingTool) {
+          return {
+            toolName: existingTool.toolName,
+            condition: existingTool.condition,
+            serialNumber: existingTool.serialNumber || '',
+            brand: existingTool.brand || '',
+          };
+        }
+        return {
+          toolName: toolName,
+          condition: 'baik' as 'baik' | 'rusak',
+          serialNumber: '',
+          brand: '',
+        };
+      });
+
+      reset({
+        crewUserId: existingChecklist.crewUserId || '',
+        tools: mergedTools,
+      });
+    }
+  }, [existingChecklist, reset]);
+
+
   const onSubmit = async (data: FormValues) => {
     setIsSaving(true);
     if (!user || !currentUserProfile) {
@@ -131,7 +166,7 @@ export default function NewAlkerPage() {
       const toolDataWithUrls: AlkerTool[] = [];
 
       const uploadPhoto = async (file: File) => {
-          const filePath = `notas/${user.uid}/alker-${Date.now()}-${file.name}`;
+          const filePath = `alker-photos/${user.uid}/${Date.now()}-${file.name}`;
           const storageRef = ref(storage, filePath);
           await uploadBytes(storageRef, file);
           return getDownloadURL(storageRef);
@@ -139,8 +174,10 @@ export default function NewAlkerPage() {
 
       for (let i = 0; i < data.tools.length; i++) {
         const tool = data.tools[i];
-        let photoUrl1: string | undefined = undefined;
-        let photoUrl2: string | undefined = undefined;
+        const existingToolData = existingChecklist?.tools.find(t => t.toolName === tool.toolName);
+
+        let photoUrl1: string | undefined = existingToolData?.photoUrl1;
+        let photoUrl2: string | undefined = existingToolData?.photoUrl2;
 
         if (tool.photo1 && tool.photo1.length > 0) {
           photoUrl1 = await uploadPhoto(tool.photo1[0]);
@@ -164,7 +201,6 @@ export default function NewAlkerPage() {
 
       const selectedCrew = users?.find(u => u.id === data.crewUserId);
       
-      // Use the user's UID as the document ID to ensure one document per user
       const checklistDocRef = doc(firestore, 'tool-checklists', user.uid);
 
       const checklistData: AlkerChecklist = {
@@ -180,7 +216,6 @@ export default function NewAlkerPage() {
         tools: toolDataWithUrls,
       };
 
-      // Use setDoc with merge to create or update the document
       await setDoc(checklistDocRef, checklistData, { merge: true });
 
       toast({ title: 'Sukses', description: 'Laporan pengecekan alker berhasil disimpan/diperbarui.' });
@@ -194,7 +229,7 @@ export default function NewAlkerPage() {
     }
   };
   
-  const pageIsLoading = isProfileLoading || areUsersLoading;
+  const pageIsLoading = isProfileLoading || areUsersLoading || isChecklistLoading;
 
   if (pageIsLoading) {
     return <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin" /> Memuat data...</div>;
@@ -336,4 +371,3 @@ export default function NewAlkerPage() {
     </div>
   );
 }
-
