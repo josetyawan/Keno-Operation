@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { format, isValid, getDaysInMonth, set } from 'date-fns';
+import { format, isValid, getDaysInMonth, getYear, getMonth, getDate } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 
 interface DatePickerDropdownsProps {
@@ -31,35 +31,47 @@ export function DatePickerDropdowns({
   const currentYear = new Date().getFullYear();
   const fromYear = fromYearProp || currentYear - 100;
   const toYear = toYearProp || currentYear;
+  
+  const selectedDay = value && isValid(value) ? String(getDate(value)) : '';
+  const selectedMonth = value && isValid(value) ? String(getMonth(value)) : '';
+  const selectedYear = value && isValid(value) ? String(getYear(value)) : '';
 
   const handleDayChange = (day: string) => {
-    const newDay = parseInt(day, 10);
-    if (!value || !isValid(value)) {
-      // If no date is set, default to current month/year when day is picked.
-      onChange(new Date(currentYear, new Date().getMonth(), newDay));
-    } else {
-      onChange(set(value, { date: newDay }));
+    if (!day) {
+      onChange(undefined);
+      return;
     }
+    const newDay = parseInt(day, 10);
+    // If no valid date exists, create one from scratch using sane defaults.
+    const year = value && isValid(value) ? getYear(value) : currentYear;
+    const month = value && isValid(value) ? getMonth(value) : 0; // Default to January
+    onChange(new Date(year, month, newDay));
   };
 
   const handleMonthChange = (month: string) => {
+    if (month === '') {
+      onChange(undefined);
+      return;
+    }
     const monthIndex = parseInt(month, 10);
-    const year = value && isValid(value) ? value.getFullYear() : currentYear;
-    const currentDay = value && isValid(value) ? value.getDate() : 1;
+    const year = value && isValid(value) ? getYear(value) : currentYear;
+    const currentDay = value && isValid(value) ? getDate(value) : 1;
     const daysInNewMonth = getDaysInMonth(new Date(year, monthIndex));
-    const newDay = Math.min(currentDay, daysInNewMonth);
 
-    onChange(set(value || new Date(), { year, month: monthIndex, date: newDay }));
+    onChange(new Date(year, monthIndex, Math.min(currentDay, daysInNewMonth)));
   };
 
   const handleYearChange = (year: string) => {
+    if (!year) {
+      onChange(undefined);
+      return;
+    }
     const yearNum = parseInt(year, 10);
-    const month = value && isValid(value) ? value.getMonth() : 0;
-    const currentDay = value && isValid(value) ? value.getDate() : 1;
-    const daysInMonth = getDaysInMonth(new Date(yearNum, month));
-    const newDay = Math.min(currentDay, daysInMonth);
-
-    onChange(set(value || new Date(), { year: yearNum, month, date: newDay }));
+    const month = value && isValid(value) ? getMonth(value) : 0; // Default to January
+    const currentDay = value && isValid(value) ? getDate(value) : 1;
+    const daysInNewMonth = getDaysInMonth(new Date(yearNum, month));
+    
+    onChange(new Date(yearNum, month, Math.min(currentDay, daysInNewMonth)));
   };
 
   const years = Array.from({ length: toYear - fromYear + 1 }, (_, i) =>
@@ -69,17 +81,8 @@ export function DatePickerDropdowns({
     value: String(i),
     label: format(new Date(2000, i, 1), 'MMMM', { locale: idLocale }),
   }));
-  const daysInSelectedMonth =
-    value && isValid(value) ? getDaysInMonth(value) : 31;
-  const days = Array.from({ length: daysInSelectedMonth }, (_, i) =>
-    String(i + 1)
-  );
-
-  const selectedDay = value && isValid(value) ? String(value.getDate()) : undefined;
-  const selectedMonth =
-    value && isValid(value) ? String(value.getMonth()) : undefined;
-  const selectedYear =
-    value && isValid(value) ? String(value.getFullYear()) : undefined;
+  const daysInSelectedMonth = value && isValid(value) ? getDaysInMonth(value) : 31;
+  const days = Array.from({ length: daysInSelectedMonth }, (_, i) => String(i + 1));
 
   return (
     <div className={cn('flex gap-2 items-center', className)}>
@@ -88,6 +91,7 @@ export function DatePickerDropdowns({
           <SelectValue placeholder="Hari" />
         </SelectTrigger>
         <SelectContent>
+          <SelectItem value="">Hari</SelectItem>
           {days.map((d) => (
             <SelectItem key={d} value={d}>
               {d}
@@ -100,6 +104,7 @@ export function DatePickerDropdowns({
           <SelectValue placeholder="Bulan" />
         </SelectTrigger>
         <SelectContent>
+          <SelectItem value="">Bulan</SelectItem>
           {months.map((m) => (
             <SelectItem key={m.value} value={m.value}>
               {m.label}
@@ -112,6 +117,7 @@ export function DatePickerDropdowns({
           <SelectValue placeholder="Tahun" />
         </SelectTrigger>
         <SelectContent>
+          <SelectItem value="">Tahun</SelectItem>
           {years.map((y) => (
             <SelectItem key={y} value={y}>
               {y}
