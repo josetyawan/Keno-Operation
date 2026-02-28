@@ -24,7 +24,6 @@ import { id as idLocale } from 'date-fns/locale';
 import type { Schedule, UserProfile } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
-import * as XLSX from 'xlsx';
 
 
 type ValidShiftType = 'piket-demak' | 'siang-malam' | 'malam' | 'ijin' | 'cuti' | 'weekend-duty' | 'holiday-duty' ;
@@ -235,9 +234,9 @@ export default function AdminSchedulesPage() {
         setScheduleToDelete(schedule);
     };
 
-    const confirmDelete = () => {
+    const confirmDelete = async () => {
         if (!scheduleToDelete || !firestore) return;
-        deleteDocumentNonBlocking(doc(firestore, 'schedules', scheduleToDelete.id));
+        await deleteDoc(doc(firestore, 'schedules', scheduleToDelete.id));
         toast({ title: 'Jadwal Dihapus' });
         setScheduleToDelete(null);
     };
@@ -286,19 +285,20 @@ export default function AdminSchedulesPage() {
     };
 
 
-    const handleFormSubmit = (data: Partial<Schedule>) => {
+    const handleFormSubmit = async (data: Partial<Schedule>) => {
         if (!firestore) return;
         if (scheduleToEdit) {
-            updateDocumentNonBlocking(doc(firestore, 'schedules', scheduleToEdit.id), data);
+            await updateDoc(doc(firestore, 'schedules', scheduleToEdit.id), data);
             toast({ title: 'Jadwal Diperbarui' });
         } else {
-            addDocumentNonBlocking(collection(firestore, 'schedules'), { ...data, createdAt: Timestamp.now() });
+            await addDoc(collection(firestore, 'schedules'), { ...data, createdAt: Timestamp.now() });
             toast({ title: 'Jadwal Ditambahkan' });
         }
         setIsFormDialogOpen(false);
     };
 
-    const handleExportTemplate = () => {
+    const handleExportTemplate = async () => {
+        const XLSX = await import('xlsx');
         const year = parseInt(selectedYear);
         const monthIndex = parseInt(selectedMonth);
         const daysInSelectedMonth = getDaysInMonth(new Date(year, monthIndex));
@@ -358,6 +358,7 @@ export default function AdminSchedulesPage() {
     
         reader.onload = async (e) => {
           try {
+            const XLSX = await import('xlsx');
             const arrayBuffer = e.target?.result;
             if (!arrayBuffer) {
                 throw new Error("Gagal membaca file. File kosong atau rusak.");

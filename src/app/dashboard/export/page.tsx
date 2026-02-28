@@ -43,7 +43,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { ArrowLeft, Edit, Trash2, Filter, FileArchive, Printer, Calendar as CalendarIcon, Loader2, Files, FileSpreadsheet } from 'lucide-react';
 import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, query, orderBy, doc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
 import { format, getMonth, getYear, startOfDay, endOfDay, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import type { Nota, ProjectID, UserProfile } from '@/lib/types';
@@ -57,7 +57,6 @@ import Image from 'next/image';
 import type { VariantProps } from 'class-variance-authority';
 import { useRouter } from 'next/navigation';
 import { AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import * as XLSX from 'xlsx';
 
 
 type ProjectType = 'B2B IOAN' | 'PROVISIONING' | 'SPPG' | 'BBM GENSET' | 'Lainnya' | 'WAREHOUSE';
@@ -1073,18 +1072,18 @@ export default function ExportPage() {
         return { count: selectedCount, total };
     }, [selectedNotaIds, notas]);
 
-    const handleDeleteSelected = () => {
+    const handleDeleteSelected = async () => {
         if (selectedNotaIds.length === 0) return;
 
         setIsDeleting(true);
-        selectedNotaIds.forEach(id => {
+        for (const id of selectedNotaIds) {
             const notaDocRef = doc(firestore, 'notas', id);
-            deleteDocumentNonBlocking(notaDocRef);
-        });
+            await deleteDoc(notaDocRef);
+        }
 
         toast({
-            title: 'Penghapusan Dimulai',
-            description: `${selectedNotaIds.length} laporan telah dijadwalkan untuk dihapus.`,
+            title: 'Penghapusan Berhasil',
+            description: `${selectedNotaIds.length} laporan telah dihapus.`,
         });
 
         setSelectedNotaIds([]);
@@ -1092,7 +1091,7 @@ export default function ExportPage() {
         setIsDeleteDialogOpen(false);
     };
 
-    const handleExcelExport = () => {
+    const handleExcelExport = async () => {
         if (selectedNotaIds.length === 0) {
             toast({
                 variant: "destructive",
@@ -1118,6 +1117,7 @@ export default function ExportPage() {
         });
     
         try {
+            const XLSX = await import('xlsx');
             const selectedNotas = filteredNotas.filter(n => selectedNotaIds.includes(n.id)) || [];
             const sortedNotas = selectedNotas.sort((a,b) => (safeToDate(a.tanggal)?.getTime() ?? 0) - (safeToDate(b.tanggal)?.getTime() ?? 0));
     

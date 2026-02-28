@@ -55,7 +55,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
-import * as XLSX from 'xlsx';
 import Link from 'next/link';
 
 
@@ -342,6 +341,7 @@ export default function AdminAssetsPage() {
 
     reader.onload = async (e) => {
         try {
+            const XLSX = await import('xlsx');
             const data = e.target?.result;
             const workbook = XLSX.read(data, { type: 'binary' });
 
@@ -1132,7 +1132,7 @@ export default function AdminAssetsPage() {
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                 <AlertDialogCancel>Batal</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDeleteAsset(a.id, a.name)} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                                <AlertDialogAction onClick={async () => await handleDeleteAsset(a.id, a.name)} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
                                     Hapus
                                 </AlertDialogAction>
                                 </AlertDialogFooter>

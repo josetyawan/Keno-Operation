@@ -15,7 +15,6 @@ import { useToast } from '@/hooks/use-toast';
 import { format, getYear, getMonth, startOfMonth, endOfMonth } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { FileSpreadsheet } from 'lucide-react';
-import * as XLSX from 'xlsx';
 
 export default function LeaveRekapPage() {
     const { user, isUserLoading } = useUser();
@@ -75,11 +74,13 @@ export default function LeaveRekapPage() {
 
     }, [allSchedules, activeTeknisi, selectedMonth, selectedYear]);
 
-    const handleExport = () => {
+    const handleExport = async () => {
         if (monthlyRekap.length === 0) {
             toast({ variant: 'destructive', title: 'Tidak ada data untuk diekspor' });
             return;
         }
+
+        const XLSX = await import('xlsx');
 
         const dataToExport = monthlyRekap.map((item, index) => ({
             'No': index + 1,
@@ -205,4 +206,3 @@ export default function LeaveRekapPage() {
         </div>
     );
 }
-

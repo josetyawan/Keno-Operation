@@ -43,7 +43,7 @@ import {
 } from '@/components/ui/select';
 import { PlusCircle, MapPin, Loader2, Search, History, Phone, Pencil, Wrench, QrCode, FileSpreadsheet, AlertCircle, Info, Upload, Trash2, Bot } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { useUser, useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, useDoc, useStorage, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase, addDoc, updateDoc, useDoc, useStorage, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, query, doc, serverTimestamp, where, getDocs, limit, orderBy, Timestamp, writeBatch, deleteDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { UserProfile, Pelanggan, RiwayatGangguan } from '@/lib/types';
@@ -55,7 +55,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { format, isValid, parse } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
-import * as XLSX from 'xlsx';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
@@ -173,7 +172,7 @@ function NewPelangganDialog({ isOpen, onOpenChange, onFinished }: { isOpen: bool
                 lastEditedBy: user.email,
                 lastEditedDate: serverTimestamp(),
             };
-            const docRef = await addDocumentNonBlocking(collection(firestore, 'pelanggan'), newPelangganData);
+            const docRef = await addDoc(collection(firestore, 'pelanggan'), newPelangganData);
             onFinished({ ...newPelangganData, id: docRef.id } as Pelanggan);
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Gagal menyimpan', description: error.message });
@@ -272,7 +271,7 @@ function AddContactDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
             };
 
             const docRef = doc(firestore, 'pelanggan', pelanggan.id);
-            updateDocumentNonBlocking(docRef, updatedData);
+            await updateDoc(docRef, updatedData);
             
             toast({ title: 'Kontak berhasil ditambahkan' });
             onFinished(updatedData);
@@ -328,7 +327,7 @@ function UpdateLocationDialog({ pelanggan, isOpen, onOpenChange, onFinished, cur
         );
     };
     
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSaving(true);
         try {
@@ -339,7 +338,7 @@ function UpdateLocationDialog({ pelanggan, isOpen, onOpenChange, onFinished, cur
                 lastEditedDate: serverTimestamp(),
             };
             const docRef = doc(firestore, 'pelanggan', pelanggan.id);
-            updateDocumentNonBlocking(docRef, updatedData);
+            await updateDoc(docRef, updatedData);
             toast({ title: 'Lokasi berhasil diperbarui' });
             onFinished(updatedData);
         } catch (error: any) {
@@ -387,7 +386,7 @@ function UpdateAssetDialog({ pelanggan, isOpen, onOpenChange, onFinished, curren
     const [odpQRCodeUrl, setOdpQRCodeUrl] = useState(pelanggan.odpQRCodeUrl || '');
     const [isSaving, setIsSaving] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSaving(true);
         try {
@@ -399,7 +398,7 @@ function UpdateAssetDialog({ pelanggan, isOpen, onOpenChange, onFinished, curren
                 lastEditedDate: serverTimestamp(),
             };
             const docRef = doc(firestore, 'pelanggan', pelanggan.id);
-            updateDocumentNonBlocking(docRef, updatedData);
+            await updateDoc(docRef, updatedData);
             toast({ title: 'Info Aset berhasil diperbarui' });
             onFinished(updatedData);
         } catch (error: any) {
@@ -579,6 +578,7 @@ export default function AdminPelangganPage() {
     const reader = new FileReader();
     reader.onload = async (e) => {
         try {
+            const XLSX = await import('xlsx');
             const data = e.target?.result;
             if (!data) throw new Error("Gagal membaca file.");
 
@@ -678,6 +678,7 @@ export default function AdminPelangganPage() {
     toast({ title: 'Mempersiapkan Ekspor...', description: 'Mengambil semua data pelanggan.' });
 
     try {
+      const XLSX = await import('xlsx');
       const pelangganCollection = collection(firestore, 'pelanggan');
       const q = query(pelangganCollection, orderBy('dateAdded', 'desc'));
       const querySnapshot = await getDocs(q);

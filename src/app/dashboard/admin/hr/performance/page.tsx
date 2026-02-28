@@ -13,7 +13,6 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Upload, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
-import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -89,6 +88,7 @@ export default function AdminPerformancePage() {
 
         reader.onload = async (e) => {
             try {
+                const XLSX = await import('xlsx');
                 const data = e.target?.result;
                 if (!data) throw new Error("Gagal membaca file.");
                 
