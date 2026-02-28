@@ -119,9 +119,9 @@ service cloud.firestore {
     }
 
     match /tool-checklists/{checklistId} {
-      allow get: if isOwner(resource.data.userId) || isAdmin() || isKorlap();
+      allow get: if isOwner(checklistId) || isAdmin() || isKorlap();
       allow list: if isApproved();
-      allow create: if isApproved() && isCreatingOwn('userId');
+      allow create: if isApproved() && isCreatingOwn('userId') && checklistId == request.auth.uid;
       allow update, delete: if (isApproved() && isUpdatingOwn('userId')) || isAdmin() || isKorlap();
     }
     
