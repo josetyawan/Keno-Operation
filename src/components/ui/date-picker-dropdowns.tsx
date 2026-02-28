@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -32,31 +31,39 @@ export function DatePickerDropdowns({
   const fromYear = fromYearProp || currentYear - 100;
   const toYear = toYearProp || currentYear;
   
-  const selectedDay = value && isValid(value) ? String(getDate(value)) : '';
-  const selectedMonth = value && isValid(value) ? String(getMonth(value)) : '';
-  const selectedYear = value && isValid(value) ? String(getYear(value)) : '';
-
   const handleDateChange = (part: 'day' | 'month' | 'year', newValue: string) => {
     if (newValue === 'none') {
-        // If any part is cleared, the whole date is cleared.
         onChange(undefined);
         return;
     }
 
-    const day = part === 'day' ? parseInt(newValue, 10) : parseInt(selectedDay, 10);
-    const month = part === 'month' ? parseInt(newValue, 10) : parseInt(selectedMonth, 10);
-    const year = part === 'year' ? parseInt(newValue, 10) : parseInt(selectedYear, 10);
-    
-    // Construct a new date. If any part is missing, use a safe default.
-    // The key is to ensure we always construct a valid date if we are not clearing it.
-    const newYear = !isNaN(year) ? year : currentYear;
-    const newMonth = !isNaN(month) ? month : 0; // January
-    const daysInNewMonth = getDaysInMonth(new Date(newYear, newMonth));
-    const newDay = !isNaN(day) ? Math.min(day, daysInNewMonth) : 1;
-    
-    onChange(new Date(newYear, newMonth, newDay));
-  };
+    // Get current values, or default to a safe value if no date is set
+    const currentYearVal = value && isValid(value) ? getYear(value) : toYear;
+    const currentMonthVal = value && isValid(value) ? getMonth(value) : 0;
+    const currentDayVal = value && isValid(value) ? getDate(value) : 1;
 
+    let year = currentYearVal;
+    let month = currentMonthVal;
+    let day = currentDayVal;
+    
+    if (part === 'day') {
+        day = parseInt(newValue, 10);
+    } else if (part === 'month') {
+        month = parseInt(newValue, 10);
+    } else if (part === 'year') {
+        year = parseInt(newValue, 10);
+    }
+    
+    // Ensure day is valid for the potentially new month and year
+    const daysInNewMonth = getDaysInMonth(new Date(year, month));
+    const newDay = Math.min(day, daysInNewMonth);
+
+    onChange(new Date(year, month, newDay));
+  };
+  
+  const selectedDay = value && isValid(value) ? String(getDate(value)) : '';
+  const selectedMonth = value && isValid(value) ? String(getMonth(value)) : '';
+  const selectedYear = value && isValid(value) ? String(getYear(value)) : '';
 
   const years = Array.from({ length: toYear - fromYear + 1 }, (_, i) =>
     String(toYear - i)
@@ -65,6 +72,7 @@ export function DatePickerDropdowns({
     value: String(i),
     label: format(new Date(2000, i, 1), 'MMMM', { locale: idLocale }),
   }));
+  
   const daysInSelectedMonth = value && isValid(value) ? getDaysInMonth(value) : 31;
   const days = Array.from({ length: daysInSelectedMonth }, (_, i) => String(i + 1));
 
