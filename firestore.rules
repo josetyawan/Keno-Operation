@@ -164,18 +164,21 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
-      allow list: if false; // Deny listing chat rooms directly
-      allow get: if isSignedIn() && request.auth.uid in chatId.split('_');
+      // Allow read (get/list) if the user is a participant.
+      // This rule works with the client-side query: `where('participants', 'array-contains', request.auth.uid)`
+      allow read: if isSignedIn() && request.auth.uid in resource.data.participants;
+      
+      // Allow write (create/update) if the user is a participant (based on the immutable doc ID) and the new data is valid.
       allow write: if isSignedIn() &&
                       request.auth.uid in chatId.split('_') &&
                       request.resource.data.participants.hasAll(chatId.split('_')) &&
                       request.resource.data.participants.size() == 2;
       
       match /messages/{messageId} {
-        allow list, get: if isSignedIn() && request.auth.uid in chatId.split('_');
-        allow write: if isSignedIn() &&
-                       request.auth.uid in chatId.split('_') &&
-                       request.resource.data.userId == request.auth.uid;
+        // To read/write messages, the user must be a participant in the parent chat room document.
+        allow read, write: if isSignedIn() &&
+                              exists(/databases/$(database)/documents/chats/$(chatId)) &&
+                              request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
       }
     }
     
