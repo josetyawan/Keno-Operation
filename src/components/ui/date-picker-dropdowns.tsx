@@ -32,105 +32,89 @@ export function DatePickerDropdowns({
   const fromYear = fromYearProp || currentYear - 100;
   const toYear = toYearProp || currentYear;
 
-  const [day, setDay] = useState<string | undefined>(
-    value && isValid(value) ? String(getDate(value)) : undefined
-  );
-  const [month, setMonth] = useState<string | undefined>(
-    value && isValid(value) ? String(getMonth(value)) : undefined
-  );
-  const [year, setYear] = useState<string | undefined>(
-    value && isValid(value) ? String(getYear(value)) : undefined
-  );
+  // Internal state to manage dropdown values. "none" represents no selection.
+  const [day, setDay] = useState<string>("none");
+  const [month, setMonth] = useState<string>("none");
+  const [year, setYear] = useState<string>("none");
 
-  // Sync state ONLY when the parent 'value' prop changes.
-  // This is crucial to prevent loops. We compare the internal date with the prop date.
+  // Effect to sync internal state FROM the external `value` prop.
+  // This runs only when the external `value` changes.
   useEffect(() => {
-    const internalDate =
-      year && month && day
-        ? new Date(parseInt(year, 10), parseInt(month, 10), parseInt(day, 10))
-        : undefined;
-
-    // If parent value is valid and different from internal representation, update internal state.
-    if (value && isValid(value) && value.getTime() !== internalDate?.getTime()) {
+    if (value && isValid(value)) {
       setDay(String(getDate(value)));
       setMonth(String(getMonth(value)));
       setYear(String(getYear(value)));
-    } else if (!value && (day || month || year)) {
-      // If parent value is cleared, clear internal state.
-      setDay(undefined);
-      setMonth(undefined);
-      setYear(undefined);
+    } else {
+      // If the prop is cleared or invalid, reset internal state.
+      setDay("none");
+      setMonth("none");
+      setYear("none");
     }
-  }, [value, day, month, year]);
+  }, [value]);
 
-  const constructAndTriggerChange = (newPart: { day?: string; month?: string; year?: string }) => {
-    const d = newPart.day ?? day;
-    const m = newPart.month ?? month;
-    const y = newPart.year ?? year;
+  const handleValueChange = (part: 'day' | 'month' | 'year', newValue: string) => {
+    // 1. Update the internal state for the changed part.
+    let currentDay = day;
+    let currentMonth = month;
+    let currentYear = year;
 
-    if (d && m && y) {
-      const yearNum = parseInt(y, 10);
-      const monthNum = parseInt(m, 10);
+    if (part === 'day') {
+      currentDay = newValue;
+      setDay(newValue);
+    } else if (part === 'month') {
+      currentMonth = newValue;
+      setMonth(newValue);
+    } else if (part === 'year') {
+      currentYear = newValue;
+      setYear(newValue);
+    }
+    
+    // 2. If all parts are selected, construct a new date and call `onChange`.
+    if (currentYear !== "none" && currentMonth !== "none" && currentDay !== "none") {
+      const yearNum = parseInt(currentYear, 10);
+      const monthNum = parseInt(currentMonth, 10);
       
-      // Clamp day to the max days in the new month/year
+      // Clamp day to the max days in the new month/year.
       const daysInNewMonth = getDaysInMonth(new Date(yearNum, monthNum));
-      const dayNum = Math.min(parseInt(d, 10), daysInNewMonth);
+      const dayNum = Math.min(parseInt(currentDay, 10), daysInNewMonth);
 
       const newDate = new Date(yearNum, monthNum, dayNum);
-      if (isValid(newDate)) {
-        // Only call onChange if the date is different from the current prop value
-        if (newDate.getTime() !== value?.getTime()) {
-          onChange(newDate);
-        }
+
+      // Only call onChange if the new date is valid and different from the current prop value.
+      if (isValid(newDate) && newDate.getTime() !== value?.getTime()) {
+        onChange(newDate);
       }
     } else {
-        // If any part is missing, we propagate 'undefined'
-        if (value !== undefined) {
-             onChange(undefined);
-        }
+      // 3. If any part is "none", it means the date is incomplete/cleared.
+      // Notify parent to clear the value if it's not already cleared.
+      if (value) {
+        onChange(undefined);
+      }
     }
   };
-
-  const handleDayChange = (newDay: string) => {
-    const d = newDay === 'none' ? undefined : newDay;
-    setDay(d);
-    constructAndTriggerChange({ day: d });
-  };
-
-  const handleMonthChange = (newMonth: string) => {
-    const m = newMonth === 'none' ? undefined : newMonth;
-    setMonth(m);
-    constructAndTriggerChange({ month: m });
-  };
-
-  const handleYearChange = (newYear: string) => {
-    const y = newYear === 'none' ? undefined : newYear;
-    setYear(y);
-    constructAndTriggerChange({ year: y });
-  };
-
+  
   const years = Array.from({ length: toYear - fromYear + 1 }, (_, i) => String(toYear - i));
   const months = Array.from({ length: 12 }, (_, i) => ({ value: String(i), label: format(new Date(2000, i, 1), 'MMMM', { locale: idLocale }) }));
-  const daysInSelectedMonth = (month && year) ? getDaysInMonth(new Date(parseInt(year), parseInt(month))) : 31;
+  const daysInSelectedMonth = (month !== "none" && year !== "none") ? getDaysInMonth(new Date(parseInt(year), parseInt(month))) : 31;
   const days = Array.from({ length: daysInSelectedMonth }, (_, i) => String(i + 1));
   
   return (
     <div className={cn('flex gap-2 items-center', className)}>
-      <Select value={day || 'none'} onValueChange={handleDayChange}>
+      <Select value={day} onValueChange={(val) => handleValueChange('day', val)}>
         <SelectTrigger className="w-[80px]"><SelectValue placeholder="Hari" /></SelectTrigger>
         <SelectContent>
           <SelectItem value="none">Hari</SelectItem>
           {days.map((d) => (<SelectItem key={d} value={d}>{d}</SelectItem>))}
         </SelectContent>
       </Select>
-      <Select value={month || 'none'} onValueChange={handleMonthChange}>
+      <Select value={month} onValueChange={(val) => handleValueChange('month', val)}>
         <SelectTrigger className="flex-1"><SelectValue placeholder="Bulan" /></SelectTrigger>
         <SelectContent>
           <SelectItem value="none">Bulan</SelectItem>
           {months.map((m) => (<SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>))}
         </SelectContent>
       </Select>
-      <Select value={year || 'none'} onValueChange={handleYearChange}>
+      <Select value={year} onValueChange={(val) => handleValueChange('year', val)}>
         <SelectTrigger className="w-[100px]"><SelectValue placeholder="Tahun" /></SelectTrigger>
         <SelectContent>
           <SelectItem value="none">Tahun</SelectItem>
