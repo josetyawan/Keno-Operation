@@ -1,9 +1,10 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, query, doc, orderBy, Timestamp, writeBatch, setDoc, getDocs, limit } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, deleteDoc as deleteDocument } from '@/firebase';
+import { collection, query, doc, orderBy, Timestamp, writeBatch, setDoc, getDocs, limit, updateDoc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -15,7 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, PlusCircle, Edit, Trash2, Calendar as CalendarIcon, Loader2, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Upload, PlusCircle, Edit, Trash2, Calendar as CalendarIcon, Loader2, Download, ChevronLeft, ChevronRight, Check, X } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
@@ -142,6 +143,10 @@ export default function AdminSchedulesPage() {
     const [scheduleToEdit, setScheduleToEdit] = useState<Schedule | null>(null);
     const [scheduleToDelete, setScheduleToDelete] = useState<Schedule | null>(null);
     
+    const [scheduleToApprove, setScheduleToApprove] = useState<Schedule | null>(null);
+    const [scheduleToReject, setScheduleToReject] = useState<Schedule | null>(null);
+    const [isActionLoading, setIsActionLoading] = useState(false);
+
     const [isImporting, setIsImporting] = useState(false);
     const [importProgress, setImportProgress] = useState(0);
     const [selectedMonth, setSelectedMonth] = useState<string>(String(new Date().getMonth()));
@@ -242,6 +247,39 @@ export default function AdminSchedulesPage() {
         toast({ title: 'Jadwal Dihapus' });
         setScheduleToDelete(null);
     };
+    
+    const handleApprove = async () => {
+        if (!scheduleToApprove || !firestore) return;
+        setIsActionLoading(true);
+        const scheduleDocRef = doc(firestore, 'schedules', scheduleToApprove.id);
+        try {
+            await updateDoc(scheduleDocRef, {
+                shiftType: 'ijin',
+                notes: `[DISETUJUI] ${scheduleToApprove.notes || 'Tukar Jaga'} dengan ${scheduleToApprove.swapTargetUserName}`,
+                swapTargetUserId: '',
+                swapTargetUserName: '',
+            });
+            toast({ title: 'Request Disetujui', description: 'Jadwal teknisi telah diubah menjadi "Ijin".' });
+        } catch (e) {
+            toast({ variant: 'destructive', title: 'Gagal Menyetujui' });
+        }
+        setIsActionLoading(false);
+        setScheduleToApprove(null);
+    };
+    
+    const handleReject = async () => {
+        if (!scheduleToReject || !firestore) return;
+        setIsActionLoading(true);
+        const scheduleDocRef = doc(firestore, 'schedules', scheduleToReject.id);
+        try {
+            await deleteDoc(scheduleDocRef);
+            toast({ title: 'Request Ditolak & Dihapus' });
+        } catch (e) {
+             toast({ variant: 'destructive', title: 'Gagal Menolak' });
+        }
+        setIsActionLoading(false);
+        setScheduleToReject(null);
+    };
 
     const confirmDeleteAll = async () => {
         if (!firestore) return;
@@ -293,7 +331,8 @@ export default function AdminSchedulesPage() {
             await updateDoc(doc(firestore, 'schedules', scheduleToEdit.id), data);
             toast({ title: 'Jadwal Diperbarui' });
         } else {
-            await addDoc(collection(firestore, 'schedules'), { ...data, createdAt: Timestamp.now() });
+            const newDocRef = doc(collection(firestore, 'schedules'));
+            await setDoc(newDocRef, { ...data, id: newDocRef.id, createdAt: Timestamp.now() });
             toast({ title: 'Jadwal Ditambahkan' });
         }
         setIsFormDialogOpen(false);
@@ -619,7 +658,7 @@ export default function AdminSchedulesPage() {
                                         <TableCell>{format(schedule.date.toDate(), 'eeee, dd MMMM yyyy', { locale: idLocale })}</TableCell>
                                         <TableCell>{shiftTypeLabels[schedule.shiftType] ?? schedule.shiftType}</TableCell>
                                         <TableCell>
-                                            {schedule.shiftType === 'tukar-jaga' && schedule.swapTargetUserName ? (
+                                            {schedule.shiftType === 'tukar-jaga' ? (
                                                 <>
                                                     <span className="font-semibold text-orange-600">Request Tukar &gt; {schedule.swapTargetUserName}</span>
                                                     <br />
@@ -630,8 +669,21 @@ export default function AdminSchedulesPage() {
                                             )}
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            <Button variant="ghost" size="icon" onClick={() => handleEdit(schedule)}><Edit className="h-4 w-4" /></Button>
-                                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDelete(schedule)}><Trash2 className="h-4 w-4" /></Button>
+                                            {schedule.shiftType === 'tukar-jaga' ? (
+                                                <div className="flex justify-end items-center gap-1">
+                                                    <Button size="sm" variant="outline" className="h-8 px-2" onClick={() => setScheduleToApprove(schedule)}>
+                                                        <Check className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button size="sm" variant="destructive" className="h-8 px-2" onClick={() => setScheduleToReject(schedule)}>
+                                                        <X className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <Button variant="ghost" size="icon" onClick={() => handleEdit(schedule)}><Edit className="h-4 w-4" /></Button>
+                                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDelete(schedule)}><Trash2 className="h-4 w-4" /></Button>
+                                                </>
+                                            )}
                                         </TableCell>
                                     </TableRow>
                                 ))
@@ -667,6 +719,42 @@ export default function AdminSchedulesPage() {
                     </div>
                 </CardFooter>
             </Card>
+
+            <AlertDialog open={!!scheduleToApprove} onOpenChange={(open) => !open && setScheduleToApprove(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Setujui Tukar Jaga?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Ini akan mengubah status jadwal <strong>{scheduleToApprove?.userName}</strong> menjadi &quot;Ijin&quot;. Anda perlu membuat jadwal baru secara manual untuk <strong>{scheduleToApprove?.swapTargetUserName}</strong>.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Batal</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleApprove} disabled={isActionLoading}>
+                            {isActionLoading && <Loader2 className="mr-2 animate-spin" />}
+                            Ya, Setujui
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+            
+            <AlertDialog open={!!scheduleToReject} onOpenChange={(open) => !open && setScheduleToReject(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Tolak & Hapus Request?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Tindakan ini akan menghapus request tukar jaga ini. Teknisi <strong>{scheduleToReject?.userName}</strong> menjadi tidak terjadwal pada hari tersebut.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Batal</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleReject} disabled={isActionLoading} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                            {isActionLoading && <Loader2 className="mr-2 animate-spin" />}
+                            Ya, Tolak & Hapus
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
             <AlertDialog open={!!scheduleToDelete} onOpenChange={(open) => !open && setScheduleToDelete(null)}>
                 <AlertDialogContent>
