@@ -2,9 +2,15 @@
 'use client';
 
 import * as React from 'react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { format, isValid } from 'date-fns';
+import { format, isValid, getDaysInMonth, set } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 
 interface DatePickerDropdownsProps {
@@ -26,75 +32,58 @@ export function DatePickerDropdowns({
   const fromYear = fromYearProp || currentYear - 100;
   const toYear = toYearProp || currentYear;
 
-  const [day, setDay] = React.useState<string | undefined>(
-    value && isValid(value) ? String(value.getDate()) : undefined
-  );
-  const [month, setMonth] = React.useState<string | undefined>(
-    value && isValid(value) ? String(value.getMonth()) : undefined
-  );
-  const [year, setYear] = React.useState<string | undefined>(
-    value && isValid(value) ? String(value.getFullYear()) : undefined
-  );
-
-  // Store the latest onChange and value in refs to avoid including them in the effect's dependency array,
-  // which is the source of the infinite loop.
-  const onChangeRef = React.useRef(onChange);
-  const valueRef = React.useRef(value);
-  onChangeRef.current = onChange;
-  valueRef.current = value;
-
-
-  // This effect synchronizes the internal state (day, month, year) FROM the parent's `value` prop.
-  React.useEffect(() => {
-    if (value && isValid(value)) {
-      const currentDay = String(value.getDate());
-      const currentMonth = String(value.getMonth());
-      const currentYear = String(value.getFullYear());
-      // Only update state if it has actually changed to prevent loops.
-      if (day !== currentDay) setDay(currentDay);
-      if (month !== currentMonth) setMonth(currentMonth);
-      if (year !== currentYear) setYear(currentYear);
+  const handleDayChange = (day: string) => {
+    const newDay = parseInt(day, 10);
+    if (!value || !isValid(value)) {
+      // If no date is set, default to current month/year when day is picked.
+      onChange(new Date(currentYear, new Date().getMonth(), newDay));
     } else {
-      // If the external value is cleared, clear the dropdowns.
-      if (day !== undefined) setDay(undefined);
-      if (month !== undefined) setMonth(undefined);
-      if (year !== undefined) setYear(undefined);
+      onChange(set(value, { date: newDay }));
     }
-  }, [value, day, month, year]); // This effect ONLY runs when the parent `value` prop changes.
+  };
 
-  // This effect notifies the parent component of changes FROM the internal state.
-  React.useEffect(() => {
-    // If all three parts of the date are selected...
-    if (day && month && year) {
-      const newDate = new Date(Number(year), Number(month), Number(day));
-      // ...and the constructed date is valid...
-      if (isValid(newDate)) {
-        // ...and it's different from the current value from the parent...
-        if (newDate.getTime() !== valueRef.current?.getTime()) {
-           // ...call the latest version of onChange from the ref.
-          onChangeRef.current(newDate);
-        }
-      }
-    } else {
-      // If any part is missing, but the parent still has a value, clear it.
-      if (valueRef.current) {
-        onChangeRef.current(undefined);
-      }
-    }
-  // This effect ONLY runs when the internal day, month, or year state changes.
-  // It does NOT depend on `value` or `onChange` from props, breaking the loop.
-  }, [day, month, year]);
+  const handleMonthChange = (month: string) => {
+    const monthIndex = parseInt(month, 10);
+    const year = value && isValid(value) ? value.getFullYear() : currentYear;
+    const currentDay = value && isValid(value) ? value.getDate() : 1;
+    const daysInNewMonth = getDaysInMonth(new Date(year, monthIndex));
+    const newDay = Math.min(currentDay, daysInNewMonth);
 
-  const years = Array.from({ length: toYear - fromYear + 1 }, (_, i) => toYear - i);
+    onChange(set(value || new Date(), { year, month: monthIndex, date: newDay }));
+  };
+
+  const handleYearChange = (year: string) => {
+    const yearNum = parseInt(year, 10);
+    const month = value && isValid(value) ? value.getMonth() : 0;
+    const currentDay = value && isValid(value) ? value.getDate() : 1;
+    const daysInMonth = getDaysInMonth(new Date(yearNum, month));
+    const newDay = Math.min(currentDay, daysInMonth);
+
+    onChange(set(value || new Date(), { year: yearNum, month, date: newDay }));
+  };
+
+  const years = Array.from({ length: toYear - fromYear + 1 }, (_, i) =>
+    String(toYear - i)
+  );
   const months = Array.from({ length: 12 }, (_, i) => ({
     value: String(i),
     label: format(new Date(2000, i, 1), 'MMMM', { locale: idLocale }),
   }));
-  const days = Array.from({ length: 31 }, (_, i) => String(i + 1));
+  const daysInSelectedMonth =
+    value && isValid(value) ? getDaysInMonth(value) : 31;
+  const days = Array.from({ length: daysInSelectedMonth }, (_, i) =>
+    String(i + 1)
+  );
+
+  const selectedDay = value && isValid(value) ? String(value.getDate()) : undefined;
+  const selectedMonth =
+    value && isValid(value) ? String(value.getMonth()) : undefined;
+  const selectedYear =
+    value && isValid(value) ? String(value.getFullYear()) : undefined;
 
   return (
     <div className={cn('flex gap-2 items-center', className)}>
-      <Select value={day} onValueChange={setDay}>
+      <Select value={selectedDay} onValueChange={handleDayChange}>
         <SelectTrigger className="w-[80px]">
           <SelectValue placeholder="Hari" />
         </SelectTrigger>
@@ -106,7 +95,7 @@ export function DatePickerDropdowns({
           ))}
         </SelectContent>
       </Select>
-      <Select value={month} onValueChange={setMonth}>
+      <Select value={selectedMonth} onValueChange={handleMonthChange}>
         <SelectTrigger className="flex-1">
           <SelectValue placeholder="Bulan" />
         </SelectTrigger>
@@ -118,13 +107,13 @@ export function DatePickerDropdowns({
           ))}
         </SelectContent>
       </Select>
-      <Select value={year} onValueChange={setYear}>
+      <Select value={selectedYear} onValueChange={handleYearChange}>
         <SelectTrigger className="w-[100px]">
           <SelectValue placeholder="Tahun" />
         </SelectTrigger>
         <SelectContent>
           {years.map((y) => (
-            <SelectItem key={y} value={String(y)}>
+            <SelectItem key={y} value={y}>
               {y}
             </SelectItem>
           ))}
