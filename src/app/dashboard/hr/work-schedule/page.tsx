@@ -56,7 +56,15 @@ export default function WorkSchedulePage() {
     useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
   );
   
-  const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
+  const usersQuery = useMemoFirebase(() => {
+    // Only admins/korlaps should fetch all users
+    if (currentUserProfile?.role === 'admin' || currentUserProfile?.role === 'korlap') {
+        return query(collection(firestore, 'users'));
+    }
+    // A technician doesn't need to query the whole collection
+    return null;
+  }, [firestore, currentUserProfile]);
+  
   const { data: allUsers, isLoading: areUsersLoading } = useCollection<UserProfile>(usersQuery);
 
   const schedulesQuery = useMemoFirebase(() => query(collection(firestore, 'schedules')), [firestore]);
@@ -67,15 +75,15 @@ export default function WorkSchedulePage() {
 
   // --- Memoized Data Processing ---
   const filteredUsers = useMemo(() => {
-    if (!allUsers || !currentUserProfile) return [];
+    if (!currentUserProfile) return [];
 
     // If user is a technician, only show their own schedule
     if (currentUserProfile.role === 'teknisi') {
-        const self = allUsers.find(u => u.id === currentUserProfile.id);
-        return self ? [self] : [];
+        return [currentUserProfile];
     }
 
     // Original logic for admin/korlap
+    if (!allUsers) return []; // Wait for allUsers to load for admins
     const activeUsers = allUsers.filter(u => u.registrationStatus === 'approved' && u.role === 'teknisi').sort((a,b) => (a.displayName || '').localeCompare(b.displayName || ''));
     if (selectedUnit === 'ALL') return activeUsers;
     
