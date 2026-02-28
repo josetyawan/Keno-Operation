@@ -1,8 +1,7 @@
-
 'use client';
 
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { doc } from 'firebase/firestore';
 import type { UserProfile, Performance } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -29,16 +28,27 @@ export default function UserPerformancePage() {
     
     const performanceQuery = useMemoFirebase(() => {
         if (!userProfile?.nik) return null;
-        return query(collection(firestore, 'performance'), where('nik', '==', userProfile.nik), orderBy('date', 'desc'));
+        // The orderBy clause has been removed to avoid needing a composite index.
+        // Sorting will now be handled on the client-side.
+        return query(collection(firestore, 'performance'), where('nik', '==', userProfile.nik));
     }, [firestore, userProfile?.nik]);
 
     const { data: performanceRecords, isLoading: isPerformanceLoading } = useCollection<Performance>(performanceQuery);
     
-    const availablePeriods = useMemo(() => {
+    const sortedPerformanceRecords = useMemo(() => {
         if (!performanceRecords) return [];
-        const periods = performanceRecords.map(p => `${p.tahun}-${String(p.bulan).padStart(2, '0')}`);
-        return [...new Set(periods)]; // Unique periods
+        return [...performanceRecords].sort((a, b) => {
+            const dateA = a.date?.toDate ? a.date.toDate().getTime() : 0;
+            const dateB = b.date?.toDate ? b.date.toDate().getTime() : 0;
+            return dateB - dateA; // Descending sort
+        });
     }, [performanceRecords]);
+    
+    const availablePeriods = useMemo(() => {
+        if (!sortedPerformanceRecords) return [];
+        const periods = sortedPerformanceRecords.map(p => `${p.tahun}-${String(p.bulan).padStart(2, '0')}`);
+        return [...new Set(periods)]; // Unique periods
+    }, [sortedPerformanceRecords]);
     
     useEffect(() => {
         if (availablePeriods.length > 0 && !selectedPeriod) {
@@ -47,9 +57,9 @@ export default function UserPerformancePage() {
     }, [availablePeriods, selectedPeriod]);
 
     const displayedRecord = useMemo(() => {
-        if (!selectedPeriod || !performanceRecords) return null;
-        return performanceRecords.find(p => `${p.tahun}-${String(p.bulan).padStart(2, '0')}` === selectedPeriod);
-    }, [performanceRecords, selectedPeriod]);
+        if (!selectedPeriod || !sortedPerformanceRecords) return null;
+        return sortedPerformanceRecords.find(p => `${p.tahun}-${String(p.bulan).padStart(2, '0')}` === selectedPeriod);
+    }, [sortedPerformanceRecords, selectedPeriod]);
 
     const isLoading = isUserLoading || isProfileLoading || isPerformanceLoading;
 
@@ -86,7 +96,7 @@ export default function UserPerformancePage() {
                 </div>
             </div>
 
-            {performanceRecords && performanceRecords.length > 0 ? (
+            {sortedPerformanceRecords && sortedPerformanceRecords.length > 0 ? (
                 <>
                 <Card>
                     <CardHeader>
