@@ -256,9 +256,14 @@ export default function AttendancePage() {
     const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
     const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
-    const { data: allUsers, isLoading: areUsersLoading } = useCollection<UserProfile>(
-        useMemoFirebase(() => query(collection(firestore, 'users'), orderBy('displayName')), [firestore])
-    );
+    const allUsersQuery = useMemoFirebase(() => {
+        if (!userProfile || (userProfile.role !== 'admin' && userProfile.role !== 'korlap')) {
+            return null;
+        }
+        return query(collection(firestore, 'users'), orderBy('displayName'));
+    }, [firestore, userProfile]);
+
+    const { data: allUsers, isLoading: areUsersLoading } = useCollection<UserProfile>(allUsersQuery);
 
     const today = useMemo(() => getStartOfDay(), []);
     const scheduleQuery = useMemoFirebase(() => {
