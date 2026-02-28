@@ -208,10 +208,12 @@ export type Schedule = {
     userId: string;
     userEmail: string;
     date: any; // Firestore Timestamp
-    shiftType: 'piket-demak' | 'siang-malam' | 'malam' | 'ijin' | 'cuti' | 'weekend-duty' | 'holiday-duty';
+    shiftType: 'piket-demak' | 'siang-malam' | 'malam' | 'ijin' | 'cuti' | 'weekend-duty' | 'holiday-duty' | 'tukar-jaga';
     notes?: string;
     evidenceUrl?: string;
     createdAt: any; // Firestore Timestamp
+    swapTargetUserId?: string;
+    swapTargetUserName?: string;
 };
 
 export type Attendance = {

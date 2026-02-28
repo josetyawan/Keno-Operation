@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useUser, useFirestore, useCollection, useStorage, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, where, Timestamp, limit, doc, setDoc, addDoc } from 'firebase/firestore';
+import { collection, query, where, Timestamp, limit, doc, setDoc, addDoc, orderBy } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -256,6 +256,10 @@ export default function AttendancePage() {
     const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
     const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
+    const { data: allUsers, isLoading: areUsersLoading } = useCollection<UserProfile>(
+        useMemoFirebase(() => query(collection(firestore, 'users'), orderBy('displayName')), [firestore])
+    );
+
     const today = useMemo(() => getStartOfDay(), []);
     const scheduleQuery = useMemoFirebase(() => {
         if (!user) return null;
@@ -283,7 +287,7 @@ export default function AttendancePage() {
     const { data: allUserAttendances, isLoading: isAttendanceLoading } = useCollection<Attendance>(allUserAttendancesQuery);
 
     useEffect(() => {
-      setIsLoading(isScheduleLoading || isAttendanceLoading || isProfileLoading);
+      setIsLoading(isScheduleLoading || isAttendanceLoading || isProfileLoading || areUsersLoading);
       if (!isAttendanceLoading && allUserAttendances) {
           const startOfToday = getStartOfDay();
           const endOfToday = add(startOfToday, { days: 1 });
@@ -297,7 +301,7 @@ export default function AttendancePage() {
       } else if (!isAttendanceLoading) {
           setTodayAttendance(null);
       }
-    }, [allUserAttendances, isAttendanceLoading, isScheduleLoading, isProfileLoading, today]);
+    }, [allUserAttendances, isAttendanceLoading, isScheduleLoading, isProfileLoading, areUsersLoading, today]);
     
     // --- Camera Logic for Main Check-in ---
     useEffect(() => {
@@ -426,6 +430,7 @@ export default function AttendancePage() {
                                 todaySchedule={todaySchedule}
                                 today={today}
                                 onFinished={() => setIsLeaveDialogOpen(false)}
+                                allUsers={allUsers || []}
                             />
                         </Dialog>
                     </div>
@@ -436,7 +441,7 @@ export default function AttendancePage() {
 }
 
 // --- Dialog Component for Leave/Late/Remote ---
-function LeaveRequestDialog({ todaySchedule, today, onFinished }: { todaySchedule: Schedule | null; today: Date; onFinished: () => void; }) {
+function LeaveRequestDialog({ todaySchedule, today, onFinished, allUsers }: { todaySchedule: Schedule | null; today: Date; onFinished: () => void; allUsers: UserProfile[] }) {
     const { user } = useUser();
     const firestore = useFirestore();
     const storage = useStorage();
@@ -446,10 +451,16 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished }: { todaySchedul
     const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
     const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
 
-    const [leaveType, setLeaveType] = useState<'sick-leave' | 'cuti' | 'late' | 'remote-progress'>('sick-leave');
+    const [leaveType, setLeaveType] = useState<'sick-leave' | 'cuti' | 'late' | 'remote-progress' | 'tukar-jaga'>('sick-leave');
     const [reason, setReason] = useState('');
     const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [swapTargetUserId, setSwapTargetUserId] = useState('');
+
+    const otherTeknisi = useMemo(() => {
+        if (!allUsers || !user) return [];
+        return allUsers.filter(u => u.role === 'teknisi' && u.registrationStatus === 'approved' && u.id !== user.uid);
+    }, [allUsers, user]);
 
     // Camera State
     const dialogVideoRef = useRef<HTMLVideoElement>(null);
@@ -501,7 +512,42 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished }: { todaySchedul
         setIsSubmitting(true);
         
         try {
-            if (leaveType === 'sick-leave' || leaveType === 'cuti') {
+            if (leaveType === 'tukar-jaga') {
+                if (!reason.trim() || !swapTargetUserId) {
+                    toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Mohon pilih teknisi pengganti dan isi alasan.' });
+                    setIsSubmitting(false);
+                    return;
+                }
+                const targetUser = allUsers.find(u => u.id === swapTargetUserId);
+                if (!targetUser) {
+                     toast({ variant: 'destructive', title: 'User Tidak Ditemukan' });
+                     setIsSubmitting(false);
+                     return;
+                }
+        
+                const scheduleId = `${user.uid}_${format(today, 'yyyy-MM-dd')}`;
+                const scheduleDocRef = doc(firestore, "schedules", scheduleId);
+                const scheduleData = {
+                    userId: user.uid, userEmail: user.email,
+                    date: Timestamp.fromDate(today),
+                    shiftType: 'tukar-jaga',
+                    notes: reason,
+                    swapTargetUserId: targetUser.id,
+                    swapTargetUserName: targetUser.displayName || targetUser.email,
+                    createdAt: todaySchedule?.createdAt || Timestamp.now(),
+                };
+                await setDoc(scheduleDocRef, scheduleData, { merge: true });
+
+                const notificationReason = `Ingin tukar dengan: ${targetUser.displayName || targetUser.email}.\nAlasan: ${reason}`;
+                sendAttendanceNotice({
+                    userName: userProfile.displayName || user.email,
+                    status: 'Request Tukar Jaga',
+                    reason: notificationReason,
+                }).catch(err => console.error("Telegram notification failed:", err));
+
+                toast({ title: 'Pengajuan Terkirim', description: 'Permintaan tukar jaga Anda telah dikirim untuk persetujuan atasan.' });
+                onFinished();
+            } else if (leaveType === 'sick-leave' || leaveType === 'cuti') {
                 if (!reason.trim() || !evidenceFile) {
                     toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Mohon isi alasan dan unggah foto bukti.' });
                     setIsSubmitting(false);
@@ -598,11 +644,27 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished }: { todaySchedul
                         <SelectContent>
                             <SelectItem value="sick-leave">Izin Sakit / Keperluan Mendesak</SelectItem>
                             <SelectItem value="cuti">Cuti</SelectItem>
+                            <SelectItem value="tukar-jaga">Request Tukar Jaga</SelectItem>
                             <SelectItem value="late">Izin Datang Terlambat</SelectItem>
                             <SelectItem value="remote-progress">Izin Langsung Progres</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
+
+                {leaveType === 'tukar-jaga' && (
+                    <div className="grid gap-2">
+                        <Label htmlFor="swap-target">Tukar Dengan</Label>
+                        <Select value={swapTargetUserId} onValueChange={setSwapTargetUserId}>
+                            <SelectTrigger id="swap-target"><SelectValue placeholder="Pilih teknisi pengganti..." /></SelectTrigger>
+                            <SelectContent>
+                                {otherTeknisi.map(t => (
+                                    <SelectItem key={t.id} value={t.id}>{t.displayName}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                )}
+
                 <div className="grid gap-2">
                     <Label htmlFor="reason">Alasan (Wajib Diisi)</Label>
                     <Textarea id="reason" placeholder="Jelaskan alasan Anda..." value={reason} onChange={(e) => setReason(e.target.value)} rows={3} />

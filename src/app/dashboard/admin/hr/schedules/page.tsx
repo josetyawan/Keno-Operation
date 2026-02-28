@@ -26,7 +26,7 @@ import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 
 
-type ValidShiftType = 'piket-demak' | 'siang-malam' | 'malam' | 'ijin' | 'cuti' | 'weekend-duty' | 'holiday-duty' ;
+type ValidShiftType = 'piket-demak' | 'siang-malam' | 'malam' | 'ijin' | 'cuti' | 'weekend-duty' | 'holiday-duty' | 'tukar-jaga' ;
 
 function ScheduleForm({ schedule, users, onFormSubmit }: { schedule?: Schedule | null, users: UserProfile[], onFormSubmit: (data: Partial<Schedule>) => void }) {
     const [userId, setUserId] = useState('');
@@ -38,7 +38,7 @@ function ScheduleForm({ schedule, users, onFormSubmit }: { schedule?: Schedule |
         if (schedule) {
             setUserId(schedule.userId);
             setDate(schedule.date.toDate());
-            const validTypes: ValidShiftType[] = ['piket-demak', 'siang-malam', 'malam', 'ijin', 'cuti', 'weekend-duty', 'holiday-duty'];
+            const validTypes: ValidShiftType[] = ['piket-demak', 'siang-malam', 'malam', 'ijin', 'cuti', 'weekend-duty', 'holiday-duty', 'tukar-jaga'];
             if (validTypes.includes(schedule.shiftType as any)) {
                 setShiftType(schedule.shiftType as ValidShiftType);
             } else {
@@ -116,6 +116,7 @@ function ScheduleForm({ schedule, users, onFormSubmit }: { schedule?: Schedule |
                         <SelectItem value="holiday-duty">Jaga Hari Libur</SelectItem>
                         <SelectItem value="ijin">Ijin (i)</SelectItem>
                         <SelectItem value="cuti">Cuti (C)</SelectItem>
+                        <SelectItem value="tukar-jaga">Request Tukar Jaga</SelectItem>
                     </SelectContent>
                 </Select>
             </div>
@@ -159,6 +160,7 @@ export default function AdminSchedulesPage() {
         'cuti': 'Cuti (C)',
         'weekend-duty': 'Jaga Akhir Pekan',
         'holiday-duty': 'Jaga Hari Libur',
+        'tukar-jaga': 'Request Tukar Jaga',
         'H': 'Masuk',
         'L': 'Libur',
     };
@@ -616,7 +618,17 @@ export default function AdminSchedulesPage() {
                                         <TableCell className="font-medium">{userMap.get(schedule.userId) || schedule.userEmail}</TableCell>
                                         <TableCell>{format(schedule.date.toDate(), 'eeee, dd MMMM yyyy', { locale: idLocale })}</TableCell>
                                         <TableCell>{shiftTypeLabels[schedule.shiftType] ?? schedule.shiftType}</TableCell>
-                                        <TableCell>{schedule.notes || '-'}</TableCell>
+                                        <TableCell>
+                                            {schedule.shiftType === 'tukar-jaga' && schedule.swapTargetUserName ? (
+                                                <>
+                                                    <span className="font-semibold text-orange-600">Request Tukar &gt; {schedule.swapTargetUserName}</span>
+                                                    <br />
+                                                    {schedule.notes}
+                                                </>
+                                            ) : (
+                                                schedule.notes || '-'
+                                            )}
+                                        </TableCell>
                                         <TableCell className="text-right">
                                             <Button variant="ghost" size="icon" onClick={() => handleEdit(schedule)}><Edit className="h-4 w-4" /></Button>
                                             <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDelete(schedule)}><Trash2 className="h-4 w-4" /></Button>
