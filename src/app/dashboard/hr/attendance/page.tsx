@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
@@ -234,230 +235,14 @@ function CheckInUI({
     );
 }
 
-// --- Main Page Component ---
-export default function AttendancePage() {
-    const { user, isUserLoading } = useUser();
-    const firestore = useFirestore();
-    const storage = useStorage();
-    const { toast } = useToast();
-    const router = useRouter();
-
-    const [todaySchedule, setTodaySchedule] = useState<Schedule | null>(null);
-    const [todayAttendance, setTodayAttendance] = useState<Attendance | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [isCheckingIn, setIsCheckingIn] = useState(false);
-    
-    // Camera state
-    const videoRef = useRef<HTMLVideoElement>(null);
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [hasCameraPermission, setHasCameraPermission] = useState(false);
-    
-    // Leave request state
-    const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
-
-    // --- Data Fetching ---
-    const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
-    const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
-
-    const today = useMemo(() => getStartOfDay(), []);
-    const scheduleQuery = useMemoFirebase(() => {
-        if (!user) return null;
-        const scheduleId = `${user.uid}_${format(today, 'yyyy-MM-dd')}`;
-        return query(
-            collection(firestore, 'schedules'),
-            where('__name__', '==', scheduleId),
-            limit(1)
-        );
-    }, [user, firestore, today]);
-
-    const { data: schedules, isLoading: isScheduleLoading } = useCollection<Schedule>(scheduleQuery);
-    
-    useEffect(() => {
-        if (!isScheduleLoading) {
-            setTodaySchedule(schedules?.[0] || null);
-        }
-    }, [schedules, isScheduleLoading]);
-
-    const allUserAttendancesQuery = useMemoFirebase(() => {
-        if (!user) return null;
-        return query(collection(firestore, 'attendances'), where('userId', '==', user.uid));
-    }, [user, firestore]);
-
-    const { data: allUserAttendances, isLoading: isAttendanceLoading } = useCollection<Attendance>(allUserAttendancesQuery);
-
-    useEffect(() => {
-      setIsLoading(isScheduleLoading || isAttendanceLoading || isProfileLoading);
-      if (!isAttendanceLoading && allUserAttendances) {
-          const startOfToday = getStartOfDay();
-          const endOfToday = add(startOfToday, { days: 1 });
-
-          const todayAtt = allUserAttendances.find(att => {
-              if (!att.checkInTime || !att.checkInTime.toDate) return false;
-              const checkIn = att.checkInTime.toDate();
-              return checkIn >= startOfToday && checkIn < endOfToday;
-          });
-          setTodayAttendance(todayAtt || null);
-      } else if (!isAttendanceLoading) {
-          setTodayAttendance(null);
-      }
-    }, [allUserAttendances, isAttendanceLoading, isScheduleLoading, isProfileLoading, today]);
-    
-    // --- Camera Logic for Main Check-in ---
-    useEffect(() => {
-        const checkInWindow = todaySchedule ? getCheckInWindow(todaySchedule.shiftType) : null;
-        const needsCamera = todaySchedule && !todayAttendance && checkInWindow;
-        let stream: MediaStream | null = null;
-
-        const setupCamera = async () => {
-             if (needsCamera) {
-                try {
-                    stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                    setHasCameraPermission(true);
-                    if (videoRef.current) videoRef.current.srcObject = stream;
-                } catch (error) {
-                    console.error("Camera access error:", error);
-                    setHasCameraPermission(false);
-                    toast({
-                        variant: 'destructive',
-                        title: 'Izin Kamera Ditolak',
-                        description: 'Aplikasi memerlukan izin untuk menggunakan kamera Anda. Mohon aktifkan izin kamera di pengaturan browser atau perangkat Anda.',
-                        duration: 9000,
-                    });
-                }
-            }
-        }
-        setupCamera();
-            
-        return () => {
-            stream?.getTracks().forEach(track => track.stop());
-        };
-    }, [todaySchedule, todayAttendance, toast]);
-    
-
-    const handleCheckIn = async () => {
-        if (!todaySchedule || !videoRef.current || !canvasRef.current || !user || !userProfile) return;
-        
-        setIsCheckingIn(true);
-        try {
-            const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-                navigator.geolocation.getCurrentPosition(resolve, reject, {
-                    enableHighAccuracy: true, timeout: 10000, maximumAge: 0,
-                });
-            });
-            const coordinates = `${position.coords.latitude}, ${position.coords.longitude}`;
-
-            const video = videoRef.current;
-            const canvas = canvasRef.current;
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const context = canvas.getContext('2d');
-            if (!context) throw new Error('Could not get canvas context');
-            context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
-            
-            const photoBlob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.9));
-            if (!photoBlob) throw new Error('Gagal membuat file gambar.');
-
-            const filePath = `hr_attendance/${user.uid}/${Date.now()}.jpg`;
-            const storageRef = ref(storage, filePath);
-            await uploadBytes(storageRef, photoBlob);
-            const photoUrl = await getDownloadURL(storageRef);
-            
-            const newAttendance: Omit<Attendance, 'id'> = {
-                userId: user.uid,
-                scheduleId: todaySchedule.id,
-                checkInTime: Timestamp.now(),
-                checkInPhotoUrl: photoUrl,
-                checkInCoordinates: coordinates,
-                status: 'present',
-            };
-            
-            await addDoc(collection(firestore, 'attendances'), newAttendance);
-
-            sendAttendanceNotice({
-                userName: userProfile.displayName || user.email!,
-                status: 'Hadir Tepat Waktu',
-                photoUrl: photoUrl,
-                coordinates: coordinates,
-            }).catch(err => console.error("Telegram notification failed:", err));
-
-            router.push('/dashboard/hr/attendance/goodbye');
-
-        } catch (error: any) {
-            let description = 'Terjadi kesalahan yang tidak diketahui.';
-            if (error.code === 1) description = 'Gagal mendapatkan lokasi: Izin ditolak.';
-            else if (error.code === 2) description = 'Gagal mendapatkan lokasi: Lokasi tidak tersedia.';
-            else if (error.code === 3) description = 'Gagal mendapatkan lokasi: Waktu permintaan habis.';
-            else if (error.message) description = error.message;
-            toast({ variant: 'destructive', title: 'Gagal Melakukan Absen', description });
-        } finally {
-            setIsCheckingIn(false);
-        }
-    };
-    
-    const pageIsLoading = isUserLoading || isLoading;
-    
-    return (
-        <div>
-            <h1 className="text-3xl font-bold tracking-tight mb-2">Absensi Jaga</h1>
-            <p className="text-muted-foreground mb-6">
-                Lakukan absensi untuk jadwal Anda hari ini: {format(today, 'eeee, dd MMMM yyyy', { locale: idLocale })}
-            </p>
-            <Card>
-                <CardHeader>
-                    <CardTitle>{!todaySchedule ? 'Absensi & Pengajuan Izin' : shiftTypeLabels[todaySchedule.shiftType] || 'Jadwal Hari Ini'}</CardTitle>
-                    <CardDescription>{!todaySchedule ? 'Anda tidak memiliki jadwal kerja. Anda bisa langsung mengajukan izin/cuti jika diperlukan.' : (todaySchedule.notes || 'Tidak ada catatan khusus untuk jadwal ini.')}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <CheckInUI 
-                        isLoading={pageIsLoading}
-                        todaySchedule={todaySchedule}
-                        todayAttendance={todayAttendance}
-                        isCheckingIn={isCheckingIn}
-                        hasCameraPermission={hasCameraPermission}
-                        videoRef={videoRef}
-                        canvasRef={canvasRef}
-                        handleCheckIn={handleCheckIn}
-                    />
-                    <div className="mt-6 border-t pt-6">
-                        <Dialog open={isLeaveDialogOpen} onOpenChange={setIsLeaveDialogOpen}>
-                            <DialogTrigger asChild>
-                                <Button variant="outline" className="w-full">
-                                    <FileWarning className="mr-2 h-4 w-4" /> Tidak Bisa Hadir / Terlambat?
-                                </Button>
-                            </DialogTrigger>
-                            <LeaveRequestDialog 
-                                todaySchedule={todaySchedule}
-                                today={today}
-                                onFinished={() => setIsLeaveDialogOpen(false)}
-                            />
-                        </Dialog>
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
-    );
-}
-
 // --- Dialog Component for Leave/Late/Remote ---
-function LeaveRequestDialog({ todaySchedule, today, onFinished }: { todaySchedule: Schedule | null; today: Date; onFinished: () => void; }) {
+function LeaveRequestDialog({ todaySchedule, today, onFinished, userProfile, canListUsers, allUsers }: { todaySchedule: Schedule | null; today: Date; onFinished: () => void; userProfile: UserProfile | null; canListUsers: boolean; allUsers: UserProfile[] }) {
     const { user } = useUser();
     const firestore = useFirestore();
     const storage = useStorage();
     const { toast } = useToast();
     const router = useRouter();
     
-    const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
-    const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
-
-    const canListUsers = userProfile?.role === 'admin' || userProfile?.role === 'korlap';
-
-    const usersQuery = useMemoFirebase(() => {
-        if (!canListUsers) return null;
-        return query(collection(firestore, 'users'), orderBy('displayName'));
-    }, [firestore, canListUsers]);
-
-    const { data: allUsers } = useCollection<UserProfile>(usersQuery);
-
     const [leaveType, setLeaveType] = useState<'sick-leave' | 'cuti' | 'late' | 'remote-progress' | 'tukar-jaga'>('sick-leave');
     const [reason, setReason] = useState('');
     const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
@@ -532,7 +317,7 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished }: { todaySchedul
                 
                 let targetUser: UserProfile | undefined;
                 if (!isManualInput) {
-                    targetUser = allUsers?.find(u => u.id === swapTargetUserId);
+                    targetUser = allUsers.find(u => u.id === swapTargetUserId);
                     if (!targetUser) {
                         toast({ variant: 'destructive', title: 'User Tidak Ditemukan' });
                         setIsSubmitting(false);
@@ -760,5 +545,221 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished }: { todaySchedul
                 </Button>
             </DialogFooter>
         </DialogContent>
+    );
+}
+
+// --- Main Page Component ---
+export default function AttendancePage() {
+    const { user, isUserLoading } = useUser();
+    const firestore = useFirestore();
+    const storage = useStorage();
+    const { toast } = useToast();
+    const router = useRouter();
+
+    const [todaySchedule, setTodaySchedule] = useState<Schedule | null>(null);
+    const [todayAttendance, setTodayAttendance] = useState<Attendance | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isCheckingIn, setIsCheckingIn] = useState(false);
+    
+    // Camera state
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [hasCameraPermission, setHasCameraPermission] = useState(false);
+    
+    // Leave request state
+    const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
+
+    // --- Data Fetching ---
+    const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
+    const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+
+    const canListUsers = useMemo(() => userProfile?.role === 'admin' || userProfile?.role === 'korlap', [userProfile]);
+
+    const usersQuery = useMemoFirebase(() => {
+        if (!canListUsers) return null;
+        return query(collection(firestore, 'users'), orderBy('displayName'));
+    }, [firestore, canListUsers]);
+
+    const { data: allUsers, isLoading: areUsersLoading } = useCollection<UserProfile>(usersQuery);
+
+    const today = useMemo(() => getStartOfDay(), []);
+    const scheduleQuery = useMemoFirebase(() => {
+        if (!user) return null;
+        const scheduleId = `${user.uid}_${format(today, 'yyyy-MM-dd')}`;
+        return query(
+            collection(firestore, 'schedules'),
+            where('__name__', '==', scheduleId),
+            limit(1)
+        );
+    }, [user, firestore, today]);
+
+    const { data: schedules, isLoading: isScheduleLoading } = useCollection<Schedule>(scheduleQuery);
+    
+    useEffect(() => {
+        if (!isScheduleLoading) {
+            setTodaySchedule(schedules?.[0] || null);
+        }
+    }, [schedules, isScheduleLoading]);
+
+    const allUserAttendancesQuery = useMemoFirebase(() => {
+        if (!user) return null;
+        return query(collection(firestore, 'attendances'), where('userId', '==', user.uid));
+    }, [user, firestore]);
+
+    const { data: allUserAttendances, isLoading: isAttendanceLoading } = useCollection<Attendance>(allUserAttendancesQuery);
+
+    useEffect(() => {
+      setIsLoading(isScheduleLoading || isAttendanceLoading || isProfileLoading || areUsersLoading);
+      if (!isAttendanceLoading && allUserAttendances) {
+          const startOfToday = getStartOfDay();
+          const endOfToday = add(startOfToday, { days: 1 });
+
+          const todayAtt = allUserAttendances.find(att => {
+              if (!att.checkInTime || !att.checkInTime.toDate) return false;
+              const checkIn = att.checkInTime.toDate();
+              return checkIn >= startOfToday && checkIn < endOfToday;
+          });
+          setTodayAttendance(todayAtt || null);
+      } else if (!isAttendanceLoading) {
+          setTodayAttendance(null);
+      }
+    }, [allUserAttendances, isAttendanceLoading, isScheduleLoading, isProfileLoading, areUsersLoading, today]);
+    
+    // --- Camera Logic for Main Check-in ---
+    useEffect(() => {
+        const checkInWindow = todaySchedule ? getCheckInWindow(todaySchedule.shiftType) : null;
+        const needsCamera = todaySchedule && !todayAttendance && checkInWindow;
+        let stream: MediaStream | null = null;
+
+        const setupCamera = async () => {
+             if (needsCamera) {
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    setHasCameraPermission(true);
+                    if (videoRef.current) videoRef.current.srcObject = stream;
+                } catch (error) {
+                    console.error("Camera access error:", error);
+                    setHasCameraPermission(false);
+                    toast({
+                        variant: 'destructive',
+                        title: 'Izin Kamera Ditolak',
+                        description: 'Aplikasi memerlukan izin untuk menggunakan kamera Anda. Mohon aktifkan izin kamera di pengaturan browser atau perangkat Anda.',
+                        duration: 9000,
+                    });
+                }
+            }
+        }
+        setupCamera();
+            
+        return () => {
+            stream?.getTracks().forEach(track => track.stop());
+        };
+    }, [todaySchedule, todayAttendance, toast]);
+    
+
+    const handleCheckIn = async () => {
+        if (!todaySchedule || !videoRef.current || !canvasRef.current || !user || !userProfile) return;
+        
+        setIsCheckingIn(true);
+        try {
+            const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, {
+                    enableHighAccuracy: true, timeout: 10000, maximumAge: 0,
+                });
+            });
+            const coordinates = `${position.coords.latitude}, ${position.coords.longitude}`;
+
+            const video = videoRef.current;
+            const canvas = canvasRef.current;
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const context = canvas.getContext('2d');
+            if (!context) throw new Error('Could not get canvas context');
+            context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+            
+            const photoBlob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+            if (!photoBlob) throw new Error('Gagal membuat file gambar.');
+
+            const filePath = `hr_attendance/${user.uid}/${Date.now()}.jpg`;
+            const storageRef = ref(storage, filePath);
+            await uploadBytes(storageRef, photoBlob);
+            const photoUrl = await getDownloadURL(storageRef);
+            
+            const newAttendance: Omit<Attendance, 'id'> = {
+                userId: user.uid,
+                scheduleId: todaySchedule.id,
+                checkInTime: Timestamp.now(),
+                checkInPhotoUrl: photoUrl,
+                checkInCoordinates: coordinates,
+                status: 'present',
+            };
+            
+            await addDoc(collection(firestore, 'attendances'), newAttendance);
+
+            sendAttendanceNotice({
+                userName: userProfile.displayName || user.email!,
+                status: 'Hadir Tepat Waktu',
+                photoUrl: photoUrl,
+                coordinates: coordinates,
+            }).catch(err => console.error("Telegram notification failed:", err));
+
+            router.push('/dashboard/hr/attendance/goodbye');
+
+        } catch (error: any) {
+            let description = 'Terjadi kesalahan yang tidak diketahui.';
+            if (error.code === 1) description = 'Gagal mendapatkan lokasi: Izin ditolak.';
+            else if (error.code === 2) description = 'Gagal mendapatkan lokasi: Lokasi tidak tersedia.';
+            else if (error.code === 3) description = 'Gagal mendapatkan lokasi: Waktu permintaan habis.';
+            else if (error.message) description = error.message;
+            toast({ variant: 'destructive', title: 'Gagal Melakukan Absen', description });
+        } finally {
+            setIsCheckingIn(false);
+        }
+    };
+    
+    const pageIsLoading = isUserLoading || isLoading;
+    
+    return (
+        <div>
+            <h1 className="text-3xl font-bold tracking-tight mb-2">Absensi Jaga</h1>
+            <p className="text-muted-foreground mb-6">
+                Lakukan absensi untuk jadwal Anda hari ini: {format(today, 'eeee, dd MMMM yyyy', { locale: idLocale })}
+            </p>
+            <Card>
+                <CardHeader>
+                    <CardTitle>{!todaySchedule ? 'Absensi & Pengajuan Izin' : shiftTypeLabels[todaySchedule.shiftType] || 'Jadwal Hari Ini'}</CardTitle>
+                    <CardDescription>{!todaySchedule ? 'Anda tidak memiliki jadwal kerja. Anda bisa langsung mengajukan izin/cuti jika diperlukan.' : (todaySchedule.notes || 'Tidak ada catatan khusus untuk jadwal ini.')}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <CheckInUI 
+                        isLoading={pageIsLoading}
+                        todaySchedule={todaySchedule}
+                        todayAttendance={todayAttendance}
+                        isCheckingIn={isCheckingIn}
+                        hasCameraPermission={hasCameraPermission}
+                        videoRef={videoRef}
+                        canvasRef={canvasRef}
+                        handleCheckIn={handleCheckIn}
+                    />
+                    <div className="mt-6 border-t pt-6">
+                        <Dialog open={isLeaveDialogOpen} onOpenChange={setIsLeaveDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button variant="outline" className="w-full">
+                                    <FileWarning className="mr-2 h-4 w-4" /> Tidak Bisa Hadir / Terlambat?
+                                </Button>
+                            </DialogTrigger>
+                            <LeaveRequestDialog 
+                                todaySchedule={todaySchedule}
+                                today={today}
+                                onFinished={() => setIsLeaveDialogOpen(false)}
+                                userProfile={userProfile}
+                                canListUsers={canListUsers}
+                                allUsers={allUsers || []}
+                            />
+                        </Dialog>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
     );
 }
