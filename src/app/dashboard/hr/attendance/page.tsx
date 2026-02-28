@@ -463,6 +463,7 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished }: { todaySchedul
     const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [swapTargetUserId, setSwapTargetUserId] = useState('');
+    const [manualSwapName, setManualSwapName] = useState('');
     const [swapDate, setSwapDate] = useState<Date | undefined>(today);
 
 
@@ -522,16 +523,21 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished }: { todaySchedul
         
         try {
             if (leaveType === 'tukar-jaga') {
-                if (!reason.trim() || !swapTargetUserId || !swapDate) {
-                    toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Mohon pilih tanggal, teknisi pengganti, dan isi alasan.' });
+                const isManualInput = !canListUsers;
+                if (!reason.trim() || !swapDate || (isManualInput && !manualSwapName.trim()) || (!isManualInput && !swapTargetUserId)) {
+                    toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Mohon pilih tanggal, isi nama/pilih teknisi pengganti, dan isi alasan.' });
                     setIsSubmitting(false);
                     return;
                 }
-                const targetUser = allUsers?.find(u => u.id === swapTargetUserId);
-                if (!targetUser) {
-                     toast({ variant: 'destructive', title: 'User Tidak Ditemukan' });
-                     setIsSubmitting(false);
-                     return;
+                
+                let targetUser: UserProfile | undefined;
+                if (!isManualInput) {
+                    targetUser = allUsers?.find(u => u.id === swapTargetUserId);
+                    if (!targetUser) {
+                        toast({ variant: 'destructive', title: 'User Tidak Ditemukan' });
+                        setIsSubmitting(false);
+                        return;
+                    }
                 }
         
                 const scheduleId = `${user.uid}_${format(swapDate, 'yyyy-MM-dd')}`;
@@ -541,13 +547,15 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished }: { todaySchedul
                     date: Timestamp.fromDate(swapDate),
                     shiftType: 'tukar-jaga',
                     notes: reason,
-                    swapTargetUserId: targetUser.id,
-                    swapTargetUserName: targetUser.displayName || targetUser.email,
+                    swapTargetUserId: targetUser?.id || '',
+                    swapTargetUserName: targetUser?.displayName || manualSwapName.trim(),
                     createdAt: todaySchedule?.createdAt || Timestamp.now(),
                 };
                 await setDoc(scheduleDocRef, scheduleData, { merge: true });
 
-                const notificationReason = `Ingin tukar jadwal tanggal ${format(swapDate, 'dd MMM yyyy', {locale: idLocale})} dengan: ${targetUser.displayName || targetUser.email}.\nAlasan: ${reason}`;
+                const swapTargetName = targetUser?.displayName || manualSwapName.trim();
+                const notificationReason = `Ingin tukar jadwal tanggal ${format(swapDate, 'dd MMM yyyy', {locale: idLocale})} dengan: ${swapTargetName}.\nAlasan: ${reason}`;
+                
                 sendAttendanceNotice({
                     userName: userProfile.displayName || user.email,
                     status: 'Request Tukar Jaga',
@@ -556,6 +564,7 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished }: { todaySchedul
 
                 toast({ title: 'Pengajuan Terkirim', description: 'Permintaan tukar jaga Anda telah dikirim untuk persetujuan atasan.' });
                 onFinished();
+
             } else if (leaveType === 'sick-leave' || leaveType === 'cuti') {
                 if (!reason.trim() || !evidenceFile) {
                     toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Mohon isi alasan dan unggah foto bukti.' });
@@ -683,14 +692,23 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished }: { todaySchedul
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="swap-target">Tukar Dengan</Label>
-                            <Select value={swapTargetUserId} onValueChange={setSwapTargetUserId}>
-                                <SelectTrigger id="swap-target"><SelectValue placeholder="Pilih teknisi pengganti..." /></SelectTrigger>
-                                <SelectContent>
-                                    {otherTeknisi.map(t => (
-                                        <SelectItem key={t.id} value={t.id}>{t.displayName}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            {canListUsers ? (
+                                <Select value={swapTargetUserId} onValueChange={setSwapTargetUserId}>
+                                    <SelectTrigger id="swap-target"><SelectValue placeholder="Pilih teknisi pengganti..." /></SelectTrigger>
+                                    <SelectContent>
+                                        {otherTeknisi.map(t => (
+                                            <SelectItem key={t.id} value={t.id}>{t.displayName}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            ) : (
+                                <Input 
+                                    id="swap-target-manual"
+                                    placeholder="Ketik nama teknisi pengganti..."
+                                    value={manualSwapName}
+                                    onChange={(e) => setManualSwapName(e.target.value)}
+                                />
+                            )}
                         </div>
                     </>
                 )}
