@@ -4,14 +4,14 @@
 import { useState, useMemo } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { collection, query, doc, setDoc, Timestamp, orderBy } from 'firebase/firestore';
+import { collection, query, doc, setDoc, Timestamp, orderBy, getDocs, writeBatch, type DocumentReference } from 'firebase/firestore';
 import type { UserProfile, Performance } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Upload, Loader2, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
@@ -27,6 +27,7 @@ export default function AdminPerformancePage() {
     
     const [isImporting, setIsImporting] = useState(false);
     const [importProgress, setImportProgress] = useState(0);
+    const [isSyncing, setIsSyncing] = useState(false);
 
     const [searchQuery, setSearchQuery] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
@@ -214,6 +215,77 @@ export default function AdminPerformancePage() {
         reader.readAsArrayBuffer(file);
     };
 
+    const handleSyncUserIds = async () => {
+        if (!firestore) return;
+        setIsSyncing(true);
+        toast({ title: 'Memulai Sinkronisasi...', description: 'Mencari data performa yang perlu diperbarui.' });
+    
+        try {
+            const usersQueryRef = query(collection(firestore, 'users'));
+            const performanceQueryRef = query(collection(firestore, 'performance'));
+    
+            const [usersSnapshot, performanceSnapshot] = await Promise.all([
+                getDocs(usersQueryRef),
+                getDocs(performanceQueryRef)
+            ]);
+    
+            const userMapByNik = new Map<string, string>();
+            usersSnapshot.forEach(doc => {
+                const u = doc.data() as UserProfile;
+                if (u.nik) {
+                    userMapByNik.set(u.nik.trim(), u.id);
+                }
+            });
+    
+            let docsToUpdate: {ref: DocumentReference, data: Partial<Performance>}[] = [];
+    
+            performanceSnapshot.forEach(perfDoc => {
+                const perfData = perfDoc.data() as Performance;
+                // Check if userId is missing but nik is present
+                if (!perfData.userId && perfData.nik) {
+                    const userId = userMapByNik.get(perfData.nik.trim());
+                    if (userId) {
+                        // Found a user match, add update to list
+                        docsToUpdate.push({
+                            ref: perfDoc.ref,
+                            data: { userId: userId }
+                        });
+                    }
+                }
+            });
+            
+            if (docsToUpdate.length === 0) {
+                toast({ title: 'Sinkronisasi Selesai', description: 'Semua data performa sudah memiliki ID pengguna yang sesuai.' });
+                setIsSyncing(false);
+                return;
+            }
+    
+            // Commit updates in chunks to avoid exceeding batch limits
+            const batchSize = 400;
+            let updatedCount = 0;
+            for (let i = 0; i < docsToUpdate.length; i += batchSize) {
+                const batch = writeBatch(firestore);
+                const chunk = docsToUpdate.slice(i, i + batchSize);
+                chunk.forEach(update => {
+                    batch.update(update.ref, update.data);
+                });
+                await batch.commit();
+                updatedCount += chunk.length;
+            }
+    
+            toast({
+                title: 'Sinkronisasi Berhasil!',
+                description: `${updatedCount} data performa telah berhasil disinkronkan dengan ID pengguna.`,
+            });
+    
+        } catch (error: any) {
+            console.error("Error syncing user IDs:", error);
+            toast({ variant: 'destructive', title: 'Sinkronisasi Gagal', description: error.message });
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
     const isLoading = isUserLoading || isProfileLoading || areUsersLoading || areRecordsLoading;
 
     if (isLoading && !performanceRecords) {
@@ -230,25 +302,39 @@ export default function AdminPerformancePage() {
     
     return (
         <div className="space-y-6">
-            <h1 className="text-3xl font-bold tracking-tight">Impor Performa Teknisi</h1>
-            <Card>
-                <CardHeader>
-                    <CardTitle>Unggah File Excel</CardTitle>
-                    <CardDescription>Pilih file Excel yang berisi data performa teknisi untuk diimpor ke sistem.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="grid gap-2 max-w-lg">
-                        <Label htmlFor="performance-file">File Excel Performa</Label>
-                        <Input id="performance-file" type="file" accept=".xlsx, .xls" onChange={handleFileImport} disabled={isImporting} />
-                    </div>
-                     {isImporting && (
-                        <div className="space-y-2">
-                            <Progress value={importProgress} />
-                            <p className="text-sm text-muted-foreground">Mengimpor {Math.round(importProgress)}%...</p>
+            <h1 className="text-3xl font-bold tracking-tight">Impor & Sinkronisasi Performa</h1>
+            <div className="grid md:grid-cols-2 gap-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Unggah File Excel Performa</CardTitle>
+                        <CardDescription>Pilih file Excel yang berisi data performa teknisi untuk diimpor ke sistem.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="performance-file">File Excel Performa</Label>
+                            <Input id="performance-file" type="file" accept=".xlsx, .xls" onChange={handleFileImport} disabled={isImporting} />
                         </div>
-                    )}
-                </CardContent>
-            </Card>
+                        {isImporting && (
+                            <div className="space-y-2">
+                                <Progress value={importProgress} />
+                                <p className="text-sm text-muted-foreground">Mengimpor {Math.round(importProgress)}%...</p>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Sinkronkan Data</CardTitle>
+                        <CardDescription>Jika data performa teknisi tidak muncul di halaman mereka, jalankan sinkronisasi ini untuk memperbaiki tautan data.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button onClick={handleSyncUserIds} disabled={isSyncing} className="w-full">
+                            {isSyncing ? <Loader2 className="mr-2 animate-spin" /> : <RefreshCw className="mr-2" />}
+                            {isSyncing ? 'Menyinkronkan...' : 'Sinkronkan ID Pengguna'}
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
 
             <Card>
                 <CardHeader>

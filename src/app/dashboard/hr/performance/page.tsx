@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 import type { UserProfile, Performance } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -21,9 +22,14 @@ export default function UserPerformancePage() {
 
     const [selectedPeriod, setSelectedPeriod] = useState<string | undefined>();
     
+    const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
+        useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
+    );
+    
     const performanceQuery = useMemoFirebase(() => {
+        // Query by the current user's ID. This is reliable and secure.
+        // The import/sync process is responsible for ensuring the 'userId' field is populated.
         if (!user?.uid) return null;
-        // Query by user's ID for reliability, instead of NIK which might be unset.
         return query(collection(firestore, 'performance'), where('userId', '==', user.uid));
     }, [firestore, user?.uid]);
 
@@ -55,7 +61,7 @@ export default function UserPerformancePage() {
         return sortedPerformanceRecords.find(p => `${p.tahun}-${String(p.bulan).padStart(2, '0')}` === selectedPeriod);
     }, [sortedPerformanceRecords, selectedPeriod]);
 
-    const isLoading = isUserLoading || isPerformanceLoading;
+    const isLoading = isUserLoading || isProfileLoading || isPerformanceLoading;
 
     const formatAsPercent = (value: string) => {
         if (typeof value !== 'string' || !value.trim()) return '-';
@@ -164,7 +170,7 @@ export default function UserPerformancePage() {
                         <BarChart3 className="mx-auto h-12 w-12 text-muted-foreground" />
                         <h3 className="mt-4 text-lg font-semibold">Data Performa Belum Tersedia</h3>
                         <p className="mt-2 text-sm text-muted-foreground">
-                            Saat ini belum ada data performa yang diimpor untuk akun Anda.
+                            Data performa untuk akun Anda belum ditemukan. Jika data sudah diimpor, minta admin untuk menjalankan "Sinkronkan ID Pengguna".
                         </p>
                     </CardContent>
                 </Card>
