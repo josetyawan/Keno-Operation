@@ -170,7 +170,7 @@ service cloud.firestore {
     }
     
     match /performance/{performanceId} {
-      allow read: if (isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.nik == resource.data.nik) || isAdmin() || isKorlap();
+      allow read: if isOwner(resource.data.userId) || isAdmin() || isKorlap();
       allow write: if isAdmin() || isKorlap();
     }
   }

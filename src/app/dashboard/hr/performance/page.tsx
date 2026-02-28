@@ -1,8 +1,7 @@
 'use client';
 
-import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
-import { doc } from 'firebase/firestore';
 import type { UserProfile, Performance } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -22,16 +21,11 @@ export default function UserPerformancePage() {
 
     const [selectedPeriod, setSelectedPeriod] = useState<string | undefined>();
     
-    const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
-        useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
-    );
-    
     const performanceQuery = useMemoFirebase(() => {
-        if (!userProfile?.nik) return null;
-        // The orderBy clause has been removed to avoid needing a composite index.
-        // Sorting will now be handled on the client-side.
-        return query(collection(firestore, 'performance'), where('nik', '==', userProfile.nik));
-    }, [firestore, userProfile?.nik]);
+        if (!user?.uid) return null;
+        // Query by user's ID for reliability, instead of NIK which might be unset.
+        return query(collection(firestore, 'performance'), where('userId', '==', user.uid));
+    }, [firestore, user?.uid]);
 
     const { data: performanceRecords, isLoading: isPerformanceLoading } = useCollection<Performance>(performanceQuery);
     
@@ -61,7 +55,7 @@ export default function UserPerformancePage() {
         return sortedPerformanceRecords.find(p => `${p.tahun}-${String(p.bulan).padStart(2, '0')}` === selectedPeriod);
     }, [sortedPerformanceRecords, selectedPeriod]);
 
-    const isLoading = isUserLoading || isProfileLoading || isPerformanceLoading;
+    const isLoading = isUserLoading || isPerformanceLoading;
 
     const formatAsPercent = (value: string) => {
         if (typeof value !== 'string' || !value.trim()) return '-';
