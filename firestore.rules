@@ -87,9 +87,9 @@ service cloud.firestore {
     }
     
     match /gamas-reports/{reportId} {
-      allow get, list: if isApproved();
+      allow read: if (isAdmin() || isKorlap()) || (isApproved() && resource.data.userId == request.auth.uid);
       allow create: if isApproved() && isCreatingOwn('userId');
-      allow update, delete: if (isApproved() && isUpdatingOwn('userId')) || isAdmin();
+      allow update, delete: if (isApproved() && isUpdatingOwn('userId')) || isAdmin() || isKorlap();
     }
 
     match /project-ids/{projectId} {
@@ -198,5 +198,3 @@ service cloud.firestore {
   }
 }
 
-
-    
