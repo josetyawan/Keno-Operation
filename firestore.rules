@@ -146,7 +146,7 @@ service cloud.firestore {
 
     match /attendances/{attendanceId} {
       allow get: if isOwner(resource.data.userId) || isAdmin() || isKorlap();
-      allow list: if isAdmin() || isKorlap();
+      allow list: if isApproved();
       allow create: if isCreatingOwn('userId');
       allow update, delete: if isAdmin();
     }
@@ -185,9 +185,7 @@ service cloud.firestore {
     match /performance/{performanceId} {
        // Allow admin/korlap to read anything.
        // Allow a regular user to read a document if their UID matches the userId field in the document.
-       // This rule is simple and directly supports the client-side query.
-       allow read: if isAdmin() || isKorlap() || 
-                   (isSignedIn() && resource.data.userId == request.auth.uid);
+       allow read: if isAdmin() || isKorlap() || (isSignedIn() && resource.data.userId == request.auth.uid);
 
        allow write: if isAdmin() || isKorlap();
     }
