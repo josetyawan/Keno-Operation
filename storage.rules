@@ -3,35 +3,30 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-  
-    // --- WRITE RULES ---
-    // These are specific rules. A user can only write to a folder that matches their UID.
 
-    // Allow writes for attendance photos
-    match /hr_attendance/{userId}/{filename} {
+    // Allow public read access to all files so the app can display them.
+    match /{allPaths=**} {
+      allow read;
+    }
+
+    // Allow a signed-in user to write to their own 'notas' folder.
+    match /notas/{userId}/{allPaths=**} {
+      allow write: if request.auth.uid == userId;
+    }
+
+    // Allow a signed-in user to write to their own 'hr_attendance' folder.
+    match /hr_attendance/{userId}/{allPaths=**} {
       allow write: if request.auth.uid == userId;
     }
     
-    // Allow writes for nota evidence
-    match /notas/{userId}/{filename} {
-      allow write: if request.auth.uid == userId;
-    }
-
-    // Allow writes for Gamas report photos
-    match /gamas-photos/{userId}/{filename} {
+    // Allow a signed-in user to write to their own 'gamas-photos' folder.
+    match /gamas-photos/{userId}/{allPaths=**} {
        allow write: if request.auth.uid == userId;
     }
 
-    // Allow writes for Alker checklist photos
-    match /alker-photos/{userId}/{filename} {
+    // Allow a signed-in user to write to their own 'alker-photos' folder.
+    match /alker-photos/{userId}/{allPaths=**} {
        allow write: if request.auth.uid == userId;
-    }
-
-    // --- READ RULE ---
-    // A single, global rule to allow public read access for all files.
-    // This is necessary for the app to display the uploaded images.
-    match /{allPaths=**} {
-      allow read;
     }
   }
 }
