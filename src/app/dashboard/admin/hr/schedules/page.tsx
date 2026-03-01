@@ -29,7 +29,7 @@ import { Progress } from '@/components/ui/progress';
 
 type ValidShiftType = 'piket-demak' | 'siang-malam' | 'malam' | 'ijin' | 'cuti' | 'weekend-duty' | 'holiday-duty' | 'tukar-jaga' ;
 
-function ScheduleForm({ schedule, users, onFormSubmit }: { schedule?: Schedule | null, users: UserProfile[], onFormSubmit: (data: Partial<Schedule>) => void }) {
+function ScheduleForm({ schedule, users, onFormSubmit }: { schedule?: Partial<Schedule> | null, users: UserProfile[], onFormSubmit: (data: Partial<Schedule>) => void }) {
     const [userId, setUserId] = useState('');
     const [date, setDate] = useState<Date | undefined>();
     const [shiftType, setShiftType] = useState<ValidShiftType>('piket-demak');
@@ -37,10 +37,10 @@ function ScheduleForm({ schedule, users, onFormSubmit }: { schedule?: Schedule |
 
     useEffect(() => {
         if (schedule) {
-            setUserId(schedule.userId);
-            setDate(schedule.date.toDate());
+            setUserId(schedule.userId || '');
+            setDate(schedule.date ? schedule.date.toDate() : undefined);
             const validTypes: ValidShiftType[] = ['piket-demak', 'siang-malam', 'malam', 'ijin', 'cuti', 'weekend-duty', 'holiday-duty', 'tukar-jaga'];
-            if (validTypes.includes(schedule.shiftType as any)) {
+            if (schedule.shiftType && validTypes.includes(schedule.shiftType as any)) {
                 setShiftType(schedule.shiftType as ValidShiftType);
             } else {
                 setShiftType('piket-demak');
@@ -140,10 +140,11 @@ export default function AdminSchedulesPage() {
     const { toast } = useToast();
 
     const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
-    const [scheduleToEdit, setScheduleToEdit] = useState<Schedule | null>(null);
+    const [scheduleToEdit, setScheduleToEdit] = useState<Partial<Schedule> | null>(null);
     const [scheduleToDelete, setScheduleToDelete] = useState<Schedule | null>(null);
     
     const [scheduleToApprove, setScheduleToApprove] = useState<Schedule | null>(null);
+    const [swapSourceSchedule, setSwapSourceSchedule] = useState<Schedule | null>(null);
     const [scheduleToReject, setScheduleToReject] = useState<Schedule | null>(null);
     const [isActionLoading, setIsActionLoading] = useState(false);
 
@@ -257,24 +258,44 @@ export default function AdminSchedulesPage() {
         setScheduleToDelete(null);
     };
     
-    const handleApprove = async () => {
-        if (!scheduleToApprove || !firestore) return;
-        setIsActionLoading(true);
-        const scheduleDocRef = doc(firestore, 'schedules', scheduleToApprove.id);
-        try {
-            await deleteDoc(scheduleDocRef);
-            toast({
-                title: 'Request Tukar Jaga Disetujui',
-                description: `Jadwal untuk ${scheduleToApprove.userName} telah dihapus. Harap buat jadwal baru secara manual untuk ${scheduleToApprove.swapTargetUserName}.`,
-                duration: 9000,
-            });
-        } catch (e) {
-            toast({ variant: 'destructive', title: 'Gagal Menyetujui' });
+    const handleApprove = () => {
+        if (!scheduleToApprove) return;
+    
+        const targetUserId = scheduleToApprove.swapTargetUserId;
+        const targetUser = activeUsers.find(u => u.id === targetUserId);
+
+        if (!targetUser && !scheduleToApprove.swapTargetUserName) {
+             toast({ variant: 'destructive', title: 'User Pengganti Tidak Valid', description: `Nama pengganti tidak ada.` });
+             setScheduleToApprove(null);
+             return;
         }
-        setIsActionLoading(false);
+
+        if (!targetUser && scheduleToApprove.swapTargetUserName) {
+             toast({
+                title: 'Tidak Bisa Membuat Jadwal Otomatis',
+                description: `User "${scheduleToApprove.swapTargetUserName}" tidak ditemukan atau tidak aktif. Hapus request dan buat jadwal baru secara manual.`,
+                duration: 8000
+             });
+             setScheduleToApprove(null);
+             return;
+        }
+        
+        if (targetUser) {
+            setScheduleToEdit({
+                userId: targetUser.id,
+                userEmail: targetUser.email,
+                date: scheduleToApprove.date,
+                shiftType: 'piket-demak',
+                notes: `Menggantikan ${scheduleToApprove.userName}`,
+            });
+
+            setSwapSourceSchedule(scheduleToApprove);
+            setIsFormDialogOpen(true);
+        }
+        
         setScheduleToApprove(null);
     };
-    
+
     const handleReject = async () => {
         if (!scheduleToReject || !firestore) return;
         setIsActionLoading(true);
@@ -283,7 +304,7 @@ export default function AdminSchedulesPage() {
             await deleteDoc(scheduleDocRef);
             toast({ 
                 title: 'Request Ditolak & Dihapus',
-                description: `Jadwal tukar jaga untuk ${scheduleToReject.userName} telah dihapus. Teknisi tersebut kini tidak memiliki jadwal pada hari itu.`,
+                description: `Jadwal tukar jaga untuk ${userMap.get(scheduleToReject.userId)} telah dihapus. Teknisi tersebut kini tidak memiliki jadwal pada hari itu.`,
                 duration: 9000,
             });
         } catch (e) {
@@ -336,18 +357,43 @@ export default function AdminSchedulesPage() {
         }
     };
 
-
     const handleFormSubmit = async (data: Partial<Schedule>) => {
         if (!firestore) return;
-        if (scheduleToEdit) {
+    
+        if (swapSourceSchedule) {
+            const batch = writeBatch(firestore);
+            
+            // 1. Create the new schedule for the replacement user
+            const replacementScheduleRef = doc(collection(firestore, 'schedules'));
+            batch.set(replacementScheduleRef, { ...data, id: replacementScheduleRef.id, createdAt: Timestamp.now() });
+
+            // 2. Delete the original 'tukar-jaga' request
+            const originalRequestRef = doc(firestore, 'schedules', swapSourceSchedule.id);
+            batch.delete(originalRequestRef);
+
+            await batch.commit();
+
+            const replacementUser = activeUsers.find(u => u.id === data.userId);
+            toast({
+                title: 'Tukar Jaga Berhasil Disetujui',
+                description: `Jadwal baru untuk ${replacementUser?.displayName} telah dibuat. Jadwal ${swapSourceSchedule.userName} telah dikosongkan.`,
+                duration: 7000
+            });
+
+            setSwapSourceSchedule(null);
+
+        } else if (scheduleToEdit?.id) {
+            // Standard update logic
             await updateDoc(doc(firestore, 'schedules', scheduleToEdit.id), data);
             toast({ title: 'Jadwal Diperbarui' });
         } else {
+            // Standard create logic
             const newDocRef = doc(collection(firestore, 'schedules'));
             await setDoc(newDocRef, { ...data, id: newDocRef.id, createdAt: Timestamp.now() });
             toast({ title: 'Jadwal Ditambahkan' });
         }
         setIsFormDialogOpen(false);
+        setScheduleToEdit(null);
     };
 
     const handleExportTemplate = async () => {
@@ -425,7 +471,6 @@ export default function AdminSchedulesPage() {
             }
             const worksheet = workbook.Sheets[sheetName];
 
-            // This ensures all values are read as their raw string representation.
             const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: null, raw: false });
     
             if (jsonData.length === 0) {
@@ -447,23 +492,13 @@ export default function AdminSchedulesPage() {
                 }
             });
 
-            // Expanded shift code map to recognize more variations
             const shiftCodeMap: Record<string, ValidShiftType> = {
-                // Piket Siang/Malam
                 'smc': 'siang-malam', 's/mc': 'siang-malam', 'sm': 'siang-malam',
-                // Piket Malam
                 'm': 'malam',
-                // Piket Demak
                 'pt/bd': 'piket-demak', 'pdm': 'piket-demak', 'ptm': 'piket-demak', 'pu': 'piket-demak', 'pb': 'piket-demak',
-                // Izin & Cuti
-                'i': 'ijin',
-                'c': 'cuti',
-                // Jaga (Duty on off-days) / Hadir (Present on workdays)
-                'h': 'weekend-duty', // Using 'weekend-duty' as a generic "on-duty" status
-                'p': 'weekend-duty', // 'P' for Pagi (Morning)
-                'jaga': 'weekend-duty',
-                'weekend': 'weekend-duty',
-                'holiday': 'holiday-duty',
+                'i': 'ijin', 'c': 'cuti',
+                'h': 'weekend-duty', 'p': 'weekend-duty',
+                'jaga': 'weekend-duty', 'weekend': 'weekend-duty', 'holiday': 'holiday-duty',
             };
             
             let processedRows = 0;
@@ -479,14 +514,10 @@ export default function AdminSchedulesPage() {
             });
     
             for (const row of jsonData) {
-                // Ensure NIK is read as a string for reliable matching
                 const nikFromExcel = String(row[nikHeader] || '').trim();
-                if (!nikFromExcel) {
-                    continue;
-                }
+                if (!nikFromExcel) continue;
     
                 const user = userMapByNik.get(nikFromExcel);
-
                 if (!user) {
                     errorCount++;
                     skippedUsers.add(nikFromExcel);
@@ -506,12 +537,9 @@ export default function AdminSchedulesPage() {
                         const scheduleDocRef = doc(firestore, "schedules", scheduleId);
         
                         const scheduleData: Omit<Schedule, 'id'> = {
-                            userId: user.id,
-                            userEmail: user.email,
-                            date: Timestamp.fromDate(date),
-                            shiftType: mappedShift,
-                            notes: '',
-                            createdAt: Timestamp.now(),
+                            userId: user.id, userEmail: user.email,
+                            date: Timestamp.fromDate(date), shiftType: mappedShift,
+                            notes: '', createdAt: Timestamp.now(),
                         };
         
                         batch.set(scheduleDocRef, scheduleData, { merge: true });
@@ -599,7 +627,7 @@ export default function AdminSchedulesPage() {
                         </DialogTrigger>
                         <DialogContent>
                             <DialogHeader>
-                                <DialogTitle>{scheduleToEdit ? 'Edit' : 'Buat'} Jadwal atau Status</DialogTitle>
+                                <DialogTitle>{scheduleToEdit?.id ? 'Edit' : 'Buat'} Jadwal atau Status</DialogTitle>
                             </DialogHeader>
                             <ScheduleForm schedule={scheduleToEdit} users={activeUsers} onFormSubmit={handleFormSubmit} />
                         </DialogContent>
@@ -694,9 +722,27 @@ export default function AdminSchedulesPage() {
                                         <TableCell className="text-right">
                                             {schedule.shiftType === 'tukar-jaga' ? (
                                                 <div className="flex justify-end items-center gap-1">
-                                                    <Button size="sm" variant="outline" className="h-8 px-2" onClick={() => setScheduleToApprove(schedule)}>
-                                                        <Check className="h-4 w-4" />
-                                                    </Button>
+                                                     <AlertDialog open={scheduleToApprove?.id === schedule.id} onOpenChange={(open) => !open && setScheduleToApprove(null)}>
+                                                        <AlertDialogTrigger asChild>
+                                                            <Button size="sm" variant="outline" className="h-8 px-2" onClick={() => setScheduleToApprove(schedule)}>
+                                                                <Check className="h-4 w-4" />
+                                                            </Button>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle>Setujui Tukar Jaga?</AlertDialogTitle>
+                                                                <AlertDialogDescription>
+                                                                    Anda akan diarahkan untuk membuat jadwal baru untuk <strong>{schedule.swapTargetUserName}</strong>. Jadwal lama ({schedule.userName}) akan otomatis dihapus setelahnya.
+                                                                </AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel>Batal</AlertDialogCancel>
+                                                                <AlertDialogAction onClick={handleApprove}>
+                                                                    Lanjutkan
+                                                                </AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
                                                     <Button size="sm" variant="destructive" className="h-8 px-2" onClick={() => setScheduleToReject(schedule)}>
                                                         <X className="h-4 w-4" />
                                                     </Button>
@@ -742,31 +788,13 @@ export default function AdminSchedulesPage() {
                     </div>
                 </CardFooter>
             </Card>
-
-            <AlertDialog open={!!scheduleToApprove} onOpenChange={(open) => !open && setScheduleToApprove(null)}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Setujui Tukar Jaga?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Jadwal untuk <strong>{scheduleToApprove?.userName}</strong> akan dihapus (menjadi libur). Anda harus membuat jadwal baru secara manual untuk <strong>{scheduleToApprove?.swapTargetUserName}</strong>.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Batal</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleApprove} disabled={isActionLoading}>
-                            {isActionLoading && <Loader2 className="mr-2 animate-spin" />}
-                            Ya, Setujui & Hapus Jadwal
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
             
             <AlertDialog open={!!scheduleToReject} onOpenChange={(open) => !open && setScheduleToReject(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Tolak & Hapus Request?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Tindakan ini akan menghapus request tukar jaga ini. Teknisi <strong>{scheduleToReject?.userName}</strong> menjadi tidak terjadwal pada hari tersebut.
+                            Tindakan ini akan menghapus request tukar jaga ini. Teknisi <strong>{userMap.get(scheduleToReject?.userId || '')}</strong> menjadi tidak terjadwal pada hari tersebut.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
