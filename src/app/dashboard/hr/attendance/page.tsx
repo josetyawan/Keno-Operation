@@ -601,17 +601,24 @@ export default function AttendancePage() {
     
     const attendanceQuery = useMemoFirebase(() => {
         if (!user) return null;
-        const startOfToday = today;
-        const endOfToday = add(startOfToday, { days: 1 });
         return query(
             collection(firestore, 'attendances'),
-            where('userId', '==', user.uid),
-            where('checkInTime', '>=', Timestamp.fromDate(startOfToday)),
-            where('checkInTime', '<', Timestamp.fromDate(endOfToday))
+            where('userId', '==', user.uid)
         );
-    }, [user, firestore, today]);
+    }, [user, firestore]);
     
-    const { data: userAttendances, isLoading: isAttendanceLoading } = useCollection<Attendance>(attendanceQuery);
+    const { data: allUserAttendances, isLoading: isAttendanceLoading } = useCollection<Attendance>(attendanceQuery);
+
+    const clientSideTodayAttendance = useMemo(() => {
+        if (!allUserAttendances) return null;
+        const startOfToday = today;
+        const endOfToday = add(startOfToday, { days: 1 });
+        return allUserAttendances.find(att => {
+            if (!att.checkInTime?.toDate) return false;
+            const checkIn = att.checkInTime.toDate();
+            return checkIn >= startOfToday && checkIn < endOfToday;
+        }) || null;
+    }, [allUserAttendances, today]);
     
     useEffect(() => {
         if (isUserLoading || isProfileLoading || isScheduleLoading || isAttendanceLoading || (canListUsers && areUsersLoading)) {
@@ -620,11 +627,11 @@ export default function AttendancePage() {
         }
 
         setTodaySchedule(schedules?.[0] || null);
-        setTodayAttendance(userAttendances?.[0] || null);
+        setTodayAttendance(clientSideTodayAttendance);
 
         setIsLoading(false);
     }, [
-        schedules, userAttendances, isUserLoading, isProfileLoading, 
+        schedules, clientSideTodayAttendance, isUserLoading, isProfileLoading, 
         isScheduleLoading, isAttendanceLoading, canListUsers, areUsersLoading
     ]);
     
