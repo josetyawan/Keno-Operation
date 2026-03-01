@@ -1,5 +1,3 @@
-
-
 import { Timestamp } from 'firebase/firestore';
 
 export type Nota = {
@@ -28,10 +26,13 @@ export type GamasReport = {
   id: string;
   userId: string;
   userName: string;
+  noTiket: string;
   designator: string;
   photoUrls: string[];
   notes?: string;
   createdAt: any; // Timestamp
+  status: 'pending' | 'approved' | 'rejected';
+  rejectionReason?: string;
 };
 
 export type Pendidikan = {
@@ -301,7 +302,3 @@ export type Performance = {
   totalPerformance: string;
   date: any; // Timestamp
 };
-
-    
-
-    

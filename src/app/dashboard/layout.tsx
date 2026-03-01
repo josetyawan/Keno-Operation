@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -76,6 +75,7 @@ const adminNavGroups = [
     icon: Building,
     links: [
       { href: '/dashboard/admin/pelanggan', label: 'Data Pelanggan', icon: Contact, access: 'korlap' },
+      { href: '/dashboard/admin/gamas-approval', label: 'Persetujuan Gamas', icon: ClipboardCheck, access: 'korlap' },
       { href: '/dashboard/admin/inventory/orbit', label: 'Inventory Orbit', icon: Component, access: 'admin' },
       { href: '/dashboard/admin/broadcast', label: 'Broadcast Pesan', icon: Send, access: 'admin' },
     ]
@@ -414,5 +414,3 @@ export default function DashboardLayout({
     </div>
   );
 }
-
-    
