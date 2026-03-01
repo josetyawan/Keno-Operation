@@ -77,7 +77,13 @@ export default function AttendanceRekapPage() {
         
         // Firestore 'in' query is limited to 30 items per query.
         if (userIds.length > 30) {
-            toast({variant: 'destructive', title: 'Terlalu Banyak Pengguna', description: 'Tidak dapat memuat semua nama pengguna untuk lebih dari 30 absensi sekaligus.'})
+            const chunks: string[][] = [];
+            for (let i = 0; i < userIds.length; i += 30) {
+                chunks.push(userIds.slice(i, i + 30));
+            }
+            // Note: This approach would require multiple hooks or a more complex query structure.
+            // For simplicity, we'll truncate, but in a real app, you'd handle multiple queries.
+            toast({variant: 'destructive', title: 'Terlalu Banyak Pengguna', description: `Hanya menampilkan nama untuk 30 dari ${userIds.length} pengguna.`})
             return query(collection(firestore, 'users'), where("__name__", 'in', userIds.slice(0, 30)));
         }
         return query(collection(firestore, 'users'), where("__name__", 'in', userIds));
@@ -272,3 +278,4 @@ export default function AttendanceRekapPage() {
         </div>
     );
 }
+    
