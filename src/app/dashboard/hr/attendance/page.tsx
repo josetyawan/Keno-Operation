@@ -329,6 +329,7 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished, userProfile, can
                 const scheduleId = `${user.uid}_${format(swapDate, 'yyyy-MM-dd')}`;
                 const scheduleDocRef = doc(firestore, "schedules", scheduleId);
                 const scheduleData = {
+                    id: scheduleId,
                     userId: user.uid, userEmail: user.email,
                     date: Timestamp.fromDate(swapDate),
                     shiftType: 'tukar-jaga',
@@ -365,6 +366,7 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished, userProfile, can
                 const scheduleId = `${user.uid}_${format(today, 'yyyy-MM-dd')}`;
                 const scheduleDocRef = doc(firestore, "schedules", scheduleId);
                 const scheduleData = {
+                    id: scheduleId,
                     userId: user.uid, userEmail: user.email,
                     date: Timestamp.fromDate(today),
                     shiftType: leaveType === 'sick-leave' ? 'ijin' : 'cuti',
@@ -598,7 +600,6 @@ export default function AttendancePage() {
     
     const attendanceQuery = useMemoFirebase(() => {
         if (!user) return null;
-        // Query all attendances for the user. Client-side filtering will find today's.
         return query(
             collection(firestore, 'attendances'),
             where('userId', '==', user.uid)
