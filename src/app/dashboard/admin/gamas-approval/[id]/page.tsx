@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { sendGamasReportNotice } from '@/ai/flows/send-gamas-report-notice';
 
 const safeToDate = (timestamp: any): Date | null => {
   if (!timestamp) return null;
@@ -60,14 +61,17 @@ export default function GamasApprovalDetailPage() {
   const { toast } = useToast();
 
   const reportRef = useMemoFirebase(() => doc(firestore, 'gamas-reports', id), [firestore, id]);
-  const { data: report, isLoading, mutate: revalidateReport } = useDoc<GamasReport>(reportRef);
+  const { data: report, isLoading } = useDoc<GamasReport>(reportRef);
 
   const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
   const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
 
   const [designatorToReject, setDesignatorToReject] = useState<DesignatorEvidence | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
-  const [isActionLoading, setIsActionLoading] = useState<string | boolean>(false); // Can be boolean for ticket-level or string for designator-level
+  const [isActionLoading, setIsActionLoading] = useState<string | boolean>(false);
+  const [isTicketRejectDialogOpen, setIsTicketRejectDialogOpen] = useState(false);
+  const [ticketRejectionReason, setTicketRejectionReason] = useState('');
+
 
   const canApprove = useMemo(() => {
     if (!userProfile) return false;
@@ -92,7 +96,6 @@ export default function GamasApprovalDetailPage() {
     try {
       await updateDoc(reportRef, { evidences: newEvidences });
       toast({ title: `Designator ${designatorCode} ${newStatus === 'approved' ? 'Disetujui' : 'Ditolak'}` });
-      revalidateReport();
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'Gagal Memperbarui', description: e.message });
     } finally {
@@ -107,12 +110,47 @@ export default function GamasApprovalDetailPage() {
     setIsActionLoading(true);
     try {
         await updateDoc(reportRef, { status: 'approved' });
+        
+        sendGamasReportNotice({
+            userName: report.userName,
+            noTiket: report.noTiket,
+            status: 'Disetujui',
+        }).catch(err => console.error("Telegram notification for approval failed:", err));
+
         toast({ title: 'Laporan Disetujui', description: 'Keseluruhan laporan telah ditandai sebagai disetujui.' });
         router.push('/dashboard/admin/gamas-approval');
     } catch (e: any) {
          toast({ variant: 'destructive', title: 'Gagal Menyetujui Laporan', description: e.message });
     } finally {
         setIsActionLoading(false);
+    }
+  };
+
+  const handleRejectTicket = async () => {
+    if (!report || !ticketRejectionReason.trim()) {
+        toast({ variant: 'destructive', title: 'Alasan Diperlukan', description: 'Mohon isi alasan penolakan tiket.' });
+        return;
+    }
+    setIsActionLoading(true);
+    const reason = ticketRejectionReason.trim();
+    try {
+        await updateDoc(reportRef, { status: 'rejected', rejectionReason: reason });
+        
+        sendGamasReportNotice({
+            userName: report.userName,
+            noTiket: report.noTiket,
+            status: 'Ditolak',
+            rejectionReason: reason,
+        }).catch(err => console.error("Telegram notification for rejection failed:", err));
+
+        toast({ title: 'Laporan Ditolak', description: 'Keseluruhan laporan telah ditandai sebagai ditolak.' });
+        router.push('/dashboard/admin/gamas-approval');
+    } catch (e: any) {
+        toast({ variant: 'destructive', title: 'Gagal Menolak Laporan', description: e.message });
+    } finally {
+        setIsActionLoading(false);
+        setIsTicketRejectDialogOpen(false);
+        setTicketRejectionReason('');
     }
   };
 
@@ -140,10 +178,15 @@ export default function GamasApprovalDetailPage() {
           <h1 className="text-xl font-bold tracking-tight">Tinjau Laporan Gamas: {report.noTiket}</h1>
           <p className="text-muted-foreground text-sm">Oleh: {report.userName}</p>
         </div>
-        <Button onClick={handleApproveTicket} disabled={!canApproveTicket || !!isActionLoading} className="ml-auto">
-            {isActionLoading === true ? <Loader2 className="animate-spin" /> : <CheckCircle className="mr-2"/>}
-            Approve Seluruh Tiket
-        </Button>
+         <div className="ml-auto flex items-center gap-2">
+            <Button variant="destructive" onClick={() => setIsTicketRejectDialogOpen(true)} disabled={!!isActionLoading}>
+                <ShieldX className="mr-2"/> Tolak Tiket
+            </Button>
+            <Button onClick={handleApproveTicket} disabled={!canApproveTicket || !!isActionLoading}>
+                {isActionLoading === true ? <Loader2 className="animate-spin" /> : <CheckCircle className="mr-2"/>}
+                Approve Tiket
+            </Button>
+        </div>
       </div>
       
       {report.evidences.map((evidence, index) => (
@@ -209,8 +252,31 @@ export default function GamasApprovalDetailPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      <AlertDialog open={isTicketRejectDialogOpen} onOpenChange={setIsTicketRejectDialogOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Tolak Seluruh Tiket: {report.noTiket}?</AlertDialogTitle>
+                <AlertDialogDescription>Berikan alasan mengapa seluruh laporan tiket ini ditolak. Notifikasi akan dikirimkan.</AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="py-4">
+                <Label htmlFor="ticket-rejection-reason" className="sr-only">Alasan Penolakan</Label>
+                <Textarea
+                    id="ticket-rejection-reason"
+                    placeholder="Contoh: Laporan tidak sesuai standar, bukti tidak lengkap..."
+                    value={ticketRejectionReason}
+                    onChange={(e) => setTicketRejectionReason(e.target.value)}
+                />
+            </div>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Batal</AlertDialogCancel>
+                <AlertDialogAction onClick={handleRejectTicket} disabled={!ticketRejectionReason.trim() || isActionLoading === true}>
+                    {isActionLoading === true && <Loader2 className="mr-2 animate-spin" />}
+                    Konfirmasi Penolakan
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </div>
   );
 }
-
-    
