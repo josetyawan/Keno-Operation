@@ -11,14 +11,16 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, FileWarning, Download, Image as ImageIcon, Check, X, Info } from 'lucide-react';
+import { ArrowLeft, FileWarning, Download, Image as ImageIcon, Check, X, Info, Edit } from 'lucide-react';
 import type { GamasReport, UserProfile, DesignatorEvidence } from '@/lib/types';
 import { useMemo, useState } from 'react';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
 
 
 const safeToDate = (timestamp: any): Date | null => {
@@ -92,6 +94,8 @@ export default function GamasDetailPage() {
     if (userProfile.role === 'admin' || userProfile.role === 'korlap') return true;
     return report.userId === user.uid;
   }, [userProfile, report, user]);
+  
+  const isOwner = user?.uid === report?.userId;
 
   const handleDownloadAll = () => {
     if (report?.evidences) {
@@ -140,7 +144,14 @@ export default function GamasDetailPage() {
             Dikirim oleh {report.userName} pada {dateCreated ? format(dateCreated, 'dd MMMM yyyy, HH:mm') : ''}
           </p>
         </div>
-         <Button onClick={handleDownloadAll} className="ml-auto"><Download className="mr-2"/>Download Semua Foto</Button>
+        <div className="ml-auto flex flex-wrap gap-2">
+            {isOwner && report.status === 'rejected' && (
+                <Link href={`/dashboard/gamas/${report.id}/edit`}>
+                    <Button><Edit className="mr-2"/>Edit & Kirim Ulang</Button>
+                </Link>
+            )}
+            <Button onClick={handleDownloadAll} variant="outline"><Download className="mr-2"/>Download Semua Foto</Button>
+        </div>
       </div>
 
       <Card>
@@ -191,5 +202,3 @@ export default function GamasDetailPage() {
     </>
   );
 }
-
-    

@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, where, doc, orderBy, updateDoc } from 'firebase/firestore';
+import { collection, query, where, doc, orderBy, updateDoc, deleteDoc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -13,8 +13,10 @@ import { format, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import type { GamasReport, UserProfile } from '@/lib/types';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, Eye } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Eye, Trash2, ShieldX } from 'lucide-react';
 import Link from 'next/link';
+import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
 
 const safeToDate = (timestamp: any): Date | null => {
   if (!timestamp) return null;
@@ -28,9 +30,11 @@ export default function GamasApprovalListPage() {
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const router = useRouter();
+  const { toast } = useToast();
 
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
+  const [reportToDelete, setReportToDelete] = useState<GamasReport | null>(null);
 
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
     useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
@@ -50,7 +54,6 @@ export default function GamasApprovalListPage() {
     const isAdminOrKorlap = currentUserProfile.role === 'admin' || currentUserProfile.role === 'korlap';
     if (!isAdminOrKorlap) return null;
 
-    // Fetch all reports ordered by creation date. Filtering will be done client-side.
     return query(collection(firestore, 'gamas-reports'), orderBy('createdAt', 'desc'));
   }, [firestore, currentUserProfile, isProfileLoading]);
 
@@ -69,6 +72,18 @@ export default function GamasApprovalListPage() {
     const endIndex = startIndex + ITEMS_PER_PAGE;
     return reports.slice(startIndex, endIndex);
   }, [reports, currentPage]);
+
+  const handleDeleteReport = async () => {
+    if (!reportToDelete) return;
+    const docRef = doc(firestore, 'gamas-reports', reportToDelete.id);
+    try {
+      await deleteDoc(docRef);
+      toast({ title: "Laporan Dihapus", description: `Laporan untuk tiket ${reportToDelete.noTiket} telah dihapus.` });
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: "Gagal Menghapus", description: e.message });
+    }
+    setReportToDelete(null);
+  };
   
   const isLoading = isUserLoading || isProfileLoading || areReportsLoading;
 
@@ -77,64 +92,83 @@ export default function GamasApprovalListPage() {
   }
 
   return (
-    <div className="space-y-6">
-       <div>
-            <h1 className="text-3xl font-bold tracking-tight">Persetujuan Laporan Gamas</h1>
-            <p className="text-muted-foreground mt-1">Tinjau dan kelola laporan eviden gamas yang masuk.</p>
-        </div>
-        <Card>
-            <CardHeader>
-                <CardTitle>Laporan Menunggu Persetujuan</CardTitle>
-                <CardDescription>Daftar laporan yang memerlukan tindakan Anda.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>No. Tiket</TableHead>
-                            <TableHead>Teknisi</TableHead>
-                            <TableHead>Tanggal</TableHead>
-                            <TableHead className="text-right">Aksi</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {isLoading ? (
-                            <TableRow><TableCell colSpan={4}><Skeleton className="h-10" /></TableCell></TableRow>
-                        ) : paginatedReports && paginatedReports.length > 0 ? (
-                            paginatedReports.map(report => (
-                                <TableRow key={report.id}>
-                                    <TableCell className="font-medium">{report.noTiket}</TableCell>
-                                    <TableCell>{report.userName}</TableCell>
-                                    <TableCell>{safeToDate(report.createdAt) ? format(safeToDate(report.createdAt)!, 'dd MMM yyyy, HH:mm') : '-'}</TableCell>
-                                    <TableCell className="text-right">
-                                        <Button asChild variant="outline" size="sm">
-                                            <Link href={`/dashboard/admin/gamas-approval/${report.id}`}><Eye className="mr-2 h-4 w-4" />Tinjau Laporan</Link>
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        ) : (
-                            <TableRow>
-                                <TableCell colSpan={4} className="h-24 text-center">
-                                    Tidak ada laporan yang menunggu persetujuan.
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-            </CardContent>
-            {totalPages > 1 && (
-                <CardFooter>
-                     <div className="text-xs text-muted-foreground">
-                        Halaman <strong>{currentPage}</strong> dari <strong>{totalPages}</strong>
-                    </div>
-                    <div className="flex items-center gap-2 ml-auto">
-                        <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1}><ChevronLeft className="h-4 w-4" /> Sebelumnya</Button>
-                        <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}>Berikutnya <ChevronRight className="h-4 w-4" /></Button>
-                    </div>
-                </CardFooter>
-            )}
-        </Card>
-    </div>
+    <>
+      <div className="space-y-6">
+        <div>
+              <h1 className="text-3xl font-bold tracking-tight">Persetujuan Laporan Gamas</h1>
+              <p className="text-muted-foreground mt-1">Tinjau dan kelola laporan eviden gamas yang masuk.</p>
+          </div>
+          <Card>
+              <CardHeader>
+                  <CardTitle>Laporan Menunggu Persetujuan</CardTitle>
+                  <CardDescription>Daftar laporan yang memerlukan tindakan Anda.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                  <Table>
+                      <TableHeader>
+                          <TableRow>
+                              <TableHead>No. Tiket</TableHead>
+                              <TableHead>Teknisi</TableHead>
+                              <TableHead>Tanggal</TableHead>
+                              <TableHead className="text-right">Aksi</TableHead>
+                          </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                          {isLoading ? (
+                              <TableRow><TableCell colSpan={4}><Skeleton className="h-10" /></TableCell></TableRow>
+                          ) : paginatedReports && paginatedReports.length > 0 ? (
+                              paginatedReports.map(report => (
+                                  <TableRow key={report.id}>
+                                      <TableCell className="font-medium">{report.noTiket}</TableCell>
+                                      <TableCell>{report.userName}</TableCell>
+                                      <TableCell>{safeToDate(report.createdAt) ? format(safeToDate(report.createdAt)!, 'dd MMM yyyy, HH:mm') : '-'}</TableCell>
+                                      <TableCell className="text-right">
+                                          <Button asChild variant="outline" size="sm">
+                                              <Link href={`/dashboard/admin/gamas-approval/${report.id}`}><Eye className="mr-2 h-4 w-4" />Tinjau Laporan</Link>
+                                          </Button>
+                                          <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                              <Button variant="ghost" size="icon" className="ml-2 text-destructive hover:text-destructive">
+                                                <Trash2 className="h-4 w-4" />
+                                              </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                              <AlertDialogHeader>
+                                                <AlertDialogTitle>Anda Yakin?</AlertDialogTitle>
+                                                <AlertDialogDescription>Tindakan ini akan menghapus laporan untuk tiket <strong>{report.noTiket}</strong> secara permanen.</AlertDialogDescription>
+                                              </AlertDialogHeader>
+                                              <AlertDialogFooter>
+                                                <AlertDialogCancel>Batal</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleDeleteReport(report)} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Hapus</AlertDialogAction>
+                                              </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                          </AlertDialog>
+                                      </TableCell>
+                                  </TableRow>
+                              ))
+                          ) : (
+                              <TableRow>
+                                  <TableCell colSpan={4} className="h-24 text-center">
+                                      Tidak ada laporan yang menunggu persetujuan.
+                                  </TableCell>
+                              </TableRow>
+                          )}
+                      </TableBody>
+                  </Table>
+              </CardContent>
+              {totalPages > 1 && (
+                  <CardFooter>
+                      <div className="text-xs text-muted-foreground">
+                          Halaman <strong>{currentPage}</strong> dari <strong>{totalPages}</strong>
+                      </div>
+                      <div className="flex items-center gap-2 ml-auto">
+                          <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1}><ChevronLeft className="h-4 w-4" /> Sebelumnya</Button>
+                          <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}>Berikutnya <ChevronRight className="h-4 w-4" /></Button>
+                      </div>
+                  </CardFooter>
+              )}
+          </Card>
+      </div>
+    </>
   )
 }
