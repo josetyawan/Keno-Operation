@@ -147,25 +147,38 @@ export default function GamasListPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="pl-6">Designator</TableHead>
+                  <TableHead className="pl-6">No. Tiket</TableHead>
                   <TableHead>Teknisi</TableHead>
+                  <TableHead>Designator</TableHead>
                   <TableHead>Jumlah Foto</TableHead>
-                  <TableHead>Tanggal Laporan</TableHead>
-                  <TableHead className="text-center pr-6">Aksi</TableHead>
+                  <TableHead className="w-[160px]">Tanggal Laporan</TableHead>
+                  <TableHead className="w-[150px] text-center pr-6">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedReports.map(report => (
+                {paginatedReports.map(report => {
+                  const designators = report.evidences.map(e => e.designator);
+                  const totalPhotos = report.evidences.reduce((acc, e) => acc + (e.photoUrls?.length || 0), 0);
+                  
+                  return (
                   <TableRow key={report.id}>
-                    <TableCell className="font-medium pl-6">{report.designator}</TableCell>
+                    <TableCell className="font-medium pl-6">{report.noTiket}</TableCell>
                     <TableCell>{report.userName}</TableCell>
-                    <TableCell><Badge variant="secondary">{report.photoUrls.length} Foto</Badge></TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1 max-w-[250px]">
+                          {designators.map((d: string) => (
+                              <Badge key={d} variant="outline">{d}</Badge>
+                          ))}
+                      </div>
+                    </TableCell>
+                    <TableCell><Badge variant="secondary">{totalPhotos} Foto</Badge></TableCell>
                     <TableCell>{safeToDate(report.createdAt) ? format(safeToDate(report.createdAt)!, 'dd MMM yyyy, HH:mm') : '-'}</TableCell>
                     <TableCell className="text-center pr-6">
                       <GamasActions report={report} />
                     </TableCell>
                   </TableRow>
-                ))}
+                  )
+                })}
               </TableBody>
             </Table>
           ) : (
