@@ -695,6 +695,7 @@ export default function AttendancePage() {
             
             await addDoc(collection(firestore, 'attendances'), newAttendance);
 
+            // Send notification after successful check-in
             sendAttendanceNotice({
                 userName: userProfile.displayName || user.email!,
                 status: 'Hadir Tepat Waktu',
