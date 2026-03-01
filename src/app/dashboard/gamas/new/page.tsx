@@ -16,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Loader2, Upload, X, FileWarning, ChevronsUpDown, Check, Camera } from 'lucide-react';
+import { ArrowLeft, Loader2, Upload, X, FileWarning, ChevronsUpDown, Check, Camera, PlusCircle } from 'lucide-react';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useFirestore, useUser, useStorage, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, serverTimestamp, doc, addDoc } from 'firebase/firestore';
@@ -33,6 +33,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
 
 
 export default function NewGamasReportPage() {
@@ -45,7 +46,7 @@ export default function NewGamasReportPage() {
 
   // Form state
   const [noTiket, setNoTiket] = useState('');
-  const [designator, setDesignator] = useState('');
+  const [selectedDesignators, setSelectedDesignators] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
   const [photos, setPhotos] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
@@ -82,6 +83,18 @@ export default function NewGamasReportPage() {
         d => d.code.toLowerCase().includes(lowercasedSearch) || d.description.toLowerCase().includes(lowercasedSearch)
     );
   }, [designatorSearch]);
+
+  const addDesignator = (code: string) => {
+    if (!selectedDesignators.includes(code)) {
+      setSelectedDesignators(prev => [...prev, code]);
+    }
+    setIsDesignatorOpen(false);
+    setDesignatorSearch('');
+  };
+
+  const removeDesignator = (codeToRemove: string) => {
+    setSelectedDesignators(prev => prev.filter(code => code !== codeToRemove));
+  };
 
   const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
@@ -175,14 +188,57 @@ export default function NewGamasReportPage() {
     }
   };
   
-  const fileToDataUrl = (file: File): Promise<string> => {
+  const compressImage = (file: File): Promise<Blob> => {
     return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(file);
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 1024;
+        const MAX_HEIGHT = 1024;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            return reject(new Error('Could not get canvas context'));
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve(blob);
+            } else {
+              reject(new Error('Canvas to Blob conversion failed'));
+            }
+          },
+          'image/jpeg',
+          0.75 // Compression quality
+        );
+        URL.revokeObjectURL(img.src);
+      };
+      img.onerror = (err) => {
+        URL.revokeObjectURL(img.src);
+        reject(err);
+      };
     });
   };
+
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -190,8 +246,8 @@ export default function NewGamasReportPage() {
       toast({ variant: 'destructive', title: 'Error', description: 'Pengguna tidak ditemukan.' });
       return;
     }
-    if (!noTiket.trim() || !designator) {
-      toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Silakan isi No. Tiket dan pilih designator.' });
+    if (!noTiket.trim() || selectedDesignators.length === 0) {
+      toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Silakan isi No. Tiket dan pilih setidaknya satu designator.' });
       return;
     }
     if (photos.length < 4) {
@@ -202,8 +258,15 @@ export default function NewGamasReportPage() {
     setIsSaving(true);
     
     try {
-        const dataUrlPromises = photos.map(fileToDataUrl);
-        const photoDataUrls = await Promise.all(dataUrlPromises);
+        const uploadPromises = photos.map(async (file) => {
+            const compressedBlob = await compressImage(file);
+            const filePath = `gamas-photos/${user.uid}/${Date.now()}-${file.name.split('.')[0]}.jpg`;
+            const storageRef = ref(storage, filePath);
+            await uploadBytes(storageRef, compressedBlob);
+            return getDownloadURL(storageRef);
+        });
+        
+        const uploadedUrls = await Promise.all(uploadPromises);
 
         const gamasCollection = collection(firestore, 'gamas-reports');
         
@@ -211,8 +274,8 @@ export default function NewGamasReportPage() {
             userId: user.uid,
             userName: userProfile.displayName || user.email!,
             noTiket: noTiket.trim(),
-            designator,
-            photoUrls: photoDataUrls,
+            designators: selectedDesignators,
+            photoUrls: uploadedUrls,
             notes,
             createdAt: serverTimestamp(),
             status: 'pending',
@@ -225,7 +288,7 @@ export default function NewGamasReportPage() {
 
     } catch (error) {
         console.error("Error creating Gamas report:", error);
-        toast({ variant: 'destructive', title: 'Gagal Menyimpan', description: 'Terjadi kesalahan saat menyimpan laporan.' });
+        toast({ variant: 'destructive', title: 'Gagal Menyimpan', description: 'Terjadi kesalahan saat mengunggah atau menyimpan laporan. Silakan coba lagi.' });
     } finally {
         setIsSaving(false);
     }
@@ -261,21 +324,25 @@ export default function NewGamasReportPage() {
                         <Input id="noTiket" placeholder="Contoh: INC12345678" value={noTiket} onChange={(e) => setNoTiket(e.target.value)} required />
                     </div>
                     <div className="grid gap-3">
-                        <Label htmlFor="designator">Designator *</Label>
+                        <Label>Designator *</Label>
+                        <div className="flex flex-wrap gap-2 mb-2 min-h-[24px]">
+                            {selectedDesignators.map(code => (
+                                <Badge key={code} variant="secondary" className="text-base">
+                                    {code}
+                                    <button type="button" onClick={() => removeDesignator(code)} className="ml-2 rounded-full p-0.5 hover:bg-destructive/20">
+                                        <X className="h-3 w-3" />
+                                    </button>
+                                </Badge>
+                            ))}
+                        </div>
                         <Popover open={isDesignatorOpen} onOpenChange={setIsDesignatorOpen}>
                             <PopoverTrigger asChild>
                                 <Button
                                     variant="outline"
-                                    role="combobox"
-                                    aria-expanded={isDesignatorOpen}
-                                    className="w-full justify-between font-normal"
+                                    className="w-full justify-start font-normal"
                                 >
-                                    <span className="truncate">
-                                        {designator
-                                            ? designatorListData.find((d) => d.code === designator)?.code
-                                            : "Pilih atau cari designator..."}
-                                    </span>
-                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    <PlusCircle className="mr-2 h-4 w-4" />
+                                    Tambah Designator...
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
@@ -294,11 +361,7 @@ export default function NewGamasReportPage() {
                                                 <button
                                                     type="button"
                                                     key={d.code}
-                                                    onClick={() => {
-                                                        setDesignator(d.code);
-                                                        setIsDesignatorOpen(false);
-                                                        setDesignatorSearch('');
-                                                    }}
+                                                    onClick={() => addDesignator(d.code)}
                                                     className={cn(
                                                         "w-full text-left p-2 rounded-md hover:bg-accent flex items-center justify-between",
                                                     )}
@@ -307,7 +370,6 @@ export default function NewGamasReportPage() {
                                                         <p className="font-medium text-sm">{d.code}</p>
                                                         <p className="text-xs text-muted-foreground">{d.description}</p>
                                                     </div>
-                                                    <Check className={cn("h-4 w-4", designator === d.code ? "opacity-100" : "opacity-0")} />
                                                 </button>
                                             ))
                                         ) : (
