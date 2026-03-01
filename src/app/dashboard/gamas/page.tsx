@@ -18,13 +18,25 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import { PlusCircle, FileWarning, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { useUser, useFirestore, useMemoFirebase, useDoc, useCollection } from '@/firebase';
-import { collection, query, where, orderBy, doc } from 'firebase/firestore';
+import { collection, query, where, orderBy, doc, deleteDoc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { GamasReport, UserProfile } from '@/lib/types';
@@ -73,6 +85,7 @@ export default function GamasListPage() {
     }
     
     // For regular technicians, fetch only their own documents without server-side ordering.
+    // This avoids needing a composite index. Sorting will be done client-side.
     return query(reportsCollectionRef, where('userId', '==', userProfile.id));
 
   }, [firestore, userProfile, isProfileLoading]);
