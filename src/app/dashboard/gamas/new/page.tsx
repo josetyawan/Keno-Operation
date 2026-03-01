@@ -13,7 +13,6 @@ import { ArrowLeft, Loader2, Upload, X, FileWarning, PlusCircle, Trash2, Check }
 import { useState, useEffect, useMemo } from 'react';
 import { useFirestore, useUser, useStorage, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, serverTimestamp, doc, addDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { GamasReport, UserProfile, DesignatorEvidence } from '@/lib/types';
 import Image from 'next/image';
 import { designatorListData } from '@/lib/designator-data';
@@ -68,7 +67,6 @@ export default function NewGamasReportPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
   const { user } = useUser();
-  const storage = useStorage();
   const [isSaving, setIsSaving] = useState(false);
 
   const userDocRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
@@ -90,13 +88,24 @@ export default function NewGamasReportPage() {
     append({ designator: '', notes: '', photos: [] });
   };
   
-  const compressImage = (file: File): Promise<Blob> => {
+  const compressImageToDataUrl = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const img = document.createElement('img');
-      img.src = URL.createObjectURL(file);
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        if(e.target && typeof e.target.result === 'string') {
+          img.src = e.target.result;
+        } else {
+          reject(new Error('Gagal membaca file.'));
+        }
+      }
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1024;
+        const MAX_WIDTH = 800; // Reduce size to avoid Firestore document limits
         let width = img.width;
         let height = img.height;
 
@@ -107,16 +116,12 @@ export default function NewGamasReportPage() {
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext('2d');
-        if (!ctx) return reject(new Error('Could not get canvas context'));
+        if (!ctx) return reject(new Error('Tidak dapat memuat konteks canvas'));
         ctx.drawImage(img, 0, 0, width, height);
-        canvas.toBlob((blob) => {
-            if (blob) resolve(blob);
-            else reject(new Error('Canvas to Blob conversion failed'));
-        }, 'image/jpeg', 0.8); // 80% quality
-        URL.revokeObjectURL(img.src);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.75); // 75% quality
+        resolve(dataUrl);
       };
       img.onerror = (err) => {
-        URL.revokeObjectURL(img.src);
         reject(err);
       };
     });
@@ -144,13 +149,7 @@ export default function NewGamasReportPage() {
     setIsSaving(true);
     try {
       const evidencePromises = data.evidences.map(async (evidence) => {
-        const photoUploadPromises = evidence.photos.map(async (file) => {
-          const compressedBlob = await compressImage(file);
-          const filePath = `gamas-photos/${user.uid}/${Date.now()}-${file.name.split('.')[0]}.jpg`;
-          const storageRef = ref(storage, filePath);
-          await uploadBytes(storageRef, compressedBlob);
-          return getDownloadURL(storageRef);
-        });
+        const photoUploadPromises = evidence.photos.map(file => compressImageToDataUrl(file));
         const photoUrls = await Promise.all(photoUploadPromises);
         return {
           designator: evidence.designator,
@@ -174,9 +173,13 @@ export default function NewGamasReportPage() {
       toast({ title: 'Laporan Berhasil Dibuat', description: 'Laporan eviden gamas Anda telah disimpan.' });
       router.push('/dashboard/gamas');
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating Gamas report:", error);
-      toast({ variant: "destructive", title: "Gagal Menyimpan", description: "Terjadi kesalahan saat mengunggah atau menyimpan laporan." });
+      let errorMessage = "Terjadi kesalahan saat menyimpan laporan.";
+      if (error.message && error.message.includes('longer than 1048487 bytes')) {
+          errorMessage = "Ukuran total file terlalu besar. Coba unggah lebih sedikit foto atau foto dengan resolusi lebih kecil.";
+      }
+      toast({ variant: "destructive", title: "Gagal Menyimpan", description: errorMessage });
     } finally {
       setIsSaving(false);
     }
