@@ -586,12 +586,16 @@ export default function AttendancePage() {
     const { data: allUsers, isLoading: areUsersLoading } = useCollection<UserProfile>(usersQuery);
 
     const today = useMemo(() => getStartOfDay(), []);
+    
     const scheduleQuery = useMemoFirebase(() => {
         if (!user) return null;
-        const scheduleId = `${user.uid}_${format(today, 'yyyy-MM-dd')}`;
+        const start = today; // today is already start of day from getStartOfDay()
+        const end = add(start, { days: 1 });
         return query(
             collection(firestore, 'schedules'),
-            where('__name__', '==', scheduleId),
+            where('userId', '==', user.uid),
+            where('date', '>=', Timestamp.fromDate(start)),
+            where('date', '<', Timestamp.fromDate(end)),
             limit(1)
         );
     }, [user, firestore, today]);
