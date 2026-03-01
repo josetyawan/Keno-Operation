@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -51,6 +50,38 @@ const getStatusVariant = (status: DesignatorEvidence['status']): "default" | "de
         default: return 'secondary';
     }
 };
+
+interface PhotoViewerProps {
+  url?: string | null;
+  label: string;
+}
+
+function PhotoViewer({ url, label }: PhotoViewerProps) {
+  const [isZoomed, setIsZoomed] = useState(false);
+  if (!url) {
+    return (
+      <div className="aspect-square w-full rounded-md bg-muted flex items-center justify-center text-xs text-muted-foreground">
+        Tidak Ada Foto
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <button onClick={() => setIsZoomed(true)} className="relative aspect-square w-full rounded-md overflow-hidden border cursor-zoom-in group">
+        <Image src={url} alt={label} fill className="object-cover transition-transform group-hover:scale-105" />
+      </button>
+      {isZoomed && (
+        <div
+          className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4 cursor-zoom-out"
+          onClick={() => setIsZoomed(false)}
+        >
+          <Image src={url} alt={label} width={1200} height={800} className="object-contain w-auto h-auto max-w-full max-h-[90vh]" />
+        </div>
+      )}
+    </>
+  );
+}
 
 export default function GamasApprovalDetailPage() {
   const params = useParams();
@@ -250,9 +281,7 @@ export default function GamasApprovalDetailPage() {
                 )}
                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {evidence.photoUrls.map((url, photoIndex) => (
-                        <div key={photoIndex} className="relative aspect-square w-full rounded-md overflow-hidden border">
-                             <Image src={url} alt={`Eviden ${evidence.designator} ${photoIndex + 1}`} fill className="object-cover" />
-                        </div>
+                        <PhotoViewer key={photoIndex} url={url} label={`Eviden ${evidence.designator} ${photoIndex + 1}`} />
                     ))}
                 </div>
             </CardContent>
