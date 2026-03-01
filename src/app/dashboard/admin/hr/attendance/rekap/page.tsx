@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -255,7 +256,7 @@ export default function AttendanceRekapPage() {
                 ) : attendances && attendances.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         {attendances.map(att => (
-                            <Card key={att.id} className="overflow-hidden break-inside-avoid">
+                            <Card key={att.id} className="overflow-hidden break-inside-avoid group relative">
                                 <div className="relative aspect-square w-full">
                                     <Image src={att.checkInPhotoUrl} alt={`Foto absen ${userMap.get(att.userId)}`} fill className="object-cover" />
                                 </div>
