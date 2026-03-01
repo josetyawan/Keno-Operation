@@ -396,7 +396,13 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished, userProfile, can
                     coordinates = `${position.coords.latitude}, ${position.coords.longitude}`;
                 }
                 
-                const photoUrl = selfie; // Use the data URL directly
+                // Convert data URL to blob and upload
+                const res = await fetch(selfie);
+                const blob = await res.blob();
+                const filePath = `hr_attendance/${user.uid}/${Date.now()}-izin.jpg`;
+                const storageRef = ref(storage, filePath);
+                await uploadBytes(storageRef, blob);
+                const photoUrl = await getDownloadURL(storageRef);
 
                 const attendanceData = {
                     userId: user.uid,
@@ -681,25 +687,29 @@ export default function AttendancePage() {
             if (!context) throw new Error('Could not get canvas context');
             context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
             
-            const photoDataUrl = canvas.toDataURL('image/jpeg', 0.8);
-            if (!photoDataUrl) throw new Error('Gagal membuat file gambar dari canvas.');
+            const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
+            if (!blob) throw new Error('Gagal membuat file gambar dari canvas.');
+
+            const filePath = `hr_attendance/${user.uid}/${Date.now()}.jpg`;
+            const storageRef = ref(storage, filePath);
+            await uploadBytes(storageRef, blob);
+            const photoUrl = await getDownloadURL(storageRef);
 
             const newAttendance: Omit<Attendance, 'id'> = {
                 userId: user.uid,
                 scheduleId: todaySchedule.id,
                 checkInTime: Timestamp.now(),
-                checkInPhotoUrl: photoDataUrl,
+                checkInPhotoUrl: photoUrl,
                 checkInCoordinates: coordinates,
                 status: 'present',
             };
             
             await addDoc(collection(firestore, 'attendances'), newAttendance);
 
-            // Send notification after successful check-in
             sendAttendanceNotice({
                 userName: userProfile.displayName || user.email!,
                 status: 'Hadir Tepat Waktu',
-                photoUrl: photoDataUrl,
+                photoUrl: photoUrl,
                 coordinates: coordinates,
             }).catch(err => console.error("Telegram notification failed:", err));
 

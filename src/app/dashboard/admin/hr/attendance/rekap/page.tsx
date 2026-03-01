@@ -1,10 +1,9 @@
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, where, Timestamp, doc, orderBy, writeBatch, deleteDoc } from 'firebase/firestore';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { collection, query, where, Timestamp, doc, orderBy, writeBatch } from 'firebase/firestore';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -13,7 +12,7 @@ import { id as idLocale } from 'date-fns/locale';
 import Image from 'next/image';
 import type { UserProfile, Attendance } from '@/lib/types';
 import { useRouter } from 'next/navigation';
-import { Calendar as CalendarIcon, Printer, MapPin, Download, Trash2, Loader2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Download, MapPin, Trash2, Loader2 } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -71,18 +70,26 @@ export default function AttendanceRekapPage() {
 
     const { data: attendances, isLoading: areAttendancesLoading } = useCollection<Attendance>(attendancesQuery);
     
-    const userIds = useMemo(() => {
-        if (!attendances) return [];
-        return [...new Set(attendances.map(a => a.userId))];
-    }, [attendances]);
-    
     const usersQuery = useMemoFirebase(() => {
-      if (userIds.length === 0) return null;
-      // Firestore 'in' query is limited to 30 items. Chunk the queries if necessary.
-      // For this page, we assume fetching all users is acceptable if the list is large.
-      // A more scalable solution for very large user bases would be to fetch users individually.
-      return query(collection(firestore, 'users'), where('id', 'in', userIds.slice(0, 30)));
-    }, [firestore, userIds]);
+        if (!attendances || attendances.length === 0) return null;
+        const userIds = [...new Set(attendances.map(a => a.userId))];
+        
+        // Firestore 'in' query is limited to 30 items. If more, we might need multiple queries.
+        if (userIds.length === 0) return null;
+
+        const chunks: string[][] = [];
+        for (let i = 0; i < userIds.length; i += 30) {
+            chunks.push(userIds.slice(i, i + 30));
+        }
+        
+        // This component doesn't combine results from multiple queries, so we'll just query the first chunk.
+        // For a fully scalable solution, a backend function or more complex client-side logic would be needed.
+        if(chunks.length > 1) {
+             toast({variant: 'destructive', title: 'Terlalu Banyak Pengguna', description: `Hanya nama untuk 30 dari ${userIds.length} pengguna pertama yang dapat ditampilkan.`})
+        }
+        
+        return query(collection(firestore, 'users'), where('id', 'in', chunks[0]));
+    }, [firestore, attendances, toast]);
     
     const { data: users, isLoading: areUsersLoading } = useCollection<UserProfile>(usersQuery);
 
