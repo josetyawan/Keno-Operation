@@ -10,7 +10,7 @@ import { z } from 'zod';
 import TelegramBot from 'node-telegram-bot-api';
 
 const TELEGRAM_BOT_TOKEN = '8043290500:AAGxBvwZvkyASJb3a_q8wEBiveyVE2NN9lY';
-const TELEGRAM_CHAT_ID = '-4190909912';
+const TELEGRAM_CHAT_ID = '-5007075772';
 
 const SendGamasReportNoticeInputSchema = z.object({
   userName: z.string(),
