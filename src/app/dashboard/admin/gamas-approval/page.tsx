@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -24,7 +23,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -170,12 +168,8 @@ export default function GamasApprovalPage() {
                                         <Button asChild variant="ghost" size="icon">
                                             <Link href={`/dashboard/gamas/${report.id}`}><Eye className="h-4 w-4" /></Link>
                                         </Button>
-                                        <AlertDialogTrigger asChild>
-                                            <Button variant="outline" size="sm" className="ml-2" onClick={() => setReportToReject(report)}><ShieldX className="h-4 w-4" /></Button>
-                                        </AlertDialogTrigger>
-                                         <AlertDialogTrigger asChild>
-                                            <Button variant="default" size="sm" className="ml-2" onClick={() => setReportToApprove(report)}><CheckCircle className="h-4 w-4" /></Button>
-                                        </AlertDialogTrigger>
+                                        <Button variant="outline" size="sm" className="ml-2" onClick={() => setReportToReject(report)}><ShieldX className="h-4 w-4" /></Button>
+                                        <Button variant="default" size="sm" className="ml-2" onClick={() => setReportToApprove(report)}><CheckCircle className="h-4 w-4" /></Button>
                                     </TableCell>
                                 </TableRow>
                                 )
