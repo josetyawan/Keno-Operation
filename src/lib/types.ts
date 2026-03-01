@@ -23,14 +23,18 @@ export type Nota = {
   tanggalPembayaran?: any;
 };
 
+export type DesignatorEvidence = {
+  designator: string;
+  notes?: string;
+  photoUrls: string[];
+};
+
 export type GamasReport = {
   id: string;
   userId: string;
   userName: string;
   noTiket: string;
-  designators: string[];
-  photoUrls: string[];
-  notes?: string;
+  evidences: DesignatorEvidence[];
   createdAt: any; // Timestamp
   status: 'pending' | 'approved' | 'rejected';
   rejectionReason?: string;

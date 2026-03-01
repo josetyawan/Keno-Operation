@@ -153,14 +153,14 @@ export default function GamasApprovalPage() {
                             <TableRow><TableCell colSpan={5}><Skeleton className="h-10" /></TableCell></TableRow>
                         ) : paginatedReports && paginatedReports.length > 0 ? (
                             paginatedReports.map(report => {
-                                const designatorList = Array.isArray(report.designators) ? report.designators : ((report as any).designator ? [(report as any).designator] : []);
+                                const designators = report.evidences.map(e => e.designator);
                                 return (
                                 <TableRow key={report.id}>
                                     <TableCell className="font-medium">{report.noTiket}</TableCell>
                                     <TableCell>{report.userName}</TableCell>
                                     <TableCell>
                                         <div className="flex flex-wrap gap-1 max-w-[250px]">
-                                            {designatorList.map((d: string) => (
+                                            {designators.map((d: string) => (
                                                 <Badge key={d} variant="outline">{d}</Badge>
                                             ))}
                                         </div>

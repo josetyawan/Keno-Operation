@@ -11,11 +11,12 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, FileWarning, Download } from 'lucide-react';
-import type { GamasReport, UserProfile } from '@/lib/types';
+import { ArrowLeft, FileWarning, Download, Image as ImageIcon } from 'lucide-react';
+import type { GamasReport, UserProfile, DesignatorEvidence } from '@/lib/types';
 import { useMemo, useState } from 'react';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
@@ -29,13 +30,40 @@ const safeToDate = (timestamp: any): Date | null => {
   return isValid(d) ? d : null;
 };
 
+function PhotoViewer({ url, label }: { url?: string; label: string }) {
+  const [isZoomed, setIsZoomed] = useState(false);
+
+  if (!url) {
+    return (
+      <div className="aspect-square w-full rounded-md bg-muted flex items-center justify-center text-xs text-muted-foreground">
+        Tidak Ada Foto
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <button onClick={() => setIsZoomed(true)} className="relative aspect-square w-full rounded-md overflow-hidden border cursor-zoom-in group">
+        <Image src={url} alt={label} fill className="object-cover transition-transform group-hover:scale-105" />
+      </button>
+      {isZoomed && (
+        <div
+          className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4 cursor-zoom-out"
+          onClick={() => setIsZoomed(false)}
+        >
+          <Image src={url} alt={label} width={1200} height={800} className="object-contain w-auto h-auto max-w-full max-h-[90vh]" />
+        </div>
+      )}
+    </>
+  );
+}
+
 export default function GamasDetailPage() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
   const { user } = useUser();
   const firestore = useFirestore();
-  const [zoomedImageUrl, setZoomedImageUrl] = useState<string | null>(null);
 
   const reportRef = useMemoFirebase(() => doc(firestore, 'gamas-reports', id), [firestore, id]);
   const { data: report, isLoading } = useDoc<GamasReport>(reportRef);
@@ -50,9 +78,9 @@ export default function GamasDetailPage() {
   }, [userProfile, report, user]);
 
   const handleDownloadAll = () => {
-    if (report?.photoUrls) {
-      report.photoUrls.forEach((url, index) => {
-        // Use a small delay to avoid browser pop-up blockers
+    if (report?.evidences) {
+      const allUrls = report.evidences.flatMap(e => e.photoUrls);
+      allUrls.forEach((url, index) => {
         setTimeout(() => {
           window.open(url, `_blank_photo_${index}`);
         }, index * 200);
@@ -80,8 +108,6 @@ export default function GamasDetailPage() {
   }
 
   const dateCreated = safeToDate(report.createdAt);
-  const designatorList = Array.isArray(report.designators) ? report.designators : ((report as any).designator ? [(report as any).designator] : []);
-
 
   return (
     <>
@@ -98,57 +124,42 @@ export default function GamasDetailPage() {
             Dikirim oleh {report.userName} pada {dateCreated ? format(dateCreated, 'dd MMMM yyyy, HH:mm') : ''}
           </p>
         </div>
+         <Button onClick={handleDownloadAll} className="ml-auto"><Download className="mr-2"/>Download Semua Foto</Button>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><FileWarning /> No. Tiket: {report.noTiket}</CardTitle>
+          <CardDescription>Status Laporan: <Badge variant={report.status === 'approved' ? 'default' : report.status === 'rejected' ? 'destructive' : 'secondary'}>{report.status}</Badge></CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-           <div>
-                <h3 className="font-semibold text-sm mb-2">Designator</h3>
-                <div className="flex flex-wrap gap-2">
-                    {designatorList.map((d: string) => (
-                        <Badge key={d} variant="secondary" className="text-base">{d}</Badge>
-                    ))}
+        {report.rejectionReason && (
+            <CardContent>
+                <div className="text-sm p-3 bg-destructive/10 text-destructive rounded-md border border-destructive/20">
+                    <p className="font-semibold">Alasan Penolakan:</p>
+                    <p>{report.rejectionReason}</p>
                 </div>
-           </div>
-           {report.notes && (
-                <div>
-                    <h3 className="font-semibold text-sm mb-2">Catatan</h3>
-                    <p className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-md">{report.notes}</p>
-                </div>
-            )}
-           <div>
-              <h3 className="font-semibold mb-2">Eviden Foto ({report.photoUrls.length})</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {report.photoUrls.map((url, index) => (
-                    <button key={index} onClick={() => setZoomedImageUrl(url)} className="relative aspect-square w-full rounded-md overflow-hidden border cursor-zoom-in group">
-                        <Image src={url} alt={`Eviden ${index + 1}`} fill className="object-cover transition-transform group-hover:scale-105" />
-                    </button>
-                ))}
-              </div>
-           </div>
-        </CardContent>
-        <CardFooter className="border-t pt-4">
-            <Button onClick={handleDownloadAll}><Download className="mr-2"/>Download Semua Foto</Button>
-        </CardFooter>
+            </CardContent>
+        )}
       </Card>
+      
+      <div className="space-y-6">
+        {report.evidences.map((evidence, index) => (
+            <Card key={index}>
+                <CardHeader>
+                    <CardTitle>{evidence.designator}</CardTitle>
+                    {evidence.notes && <CardDescription>{evidence.notes}</CardDescription>}
+                </CardHeader>
+                <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                        {evidence.photoUrls.map((url, photoIndex) => (
+                             <PhotoViewer key={photoIndex} url={url} label={`Eviden ${evidence.designator} ${photoIndex + 1}`} />
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
+        ))}
+      </div>
     </div>
-
-    {zoomedImageUrl && (
-        <div 
-            className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4 cursor-zoom-out"
-            onClick={() => setZoomedImageUrl(null)}
-        >
-            <div className="relative max-w-4xl max-h-full">
-                <Image src={zoomedImageUrl} alt="Eviden yang diperbesar" width={1200} height={800} className="object-contain w-auto h-auto max-w-full max-h-[90vh] cursor-default" onClick={(e) => e.stopPropagation()} />
-                <Button variant="destructive" size="icon" className="absolute -top-2 -right-2 h-8 w-8 z-10 rounded-full" onClick={() => setZoomedImageUrl(null)}>
-                    <X className="h-5 w-5" /><span className="sr-only">Tutup Zoom</span>
-                </Button>
-            </div>
-        </div>
-      )}
     </>
   );
 }

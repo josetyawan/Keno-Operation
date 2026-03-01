@@ -88,6 +88,21 @@
       },
       "required": ["id", "userId", "userEmail", "tanggal", "segmen", "serviceArea", "nominal", "namaPic", "dateCreated", "status"]
     },
+    "DesignatorEvidence": {
+      "title": "Designator Evidence",
+      "type": "object",
+      "description": "Represents the evidence (photos and notes) for a single designator within a Gamas Report.",
+      "properties": {
+        "designator": { "type": "string", "description": "The designator code for this piece of evidence." },
+        "notes": { "type": "string", "description": "Specific notes for this designator." },
+        "photoUrls": {
+          "type": "array",
+          "description": "A list of photo URLs for this designator's evidence.",
+          "items": { "type": "string", "format": "uri" }
+        }
+      },
+      "required": ["designator", "photoUrls"]
+    },
     "GamasReport": {
       "title": "Gamas Report",
       "type": "object",
@@ -97,18 +112,16 @@
         "userId": { "type": "string", "description": "The ID of the user who created the report." },
         "userName": { "type": "string", "description": "Denormalized name of the user for display." },
         "noTiket": { "type": "string", "description": "The incident ticket number (e.g., INC...)." },
-        "designators": {
+        "evidences": {
           "type": "array",
-          "description": "A list of selected designators for the report.",
-          "items": { "type": "string" }
+          "description": "An array of evidence objects, one for each designator.",
+          "items": { "$ref": "#/backend/entities/DesignatorEvidence" }
         },
-        "photoUrls": { "type": "array", "items": { "type": "string", "format": "uri" } },
-        "notes": { "type": "string", "description": "Additional notes for the report." },
         "createdAt": { "type": "string", "format": "date-time" },
         "status": { "type": "string", "description": "The approval status of the report.", "enum": ["pending", "approved", "rejected"] },
         "rejectionReason": { "type": "string", "description": "The reason for rejection, if applicable." }
       },
-      "required": ["id", "userId", "userName", "noTiket", "designators", "photoUrls", "createdAt", "status"]
+      "required": ["id", "userId", "userName", "noTiket", "evidences", "createdAt", "status"]
     },
     "ProjectID": {
       "$schema": "http://json-schema.org/draft-07/schema#",
