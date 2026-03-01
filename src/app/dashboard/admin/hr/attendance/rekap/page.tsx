@@ -70,25 +70,7 @@ export default function AttendanceRekapPage() {
 
     const { data: attendances, isLoading: areAttendancesLoading } = useCollection<Attendance>(attendancesQuery);
     
-    const usersQuery = useMemoFirebase(() => {
-        if (!attendances || attendances.length === 0) return null;
-        const userIds = [...new Set(attendances.map(a => a.userId))].filter(Boolean); // Filter out any undefined/null userIds
-        if (userIds.length === 0) return null;
-        
-        // Firestore 'in' query is limited to 30 items per query.
-        if (userIds.length > 30) {
-            const chunks: string[][] = [];
-            for (let i = 0; i < userIds.length; i += 30) {
-                chunks.push(userIds.slice(i, i + 30));
-            }
-            // Note: This approach would require multiple hooks or a more complex query structure.
-            // For simplicity, we'll truncate, but in a real app, you'd handle multiple queries.
-            toast({variant: 'destructive', title: 'Terlalu Banyak Pengguna', description: `Hanya menampilkan nama untuk 30 dari ${userIds.length} pengguna.`})
-            return query(collection(firestore, 'users'), where("__name__", 'in', userIds.slice(0, 30)));
-        }
-        return query(collection(firestore, 'users'), where("__name__", 'in', userIds));
-    }, [firestore, attendances, toast]);
-    
+    const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
     const { data: users, isLoading: areUsersLoading } = useCollection<UserProfile>(usersQuery);
 
     const userMap = useMemo(() => {
@@ -113,13 +95,12 @@ export default function AttendanceRekapPage() {
         });
 
         try {
-            // Give browser time to render images before capturing
             await new Promise(resolve => setTimeout(resolve, 500));
 
             const dataUrl = await toJpeg(printableArea, { 
                 quality: 0.95,
                 backgroundColor: '#ffffff',
-                pixelRatio: 2, // Increase resolution for better quality
+                pixelRatio: 2,
              });
             const link = document.createElement('a');
             const dateString = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : 'rekap';
@@ -221,25 +202,27 @@ export default function AttendanceRekapPage() {
                     <h2 className="text-2xl font-bold">Laporan Absensi - {selectedDate ? format(selectedDate, 'dd MMMM yyyy', {locale: idLocale}) : ''}</h2>
                     <div className="flex gap-2 no-print">
                         <Button onClick={handleDownloadJpg} disabled={!attendances || attendances.length === 0}><Download className="mr-2 h-4 w-4" /> Download JPG</Button>
-                        <AlertDialog open={isDeleteAllDialogOpen} onOpenChange={setIsDeleteAllDialogOpen}>
-                            <AlertDialogTrigger asChild>
-                                <Button variant="destructive" disabled={!attendances || attendances.length === 0}><Trash2 className="mr-2 h-4 w-4" /> Hapus Semua</Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle>Anda Yakin?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        Tindakan ini akan menghapus semua <strong>({attendances?.length || 0})</strong> data absensi untuk tanggal <strong>{selectedDate ? format(selectedDate, 'dd MMM yyyy') : ''}</strong> secara permanen. Tindakan ini tidak dapat dibatalkan.
-                                    </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel>Batal</AlertDialogCancel>
-                                    <AlertDialogAction onClick={handleDeleteAll} disabled={isDeletingAll} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-                                        {isDeletingAll ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Ya, Hapus Semua'}
-                                    </AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
+                        {(currentUserProfile?.role === 'admin' || currentUserProfile?.role === 'korlap') && (
+                            <AlertDialog open={isDeleteAllDialogOpen} onOpenChange={setIsDeleteAllDialogOpen}>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive" disabled={!attendances || attendances.length === 0 || isDeletingAll}><Trash2 className="mr-2 h-4 w-4" /> Hapus Semua</Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Anda Yakin?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            Tindakan ini akan menghapus semua <strong>({attendances?.length || 0})</strong> data absensi untuk tanggal <strong>{selectedDate ? format(selectedDate, 'dd MMM yyyy') : ''}</strong> secara permanen. Tindakan ini tidak dapat dibatalkan.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Batal</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleDeleteAll} disabled={isDeletingAll} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                                            {isDeletingAll ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Ya, Hapus Semua'}
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        )}
                     </div>
                 </div>
 
@@ -278,4 +261,3 @@ export default function AttendanceRekapPage() {
         </div>
     );
 }
-    
