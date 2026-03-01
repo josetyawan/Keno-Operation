@@ -3,8 +3,8 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, deleteDoc as deleteDocument } from '@/firebase';
-import { collection, query, doc, orderBy, Timestamp, writeBatch, setDoc, getDocs, limit, updateDoc } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query, doc, orderBy, Timestamp, writeBatch, setDoc, getDocs, limit, updateDoc, deleteDoc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -154,6 +154,7 @@ export default function AdminSchedulesPage() {
 
     const [isDeletingAll, setIsDeletingAll] = useState(false);
     const [isDeleteAllDialogOpen, setIsDeleteAllDialogOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 5;
 
@@ -203,28 +204,36 @@ export default function AdminSchedulesPage() {
         return new Map(users.map(u => [u.id, u.displayName || u.email]));
     }, [users]);
     
-    const sortedSchedules = useMemo(() => {
+    const filteredAndSortedSchedules = useMemo(() => {
         if (!schedules) return [];
-        return [...schedules].sort((a, b) => {
+
+        const filtered = searchQuery
+            ? schedules.filter(s => {
+                const userName = userMap.get(s.userId) || s.userEmail;
+                return userName.toLowerCase().includes(searchQuery.toLowerCase());
+            })
+            : schedules;
+
+        return [...filtered].sort((a, b) => {
             const nameA = userMap.get(a.userId) || a.userEmail;
             const nameB = userMap.get(b.userId) || b.userEmail;
             if (nameA < nameB) return -1;
             if (nameA > nameB) return 1;
             return b.date.toDate().getTime() - a.date.toDate().getTime();
         });
-    }, [schedules, userMap]);
+    }, [schedules, userMap, searchQuery]);
 
-    const totalPages = Math.ceil(sortedSchedules.length / ITEMS_PER_PAGE);
+    const totalPages = Math.ceil(filteredAndSortedSchedules.length / ITEMS_PER_PAGE);
 
     const paginatedSchedules = useMemo(() => {
         const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
         const endIndex = startIndex + ITEMS_PER_PAGE;
-        return sortedSchedules.slice(startIndex, endIndex);
-    }, [sortedSchedules, currentPage]);
+        return filteredAndSortedSchedules.slice(startIndex, endIndex);
+    }, [filteredAndSortedSchedules, currentPage]);
     
     useEffect(() => {
         setCurrentPage(1);
-    }, []);
+    }, [searchQuery]);
 
 
     const handleCreate = () => {
@@ -253,13 +262,12 @@ export default function AdminSchedulesPage() {
         setIsActionLoading(true);
         const scheduleDocRef = doc(firestore, 'schedules', scheduleToApprove.id);
         try {
-            await updateDoc(scheduleDocRef, {
-                shiftType: 'ijin',
-                notes: `[DISETUJUI] ${scheduleToApprove.notes || 'Tukar Jaga'} dengan ${scheduleToApprove.swapTargetUserName}`,
-                swapTargetUserId: '',
-                swapTargetUserName: '',
+            await deleteDoc(scheduleDocRef);
+            toast({
+                title: 'Request Tukar Jaga Disetujui',
+                description: `Jadwal untuk ${scheduleToApprove.userName} telah dihapus. Harap buat jadwal baru secara manual untuk ${scheduleToApprove.swapTargetUserName}.`,
+                duration: 9000,
             });
-            toast({ title: 'Request Disetujui', description: 'Jadwal teknisi telah diubah menjadi "Ijin".' });
         } catch (e) {
             toast({ variant: 'destructive', title: 'Gagal Menyetujui' });
         }
@@ -273,7 +281,11 @@ export default function AdminSchedulesPage() {
         const scheduleDocRef = doc(firestore, 'schedules', scheduleToReject.id);
         try {
             await deleteDoc(scheduleDocRef);
-            toast({ title: 'Request Ditolak & Dihapus' });
+            toast({ 
+                title: 'Request Ditolak & Dihapus',
+                description: `Jadwal tukar jaga untuk ${scheduleToReject.userName} telah dihapus. Teknisi tersebut kini tidak memiliki jadwal pada hari itu.`,
+                duration: 9000,
+            });
         } catch (e) {
              toast({ variant: 'destructive', title: 'Gagal Menolak' });
         }
@@ -638,7 +650,18 @@ export default function AdminSchedulesPage() {
             </Card>
 
             <Card>
-                <CardHeader><CardTitle>Daftar Jadwal</CardTitle><CardDescription>Semua jadwal & status yang telah dibuat, diurutkan berdasarkan nama.</CardDescription></CardHeader>
+                <CardHeader>
+                    <CardTitle>Daftar Jadwal</CardTitle>
+                    <CardDescription>Semua jadwal & status yang telah dibuat, diurutkan berdasarkan nama.</CardDescription>
+                    <div className="pt-4">
+                        <Input
+                            placeholder="Cari nama teknisi..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="max-w-sm"
+                        />
+                    </div>
+                </CardHeader>
                 <CardContent>
                     <Table>
                         <TableHeader>
@@ -725,14 +748,14 @@ export default function AdminSchedulesPage() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Setujui Tukar Jaga?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Ini akan mengubah status jadwal <strong>{scheduleToApprove?.userName}</strong> menjadi &quot;Ijin&quot;. Anda perlu membuat jadwal baru secara manual untuk <strong>{scheduleToApprove?.swapTargetUserName}</strong>.
+                            Jadwal untuk <strong>{scheduleToApprove?.userName}</strong> akan dihapus (menjadi libur). Anda harus membuat jadwal baru secara manual untuk <strong>{scheduleToApprove?.swapTargetUserName}</strong>.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Batal</AlertDialogCancel>
                         <AlertDialogAction onClick={handleApprove} disabled={isActionLoading}>
                             {isActionLoading && <Loader2 className="mr-2 animate-spin" />}
-                            Ya, Setujui
+                            Ya, Setujui & Hapus Jadwal
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
