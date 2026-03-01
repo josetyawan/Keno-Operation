@@ -1,9 +1,8 @@
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, where, Timestamp, doc, orderBy, documentId, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, query, where, Timestamp, doc, orderBy, writeBatch, deleteDoc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -73,14 +72,15 @@ export default function AttendanceRekapPage() {
     
     const usersQuery = useMemoFirebase(() => {
         if (!attendances || attendances.length === 0) return null;
-        const userIds = [...new Set(attendances.map(a => a.userId))];
+        const userIds = [...new Set(attendances.map(a => a.userId))].filter(Boolean); // Filter out any undefined/null userIds
         if (userIds.length === 0) return null;
+        
         // Firestore 'in' query is limited to 30 items per query.
         if (userIds.length > 30) {
             toast({variant: 'destructive', title: 'Terlalu Banyak Pengguna', description: 'Tidak dapat memuat semua nama pengguna untuk lebih dari 30 absensi sekaligus.'})
-            return query(collection(firestore, 'users'), where(documentId(), 'in', userIds.slice(0, 30)));
+            return query(collection(firestore, 'users'), where("__name__", 'in', userIds.slice(0, 30)));
         }
-        return query(collection(firestore, 'users'), where(documentId(), 'in', userIds));
+        return query(collection(firestore, 'users'), where("__name__", 'in', userIds));
     }, [firestore, attendances, toast]);
     
     const { data: users, isLoading: areUsersLoading } = useCollection<UserProfile>(usersQuery);
