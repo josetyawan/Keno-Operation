@@ -152,11 +152,19 @@ export default function GamasApprovalPage() {
                         {isLoading ? (
                             <TableRow><TableCell colSpan={5}><Skeleton className="h-10" /></TableCell></TableRow>
                         ) : paginatedReports && paginatedReports.length > 0 ? (
-                            paginatedReports.map(report => (
+                            paginatedReports.map(report => {
+                                const designatorList = Array.isArray(report.designators) ? report.designators : ((report as any).designator ? [(report as any).designator] : []);
+                                return (
                                 <TableRow key={report.id}>
                                     <TableCell className="font-medium">{report.noTiket}</TableCell>
                                     <TableCell>{report.userName}</TableCell>
-                                    <TableCell><Badge variant="outline">{report.designator}</Badge></TableCell>
+                                    <TableCell>
+                                        <div className="flex flex-wrap gap-1 max-w-[250px]">
+                                            {designatorList.map((d: string) => (
+                                                <Badge key={d} variant="outline">{d}</Badge>
+                                            ))}
+                                        </div>
+                                    </TableCell>
                                     <TableCell>{safeToDate(report.createdAt) ? format(safeToDate(report.createdAt)!, 'dd MMM yyyy, HH:mm') : '-'}</TableCell>
                                     <TableCell className="text-right">
                                         <Button asChild variant="ghost" size="icon">
@@ -170,7 +178,8 @@ export default function GamasApprovalPage() {
                                         </AlertDialogTrigger>
                                     </TableCell>
                                 </TableRow>
-                            ))
+                                )
+                            })
                         ) : (
                             <TableRow>
                                 <TableCell colSpan={6} className="h-24 text-center">

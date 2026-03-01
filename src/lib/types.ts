@@ -28,7 +28,7 @@ export type GamasReport = {
   userId: string;
   userName: string;
   noTiket: string;
-  designator: string;
+  designators: string[];
   photoUrls: string[];
   notes?: string;
   createdAt: any; // Timestamp

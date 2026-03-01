@@ -18,7 +18,8 @@ import { ArrowLeft, FileWarning, Download } from 'lucide-react';
 import type { GamasReport, UserProfile } from '@/lib/types';
 import { useMemo, useState } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
+import { Badge } from '@/components/ui/badge';
+
 
 const safeToDate = (timestamp: any): Date | null => {
   if (!timestamp) return null;
@@ -79,6 +80,8 @@ export default function GamasDetailPage() {
   }
 
   const dateCreated = safeToDate(report.createdAt);
+  const designatorList = Array.isArray(report.designators) ? report.designators : ((report as any).designator ? [(report as any).designator] : []);
+
 
   return (
     <>
@@ -99,18 +102,33 @@ export default function GamasDetailPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><FileWarning /> Designator: {report.designator}</CardTitle>
-          {report.notes && <CardDescription>Catatan: {report.notes}</CardDescription>}
+          <CardTitle className="flex items-center gap-2"><FileWarning /> No. Tiket: {report.noTiket}</CardTitle>
         </CardHeader>
-        <CardContent>
-          <h3 className="font-semibold mb-4">Eviden Foto ({report.photoUrls.length})</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {report.photoUrls.map((url, index) => (
-                <button key={index} onClick={() => setZoomedImageUrl(url)} className="relative aspect-square w-full rounded-md overflow-hidden border cursor-zoom-in group">
-                    <Image src={url} alt={`Eviden ${index + 1}`} fill className="object-cover transition-transform group-hover:scale-105" />
-                </button>
-            ))}
-          </div>
+        <CardContent className="space-y-6">
+           <div>
+                <h3 className="font-semibold text-sm mb-2">Designator</h3>
+                <div className="flex flex-wrap gap-2">
+                    {designatorList.map((d: string) => (
+                        <Badge key={d} variant="secondary" className="text-base">{d}</Badge>
+                    ))}
+                </div>
+           </div>
+           {report.notes && (
+                <div>
+                    <h3 className="font-semibold text-sm mb-2">Catatan</h3>
+                    <p className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-md">{report.notes}</p>
+                </div>
+            )}
+           <div>
+              <h3 className="font-semibold mb-2">Eviden Foto ({report.photoUrls.length})</h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {report.photoUrls.map((url, index) => (
+                    <button key={index} onClick={() => setZoomedImageUrl(url)} className="relative aspect-square w-full rounded-md overflow-hidden border cursor-zoom-in group">
+                        <Image src={url} alt={`Eviden ${index + 1}`} fill className="object-cover transition-transform group-hover:scale-105" />
+                    </button>
+                ))}
+              </div>
+           </div>
         </CardContent>
         <CardFooter className="border-t pt-4">
             <Button onClick={handleDownloadAll}><Download className="mr-2"/>Download Semua Foto</Button>
@@ -134,5 +152,3 @@ export default function GamasDetailPage() {
     </>
   );
 }
-
-    

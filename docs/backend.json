@@ -97,14 +97,18 @@
         "userId": { "type": "string", "description": "The ID of the user who created the report." },
         "userName": { "type": "string", "description": "Denormalized name of the user for display." },
         "noTiket": { "type": "string", "description": "The incident ticket number (e.g., INC...)." },
-        "designator": { "type": "string", "description": "The selected designator for the report." },
+        "designators": {
+          "type": "array",
+          "description": "A list of selected designators for the report.",
+          "items": { "type": "string" }
+        },
         "photoUrls": { "type": "array", "items": { "type": "string", "format": "uri" } },
         "notes": { "type": "string", "description": "Additional notes for the report." },
         "createdAt": { "type": "string", "format": "date-time" },
         "status": { "type": "string", "description": "The approval status of the report.", "enum": ["pending", "approved", "rejected"] },
         "rejectionReason": { "type": "string", "description": "The reason for rejection, if applicable." }
       },
-      "required": ["id", "userId", "userName", "noTiket", "designator", "photoUrls", "createdAt", "status"]
+      "required": ["id", "userId", "userName", "noTiket", "designators", "photoUrls", "createdAt", "status"]
     },
     "ProjectID": {
       "$schema": "http://json-schema.org/draft-07/schema#",
