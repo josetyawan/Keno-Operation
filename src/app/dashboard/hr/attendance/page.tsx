@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
@@ -742,7 +743,7 @@ export default function AttendancePage() {
                         handleCheckIn={handleCheckIn}
                     />
                     <div className="mt-6 border-t pt-6">
-                        <Dialog open={isLeaveDialogOpen} onOpenChange={setIsLeaveDialogOpen}>
+                        <Dialog open={isLeaveDialogOpen} onOpenChange={setIsLeaveDialogOpen} modal={false}>
                             <DialogTrigger asChild>
                                 <Button variant="outline" className="w-full">
                                     <FileWarning className="mr-2 h-4 w-4" /> Tidak Bisa Hadir / Terlambat?

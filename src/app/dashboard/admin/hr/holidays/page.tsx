@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -184,7 +185,7 @@ export default function AdminHolidaysPage() {
                     <h1 className="text-3xl font-bold tracking-tight">Manajemen Hari Libur</h1>
                     <p className="text-muted-foreground mt-1">Kelola tanggal merah nasional dan cuti bersama.</p>
                 </div>
-                <Dialog open={isFormDialogOpen} onOpenChange={setIsFormDialogOpen}>
+                <Dialog open={isFormDialogOpen} onOpenChange={setIsFormDialogOpen} modal={false}>
                     <DialogTrigger asChild><Button onClick={handleCreate}><PlusCircle className="mr-2 h-4 w-4" />Tambah Hari Libur</Button></DialogTrigger>
                     <DialogContent><DialogHeader><DialogTitle>{holidayToEdit ? 'Edit' : 'Tambah'} Hari Libur</DialogTitle></DialogHeader><HolidayForm holiday={holidayToEdit} onFormSubmit={handleFormSubmit} /></DialogContent>
                 </Dialog>
