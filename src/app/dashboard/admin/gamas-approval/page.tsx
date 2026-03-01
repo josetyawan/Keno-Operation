@@ -50,11 +50,16 @@ export default function GamasApprovalListPage() {
     const isAdminOrKorlap = currentUserProfile.role === 'admin' || currentUserProfile.role === 'korlap';
     if (!isAdminOrKorlap) return null;
 
-    // Fetch only reports that are pending overall
-    return query(collection(firestore, 'gamas-reports'), where('status', '==', 'pending'), orderBy('createdAt', 'desc'));
+    // Fetch all reports ordered by creation date. Filtering will be done client-side.
+    return query(collection(firestore, 'gamas-reports'), orderBy('createdAt', 'desc'));
   }, [firestore, currentUserProfile, isProfileLoading]);
 
-  const { data: reports, isLoading: areReportsLoading } = useCollection<GamasReport>(reportsQuery);
+  const { data: allReports, isLoading: areReportsLoading } = useCollection<GamasReport>(reportsQuery);
+
+  const reports = useMemo(() => {
+      if (!allReports) return [];
+      return allReports.filter(report => report.status === 'pending');
+  }, [allReports]);
   
   const totalPages = reports ? Math.ceil(reports.length / ITEMS_PER_PAGE) : 0;
 
@@ -133,5 +138,3 @@ export default function GamasApprovalListPage() {
     </div>
   )
 }
-
-    
