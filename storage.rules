@@ -7,31 +7,31 @@ service firebase.storage {
     // --- Aturan Eksplisit per Folder ---
 
     match /notas/{userId}/{fileName} {
-      allow write: if request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
 
     match /profile-pictures/{userId}/{fileName} {
-      allow write: if request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
     
     match /pelanggan/{userId}/{fileName} {
-      allow write: if request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
 
     match /hr_attendance/{userId}/{fileName} {
-      allow write: if request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
 
     match /hr_evidence/{userId}/{fileName} {
-      allow write: if request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
 
     match /alker-photos/{userId}/{fileName} {
-      allow write: if request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
     
     match /gamas-photos/{userId}/{fileName} {
-      allow write: if request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
 
     // Default public read for all files to allow image display in the app.
