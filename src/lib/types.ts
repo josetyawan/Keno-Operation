@@ -27,6 +27,8 @@ export type DesignatorEvidence = {
   designator: string;
   notes?: string;
   photoUrls: string[];
+  status: 'pending' | 'approved' | 'rejected';
+  rejectionReason?: string;
 };
 
 export type GamasReport = {
@@ -307,3 +309,5 @@ export type Performance = {
   totalPerformance: string;
   date: any; // Timestamp
 };
+
+    

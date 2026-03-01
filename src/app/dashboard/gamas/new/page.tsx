@@ -1,23 +1,25 @@
+
 'use client';
 
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Loader2, Upload, X, FileWarning, PlusCircle, Trash2, Check } from 'lucide-react';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useFirestore, useUser, useStorage, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, serverTimestamp, doc, addDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { GamasReport, UserProfile, DesignatorEvidence } from '@/lib/types';
 import Image from 'next/image';
 import { designatorListData } from '@/lib/designator-data';
 import { cn } from '@/lib/utils';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 type EvidenceFormValues = {
   designator: string;
@@ -33,7 +35,7 @@ type FormValues = {
 function PhotoUploadPreview({ files, onRemove }: { files: File[], onRemove: (index: number) => void }) {
     const [previews, setPreviews] = useState<string[]>([]);
   
-    useEffect(() => {
+    React.useEffect(() => {
       const newPreviews = files.map(file => URL.createObjectURL(file));
       setPreviews(newPreviews);
   
@@ -62,11 +64,77 @@ function PhotoUploadPreview({ files, onRemove }: { files: File[], onRemove: (ind
     );
 }
 
+function DesignatorSelector({ value, onChange }: { value: string, onChange: (value: string) => void }) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [search, setSearch] = useState('');
+  
+    const filteredDesignators = useMemo(() => {
+      if (!search) return designatorListData;
+      const lowercasedSearch = search.toLowerCase();
+      return designatorListData.filter(
+        d => d.code.toLowerCase().includes(lowercasedSearch) || d.description.toLowerCase().includes(lowercasedSearch)
+      );
+    }, [search]);
+  
+    const handleSelect = (code: string) => {
+      onChange(code);
+      setIsOpen(false);
+      setSearch('');
+    };
+  
+    return (
+      <Popover open={isOpen} onOpenChange={setIsOpen}>
+        <PopoverTrigger asChild>
+          <Button variant="outline" role="combobox" aria-expanded={isOpen} className="w-full justify-between">
+            {value ? designatorListData.find(d => d.code === value)?.code : "Pilih designator..."}
+            <FileWarning className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+          <div className="p-2">
+            <Input
+              placeholder="Cari kode atau keterangan..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-9"
+            />
+          </div>
+          <ScrollArea className="h-72">
+            <div className="p-1">
+              {filteredDesignators.length > 0 ? (
+                filteredDesignators.map((d) => (
+                  <button
+                    type="button"
+                    key={d.code}
+                    onClick={() => handleSelect(d.code)}
+                    className={cn(
+                      "w-full text-left p-2 rounded-md hover:bg-accent flex items-center justify-between",
+                      value === d.code && "bg-accent"
+                    )}
+                  >
+                    <div>
+                      <p className="font-medium text-sm">{d.code}</p>
+                      <p className="text-xs text-muted-foreground">{d.description}</p>
+                    </div>
+                    {value === d.code && <Check className="h-4 w-4" />}
+                  </button>
+                ))
+              ) : (
+                <div className="p-2 text-center text-sm text-muted-foreground">Tidak ada designator ditemukan.</div>
+              )}
+            </div>
+          </ScrollArea>
+        </PopoverContent>
+      </Popover>
+    );
+}
+
 export default function NewGamasReportPage() {
   const router = useRouter();
   const { toast } = useToast();
   const firestore = useFirestore();
   const { user } = useUser();
+  const storage = useStorage();
   const [isSaving, setIsSaving] = useState(false);
 
   const userDocRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
@@ -88,13 +156,13 @@ export default function NewGamasReportPage() {
     append({ designator: '', notes: '', photos: [] });
   };
   
-  const compressImageToDataUrl = (file: File): Promise<string> => {
+  const compressImage = (file: File): Promise<File> => {
     return new Promise((resolve, reject) => {
       const img = document.createElement('img');
       const reader = new FileReader();
       
       reader.onload = (e) => {
-        if(e.target && typeof e.target.result === 'string') {
+        if(typeof e.target?.result === 'string') {
           img.src = e.target.result;
         } else {
           reject(new Error('Gagal membaca file.'));
@@ -105,25 +173,29 @@ export default function NewGamasReportPage() {
 
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 800; // Reduce size to avoid Firestore document limits
-        let width = img.width;
-        let height = img.height;
+        const MAX_WIDTH = 1024;
+        let { width, height } = img;
 
         if (width > MAX_WIDTH) {
           height *= MAX_WIDTH / width;
           width = MAX_WIDTH;
         }
+
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         if (!ctx) return reject(new Error('Tidak dapat memuat konteks canvas'));
+
         ctx.drawImage(img, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.75); // 75% quality
-        resolve(dataUrl);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }));
+          } else {
+            reject(new Error('Gagal membuat blob dari canvas.'));
+          }
+        }, 'image/jpeg', 0.8);
       };
-      img.onerror = (err) => {
-        reject(err);
-      };
+      img.onerror = (err) => reject(err);
     });
   };
 
@@ -149,13 +221,22 @@ export default function NewGamasReportPage() {
     setIsSaving(true);
     try {
       const evidencePromises = data.evidences.map(async (evidence) => {
-        const photoUploadPromises = evidence.photos.map(file => compressImageToDataUrl(file));
+        const photoUploadPromises = evidence.photos.map(async (file) => {
+            const compressedFile = await compressImage(file);
+            const filePath = `gamas-photos/${user.uid}/${Date.now()}-${compressedFile.name}`;
+            const storageRef = ref(storage, filePath);
+            await uploadBytes(storageRef, compressedFile);
+            return getDownloadURL(storageRef);
+        });
+        
         const photoUrls = await Promise.all(photoUploadPromises);
+        
         return {
           designator: evidence.designator,
           notes: evidence.notes,
           photoUrls,
-        };
+          status: 'pending',
+        } as DesignatorEvidence;
       });
 
       const processedEvidences: DesignatorEvidence[] = await Promise.all(evidencePromises);
@@ -176,7 +257,9 @@ export default function NewGamasReportPage() {
     } catch (error: any) {
       console.error("Error creating Gamas report:", error);
       let errorMessage = "Terjadi kesalahan saat menyimpan laporan.";
-      if (error.message && error.message.includes('longer than 1048487 bytes')) {
+      if (error.code === 'storage/unauthorized') {
+          errorMessage = "Izin ditolak. Anda tidak memiliki izin untuk mengunggah file. Pastikan Anda telah login."
+      } else if (error.message && error.message.includes('longer than 1048487 bytes')) {
           errorMessage = "Ukuran total file terlalu besar. Coba unggah lebih sedikit foto atau foto dengan resolusi lebih kecil.";
       }
       toast({ variant: "destructive", title: "Gagal Menyimpan", description: errorMessage });
@@ -278,67 +361,4 @@ export default function NewGamasReportPage() {
   );
 }
 
-function DesignatorSelector({ value, onChange }: { value: string, onChange: (value: string) => void }) {
-    const [isOpen, setIsOpen] = useState(false);
-    const [search, setSearch] = useState('');
-  
-    const filteredDesignators = useMemo(() => {
-      if (!search) return designatorListData;
-      const lowercasedSearch = search.toLowerCase();
-      return designatorListData.filter(
-        d => d.code.toLowerCase().includes(lowercasedSearch) || d.description.toLowerCase().includes(lowercasedSearch)
-      );
-    }, [search]);
-  
-    const handleSelect = (code: string) => {
-      onChange(code);
-      setIsOpen(false);
-      setSearch('');
-    };
-  
-    return (
-      <Popover open={isOpen} onOpenChange={setIsOpen}>
-        <PopoverTrigger asChild>
-          <Button variant="outline" role="combobox" aria-expanded={isOpen} className="w-full justify-between">
-            {value ? designatorListData.find(d => d.code === value)?.code : "Pilih designator..."}
-            <FileWarning className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-          <div className="p-2">
-            <Input
-              placeholder="Cari kode atau keterangan..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-9"
-            />
-          </div>
-          <ScrollArea className="h-72">
-            <div className="p-1">
-              {filteredDesignators.length > 0 ? (
-                filteredDesignators.map((d) => (
-                  <button
-                    type="button"
-                    key={d.code}
-                    onClick={() => handleSelect(d.code)}
-                    className={cn(
-                      "w-full text-left p-2 rounded-md hover:bg-accent flex items-center justify-between",
-                      value === d.code && "bg-accent"
-                    )}
-                  >
-                    <div>
-                      <p className="font-medium text-sm">{d.code}</p>
-                      <p className="text-xs text-muted-foreground">{d.description}</p>
-                    </div>
-                    {value === d.code && <Check className="h-4 w-4" />}
-                  </button>
-                ))
-              ) : (
-                <div className="p-2 text-center text-sm text-muted-foreground">Tidak ada designator ditemukan.</div>
-              )}
-            </div>
-          </ScrollArea>
-        </PopoverContent>
-      </Popover>
-    );
-}
+    

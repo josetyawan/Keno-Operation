@@ -11,11 +11,10 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, FileWarning, Download, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, FileWarning, Download, Image as ImageIcon, Check, X, Info } from 'lucide-react';
 import type { GamasReport, UserProfile, DesignatorEvidence } from '@/lib/types';
 import { useMemo, useState } from 'react';
 import Image from 'next/image';
@@ -57,6 +56,23 @@ function PhotoViewer({ url, label }: { url?: string; label: string }) {
     </>
   );
 }
+
+const getStatusVariant = (status: DesignatorEvidence['status']): "default" | "destructive" | "secondary" | "outline" => {
+    switch (status) {
+        case 'approved': return 'default';
+        case 'rejected': return 'destructive';
+        case 'pending':
+        default: return 'secondary';
+    }
+};
+
+const getStatusIcon = (status: DesignatorEvidence['status']) => {
+    switch (status) {
+        case 'approved': return <Check className="h-4 w-4 mr-1" />;
+        case 'rejected': return <X className="h-4 w-4 mr-1" />;
+        default: return null;
+    }
+};
 
 export default function GamasDetailPage() {
   const params = useParams();
@@ -130,12 +146,12 @@ export default function GamasDetailPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><FileWarning /> No. Tiket: {report.noTiket}</CardTitle>
-          <CardDescription>Status Laporan: <Badge variant={report.status === 'approved' ? 'default' : report.status === 'rejected' ? 'destructive' : 'secondary'}>{report.status}</Badge></CardDescription>
+          <CardDescription>Status Laporan Keseluruhan: <Badge variant={report.status === 'approved' ? 'default' : report.status === 'rejected' ? 'destructive' : 'secondary'}>{report.status}</Badge></CardDescription>
         </CardHeader>
         {report.rejectionReason && (
             <CardContent>
                 <div className="text-sm p-3 bg-destructive/10 text-destructive rounded-md border border-destructive/20">
-                    <p className="font-semibold">Alasan Penolakan:</p>
+                    <p className="font-semibold">Alasan Penolakan Tiket:</p>
                     <p>{report.rejectionReason}</p>
                 </div>
             </CardContent>
@@ -145,11 +161,23 @@ export default function GamasDetailPage() {
       <div className="space-y-6">
         {report.evidences.map((evidence, index) => (
             <Card key={index}>
-                <CardHeader>
-                    <CardTitle>{evidence.designator}</CardTitle>
-                    {evidence.notes && <CardDescription>{evidence.notes}</CardDescription>}
+                <CardHeader className="flex flex-row items-start justify-between">
+                    <div>
+                        <CardTitle>{evidence.designator}</CardTitle>
+                        {evidence.notes && <CardDescription>{evidence.notes}</CardDescription>}
+                    </div>
+                    <Badge variant={getStatusVariant(evidence.status)} className="capitalize">
+                        {getStatusIcon(evidence.status)}
+                        {evidence.status}
+                    </Badge>
                 </CardHeader>
                 <CardContent>
+                    {evidence.status === 'rejected' && evidence.rejectionReason && (
+                        <div className="mb-4 text-sm p-3 bg-destructive/10 text-destructive rounded-md border border-destructive/20">
+                            <p className="font-semibold flex items-center gap-1"><Info className="h-4 w-4"/>Alasan Penolakan Designator:</p>
+                            <p>{evidence.rejectionReason}</p>
+                        </div>
+                    )}
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                         {evidence.photoUrls.map((url, photoIndex) => (
                              <PhotoViewer key={photoIndex} url={url} label={`Eviden ${evidence.designator} ${photoIndex + 1}`} />
@@ -163,3 +191,5 @@ export default function GamasDetailPage() {
     </>
   );
 }
+
+    
