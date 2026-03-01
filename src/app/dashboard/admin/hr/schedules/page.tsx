@@ -4,7 +4,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, doc, orderBy, Timestamp, writeBatch, setDoc, getDocs, limit, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, doc, orderBy, Timestamp, writeBatch, setDoc, getDocs, limit, updateDoc, deleteDoc, type DocumentReference } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -358,40 +358,56 @@ export default function AdminSchedulesPage() {
     };
 
     const handleFormSubmit = async (data: Partial<Schedule>) => {
-        if (!firestore) return;
+        if (!firestore || !data.userId || !data.date) {
+            toast({ variant: 'destructive', title: 'Data tidak lengkap' });
+            return;
+        }
+    
+        const scheduleDate = data.date.toDate();
+        const scheduleId = `${data.userId}_${format(scheduleDate, 'yyyy-MM-dd')}`;
+        const scheduleDocRef = doc(firestore, 'schedules', scheduleId);
     
         if (swapSourceSchedule) {
             const batch = writeBatch(firestore);
             
-            // 1. Create the new schedule for the replacement user
-            const replacementScheduleRef = doc(collection(firestore, 'schedules'));
-            batch.set(replacementScheduleRef, { ...data, id: replacementScheduleRef.id, createdAt: Timestamp.now() });
-
+            // 1. Create the new schedule for the replacement user with the correct composite ID
+            batch.set(scheduleDocRef, { ...data, id: scheduleId, createdAt: Timestamp.now() }, { merge: true });
+    
             // 2. Delete the original 'tukar-jaga' request
             const originalRequestRef = doc(firestore, 'schedules', swapSourceSchedule.id);
             batch.delete(originalRequestRef);
-
+    
             await batch.commit();
-
+    
             const replacementUser = activeUsers.find(u => u.id === data.userId);
             toast({
                 title: 'Tukar Jaga Berhasil Disetujui',
                 description: `Jadwal baru untuk ${replacementUser?.displayName} telah dibuat. Jadwal ${swapSourceSchedule.userName} telah dikosongkan.`,
                 duration: 7000
             });
-
             setSwapSourceSchedule(null);
-
-        } else if (scheduleToEdit?.id) {
-            // Standard update logic
-            await updateDoc(doc(firestore, 'schedules', scheduleToEdit.id), data);
-            toast({ title: 'Jadwal Diperbarui' });
         } else {
-            // Standard create logic
-            const newDocRef = doc(collection(firestore, 'schedules'));
-            await setDoc(newDocRef, { ...data, id: newDocRef.id, createdAt: Timestamp.now() });
-            toast({ title: 'Jadwal Ditambahkan' });
+            let docToDeleteRef: DocumentReference | null = null;
+            // Check if it's an edit and if the ID has changed (due to date or user change)
+            if (scheduleToEdit?.id && scheduleToEdit.id !== scheduleId) {
+                docToDeleteRef = doc(firestore, 'schedules', scheduleToEdit.id);
+            }
+    
+            if (docToDeleteRef) {
+                // This is an edit where the ID changed, so we need a batch write.
+                const batch = writeBatch(firestore);
+                batch.delete(docToDeleteRef); // Delete the old document
+                batch.set(scheduleDocRef, { ...data, id: scheduleId, createdAt: Timestamp.now() }, { merge: true }); // Set the new one
+                await batch.commit();
+                toast({ title: 'Jadwal Diperbarui' });
+            } else {
+                // This is a new schedule or an edit where the ID remains the same.
+                // `setDoc` with `merge: true` handles both creating and updating safely.
+                await setDoc(scheduleDocRef, { ...data, id: scheduleId, createdAt: Timestamp.now() }, { merge: true });
+                toast({ title: scheduleToEdit?.id ? 'Jadwal Diperbarui' : 'Jadwal Ditambahkan' });
+            }
         }
+        
         setIsFormDialogOpen(false);
         setScheduleToEdit(null);
     };
@@ -542,7 +558,7 @@ export default function AdminSchedulesPage() {
                             notes: '', createdAt: Timestamp.now(),
                         };
         
-                        batch.set(scheduleDocRef, scheduleData, { merge: true });
+                        batch.set(scheduleDocRef, { ...scheduleData, id: scheduleId }, { merge: true });
                         createdCount++;
 
                          if (createdCount > 0 && createdCount % chunkSize === 0) {
@@ -816,3 +832,5 @@ export default function AdminSchedulesPage() {
         </>
     );
 }
+
+    

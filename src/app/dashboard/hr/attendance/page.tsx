@@ -596,35 +596,33 @@ export default function AttendancePage() {
 
     const { data: schedules, isLoading: isScheduleLoading } = useCollection<Schedule>(scheduleQuery);
     
+    const attendanceQuery = useMemoFirebase(() => {
+        if (!user) return null;
+        const startOfToday = getStartOfDay();
+        const endOfToday = add(startOfToday, { days: 1 });
+        return query(
+            collection(firestore, 'attendances'),
+            where('userId', '==', user.uid),
+            where('checkInTime', '>=', Timestamp.fromDate(startOfToday)),
+            where('checkInTime', '<', Timestamp.fromDate(endOfToday)),
+            limit(1)
+        );
+    }, [user, firestore]);
+    
+    const { data: todayAttendances, isLoading: isAttendanceLoading } = useCollection<Attendance>(attendanceQuery);
+    
     useEffect(() => {
         if (!isScheduleLoading) {
             setTodaySchedule(schedules?.[0] || null);
         }
     }, [schedules, isScheduleLoading]);
 
-    const allUserAttendancesQuery = useMemoFirebase(() => {
-        if (!user) return null;
-        return query(collection(firestore, 'attendances'), where('userId', '==', user.uid));
-    }, [user, firestore]);
-
-    const { data: allUserAttendances, isLoading: isAttendanceLoading } = useCollection<Attendance>(allUserAttendancesQuery);
-
     useEffect(() => {
-      setIsLoading(isScheduleLoading || isAttendanceLoading || isProfileLoading || areUsersLoading);
-      if (!isAttendanceLoading && allUserAttendances) {
-          const startOfToday = getStartOfDay();
-          const endOfToday = add(startOfToday, { days: 1 });
-
-          const todayAtt = allUserAttendances.find(att => {
-              if (!att.checkInTime || !att.checkInTime.toDate) return false;
-              const checkIn = att.checkInTime.toDate();
-              return checkIn >= startOfToday && checkIn < endOfToday;
-          });
-          setTodayAttendance(todayAtt || null);
-      } else if (!isAttendanceLoading) {
-          setTodayAttendance(null);
-      }
-    }, [allUserAttendances, isAttendanceLoading, isScheduleLoading, isProfileLoading, areUsersLoading, today]);
+        if (!isAttendanceLoading) {
+            setTodayAttendance(todayAttendances?.[0] || null);
+        }
+        setIsLoading(isScheduleLoading || isAttendanceLoading || isProfileLoading || areUsersLoading);
+    }, [todayAttendances, isAttendanceLoading, isScheduleLoading, isProfileLoading, areUsersLoading]);
     
     // --- Camera Logic for Main Check-in ---
     useEffect(() => {
@@ -764,3 +762,5 @@ export default function AttendancePage() {
         </div>
     );
 }
+
+    
