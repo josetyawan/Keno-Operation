@@ -217,8 +217,8 @@ export default function AttendanceRekapPage() {
                 ) : attendances && attendances.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         {attendances.map(att => (
-                            <Card key={att.id} className="overflow-hidden break-inside-avoid group">
-                                <div className="relative aspect-square w-full">
+                            <Card key={att.id} className="overflow-hidden break-inside-avoid">
+                                <div className="relative aspect-square w-full group">
                                     <Image src={att.checkInPhotoUrl} alt={`Foto absen ${userMap.get(att.userId)}`} fill className="object-cover" />
                                      <Button
                                         variant="destructive"
@@ -268,3 +268,4 @@ export default function AttendanceRekapPage() {
         </div>
     );
 }
+
