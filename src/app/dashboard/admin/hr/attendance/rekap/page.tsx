@@ -74,7 +74,7 @@ export default function AttendanceRekapPage() {
         if (!attendances || attendances.length === 0) return null;
         const userIds = [...new Set(attendances.map(a => a.userId))];
         
-        // Firestore 'in' query is limited to 30 items. If more, we might need multiple queries.
+        // Firestore 'in' query is limited to 30 items. If more, we need to chunk the queries.
         if (userIds.length === 0) return null;
 
         const chunks: string[][] = [];
@@ -281,3 +281,4 @@ export default function AttendanceRekapPage() {
         </div>
     );
 }
+    
