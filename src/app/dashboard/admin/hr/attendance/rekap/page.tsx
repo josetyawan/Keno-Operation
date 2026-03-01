@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, where, Timestamp, doc, orderBy, documentId } from 'firebase/firestore';
+import { collection, query, where, Timestamp, doc, orderBy, documentId, deleteDoc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -13,7 +13,17 @@ import { id as idLocale } from 'date-fns/locale';
 import Image from 'next/image';
 import type { UserProfile, Attendance } from '@/lib/types';
 import { useRouter } from 'next/navigation';
-import { Calendar as CalendarIcon, Printer, MapPin, Download } from 'lucide-react';
+import { Calendar as CalendarIcon, Printer, MapPin, Download, Trash2, Loader2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
@@ -28,6 +38,8 @@ export default function AttendanceRekapPage() {
     const { toast } = useToast();
 
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+    const [attendanceToDelete, setAttendanceToDelete] = useState<Attendance | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
         useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
@@ -117,6 +129,28 @@ export default function AttendanceRekapPage() {
             });
         }
     };
+
+    const handleDelete = async () => {
+        if (!attendanceToDelete) return;
+        setIsDeleting(true);
+        try {
+            const docRef = doc(firestore, 'attendances', attendanceToDelete.id);
+            await deleteDoc(docRef);
+            toast({
+                title: "Absensi Dihapus",
+                description: "Data absensi telah berhasil dihapus."
+            });
+            setAttendanceToDelete(null);
+        } catch (error: any) {
+            toast({
+                variant: "destructive",
+                title: "Gagal Menghapus",
+                description: error.message,
+            });
+        } finally {
+            setIsDeleting(false);
+        }
+    };
     
     const isLoading = isUserLoading || isProfileLoading || areAttendancesLoading || areUsersLoading;
 
@@ -183,9 +217,17 @@ export default function AttendanceRekapPage() {
                 ) : attendances && attendances.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         {attendances.map(att => (
-                            <Card key={att.id} className="overflow-hidden break-inside-avoid">
+                            <Card key={att.id} className="overflow-hidden break-inside-avoid group">
                                 <div className="relative aspect-square w-full">
                                     <Image src={att.checkInPhotoUrl} alt={`Foto absen ${userMap.get(att.userId)}`} fill className="object-cover" />
+                                     <Button
+                                        variant="destructive"
+                                        size="icon"
+                                        className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        onClick={() => setAttendanceToDelete(att)}
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
                                 </div>
                                 <CardContent className="p-3 text-sm">
                                     <p className="font-semibold truncate">{userMap.get(att.userId) || 'Memuat...'}</p>
@@ -206,6 +248,23 @@ export default function AttendanceRekapPage() {
                     </div>
                 )}
             </div>
+
+             <AlertDialog open={!!attendanceToDelete} onOpenChange={(open) => !open && setAttendanceToDelete(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Anda Yakin?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Tindakan ini akan menghapus data absensi untuk <strong>{attendanceToDelete && userMap.get(attendanceToDelete.userId)}</strong> secara permanen. Tindakan ini tidak dapat dibatalkan.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Batal</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                            {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Hapus'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }
