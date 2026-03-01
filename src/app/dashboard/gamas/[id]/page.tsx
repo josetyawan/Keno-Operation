@@ -99,7 +99,7 @@ export default function GamasDetailPage() {
 
   const handleDownloadAll = () => {
     if (report?.evidences) {
-      const allUrls = report.evidences.flatMap(e => e.photoUrls);
+      const allUrls = report.evidences.flatMap(e => e.photoUrls).filter((url): url is string => !!url);
       allUrls.forEach((url, index) => {
         setTimeout(() => {
           window.open(url, `_blank_photo_${index}`);

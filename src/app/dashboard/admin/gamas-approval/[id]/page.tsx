@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, CheckCircle, ShieldX, Check, X, FileWarning, Loader2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle, ShieldX, Check, X, FileWarning, Loader2, Download } from 'lucide-react';
 import type { GamasReport, UserProfile, DesignatorEvidence } from '@/lib/types';
 import { useMemo, useState } from 'react';
 import Image from 'next/image';
@@ -154,6 +154,17 @@ export default function GamasApprovalDetailPage() {
     }
   };
 
+  const handleDownloadAll = () => {
+    if (report?.evidences) {
+      const allUrls = report.evidences.flatMap(e => e.photoUrls).filter((url): url is string => !!url);
+      allUrls.forEach((url, index) => {
+        setTimeout(() => {
+          window.open(url, `_blank_photo_${index}`);
+        }, index * 200);
+      });
+    }
+  };
+
   if (isLoading) {
     return <div className="space-y-4"><Skeleton className="h-12 w-full" /><Skeleton className="h-96 w-full" /></div>;
   }
@@ -179,6 +190,10 @@ export default function GamasApprovalDetailPage() {
           <p className="text-muted-foreground text-sm">Oleh: {report.userName}</p>
         </div>
          <div className="ml-auto flex items-center gap-2">
+            <Button onClick={handleDownloadAll} variant="outline" size="sm">
+                <Download className="mr-2 h-4 w-4" />
+                Download Foto
+            </Button>
             <Button variant="destructive" onClick={() => setIsTicketRejectDialogOpen(true)} disabled={!!isActionLoading}>
                 <ShieldX className="mr-2"/> Tolak Tiket
             </Button>
