@@ -14,7 +14,7 @@ import { format, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import type { GamasReport, UserProfile } from '@/lib/types';
 import { useRouter } from 'next/navigation';
-import { CheckCircle, ShieldX, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
+import { CheckCircle, ShieldX, ChevronLeft, ChevronRight, Eye, Loader2 } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import Link from 'next/link';
 
 const safeToDate = (timestamp: any): Date | null => {
   if (!timestamp) return null;
@@ -64,13 +65,13 @@ export default function GamasApprovalPage() {
   }, [user, currentUserProfile, isUserLoading, isProfileLoading, router]);
 
   const reportsQuery = useMemoFirebase(() => {
-    if (isProfileLoading || !userProfile) return null;
+    if (isProfileLoading || !currentUserProfile) return null;
 
-    const isAdminOrKorlap = userProfile.role === 'admin' || userProfile.role === 'korlap';
+    const isAdminOrKorlap = currentUserProfile.role === 'admin' || currentUserProfile.role === 'korlap';
     if (!isAdminOrKorlap) return null;
 
     return query(collection(firestore, 'gamas-reports'), orderBy('createdAt', 'desc'));
-  }, [firestore, userProfile, isProfileLoading]);
+  }, [firestore, currentUserProfile, isProfileLoading]);
 
   const { data: reports, isLoading: areReportsLoading } = useCollection<GamasReport>(reportsQuery);
   

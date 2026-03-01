@@ -96,12 +96,15 @@
         "id": { "type": "string" },
         "userId": { "type": "string", "description": "The ID of the user who created the report." },
         "userName": { "type": "string", "description": "Denormalized name of the user for display." },
+        "noTiket": { "type": "string", "description": "The incident ticket number (e.g., INC...)." },
         "designator": { "type": "string", "description": "The selected designator for the report." },
         "photoUrls": { "type": "array", "items": { "type": "string", "format": "uri" } },
         "notes": { "type": "string", "description": "Additional notes for the report." },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "createdAt": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "description": "The approval status of the report.", "enum": ["pending", "approved", "rejected"] },
+        "rejectionReason": { "type": "string", "description": "The reason for rejection, if applicable." }
       },
-      "required": ["id", "userId", "userName", "designator", "photoUrls", "createdAt"]
+      "required": ["id", "userId", "userName", "noTiket", "designator", "photoUrls", "createdAt", "status"]
     },
     "ProjectID": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -431,7 +434,3 @@
     "reasoning": "The data is structured with a top-level `users` collection for profiles and a top-level `notas` collection for all user-generated notes. This flat structure for `notas` simplifies querying, allowing all users to view all notes easily, which aligns with the application's requirements. Security is enforced within the rules: while reads are permissive, writes (create, update, delete) are strictly controlled. A user can only create a nota with their own `userId`, and can only update or delete notas they own. Admins are granted special privileges to update any nota for verification purposes. A `network-assets` collection is added for managing network equipment, with admin-only write access. This design is efficient and secure for the specified use case."
   }
 }
-
-    
-
-    

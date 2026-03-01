@@ -44,6 +44,7 @@ export default function NewGamasReportPage() {
   const [isSaving, setIsSaving] = useState(false);
 
   // Form state
+  const [noTiket, setNoTiket] = useState('');
   const [designator, setDesignator] = useState('');
   const [notes, setNotes] = useState('');
   const [photos, setPhotos] = useState<File[]>([]);
@@ -156,19 +157,31 @@ export default function NewGamasReportPage() {
       canvas.height = video.videoHeight;
       const context = canvas.getContext('2d');
       context?.drawImage(video, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const file = new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
-          setPhotos(prev => [...prev, file]);
-          setPreviews(prev => [...prev, URL.createObjectURL(file)]);
-          toast({
-            title: `Foto ${photos.length + 1} ditambahkan`,
-            description: `Anda dapat mengambil foto lagi atau menutup kamera jika sudah selesai.`,
-            duration: 2000,
-          });
-        }
-      }, 'image/jpeg');
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+      
+      // Convert data URL to File object
+      fetch(dataUrl)
+        .then(res => res.blob())
+        .then(blob => {
+            const file = new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
+            setPhotos(prev => [...prev, file]);
+            setPreviews(prev => [...prev, URL.createObjectURL(file)]);
+            toast({
+              title: `Foto ${photos.length + 1} ditambahkan`,
+              description: `Anda dapat mengambil foto lagi atau menutup kamera jika sudah selesai.`,
+              duration: 2000,
+            });
+        });
     }
+  };
+  
+  const fileToDataUrl = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
   };
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -177,8 +190,8 @@ export default function NewGamasReportPage() {
       toast({ variant: 'destructive', title: 'Error', description: 'Pengguna tidak ditemukan.' });
       return;
     }
-    if (!designator) {
-      toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Silakan pilih designator.' });
+    if (!noTiket.trim() || !designator) {
+      toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Silakan isi No. Tiket dan pilih designator.' });
       return;
     }
     if (photos.length < 4) {
@@ -189,24 +202,20 @@ export default function NewGamasReportPage() {
     setIsSaving(true);
     
     try {
-        const uploadPromises = photos.map(async (file) => {
-            const filePath = `gamas-photos/${user.uid}/${Date.now()}-${file.name}`;
-            const storageRef = ref(storage, filePath);
-            await uploadBytes(storageRef, file);
-            return getDownloadURL(storageRef);
-        });
-
-        const photoUrls = await Promise.all(uploadPromises);
+        const dataUrlPromises = photos.map(fileToDataUrl);
+        const photoDataUrls = await Promise.all(dataUrlPromises);
 
         const gamasCollection = collection(firestore, 'gamas-reports');
         
         const newReport: Omit<GamasReport, 'id'> = {
             userId: user.uid,
             userName: userProfile.displayName || user.email!,
+            noTiket: noTiket.trim(),
             designator,
-            photoUrls,
+            photoUrls: photoDataUrls,
             notes,
             createdAt: serverTimestamp(),
+            status: 'pending',
         };
 
         await addDoc(gamasCollection, newReport);
@@ -247,6 +256,10 @@ export default function NewGamasReportPage() {
                     <CardDescription>Pilih designator dan unggah foto-foto eviden yang diperlukan.</CardDescription>
                 </CardHeader>
                 <CardContent className="grid gap-6">
+                    <div className="grid gap-3">
+                        <Label htmlFor="noTiket">No. Tiket *</Label>
+                        <Input id="noTiket" placeholder="Contoh: INC12345678" value={noTiket} onChange={(e) => setNoTiket(e.target.value)} required />
+                    </div>
                     <div className="grid gap-3">
                         <Label htmlFor="designator">Designator *</Label>
                         <Popover open={isDesignatorOpen} onOpenChange={setIsDesignatorOpen}>
