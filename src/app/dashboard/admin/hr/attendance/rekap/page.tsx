@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -217,18 +216,18 @@ export default function AttendanceRekapPage() {
                 ) : attendances && attendances.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         {attendances.map(att => (
-                            <Card key={att.id} className="overflow-hidden break-inside-avoid">
-                                <div className="relative aspect-square w-full group">
+                            <Card key={att.id} className="overflow-hidden break-inside-avoid group relative">
+                                <div className="aspect-square w-full">
                                     <Image src={att.checkInPhotoUrl} alt={`Foto absen ${userMap.get(att.userId)}`} fill className="object-cover" />
-                                     <Button
-                                        variant="destructive"
-                                        size="icon"
-                                        className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity no-print z-10"
-                                        onClick={() => setAttendanceToDelete(att)}
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
                                 </div>
+                                <Button
+                                    variant="destructive"
+                                    size="icon"
+                                    className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity no-print z-10"
+                                    onClick={() => setAttendanceToDelete(att)}
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
                                 <CardContent className="p-3 text-sm">
                                     <p className="font-semibold truncate">{userMap.get(att.userId) || 'Memuat...'}</p>
                                     <p className="text-muted-foreground">{format(att.checkInTime.toDate(), 'HH:mm:ss', {locale: idLocale})}</p>
@@ -268,4 +267,3 @@ export default function AttendanceRekapPage() {
         </div>
     );
 }
-
