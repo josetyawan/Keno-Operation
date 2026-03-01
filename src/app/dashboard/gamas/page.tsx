@@ -72,6 +72,7 @@ export default function GamasListPage() {
       return query(reportsCollectionRef, orderBy('createdAt', 'desc'));
     }
     
+    // For regular technicians, fetch only their own documents without server-side ordering.
     return query(reportsCollectionRef, where('userId', '==', userProfile.id));
 
   }, [firestore, userProfile, isProfileLoading]);
@@ -82,8 +83,10 @@ export default function GamasListPage() {
     if (!reports) return [];
 
     const isAdminOrKorlap = userProfile?.role === 'admin' || userProfile?.role === 'korlap';
+    // If admin, data is already sorted by Firestore.
     if (isAdminOrKorlap) return reports;
 
+    // For regular users, sort on the client-side.
     const processedReports = [...reports];
     processedReports.sort((a, b) => {
       const timeA = safeToDate(a.createdAt)?.getTime() ?? 0;
