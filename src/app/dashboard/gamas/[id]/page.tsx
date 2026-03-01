@@ -22,7 +22,7 @@ import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 
-
+// Helper function to safely convert Firebase Timestamp to Date
 const safeToDate = (timestamp: any): Date | null => {
   if (!timestamp) return null;
   if (timestamp.toDate) return timestamp.toDate();
@@ -31,9 +31,13 @@ const safeToDate = (timestamp: any): Date | null => {
   return isValid(d) ? d : null;
 };
 
-function PhotoViewer({ url, label }: { url?: string; label: string }) {
-  const [isZoomed, setIsZoomed] = useState(false);
+interface PhotoViewerProps {
+  url?: string | null;
+  label: string;
+}
 
+function PhotoViewer({ url, label }: PhotoViewerProps) {
+  const [isZoomed, setIsZoomed] = useState(false);
   if (!url) {
     return (
       <div className="aspect-square w-full rounded-md bg-muted flex items-center justify-center text-xs text-muted-foreground">
@@ -98,14 +102,30 @@ export default function GamasDetailPage() {
   const isOwner = user?.uid === report?.userId;
 
   const handleDownloadAll = () => {
-    if (report?.evidences) {
-      const allUrls = report.evidences.flatMap(e => e.photoUrls).filter((url): url is string => !!url);
-      allUrls.forEach((url, index) => {
-        setTimeout(() => {
-          window.open(url, `_blank_photo_${index}`);
-        }, index * 200);
-      });
-    }
+    if (!report?.evidences) return;
+
+    const downloadWithAnchor = (url: string, filename: string) => {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    };
+
+    let photoIndex = 0;
+    report.evidences.forEach(evidence => {
+        (evidence.photoUrls || []).forEach(url => {
+            if (url) {
+                const filename = `${report.noTiket}_${evidence.designator}_${photoIndex + 1}.jpeg`;
+                // Use a timeout to prevent browser from blocking multiple downloads
+                setTimeout(() => {
+                    downloadWithAnchor(url, filename);
+                }, photoIndex * 300);
+                photoIndex++;
+            }
+        });
+    });
   };
 
   if (isLoading) {

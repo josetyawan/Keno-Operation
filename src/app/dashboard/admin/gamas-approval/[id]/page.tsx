@@ -155,14 +155,30 @@ export default function GamasApprovalDetailPage() {
   };
 
   const handleDownloadAll = () => {
-    if (report?.evidences) {
-      const allUrls = report.evidences.flatMap(e => e.photoUrls).filter((url): url is string => !!url);
-      allUrls.forEach((url, index) => {
-        setTimeout(() => {
-          window.open(url, `_blank_photo_${index}`);
-        }, index * 200);
-      });
-    }
+    if (!report?.evidences) return;
+
+    const downloadWithAnchor = (url: string, filename: string) => {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    };
+
+    let photoIndex = 0;
+    report.evidences.forEach(evidence => {
+        (evidence.photoUrls || []).forEach(url => {
+            if (url) {
+                const filename = `${report.noTiket}_${evidence.designator}_${photoIndex + 1}.jpeg`;
+                // Use a timeout to prevent browser from blocking multiple downloads
+                setTimeout(() => {
+                    downloadWithAnchor(url, filename);
+                }, photoIndex * 300);
+                photoIndex++;
+            }
+        });
+    });
   };
 
   if (isLoading) {
