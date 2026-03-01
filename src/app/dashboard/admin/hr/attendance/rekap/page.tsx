@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -70,7 +71,19 @@ export default function AttendanceRekapPage() {
 
     const { data: attendances, isLoading: areAttendancesLoading } = useCollection<Attendance>(attendancesQuery);
     
-    const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
+    const userIds = useMemo(() => {
+        if (!attendances) return [];
+        return [...new Set(attendances.map(a => a.userId))];
+    }, [attendances]);
+    
+    const usersQuery = useMemoFirebase(() => {
+      if (userIds.length === 0) return null;
+      // Firestore 'in' query is limited to 30 items. Chunk the queries if necessary.
+      // For this page, we assume fetching all users is acceptable if the list is large.
+      // A more scalable solution for very large user bases would be to fetch users individually.
+      return query(collection(firestore, 'users'), where('id', 'in', userIds.slice(0, 30)));
+    }, [firestore, userIds]);
+    
     const { data: users, isLoading: areUsersLoading } = useCollection<UserProfile>(usersQuery);
 
     const userMap = useMemo(() => {
