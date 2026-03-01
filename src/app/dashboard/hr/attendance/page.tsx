@@ -589,16 +589,13 @@ export default function AttendancePage() {
     
     const scheduleQuery = useMemoFirebase(() => {
         if (!user) return null;
-        const start = today; // today is already start of day from getStartOfDay()
-        const end = add(start, { days: 1 });
+        // Query all schedules for the user, filtering will be done client-side.
+        // This avoids needing a composite index.
         return query(
             collection(firestore, 'schedules'),
-            where('userId', '==', user.uid),
-            where('date', '>=', Timestamp.fromDate(start)),
-            where('date', '<', Timestamp.fromDate(end)),
-            limit(1)
+            where('userId', '==', user.uid)
         );
-    }, [user, firestore, today]);
+    }, [user, firestore]);
 
     const { data: schedules, isLoading: isScheduleLoading } = useCollection<Schedule>(scheduleQuery);
     
@@ -618,7 +615,19 @@ export default function AttendancePage() {
             return;
         }
 
-        setTodaySchedule(schedules?.[0] || null);
+        if (schedules) {
+            const startOfToday = today;
+            const endOfToday = add(startOfToday, { days: 1 });
+            
+            const scheduleForToday = schedules.find(sch => {
+                if (!sch.date?.toDate) return false;
+                const scheduleDate = sch.date.toDate();
+                return scheduleDate >= startOfToday && scheduleDate < endOfToday;
+            });
+            setTodaySchedule(scheduleForToday || null);
+        } else {
+            setTodaySchedule(null);
+        }
 
         if (userAttendances) {
             const startOfToday = getStartOfDay();
@@ -637,7 +646,7 @@ export default function AttendancePage() {
         setIsLoading(false);
     }, [
         userAttendances, schedules, isUserLoading, isProfileLoading, 
-        isScheduleLoading, isAttendanceLoading, canListUsers, areUsersLoading
+        isScheduleLoading, isAttendanceLoading, canListUsers, areUsersLoading, today
     ]);
     
     // --- Camera Logic for Main Check-in ---
