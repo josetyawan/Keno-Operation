@@ -82,7 +82,7 @@ const getCheckInWindow = (shiftType: Schedule['shiftType']): { start: Date, end:
 
     const targetTime = set(now, { hours: targetHour, minutes: 0, seconds: 0, milliseconds: 0 });
     const startTime = sub(targetTime, { hours: 1 });
-    const endTime = add(targetTime, { hours: 4 });
+    const endTime = add(targetTime, { hours: 6 });
 
     return { start: startTime, end: endTime, target: targetTime };
 };
@@ -589,23 +589,27 @@ export default function AttendancePage() {
     
     const scheduleQuery = useMemoFirebase(() => {
         if (!user) return null;
-        // Query all schedules for the user, filtering will be done client-side.
-        // This avoids needing a composite index.
+        const startOfToday = today;
         return query(
             collection(firestore, 'schedules'),
-            where('userId', '==', user.uid)
+            where('userId', '==', user.uid),
+            where('date', '==', Timestamp.fromDate(startOfToday))
         );
-    }, [user, firestore]);
+    }, [user, firestore, today]);
 
     const { data: schedules, isLoading: isScheduleLoading } = useCollection<Schedule>(scheduleQuery);
     
     const attendanceQuery = useMemoFirebase(() => {
         if (!user) return null;
+        const startOfToday = today;
+        const endOfToday = add(startOfToday, { days: 1 });
         return query(
             collection(firestore, 'attendances'),
-            where('userId', '==', user.uid)
+            where('userId', '==', user.uid),
+            where('checkInTime', '>=', Timestamp.fromDate(startOfToday)),
+            where('checkInTime', '<', Timestamp.fromDate(endOfToday))
         );
-    }, [user, firestore]);
+    }, [user, firestore, today]);
     
     const { data: userAttendances, isLoading: isAttendanceLoading } = useCollection<Attendance>(attendanceQuery);
     
@@ -615,38 +619,13 @@ export default function AttendancePage() {
             return;
         }
 
-        if (schedules) {
-            const startOfToday = today;
-            const endOfToday = add(startOfToday, { days: 1 });
-            
-            const scheduleForToday = schedules.find(sch => {
-                if (!sch.date?.toDate) return false;
-                const scheduleDate = sch.date.toDate();
-                return scheduleDate >= startOfToday && scheduleDate < endOfToday;
-            });
-            setTodaySchedule(scheduleForToday || null);
-        } else {
-            setTodaySchedule(null);
-        }
-
-        if (userAttendances) {
-            const startOfToday = getStartOfDay();
-            const endOfToday = add(startOfToday, { days: 1 });
-            
-            const attendanceForToday = userAttendances.find(att => {
-                if (!att.checkInTime?.toDate) return false;
-                const checkInDate = att.checkInTime.toDate();
-                return checkInDate >= startOfToday && checkInDate < endOfToday;
-            });
-            setTodayAttendance(attendanceForToday || null);
-        } else {
-            setTodayAttendance(null);
-        }
+        setTodaySchedule(schedules?.[0] || null);
+        setTodayAttendance(userAttendances?.[0] || null);
 
         setIsLoading(false);
     }, [
-        userAttendances, schedules, isUserLoading, isProfileLoading, 
-        isScheduleLoading, isAttendanceLoading, canListUsers, areUsersLoading, today
+        schedules, userAttendances, isUserLoading, isProfileLoading, 
+        isScheduleLoading, isAttendanceLoading, canListUsers, areUsersLoading
     ]);
     
     // --- Camera Logic for Main Check-in ---
