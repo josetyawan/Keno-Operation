@@ -16,8 +16,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Loader2, Upload, X, FileWarning, ChevronsUpDown, Check } from 'lucide-react';
-import { useState, useEffect, useMemo } from 'react';
+import { ArrowLeft, Loader2, Upload, X, FileWarning, ChevronsUpDown, Check, Camera } from 'lucide-react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useFirestore, useUser, useStorage, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, serverTimestamp, doc, addDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -25,6 +25,13 @@ import type { GamasReport, UserProfile } from '@/lib/types';
 import Image from 'next/image';
 import { designatorListData } from '@/lib/designator-data';
 import { cn } from '@/lib/utils';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 
 export default function NewGamasReportPage() {
@@ -44,6 +51,12 @@ export default function NewGamasReportPage() {
   // State for searchable designator dropdown
   const [isDesignatorOpen, setIsDesignatorOpen] = useState(false);
   const [designatorSearch, setDesignatorSearch] = useState('');
+
+  // State for camera
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [stream, setStream] = useState<MediaStream | null>(null);
 
   const userDocRef = useMemoFirebase(() => {
     if (!user) return null;
@@ -66,7 +79,7 @@ export default function NewGamasReportPage() {
     return designatorListData.filter(
         d => d.code.toLowerCase().includes(lowercasedSearch) || d.description.toLowerCase().includes(lowercasedSearch)
     );
-}, [designatorSearch]);
+  }, [designatorSearch]);
 
   const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
@@ -91,9 +104,64 @@ export default function NewGamasReportPage() {
     setPhotos(prev => prev.filter((_, index) => index !== indexToRemove));
     setPreviews(prev => {
         const urlToRemove = prev[indexToRemove];
-        URL.revokeObjectURL(urlToRemove); // Clean up memory
+        if (urlToRemove) URL.revokeObjectURL(urlToRemove); // Clean up memory
         return prev.filter((_, index) => index !== indexToRemove);
     });
+  };
+
+    useEffect(() => {
+    if (isCameraOpen) {
+      const getCameraPermission = async () => {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          setStream(stream);
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+          }
+        } catch (error) {
+          console.error('Error accessing camera:', error);
+          toast({
+            variant: 'destructive',
+            title: 'Izin Kamera Ditolak',
+            description: 'Mohon izinkan akses kamera di pengaturan browser Anda.',
+          });
+          setIsCameraOpen(false);
+        }
+      };
+      getCameraPermission();
+    } else {
+      stream?.getTracks().forEach(track => track.stop());
+    }
+
+    return () => {
+      stream?.getTracks().forEach(track => track.stop());
+    };
+  }, [isCameraOpen, toast, stream]);
+
+  const handleCapture = () => {
+    if (videoRef.current && canvasRef.current) {
+      if (photos.length >= 10) {
+        toast({
+          variant: 'destructive',
+          title: 'Maksimal 10 Foto',
+        });
+        return;
+      }
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const context = canvas.getContext('2d');
+      context?.drawImage(video, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const file = new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
+          setPhotos(prev => [...prev, file]);
+          setPreviews(prev => [...prev, URL.createObjectURL(file)]);
+          setIsCameraOpen(false);
+        }
+      }, 'image/jpeg');
+    }
   };
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -238,24 +306,28 @@ export default function NewGamasReportPage() {
                     </div>
                     <div className="grid gap-3">
                         <Label>Foto Eviden (min 4, max 10)</Label>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        <div className="flex gap-2">
+                            <Label htmlFor="photo-upload" className={cn(buttonVariants({ variant: "outline" }), "cursor-pointer")}>
+                                <Upload className="mr-2 h-4 w-4" />
+                                Upload dari Galeri
+                            </Label>
+                            <input type="file" id="photo-upload" className="hidden" onChange={handlePhotoChange} accept="image/*" multiple disabled={photos.length >= 10}/>
+
+                            <Button type="button" variant="secondary" onClick={() => setIsCameraOpen(true)} disabled={photos.length >= 10}>
+                                <Camera className="mr-2 h-4 w-4" />
+                                Ambil Foto
+                            </Button>
+                        </div>
+
+                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mt-2">
                             {previews.map((previewUrl, index) => (
                                 <div key={index} className="relative group aspect-square">
                                     <Image src={previewUrl} alt={`Preview ${index + 1}`} fill className="object-cover rounded-md border" />
-                                    <Button type="button" variant="destructive" size="icon" className="absolute -top-2 -right-2 h-6 w-6 rounded-full z-10" onClick={() => removePhoto(index)}>
+                                    <Button type="button" variant="destructive" size="icon" className="absolute -top-2 -right-2 h-6 w-6 rounded-full z-10 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => removePhoto(index)}>
                                         <X className="h-4 w-4" />
                                     </Button>
                                 </div>
                             ))}
-                             {photos.length < 10 && (
-                                <div className="relative flex justify-center items-center aspect-square w-full rounded-md border-2 border-dashed border-muted-foreground/50">
-                                    <input type="file" id="photo-upload" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={handlePhotoChange} accept="image/*" multiple />
-                                    <div className="text-center text-muted-foreground">
-                                        <Upload className="mx-auto h-8 w-8" />
-                                        <span className="text-sm">Tambah Foto</span>
-                                    </div>
-                                </div>
-                            )}
                         </div>
                          {photos.length > 0 && <p className="text-sm text-muted-foreground">{photos.length} / 10 foto terpilih.</p>}
                     </div>
@@ -269,6 +341,22 @@ export default function NewGamasReportPage() {
                 </Button>
             </div>
         </form>
+
+        <Dialog open={isCameraOpen} onOpenChange={setIsCameraOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Ambil Foto Eviden</DialogTitle>
+                </DialogHeader>
+                <div className="relative aspect-video w-full bg-muted rounded-md overflow-hidden flex items-center justify-center">
+                    <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
+                    <canvas ref={canvasRef} className="hidden"></canvas>
+                </div>
+                <DialogFooter>
+                    <Button variant="secondary" onClick={() => setIsCameraOpen(false)}>Batal</Button>
+                    <Button onClick={handleCapture}>Ambil Gambar</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </div>
   );
 }
