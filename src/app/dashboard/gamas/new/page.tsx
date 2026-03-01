@@ -28,6 +28,7 @@ import { cn } from '@/lib/utils';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -144,7 +145,9 @@ export default function NewGamasReportPage() {
         toast({
           variant: 'destructive',
           title: 'Maksimal 10 Foto',
+          description: 'Anda telah mencapai batas maksimum 10 foto.',
         });
+        setIsCameraOpen(false); // Close if max is reached
         return;
       }
       const video = videoRef.current;
@@ -158,7 +161,11 @@ export default function NewGamasReportPage() {
           const file = new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
           setPhotos(prev => [...prev, file]);
           setPreviews(prev => [...prev, URL.createObjectURL(file)]);
-          setIsCameraOpen(false);
+          toast({
+            title: `Foto ${photos.length + 1} ditambahkan`,
+            description: `Anda dapat mengambil foto lagi atau menutup kamera jika sudah selesai.`,
+            duration: 2000,
+          });
         }
       }, 'image/jpeg');
     }
@@ -345,15 +352,18 @@ export default function NewGamasReportPage() {
         <Dialog open={isCameraOpen} onOpenChange={setIsCameraOpen}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Ambil Foto Eviden</DialogTitle>
+                    <DialogTitle>Ambil Foto Eviden ({photos.length} / 10)</DialogTitle>
+                     <DialogDescription>
+                        Arahkan kamera dan klik "Ambil Gambar". Anda dapat mengambil beberapa foto sekaligus.
+                    </DialogDescription>
                 </DialogHeader>
                 <div className="relative aspect-video w-full bg-muted rounded-md overflow-hidden flex items-center justify-center">
                     <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
                     <canvas ref={canvasRef} className="hidden"></canvas>
                 </div>
-                <DialogFooter>
-                    <Button variant="secondary" onClick={() => setIsCameraOpen(false)}>Batal</Button>
-                    <Button onClick={handleCapture}>Ambil Gambar</Button>
+                <DialogFooter className="sm:justify-between">
+                    <Button variant="secondary" onClick={() => setIsCameraOpen(false)}>Selesai & Tutup</Button>
+                    <Button onClick={handleCapture} disabled={photos.length >= 10}>Ambil Gambar</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
