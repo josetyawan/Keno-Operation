@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
@@ -398,11 +396,7 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished, userProfile, can
                     coordinates = `${position.coords.latitude}, ${position.coords.longitude}`;
                 }
                 
-                const photoBlob = await (await fetch(selfie)).blob();
-                const filePath = `hr_attendance/${user.uid}/${Date.now()}-selfie.jpg`;
-                const storageRef = ref(storage, filePath);
-                await uploadBytes(storageRef, photoBlob);
-                const photoUrl = await getDownloadURL(storageRef);
+                const photoUrl = selfie; // Use the data URL directly
 
                 const attendanceData = {
                     userId: user.uid,
@@ -687,19 +681,14 @@ export default function AttendancePage() {
             if (!context) throw new Error('Could not get canvas context');
             context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
             
-            const photoBlob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.9));
-            if (!photoBlob) throw new Error('Gagal membuat file gambar.');
+            const photoDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+            if (!photoDataUrl) throw new Error('Gagal membuat file gambar dari canvas.');
 
-            const filePath = `hr_attendance/${user.uid}/${Date.now()}.jpg`;
-            const storageRef = ref(storage, filePath);
-            await uploadBytes(storageRef, photoBlob);
-            const photoUrl = await getDownloadURL(storageRef);
-            
             const newAttendance: Omit<Attendance, 'id'> = {
                 userId: user.uid,
                 scheduleId: todaySchedule.id,
                 checkInTime: Timestamp.now(),
-                checkInPhotoUrl: photoUrl,
+                checkInPhotoUrl: photoDataUrl,
                 checkInCoordinates: coordinates,
                 status: 'present',
             };
@@ -709,7 +698,7 @@ export default function AttendancePage() {
             sendAttendanceNotice({
                 userName: userProfile.displayName || user.email!,
                 status: 'Hadir Tepat Waktu',
-                photoUrl: photoUrl,
+                photoUrl: photoDataUrl,
                 coordinates: coordinates,
             }).catch(err => console.error("Telegram notification failed:", err));
 
