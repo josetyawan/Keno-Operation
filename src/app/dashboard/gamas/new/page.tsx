@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -9,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Loader2, Upload, X, FileWarning, PlusCircle, Trash2, Check } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useFirestore, useUser, useStorage, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, serverTimestamp, doc, addDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -35,7 +34,7 @@ type FormValues = {
 function PhotoUploadPreview({ files, onRemove }: { files: File[], onRemove: (index: number) => void }) {
     const [previews, setPreviews] = useState<string[]>([]);
   
-    React.useEffect(() => {
+    useEffect(() => {
       const newPreviews = files.map(file => URL.createObjectURL(file));
       setPreviews(newPreviews);
   
@@ -360,5 +359,3 @@ export default function NewGamasReportPage() {
     </div>
   );
 }
-
-    
