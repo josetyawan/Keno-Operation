@@ -132,12 +132,12 @@ export default function NewGamasReportPage() {
   const router = useRouter();
   const { toast } = useToast();
   const firestore = useFirestore();
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const storage = useStorage();
   const [isSaving, setIsSaving] = useState(false);
 
   const userDocRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
-  const { data: userProfile } = useDoc<UserProfile>(userDocRef);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
   const { register, control, handleSubmit, formState: { errors }, getValues, setValue } = useForm<FormValues>({
     defaultValues: {
@@ -279,7 +279,7 @@ export default function NewGamasReportPage() {
           </h1>
           <div className="hidden items-center gap-2 md:ml-auto md:flex">
             <Button onClick={() => router.back()} variant="outline" type="button">Batal</Button>
-            <Button type="submit" disabled={isSaving}>
+            <Button type="submit" disabled={isSaving || isUserLoading || isProfileLoading}>
               {isSaving ? <><Loader2 className="animate-spin mr-2" /> Menyimpan...</> : 'Simpan Laporan'}
             </Button>
           </div>
@@ -351,7 +351,7 @@ export default function NewGamasReportPage() {
 
         <div className="flex items-center justify-end gap-2 mt-4 md:hidden">
           <Button onClick={() => router.back()} variant="outline" type="button">Batal</Button>
-          <Button type="submit" disabled={isSaving}>
+          <Button type="submit" disabled={isSaving || isUserLoading || isProfileLoading}>
             {isSaving ? <><Loader2 className="animate-spin mr-2" /> Menyimpan...</> : 'Simpan Laporan'}
           </Button>
         </div>

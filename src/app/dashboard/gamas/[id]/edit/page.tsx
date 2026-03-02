@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useRouter, useParams } from 'next/navigation';
@@ -12,6 +11,7 @@ import { ArrowLeft, Loader2, Upload, X, FileWarning, PlusCircle, Trash2, Check }
 import { useState, useMemo, useEffect } from 'react';
 import { useFirestore, useUser, useStorage, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { GamasReport, UserProfile, DesignatorEvidence } from '@/lib/types';
 import Image from 'next/image';
 import { designatorListData } from '@/lib/designator-data';
@@ -98,13 +98,57 @@ function DesignatorSelector({ value, onChange }: { value: string, onChange: (val
     );
 }
 
+const compressImage = (file: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const img = document.createElement('img');
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        if(typeof e.target?.result === 'string') {
+          img.src = e.target.result;
+        } else {
+          reject(new Error('Gagal membaca file.'));
+        }
+      }
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 1024;
+        let { width, height } = img;
+
+        if (width > MAX_WIDTH) {
+          height *= MAX_WIDTH / width;
+          width = MAX_WIDTH;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return reject(new Error('Tidak dapat memuat konteks canvas'));
+
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }));
+          } else {
+            reject(new Error('Gagal membuat blob dari canvas.'));
+          }
+        }, 'image/jpeg', 0.8);
+      };
+      img.onerror = (err) => reject(err);
+    });
+};
+
 export default function EditGamasReportPage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
   const { toast } = useToast();
   const firestore = useFirestore();
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
+  const storage = useStorage();
   const [isSaving, setIsSaving] = useState(false);
 
   const reportRef = useMemoFirebase(() => doc(firestore, 'gamas-reports', id), [firestore, id]);
@@ -143,23 +187,16 @@ export default function EditGamasReportPage() {
     try {
       const evidencePromises = data.evidences.map(async (evidenceBlock) => {
         
-        let finalPhotoUrls = evidenceBlock.existingPhotos;
+        const newPhotoUploadPromises = (evidenceBlock.photos || []).map(async (file) => {
+            const compressedFile = await compressImage(file);
+            const filePath = `gamas-photos/${user.uid}/${Date.now()}-${file.name}`;
+            const storageRef = ref(storage, filePath);
+            await uploadBytes(storageRef, compressedFile);
+            return getDownloadURL(storageRef);
+        });
 
-        // If new photos are added, upload them and replace old ones
-        if (evidenceBlock.photos.length > 0) {
-            const photoUploadPromises = evidenceBlock.photos.map(async (file) => {
-                const filePath = `gamas-photos/${user.uid}/${Date.now()}-${file.name}`;
-                // Note: The file upload logic has been removed as it was causing issues.
-                // In a real scenario, you would upload the file here and get the URL.
-                // For this fix, we will simulate this by returning a data URL.
-                return new Promise<string>((resolve) => {
-                    const reader = new FileReader();
-                    reader.onload = (e) => resolve(e.target?.result as string);
-                    reader.readAsDataURL(file);
-                });
-            });
-            finalPhotoUrls = await Promise.all(photoUploadPromises);
-        }
+        const newPhotoUrls = await Promise.all(newPhotoUploadPromises);
+        const finalPhotoUrls = [...(evidenceBlock.existingPhotos || []), ...newPhotoUrls];
         
         return {
           designator: evidenceBlock.designator,
@@ -210,7 +247,7 @@ export default function EditGamasReportPage() {
           </h1>
           <div className="hidden items-center gap-2 md:ml-auto md:flex">
             <Button onClick={() => router.back()} variant="outline" type="button">Batal</Button>
-            <Button type="submit" disabled={isSaving}>
+            <Button type="submit" disabled={isSaving || isUserLoading || isReportLoading}>
               {isSaving ? <><Loader2 className="animate-spin mr-2" /> Menyimpan...</> : 'Simpan & Kirim Ulang'}
             </Button>
           </div>
@@ -277,7 +314,7 @@ export default function EditGamasReportPage() {
 
         <div className="flex items-center justify-end gap-2 mt-4 md:hidden">
           <Button onClick={() => router.back()} variant="outline" type="button">Batal</Button>
-          <Button type="submit" disabled={isSaving}>
+          <Button type="submit" disabled={isSaving || isUserLoading || isReportLoading}>
             {isSaving ? <><Loader2 className="animate-spin mr-2" /> Menyimpan...</> : 'Simpan & Kirim Ulang'}
           </Button>
         </div>
@@ -285,4 +322,3 @@ export default function EditGamasReportPage() {
     </div>
   );
 }
-
