@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -116,13 +117,12 @@ export default function WorkSchedulePage() {
             case 'ijin': return 'i';
             case 'cuti': return 'C';
             case 'tukar-jaga': return 'TJ';
-            default: break;
+            case 'weekend-duty': return 'J';
+            case 'holiday-duty': return 'J';
         }
     }
 
     if (holidaysMap.has(dateKey) || isWeekend(day)) {
-        // A scheduled shift (like weekend-duty) overrides the holiday/weekend 'L' status
-        if (shift) return 'H';
         return 'L';
     }
     
@@ -211,6 +211,7 @@ export default function WorkSchedulePage() {
                                 'bg-blue-500 text-white': status === 'C',
                                 'bg-green-200 text-black': ['PDM', 'SM', 'M'].includes(status),
                                 'bg-orange-400 text-black': status === 'TJ',
+                                'bg-purple-500 text-white': status === 'J',
                             })}>
                                 {status}
                             </TableCell>
@@ -233,12 +234,13 @@ export default function WorkSchedulePage() {
                     <div className="flex items-center gap-2"><div className="w-4 h-4 bg-white border"></div><span>H: Masuk</span></div>
                     <div className="flex items-center gap-2"><div className="w-4 h-4 bg-green-200 border"></div><span>PDM/SM/M: Piket</span></div>
                     <div className="flex items-center gap-2"><div className="w-4 h-4 bg-orange-400 border"></div><span>TJ: Tukar Jaga</span></div>
+                    <div className="flex items-center gap-2"><div className="w-4 h-4 bg-purple-500 border"></div><span>J: Jaga</span></div>
                     <div className="flex items-center gap-2"><div className="w-4 h-4 bg-red-500 border"></div><span>L: Libur</span></div>
                     <div className="flex items-center gap-2"><div className="w-4 h-4 bg-yellow-400 border"></div><span>i: Ijin</span></div>
                     <div className="flex items-center gap-2"><div className="w-4 h-4 bg-blue-500 border"></div><span>C: Cuti</span></div>
                 </div>
                 <div className="mt-2 text-xs text-muted-foreground space-y-1">
-                    <p>H: Masuk Pagi Biasa | L: Libur / Weekend / Hari Libur Nasional | TJ: Pengajuan Tukar Jaga</p>
+                    <p>H: Masuk Pagi Biasa | L: Libur / Weekend / Hari Libur Nasional | TJ: Pengajuan Tukar Jaga | J: Jaga terjadwal di hari libur/weekend</p>
                     <p>PDM: Piket Demak | SM: Piket Siang-Malam (14:00-08:00) | M: Piket Malam (22:00-07:00)</p>
                 </div>
            </div>
