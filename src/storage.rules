@@ -13,6 +13,11 @@ service firebase.storage {
     match /notas/{userId}/{allPaths=**} {
       allow write: if request.auth.uid == userId;
     }
+    
+    // Allow a signed-in user to write to their own 'pelanggan' photos folder.
+    match /pelanggan_photos/{userId}/{allPaths=**} {
+      allow write: if request.auth.uid == userId;
+    }
 
     // Allow a signed-in user to write to their own 'hr_attendance' folder.
     match /hr_attendance/{userId}/{allPaths=**} {
