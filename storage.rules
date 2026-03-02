@@ -4,37 +4,33 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
+    // Public read access for all files
     match /{allPaths=**} {
       allow read;
     }
 
+    // --- WRITE RULES ---
+    // A user can only write to a folder that matches their own user ID,
+    // and they must be logged in.
+
     match /notas/{userId}/{allPaths=**} {
-      allow write: if isOwner(userId);
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
 
     match /pelanggan_photos/{userId}/{allPaths=**} {
-      allow write: if isOwner(userId);
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
 
     match /hr_attendance/{userId}/{allPaths=**} {
-      allow write: if isOwner(userId);
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
     
-    // Simplified rule for diagnostics
     match /gamas-photos/{userId}/{allPaths=**} {
-       allow write: if request.auth != null;
+       allow write: if request.auth != null && request.auth.uid == userId;
     }
 
     match /alker-photos/{userId}/{allPaths=**} {
-       allow write: if isOwner(userId);
+       allow write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }

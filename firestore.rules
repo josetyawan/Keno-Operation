@@ -40,10 +40,10 @@ service cloud.firestore {
       return isApproved() && (userProfile.role == 'admin' || userProfile.appAccess == 'allpro' || userProfile.appAccess == 'all');
     }
 
-    function isChangingLoanStatus() {
-      return request.resource.data.status == 'borrowed' 
-          && resource.data.status == 'available'
-          && request.resource.data.borrowedByUserId == request.auth.uid;
+    function isBorrowingDevice() {
+        return request.resource.data.status == 'borrowed'
+            && resource.data.status == 'available'
+            && request.resource.data.borrowedByUserId == request.auth.uid;
     }
 
     function isReturningDevice() {
