@@ -12,12 +12,13 @@ service firebase.storage {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Public read access is fine for image URLs
+    // Public read access for all files is generally safe for app assets like images.
     match /{allPaths=**} {
       allow read;
     }
 
     // --- WRITE RULES ---
+    // General principle: A user can only write to their own folder, and must be logged in.
 
     match /notas/{userId}/{allPaths=**} {
       allow write: if isOwner(userId);
