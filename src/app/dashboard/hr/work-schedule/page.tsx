@@ -44,6 +44,11 @@ import { useRouter } from 'next/navigation';
 
 const units = ['Provisioning', 'B2B', 'B2C', 'MTC', 'ALL'];
 
+type DayStatusInfo = {
+    status: string; // 'H', 'L', 'PDM', etc.
+    isJaga: boolean; // Is it an on-duty shift on a holiday/weekend?
+}
+
 export default function WorkSchedulePage() {
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
@@ -105,28 +110,28 @@ export default function WorkSchedulePage() {
   const daysInMonth = getDaysInMonth(currentDate);
   const daysArray = Array.from({ length: daysInMonth }, (_, i) => new Date(monthStart.getFullYear(), monthStart.getMonth(), i + 1));
 
-  const getDayStatus = (userId: string, day: Date) => {
+  const getDayStatus = (userId: string, day: Date): DayStatusInfo => {
     const dateKey = format(day, 'yyyy-MM-dd');
     const shift = schedulesMap.get(`${userId}-${dateKey}`);
 
     if (shift) {
         switch (shift) {
-            case 'piket-demak': return 'PDM';
-            case 'siang-malam': return 'SM';
-            case 'malam': return 'M';
-            case 'ijin': return 'i';
-            case 'cuti': return 'C';
-            case 'tukar-jaga': return 'TJ';
-            case 'weekend-duty': return 'J';
-            case 'holiday-duty': return 'J';
+            case 'piket-demak': return { status: 'PDM', isJaga: false };
+            case 'siang-malam': return { status: 'SM', isJaga: false };
+            case 'malam': return { status: 'M', isJaga: false };
+            case 'ijin': return { status: 'i', isJaga: false };
+            case 'cuti': return { status: 'C', isJaga: false };
+            case 'tukar-jaga': return { status: 'TJ', isJaga: false };
+            case 'weekend-duty': return { status: 'H', isJaga: true };
+            case 'holiday-duty': return { status: 'H', isJaga: true };
         }
     }
 
     if (holidaysMap.has(dateKey) || isWeekend(day)) {
-        return 'L';
+        return { status: 'L', isJaga: false };
     }
     
-    return 'H';
+    return { status: 'H', isJaga: false };
   };
 
   const changeMonth = (amount: number) => {
@@ -203,17 +208,17 @@ export default function WorkSchedulePage() {
                         <TableCell className="sticky left-[120px] bg-card z-10 font-mono text-xs border border-slate-300">{user.noHpTsel || '-'}</TableCell>
                         <TableCell className="sticky left-[270px] bg-card z-10 font-medium border border-slate-300">{user.displayName}</TableCell>
                         {daysArray.map(day => {
-                            const status = getDayStatus(user.id, day);
+                            const dayInfo = getDayStatus(user.id, day);
                             return (
                             <TableCell key={day.toString()} className={cn("text-center font-bold p-1 border border-slate-300", {
-                                'bg-red-500 text-white': status === 'L',
-                                'bg-yellow-400 text-black': status === 'i',
-                                'bg-blue-500 text-white': status === 'C',
-                                'bg-green-200 text-black': ['PDM', 'SM', 'M'].includes(status),
-                                'bg-orange-400 text-black': status === 'TJ',
-                                'bg-purple-500 text-white': status === 'J',
+                                'bg-red-500 text-white': dayInfo.status === 'L',
+                                'bg-yellow-400 text-black': dayInfo.status === 'i',
+                                'bg-blue-500 text-white': dayInfo.status === 'C',
+                                'bg-green-200 text-black': ['PDM', 'SM', 'M'].includes(dayInfo.status),
+                                'bg-orange-400 text-black': dayInfo.status === 'TJ',
+                                'bg-purple-500 text-white': dayInfo.isJaga,
                             })}>
-                                {status}
+                                {dayInfo.status}
                             </TableCell>
                             )
                         })}
@@ -232,15 +237,15 @@ export default function WorkSchedulePage() {
            <div className="mt-4 flex flex-col gap-2 text-sm">
                 <div className="flex flex-wrap gap-x-6 gap-y-2">
                     <div className="flex items-center gap-2"><div className="w-4 h-4 bg-white border"></div><span>H: Masuk</span></div>
+                    <div className="flex items-center gap-2"><div className="w-4 h-4 bg-purple-500 border"></div><span>H: Jaga</span></div>
                     <div className="flex items-center gap-2"><div className="w-4 h-4 bg-green-200 border"></div><span>PDM/SM/M: Piket</span></div>
                     <div className="flex items-center gap-2"><div className="w-4 h-4 bg-orange-400 border"></div><span>TJ: Tukar Jaga</span></div>
-                    <div className="flex items-center gap-2"><div className="w-4 h-4 bg-purple-500 border"></div><span>J: Jaga</span></div>
                     <div className="flex items-center gap-2"><div className="w-4 h-4 bg-red-500 border"></div><span>L: Libur</span></div>
                     <div className="flex items-center gap-2"><div className="w-4 h-4 bg-yellow-400 border"></div><span>i: Ijin</span></div>
                     <div className="flex items-center gap-2"><div className="w-4 h-4 bg-blue-500 border"></div><span>C: Cuti</span></div>
                 </div>
                 <div className="mt-2 text-xs text-muted-foreground space-y-1">
-                    <p>H: Masuk Pagi Biasa | L: Libur / Weekend / Hari Libur Nasional | TJ: Pengajuan Tukar Jaga | J: Jaga terjadwal di hari libur/weekend</p>
+                    <p>H: Masuk Pagi Biasa | L: Libur / Weekend / Hari Libur Nasional | TJ: Pengajuan Tukar Jaga | H (ungu): Jaga terjadwal di hari libur/weekend</p>
                     <p>PDM: Piket Demak | SM: Piket Siang-Malam (14:00-08:00) | M: Piket Malam (22:00-07:00)</p>
                 </div>
            </div>
