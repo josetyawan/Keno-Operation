@@ -219,6 +219,9 @@ export default function NewGamasReportPage() {
 
     setIsSaving(true);
     try {
+      // Force a token refresh before upload to prevent auth state issues
+      await user.getIdToken(true);
+
       const evidencePromises = data.evidences.map(async (evidence) => {
         const photoUploadPromises = evidence.photos.map(async (file) => {
             const compressedFile = await compressImage(file);
