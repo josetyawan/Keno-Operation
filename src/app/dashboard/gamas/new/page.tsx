@@ -225,7 +225,8 @@ export default function NewGamasReportPage() {
       const evidencePromises = data.evidences.map(async (evidence) => {
         const photoUploadPromises = evidence.photos.map(async (file) => {
             const compressedFile = await compressImage(file);
-            const filePath = `gamas-photos/${user.uid}/${Date.now()}-${compressedFile.name}`;
+            // DIAGNOSTIC CHANGE: Upload to 'notas' folder instead of 'gamas-photos'
+            const filePath = `notas/${user.uid}/gamas-${Date.now()}-${compressedFile.name}`;
             const storageRef = ref(storage, filePath);
             await uploadBytes(storageRef, compressedFile);
             return getDownloadURL(storageRef);

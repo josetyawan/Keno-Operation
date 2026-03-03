@@ -191,7 +191,8 @@ export default function EditGamasReportPage() {
         
         const newPhotoUploadPromises = (evidenceBlock.photos || []).map(async (file) => {
             const compressedFile = await compressImage(file);
-            const filePath = `gamas-photos/${user.uid}/${Date.now()}-${file.name}`;
+            // DIAGNOSTIC CHANGE: Upload to 'notas' folder instead of 'gamas-photos'
+            const filePath = `notas/${user.uid}/gamas-edit-${Date.now()}-${file.name}`;
             const storageRef = ref(storage, filePath);
             await uploadBytes(storageRef, compressedFile);
             return getDownloadURL(storageRef);
