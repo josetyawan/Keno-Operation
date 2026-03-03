@@ -4,39 +4,64 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
+    // -------------------------------------------------------------------------
+    // Helper Functions
+    // -------------------------------------------------------------------------
+
     function isSignedIn() {
       return request.auth != null;
     }
-
-    function isOwner(userId) {
-      return request.auth != null && request.auth.uid == userId;
+    
+    // Corrected to use firestore.get() for cross-service calls
+    function getUserData(userId) {
+      return firestore.get(/databases/$(database)/documents/users/$(userId)).data;
     }
 
-    // Public read access is fine for image URLs
+    function isApproved() {
+      return isSignedIn() && getUserData(request.auth.uid).registrationStatus == 'approved';
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && getUserData(request.auth.uid).role.lower() == 'admin';
+    }
+    
+    function isKorlap() {
+      return isSignedIn() && getUserData(request.auth.uid).role.lower() == 'korlap';
+    }
+
+    // -------------------------------------------------------------------------
+    // Rules
+    // -------------------------------------------------------------------------
+    
     match /{allPaths=**} {
-      allow read;
+      allow read; // Public read is generally okay for image URLs
     }
 
     // --- WRITE RULES ---
-    // General principle: A user can only write to their own folder, if they are signed in.
+    // General principle: A user must be approved and can only write to their own folder.
+
     match /notas/{userId}/{allPaths=**} {
-      allow write: if isSignedIn() && isOwner(userId);
+      allow write: if isApproved() && isOwner(userId);
     }
 
     match /pelanggan_photos/{userId}/{allPaths=**} {
-      allow write: if isSignedIn() && isOwner(userId);
+      allow write: if isApproved() && isOwner(userId);
     }
 
     match /hr_attendance/{userId}/{allPaths=**} {
-      allow write: if isSignedIn() && isOwner(userId);
+      allow write: if isApproved() && isOwner(userId);
     }
     
     match /gamas-photos/{userId}/{allPaths=**} {
-       allow write: if isSignedIn() && isOwner(userId);
+       allow write: if isApproved() && isOwner(userId);
     }
 
     match /alker-photos/{userId}/{allPaths=**} {
-       allow write: if isSignedIn() && isOwner(userId);
+       allow write: if isApproved() && isOwner(userId);
     }
   }
 }
