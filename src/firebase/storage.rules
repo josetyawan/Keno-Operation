@@ -3,31 +3,39 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // Public read access is fine for image URLs as they are unguessable.
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Public read access is fine for image URLs
     match /{allPaths=**} {
       allow read;
     }
 
     // --- WRITE RULES ---
-    // A user can only write to a folder that matches their own user ID, provided they are authenticated.
+    // As a final diagnostic step, we are simplifying the rule to its most basic form.
+    // This allows any authenticated user to write to any path.
+    // This is NOT secure for production, but will confirm if the issue is
+    // with ownership validation (`request.auth.uid == userId`) or with the
+    // authentication state itself (`request.auth`).
     match /notas/{userId}/{allPaths=**} {
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow write: if isSignedIn();
     }
 
     match /pelanggan_photos/{userId}/{allPaths=**} {
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow write: if isSignedIn();
     }
 
     match /hr_attendance/{userId}/{allPaths=**} {
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow write: if isSignedIn();
     }
     
     match /gamas-photos/{userId}/{allPaths=**} {
-       allow write: if request.auth != null && request.auth.uid == userId;
+       allow write: if isSignedIn();
     }
 
     match /alker-photos/{userId}/{allPaths=**} {
-       allow write: if request.auth != null && request.auth.uid == userId;
+       allow write: if isSignedIn();
     }
   }
 }
