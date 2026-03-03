@@ -4,36 +4,35 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    function isApproved() {
-      return request.auth != null && firestore.get(/databases/$(database)/documents/users/$(request.auth.uid)).data.registrationStatus == 'approved';
-    }
-
-    function isOwner(userId) {
-      return request.auth != null && request.auth.uid == userId;
-    }
-    
+    // PUBLIC READ
+    // Anyone can read any file. This is okay for public images like photo evidence.
     match /{allPaths=**} {
       allow read;
     }
 
+    // --- WRITE RULES ---
+    // A user can only write to their own folder.
+    // The path contains a folder named with the user's ID (`{userId}`).
+    // The rule checks if the logged-in user's ID (`request.auth.uid`) matches that folder name.
+
     match /notas/{userId}/{allPaths=**} {
-      allow write: if isApproved() && isOwner(userId);
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
 
     match /pelanggan_photos/{userId}/{allPaths=**} {
-      allow write: if isApproved() && isOwner(userId);
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
 
     match /hr_attendance/{userId}/{allPaths=**} {
-      allow write: if isApproved() && isOwner(userId);
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
-    
+
     match /gamas-photos/{userId}/{allPaths=**} {
-       allow write: if isApproved() && isOwner(userId);
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
 
     match /alker-photos/{userId}/{allPaths=**} {
-       allow write: if isApproved() && isOwner(userId);
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
