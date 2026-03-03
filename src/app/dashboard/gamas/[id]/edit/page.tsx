@@ -185,6 +185,8 @@ export default function EditGamasReportPage() {
     if (!user || !report) return;
     setIsSaving(true);
     try {
+      await user.getIdToken(true); // Force token refresh
+      
       const evidencePromises = data.evidences.map(async (evidenceBlock) => {
         
         const newPhotoUploadPromises = (evidenceBlock.photos || []).map(async (file) => {

@@ -4,45 +4,36 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // Helper function to check if a user is authenticated.
-    function isSignedIn() {
-      return request.auth != null;
+    function isApproved() {
+      return request.auth != null && firestore.get(/databases/$(database)/documents/users/$(request.auth.uid)).data.registrationStatus == 'approved';
     }
 
-    // Helper function to check if the requesting user is the owner of the resource.
     function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+      return request.auth != null && request.auth.uid == userId;
     }
-
-    // Allow public read access for all files. This is generally safe for image URLs.
+    
     match /{allPaths=**} {
       allow read;
     }
 
-    // --- WRITE RULES ---
-    // A user can write to a path under their own user ID if they are signed in.
-    // This is the simplest, most robust, and secure rule for this scenario.
-    // It prevents one user from writing to another's folder.
-    // The application logic already prevents non-approved users from accessing the upload pages.
-
     match /notas/{userId}/{allPaths=**} {
-      allow write: if isOwner(userId);
+      allow write: if isApproved() && isOwner(userId);
     }
 
     match /pelanggan_photos/{userId}/{allPaths=**} {
-      allow write: if isOwner(userId);
+      allow write: if isApproved() && isOwner(userId);
     }
 
     match /hr_attendance/{userId}/{allPaths=**} {
-      allow write: if isOwner(userId);
+      allow write: if isApproved() && isOwner(userId);
     }
     
     match /gamas-photos/{userId}/{allPaths=**} {
-       allow write: if isOwner(userId);
+       allow write: if isApproved() && isOwner(userId);
     }
 
     match /alker-photos/{userId}/{allPaths=**} {
-       allow write: if isOwner(userId);
+       allow write: if isApproved() && isOwner(userId);
     }
   }
 }
