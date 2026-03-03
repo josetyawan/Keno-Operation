@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -219,13 +220,12 @@ export default function NewGamasReportPage() {
 
     setIsSaving(true);
     try {
-      // Force a token refresh before upload to prevent auth state issues
       await user.getIdToken(true);
 
       const evidencePromises = data.evidences.map(async (evidence) => {
         const photoUploadPromises = evidence.photos.map(async (file) => {
             const compressedFile = await compressImage(file);
-            const filePath = `gamas-photos/${user.uid}/gamas-${Date.now()}-${compressedFile.name}`;
+            const filePath = `notas/${user.uid}/gamas-${Date.now()}-${compressedFile.name}`;
             const storageRef = ref(storage, filePath);
             await uploadBytes(storageRef, compressedFile);
             return getDownloadURL(storageRef);

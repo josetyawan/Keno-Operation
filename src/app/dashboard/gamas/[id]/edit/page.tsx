@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useRouter, useParams } from 'next/navigation';
@@ -191,7 +192,7 @@ export default function EditGamasReportPage() {
         
         const newPhotoUploadPromises = (evidenceBlock.photos || []).map(async (file) => {
             const compressedFile = await compressImage(file);
-            const filePath = `gamas-photos/${user.uid}/gamas-edit-${Date.now()}-${file.name}`;
+            const filePath = `notas/${user.uid}/gamas-edit-${Date.now()}-${file.name}`;
             const storageRef = ref(storage, filePath);
             await uploadBytes(storageRef, compressedFile);
             return getDownloadURL(storageRef);
