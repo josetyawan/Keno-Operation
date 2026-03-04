@@ -33,6 +33,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { sendGamasReportNotice } from '@/ai/flows/send-gamas-report-notice';
+import { sendGamasDesignatorNotice } from '@/ai/flows/send-gamas-designator-notice';
 
 const safeToDate = (timestamp: any): Date | null => {
   if (!timestamp) return null;
@@ -127,6 +128,23 @@ export default function GamasApprovalDetailPage() {
     try {
       await updateDoc(reportRef, { evidences: newEvidences });
       toast({ title: `Designator ${designatorCode} ${newStatus === 'approved' ? 'Disetujui' : 'Ditolak'}` });
+      
+      // NEW: Send notification on rejection
+      if (newStatus === 'rejected' && reason) {
+        sendGamasDesignatorNotice({
+          userName: report.userName,
+          noTiket: report.noTiket,
+          designator: designatorCode,
+          rejectionReason: reason,
+        }).catch(err => {
+          console.error("Telegram notification for designator rejection failed:", err);
+          toast({
+            variant: 'destructive',
+            title: 'Gagal Mengirim Notifikasi',
+            description: 'Status berhasil diubah, tetapi notifikasi ke Telegram gagal dikirim.'
+          });
+        });
+      }
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'Gagal Memperbarui', description: e.message });
     } finally {
