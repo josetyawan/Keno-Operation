@@ -98,12 +98,10 @@ export default function GamasDetailPage() {
     return report.userId === user.uid;
   }, [userProfile, report, user]);
   
-  const isOwner = user?.uid === report?.userId;
-
   const canEdit = useMemo(() => {
-    if (!isOwner || !report) return false;
+    if (!user || !report || user.uid !== report.userId) return false;
     return report.status === 'rejected' || report.evidences.some(e => e.status === 'rejected');
-  }, [isOwner, report]);
+  }, [user, report]);
 
   const handleDownloadAll = () => {
     if (!report?.evidences) return;
