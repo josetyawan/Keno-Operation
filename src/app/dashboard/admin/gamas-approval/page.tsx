@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -34,7 +33,6 @@ export default function GamasApprovalListPage() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
-  const [reportToDelete, setReportToDelete] = useState<GamasReport | null>(null);
 
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
     useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
@@ -73,7 +71,7 @@ export default function GamasApprovalListPage() {
     return reports.slice(startIndex, endIndex);
   }, [reports, currentPage]);
 
-  const handleDeleteReport = async () => {
+  const handleDeleteReport = async (reportToDelete: GamasReport) => {
     if (!reportToDelete) return;
     const docRef = doc(firestore, 'gamas-reports', reportToDelete.id);
     try {
@@ -82,7 +80,6 @@ export default function GamasApprovalListPage() {
     } catch (e: any) {
       toast({ variant: 'destructive', title: "Gagal Menghapus", description: e.message });
     }
-    setReportToDelete(null);
   };
   
   const isLoading = isUserLoading || isProfileLoading || areReportsLoading;
