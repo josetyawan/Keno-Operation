@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, FileWarning, Download, Image as ImageIcon, Check, X, Info, Edit } from 'lucide-react';
 import type { GamasReport, UserProfile, DesignatorEvidence } from '@/lib/types';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
@@ -92,6 +92,19 @@ export default function GamasDetailPage() {
   const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
   const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
 
+  const [canEdit, setCanEdit] = useState(false);
+
+  useEffect(() => {
+    if (user && report) {
+      const isOwner = user.uid === report.userId;
+      const isReportRejected = report.status === 'rejected';
+      const hasRejectedEvidence = report.evidences.some(e => e.status === 'rejected');
+      setCanEdit(isOwner && (isReportRejected || hasRejectedEvidence));
+    } else {
+      setCanEdit(false);
+    }
+  }, [user, report]);
+
   const canView = useMemo(() => {
     if (!userProfile || !report) return false;
     if (userProfile.role === 'admin' || userProfile.role === 'korlap') return true;
@@ -162,9 +175,9 @@ export default function GamasDetailPage() {
           </p>
         </div>
         <div className="ml-auto flex flex-wrap gap-2">
-            {(user?.uid === report.userId && (report.status === 'rejected' || report.evidences.some(e => e.status === 'rejected'))) && (
+            {canEdit && (
                 <Link href={`/dashboard/gamas/${report.id}/edit`}>
-                    <Button><Edit className="mr-2"/>Edit & Kirim Ulang</Button>
+                    <Button><Edit className="mr-2"/>Edit & Kirim Ulang Laporan</Button>
                 </Link>
             )}
             <Button onClick={handleDownloadAll} variant="outline"><Download className="mr-2"/>Download Semua Foto</Button>
@@ -204,12 +217,22 @@ export default function GamasDetailPage() {
                         <div className="mb-4 text-sm p-3 bg-destructive/10 text-destructive rounded-md border border-destructive/20">
                             <p className="font-semibold flex items-center gap-1"><Info className="h-4 w-4"/>Alasan Penolakan Designator:</p>
                             <p>{evidence.rejectionReason}</p>
+                            {canEdit && (
+                                <Link href={`/dashboard/gamas/${report.id}/edit`} className="mt-2 inline-block font-semibold underline hover:no-underline">
+                                    Klik di sini untuk memperbaiki
+                                </Link>
+                            )}
                         </div>
                     )}
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                         {evidence.photoUrls.map((url, photoIndex) => (
                              <PhotoViewer key={photoIndex} url={url} label={`Eviden ${evidence.designator} ${photoIndex + 1}`} />
                         ))}
+                         {evidence.photoUrls.length === 0 && (
+                            <div className="col-span-full text-center text-muted-foreground py-4">
+                                Tidak ada foto untuk designator ini.
+                            </div>
+                        )}
                     </div>
                 </CardContent>
             </Card>
