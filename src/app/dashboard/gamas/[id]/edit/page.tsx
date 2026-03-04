@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useRouter, useParams } from 'next/navigation';
@@ -33,6 +32,41 @@ type FormValues = {
   noTiket: string;
   evidences: EvidenceFormValues[];
 };
+
+// Component to preview newly uploaded files
+function PhotoUploadPreview({ files, onRemove }: { files: File[], onRemove: (index: number) => void }) {
+    const [previews, setPreviews] = useState<string[]>([]);
+  
+    useEffect(() => {
+      const newPreviews = files.map(file => URL.createObjectURL(file));
+      setPreviews(newPreviews);
+  
+      return () => {
+        newPreviews.forEach(url => URL.revokeObjectURL(url));
+      };
+    }, [files]);
+  
+    if (previews.length === 0) return null;
+
+    return (
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mt-2">
+        {previews.map((previewUrl, index) => (
+          <div key={index} className="relative group aspect-square">
+            <Image src={previewUrl} alt={`Preview ${index + 1}`} fill className="object-cover rounded-md border border-primary/50" />
+            <Button
+              type="button"
+              variant="destructive"
+              size="icon"
+              className="absolute -top-2 -right-2 h-6 w-6 rounded-full z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={() => onRemove(index)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        ))}
+      </div>
+    );
+}
 
 function DesignatorSelector({ value, onChange }: { value: string, onChange: (value: string) => void }) {
     const [isOpen, setIsOpen] = useState(false);
@@ -155,12 +189,14 @@ export default function EditGamasReportPage() {
   const reportRef = useMemoFirebase(() => doc(firestore, 'gamas-reports', id), [firestore, id]);
   const { data: report, isLoading: isReportLoading } = useDoc<GamasReport>(reportRef);
 
-  const { register, control, handleSubmit, formState: { errors }, getValues, setValue, reset } = useForm<FormValues>({
+  const { register, control, handleSubmit, formState: { errors }, getValues, setValue, reset, watch } = useForm<FormValues>({
     defaultValues: {
       noTiket: '',
       evidences: [],
     },
   });
+
+  const evidencesWatch = watch("evidences");
 
   useEffect(() => {
     if (report) {
@@ -180,6 +216,12 @@ export default function EditGamasReportPage() {
 
   const addEvidenceBlock = () => {
     append({ designator: '', notes: '', photos: [], existingPhotos: [] });
+  };
+
+  const handleRemoveExistingPhoto = (evidenceIndex: number, photoIndex: number) => {
+    const currentEvidences = getValues('evidences');
+    const updatedPhotos = currentEvidences[evidenceIndex].existingPhotos.filter((_, idx) => idx !== photoIndex);
+    setValue(`evidences.${evidenceIndex}.existingPhotos`, updatedPhotos, { shouldDirty: true });
   };
 
   const onSubmit = async (data: FormValues) => {
@@ -292,20 +334,48 @@ export default function EditGamasReportPage() {
                 <Textarea id={`notes-${index}`} placeholder="Catatan tambahan untuk designator ini..." {...register(`evidences.${index}.notes`)} />
               </div>
               <div className="grid gap-3">
-                <Label>Foto Eviden (Unggah ulang jika perlu revisi)</Label>
-                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mt-2">
-                    {getValues(`evidences.${index}.existingPhotos`).map((url, photoIdx) => (
+                <Label>Foto Eviden</Label>
+                
+                {/* Display existing photos with a remove button */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mt-2">
+                    {(evidencesWatch?.[index]?.existingPhotos || []).map((url, photoIdx) => (
                         <div key={photoIdx} className="relative group aspect-square">
                             <Image src={url} alt={`Existing photo ${photoIdx + 1}`} fill className="object-cover rounded-md border" />
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon"
+                                className="absolute -top-2 -right-2 h-6 w-6 rounded-full z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => handleRemoveExistingPhoto(index, photoIdx)}
+                            >
+                                <X className="h-4 w-4" />
+                            </Button>
                         </div>
                     ))}
-                 </div>
+                </div>
+
+                {/* Display previews for newly added files with a remove button */}
+                <PhotoUploadPreview 
+                    files={evidencesWatch?.[index]?.photos || []}
+                    onRemove={(photoIndex) => {
+                        const currentPhotos = getValues(`evidences.${index}.photos`) || [];
+                        const updatedPhotos = currentPhotos.filter((_, i) => i !== photoIndex);
+                        setValue(`evidences.${index}.photos`, updatedPhotos, { shouldValidate: true });
+                    }}
+                />
+
                 <Input
                     type="file"
                     accept="image/*"
                     multiple
-                    {...register(`evidences.${index}.photos`)}
+                    onChange={(e) => {
+                        const currentPhotos = getValues(`evidences.${index}.photos`) || [];
+                        const newFiles = Array.from(e.target.files || []);
+                        setValue(`evidences.${index}.photos`, [...currentPhotos, ...newFiles], { shouldValidate: true });
+                        e.target.value = ''; 
+                    }}
                 />
+                 <p className="text-xs text-muted-foreground">Anda dapat mengunggah beberapa foto sekaligus. Foto yang sudah ada tidak akan terhapus kecuali Anda mengklik tombol X.</p>
               </div>
             </CardContent>
           </Card>
