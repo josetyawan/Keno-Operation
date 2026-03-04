@@ -100,6 +100,11 @@ export default function GamasDetailPage() {
   
   const isOwner = user?.uid === report?.userId;
 
+  const canEdit = useMemo(() => {
+    if (!isOwner || !report) return false;
+    return report.status === 'rejected' || report.evidences.some(e => e.status === 'rejected');
+  }, [isOwner, report]);
+
   const handleDownloadAll = () => {
     if (!report?.evidences) return;
 
@@ -164,7 +169,7 @@ export default function GamasDetailPage() {
           </p>
         </div>
         <div className="ml-auto flex flex-wrap gap-2">
-            {isOwner && report.status === 'rejected' && (
+            {canEdit && (
                 <Link href={`/dashboard/gamas/${report.id}/edit`}>
                     <Button><Edit className="mr-2"/>Edit & Kirim Ulang</Button>
                 </Link>
