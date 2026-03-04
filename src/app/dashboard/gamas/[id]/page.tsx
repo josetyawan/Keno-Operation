@@ -95,13 +95,8 @@ export default function GamasDetailPage() {
   const canView = useMemo(() => {
     if (!userProfile || !report) return false;
     if (userProfile.role === 'admin' || userProfile.role === 'korlap') return true;
-    return report.userId === user.uid;
+    return report.userId === user?.uid;
   }, [userProfile, report, user]);
-  
-  // Rewrote canEdit logic to be more direct and avoid potential stale memoization.
-  const isOwner = user?.uid === report?.userId;
-  const isRejected = report?.status === 'rejected' || !!report?.evidences.some(e => e.status === 'rejected');
-  const canEdit = isOwner && isRejected;
 
   const handleDownloadAll = () => {
     if (!report?.evidences) return;
@@ -167,7 +162,7 @@ export default function GamasDetailPage() {
           </p>
         </div>
         <div className="ml-auto flex flex-wrap gap-2">
-            {canEdit && (
+            {(user?.uid === report.userId && (report.status === 'rejected' || report.evidences.some(e => e.status === 'rejected'))) && (
                 <Link href={`/dashboard/gamas/${report.id}/edit`}>
                     <Button><Edit className="mr-2"/>Edit & Kirim Ulang</Button>
                 </Link>
