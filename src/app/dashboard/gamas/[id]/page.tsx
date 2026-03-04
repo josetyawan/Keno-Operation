@@ -98,10 +98,10 @@ export default function GamasDetailPage() {
     return report.userId === user.uid;
   }, [userProfile, report, user]);
   
-  const canEdit = useMemo(() => {
-    if (!user || !report || user.uid !== report.userId) return false;
-    return report.status === 'rejected' || report.evidences.some(e => e.status === 'rejected');
-  }, [user, report]);
+  // Rewrote canEdit logic to be more direct and avoid potential stale memoization.
+  const isOwner = user?.uid === report?.userId;
+  const isRejected = report?.status === 'rejected' || !!report?.evidences.some(e => e.status === 'rejected');
+  const canEdit = isOwner && isRejected;
 
   const handleDownloadAll = () => {
     if (!report?.evidences) return;
