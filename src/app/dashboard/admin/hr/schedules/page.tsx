@@ -262,37 +262,42 @@ export default function AdminSchedulesPage() {
         if (!scheduleToApprove) return;
     
         const targetUserId = scheduleToApprove.swapTargetUserId;
-        const targetUser = activeUsers.find(u => u.id === targetUserId);
+        let targetUser: UserProfile | undefined;
 
-        if (!targetUser && !scheduleToApprove.swapTargetUserName) {
-             toast({ variant: 'destructive', title: 'User Pengganti Tidak Valid', description: `Nama pengganti tidak ada.` });
-             setScheduleToApprove(null);
-             return;
+        // First, try to find by ID if it exists
+        if (targetUserId) {
+            targetUser = activeUsers.find(u => u.id === targetUserId);
         }
 
+        // If not found by ID, and there's a username, try to find by username.
+        // This handles requests made by users who can't select an ID.
         if (!targetUser && scheduleToApprove.swapTargetUserName) {
+            const targetName = scheduleToApprove.swapTargetUserName.trim().toLowerCase();
+            targetUser = activeUsers.find(u => (u.displayName || '').trim().toLowerCase() === targetName);
+        }
+        
+        // If still no user is found, show an error.
+        if (!targetUser) {
              toast({
                 title: 'Tidak Bisa Membuat Jadwal Otomatis',
-                description: `User "${scheduleToApprove.swapTargetUserName}" tidak ditemukan atau tidak aktif. Hapus request dan buat jadwal baru secara manual.`,
+                description: `User "${scheduleToApprove.swapTargetUserName || 'Pengganti'}" tidak ditemukan atau tidak aktif. Hapus request dan buat jadwal baru secara manual.`,
                 duration: 8000
              });
              setScheduleToApprove(null);
              return;
         }
         
-        if (targetUser) {
-            setScheduleToEdit({
-                userId: targetUser.id,
-                userEmail: targetUser.email,
-                date: scheduleToApprove.date,
-                shiftType: 'piket-demak',
-                notes: `Menggantikan ${scheduleToApprove.userName}`,
-            });
+        // If we found a user, proceed.
+        setScheduleToEdit({
+            userId: targetUser.id,
+            userEmail: targetUser.email,
+            date: scheduleToApprove.date,
+            shiftType: 'piket-demak',
+            notes: `Menggantikan ${scheduleToApprove.userName}`,
+        });
 
-            setSwapSourceSchedule(scheduleToApprove);
-            setIsFormDialogOpen(true);
-        }
-        
+        setSwapSourceSchedule(scheduleToApprove);
+        setIsFormDialogOpen(true);
         setScheduleToApprove(null);
     };
 
