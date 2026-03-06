@@ -273,61 +273,24 @@ export default function AdminSchedulesPage() {
     
     const handleApprove = () => {
         if (!scheduleToApprove) return;
-    
-        const targetUserId = scheduleToApprove.swapTargetUserId;
-        let targetUser: UserProfile | undefined;
 
-        // First, try to find by ID if it exists
-        if (targetUserId) {
-            targetUser = activeUsers.find(u => u.id === targetUserId);
-        }
-
-        // If not found by ID, and there's a username, try a more robust name search.
-        if (!targetUser && scheduleToApprove.swapTargetUserName) {
-            const targetName = scheduleToApprove.swapTargetUserName.trim().toLowerCase();
-            
-            // 1. Try exact match on displayName
-            targetUser = activeUsers.find(u => 
-                (u.displayName || '').trim().toLowerCase() === targetName
-            );
-
-            // 2. Try exact match on email username part
-            if (!targetUser) {
-                targetUser = activeUsers.find(u => 
-                    (u.email || '').split('@')[0].toLowerCase() === targetName
-                );
-            }
-
-            // 3. Try partial match on display name (includes)
-            if (!targetUser) {
-                targetUser = activeUsers.find(u => 
-                    (u.displayName || '').trim().toLowerCase().includes(targetName)
-                );
-            }
-        }
-        
-        // If still no user is found, show an error.
-        if (!targetUser) {
-             toast({
-                title: 'Tidak Bisa Membuat Jadwal Otomatis',
-                description: `User "${scheduleToApprove.swapTargetUserName || 'Pengganti'}" tidak ditemukan atau tidak aktif. Hapus request dan buat jadwal baru secara manual.`,
-                duration: 8000
-             });
-             setScheduleToApprove(null);
-             return;
-        }
-        
-        // If we found a user, proceed.
+        // Directly set state to open the form dialog, pre-filling what we can.
+        // Let the admin choose the user from the dropdown in the form.
         setScheduleToEdit({
-            userId: targetUser.id,
-            userEmail: targetUser.email,
+            userId: '', // Clear this so the admin has to select
+            userEmail: '',
             date: scheduleToApprove.date,
-            shiftType: 'piket-demak', // Default shift for replacement
-            notes: `Menggantikan ${scheduleToApprove.userName}`,
+            shiftType: 'piket-demak', // A sensible default for a replacement shift
+            notes: `Menggantikan ${scheduleToApprove.userName || scheduleToApprove.userEmail}. Alasan: ${scheduleToApprove.notes || 'Tidak ada'}`,
         });
 
+        // Keep track of the original request so we can delete it after the form is submitted.
         setSwapSourceSchedule(scheduleToApprove);
+        
+        // Open the form dialog.
         setIsFormDialogOpen(true);
+        
+        // Close the confirmation alert dialog.
         setScheduleToApprove(null);
     };
 
@@ -783,7 +746,7 @@ export default function AdminSchedulesPage() {
                                                             <AlertDialogHeader>
                                                                 <AlertDialogTitle>Setujui Tukar Jaga?</AlertDialogTitle>
                                                                 <AlertDialogDescription>
-                                                                    Anda akan diarahkan untuk membuat jadwal baru untuk <strong>{schedule.swapTargetUserName}</strong>. Jadwal lama ({schedule.userName}) akan otomatis dihapus setelahnya.
+                                                                    Formulir jadwal akan terbuka. Silakan pilih teknisi pengganti ("{scheduleToApprove?.swapTargetUserName || 'N/A'}") dan simpan jadwal baru. Request lama akan otomatis dihapus.
                                                                 </AlertDialogDescription>
                                                             </AlertDialogHeader>
                                                             <AlertDialogFooter>
