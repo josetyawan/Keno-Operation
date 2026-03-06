@@ -282,14 +282,28 @@ export default function AdminSchedulesPage() {
             targetUser = activeUsers.find(u => u.id === targetUserId);
         }
 
-        // If not found by ID, and there's a username, try to find by username.
+        // If not found by ID, and there's a username, try a more robust name search.
         if (!targetUser && scheduleToApprove.swapTargetUserName) {
             const targetName = scheduleToApprove.swapTargetUserName.trim().toLowerCase();
-            // More robust check: exact match on displayName OR on the username part of the email
+            
+            // 1. Try exact match on displayName
             targetUser = activeUsers.find(u => 
-                (u.displayName || '').trim().toLowerCase() === targetName ||
-                (u.email || '').split('@')[0].toLowerCase() === targetName
+                (u.displayName || '').trim().toLowerCase() === targetName
             );
+
+            // 2. Try exact match on email username part
+            if (!targetUser) {
+                targetUser = activeUsers.find(u => 
+                    (u.email || '').split('@')[0].toLowerCase() === targetName
+                );
+            }
+
+            // 3. Try partial match on display name (includes)
+            if (!targetUser) {
+                targetUser = activeUsers.find(u => 
+                    (u.displayName || '').trim().toLowerCase().includes(targetName)
+                );
+            }
         }
         
         // If still no user is found, show an error.
@@ -308,7 +322,7 @@ export default function AdminSchedulesPage() {
             userId: targetUser.id,
             userEmail: targetUser.email,
             date: scheduleToApprove.date,
-            shiftType: 'piket-demak',
+            shiftType: 'piket-demak', // Default shift for replacement
             notes: `Menggantikan ${scheduleToApprove.userName}`,
         });
 
