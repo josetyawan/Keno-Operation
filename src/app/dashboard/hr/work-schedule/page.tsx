@@ -126,6 +126,7 @@ export default function WorkSchedulePage() {
             case 'ijin': return { status: 'i', isJaga: false };
             case 'cuti': return { status: 'C', isJaga: false };
             case 'tukar-jaga': return { status: 'TJ', isJaga: false };
+            case 'libur-dijadwalkan': return { status: 'L', isJaga: false };
             case 'weekend-duty':
             case 'holiday-duty':
                 // A shift is only 'jaga' (special on-duty) if it occurs on an actual off-day.

@@ -34,7 +34,7 @@ const safeToDate = (timestamp: any): Date | null => {
     return isValid(d) ? d : null;
 };
 
-type ValidShiftType = 'piket-demak' | 'siang-malam' | 'malam' | 'ijin' | 'cuti' | 'weekend-duty' | 'holiday-duty' | 'tukar-jaga' ;
+type ValidShiftType = 'piket-demak' | 'siang-malam' | 'malam' | 'ijin' | 'cuti' | 'weekend-duty' | 'holiday-duty' | 'tukar-jaga' | 'libur-dijadwalkan' ;
 
 function ScheduleForm({ schedule, users, onFormSubmit }: { schedule?: Partial<Schedule> | null, users: UserProfile[], onFormSubmit: (data: Partial<Schedule>) => void }) {
     const [userId, setUserId] = useState('');
@@ -46,7 +46,7 @@ function ScheduleForm({ schedule, users, onFormSubmit }: { schedule?: Partial<Sc
         if (schedule) {
             setUserId(schedule.userId || '');
             setDate(schedule.date ? safeToDate(schedule.date) : undefined);
-            const validTypes: ValidShiftType[] = ['piket-demak', 'siang-malam', 'malam', 'ijin', 'cuti', 'weekend-duty', 'holiday-duty', 'tukar-jaga'];
+            const validTypes: ValidShiftType[] = ['piket-demak', 'siang-malam', 'malam', 'ijin', 'cuti', 'weekend-duty', 'holiday-duty', 'tukar-jaga', 'libur-dijadwalkan'];
             if (schedule.shiftType && validTypes.includes(schedule.shiftType as any)) {
                 setShiftType(schedule.shiftType as ValidShiftType);
             } else {
@@ -125,6 +125,7 @@ function ScheduleForm({ schedule, users, onFormSubmit }: { schedule?: Partial<Sc
                         <SelectItem value="ijin">Ijin (i)</SelectItem>
                         <SelectItem value="cuti">Cuti (C)</SelectItem>
                         <SelectItem value="tukar-jaga">Request Tukar Jaga</SelectItem>
+                        <SelectItem value="libur-dijadwalkan">Libur (L)</SelectItem>
                     </SelectContent>
                 </Select>
             </div>
@@ -175,6 +176,7 @@ export default function AdminSchedulesPage() {
         'weekend-duty': 'Jaga Akhir Pekan',
         'holiday-duty': 'Jaga Hari Libur',
         'tukar-jaga': 'Request Tukar Jaga',
+        'libur-dijadwalkan': 'Libur (L)',
         'H': 'Masuk',
         'L': 'Libur',
     };
@@ -526,6 +528,7 @@ export default function AdminSchedulesPage() {
                 'i': 'ijin', 'c': 'cuti',
                 'h': 'weekend-duty', 'p': 'weekend-duty',
                 'jaga': 'weekend-duty', 'weekend': 'weekend-duty', 'holiday': 'holiday-duty',
+                'l': 'libur-dijadwalkan',
             };
             
             let processedRows = 0;

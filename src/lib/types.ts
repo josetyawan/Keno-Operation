@@ -227,7 +227,7 @@ export type Schedule = {
     userId: string;
     userEmail: string;
     date: any; // Firestore Timestamp
-    shiftType: 'piket-demak' | 'siang-malam' | 'malam' | 'ijin' | 'cuti' | 'weekend-duty' | 'holiday-duty' | 'tukar-jaga';
+    shiftType: 'piket-demak' | 'siang-malam' | 'malam' | 'ijin' | 'cuti' | 'weekend-duty' | 'holiday-duty' | 'tukar-jaga' | 'libur-dijadwalkan';
     notes?: string;
     evidenceUrl?: string;
     createdAt: any; // Firestore Timestamp
@@ -309,5 +309,3 @@ export type Performance = {
   totalPerformance: string;
   date: any; // Timestamp
 };
-
-    
