@@ -114,6 +114,10 @@ export default function WorkSchedulePage() {
     const dateKey = format(day, 'yyyy-MM-dd');
     const shift = schedulesMap.get(`${userId}-${dateKey}`);
 
+    const isDayWeekend = isWeekend(day);
+    const isDayHoliday = holidaysMap.has(dateKey);
+    const isOffDay = isDayWeekend || isDayHoliday;
+
     if (shift) {
         switch (shift) {
             case 'piket-demak': return { status: 'PDM', isJaga: false };
@@ -122,12 +126,14 @@ export default function WorkSchedulePage() {
             case 'ijin': return { status: 'i', isJaga: false };
             case 'cuti': return { status: 'C', isJaga: false };
             case 'tukar-jaga': return { status: 'TJ', isJaga: false };
-            case 'weekend-duty': return { status: 'H', isJaga: true };
-            case 'holiday-duty': return { status: 'H', isJaga: true };
+            case 'weekend-duty':
+            case 'holiday-duty':
+                // A shift is only 'jaga' (special on-duty) if it occurs on an actual off-day.
+                return { status: 'H', isJaga: isOffDay };
         }
     }
 
-    if (holidaysMap.has(dateKey) || isWeekend(day)) {
+    if (isOffDay) {
         return { status: 'L', isJaga: false };
     }
     
