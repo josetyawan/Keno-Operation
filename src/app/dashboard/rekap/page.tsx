@@ -29,8 +29,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { ArrowLeft, Calendar as CalendarIcon, Loader2, Bot, Wallet, CheckCircle } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc, updateDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, Timestamp, doc } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
+import { collection, query, where, Timestamp, doc, updateDoc } from 'firebase/firestore';
 import { format, startOfDay, endOfDay, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import type { Nota, UserProfile } from '@/lib/types';
@@ -239,7 +239,7 @@ export default function RekapPage() {
     
             for (const notaId of selectedNotaIds) {
                 const notaDocRef = doc(firestore, 'notas', notaId);
-                updateDocumentNonBlocking(notaDocRef, {
+                updateDoc(notaDocRef, {
                     status: 'paid',
                     tanggalPembayaran: paymentDate
                 });
@@ -337,7 +337,7 @@ export default function RekapPage() {
                 
                 for (const notaId of selectedNotaIds) {
                     const notaDocRef = doc(firestore, 'notas', notaId);
-                    updateDocumentNonBlocking(notaDocRef, {
+                    updateDoc(notaDocRef, {
                         status: 'paid',
                         tanggalPembayaran: paymentDate
                     });
