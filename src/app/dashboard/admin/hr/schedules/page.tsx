@@ -633,7 +633,7 @@ export default function AdminSchedulesPage() {
                             </AlertDialogFooter>
                         </AlertDialogContent>
                     </AlertDialog>
-                    <Dialog open={isFormDialogOpen} onOpenChange={setIsFormDialogOpen} modal={false}>
+                    <Dialog open={isFormDialogOpen} onOpenChange={setIsFormDialogOpen}>
                         <DialogTrigger asChild>
                             <Button onClick={handleCreate} disabled={activeUsers.length === 0}>
                                 <PlusCircle className="mr-2 h-4 w-4" />Buat Jadwal Manual
