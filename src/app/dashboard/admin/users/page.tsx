@@ -684,29 +684,31 @@ export default function AdminUsersPage() {
     setUserToEdit(user);
   };
   
-  const handleFormSubmit = async (data: Partial<UserProfile>) => {
+  const handleFormSubmit = (data: Partial<UserProfile>) => {
     if (!userToEdit) return;
     setIsSaving(true);
     
     const userDocRef = doc(firestore, 'users', userToEdit.id);
     
-    try {
-        await updateDoc(userDocRef, data);
+    updateDoc(userDocRef, data)
+      .then(() => {
         toast({
           title: 'User Data Updated',
           description: `Data untuk ${userToEdit.email} telah diperbarui.`,
         });
         setUserToEdit(null);
-    } catch(error) {
+      })
+      .catch((error) => {
         console.error("Failed to update user data:", error);
         toast({
             variant: "destructive",
             title: "Update Failed",
             description: "Could not save user data."
         });
-    } finally {
+      })
+      .finally(() => {
         setIsSaving(false);
-    }
+      });
   };
 
   const isLoading = isUserLoading || isProfileLoading || areUsersLoading;

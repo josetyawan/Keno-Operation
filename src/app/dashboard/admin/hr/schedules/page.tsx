@@ -26,6 +26,13 @@ import type { Schedule, UserProfile } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 
+const safeToDate = (timestamp: any): Date | null => {
+    if (!timestamp) return null;
+    if (timestamp.toDate) return timestamp.toDate();
+    if (timestamp instanceof Date && isValid(timestamp)) return timestamp;
+    const d = new Date(timestamp);
+    return isValid(d) ? d : null;
+};
 
 type ValidShiftType = 'piket-demak' | 'siang-malam' | 'malam' | 'ijin' | 'cuti' | 'weekend-duty' | 'holiday-duty' | 'tukar-jaga' ;
 
@@ -38,7 +45,7 @@ function ScheduleForm({ schedule, users, onFormSubmit }: { schedule?: Partial<Sc
     useEffect(() => {
         if (schedule) {
             setUserId(schedule.userId || '');
-            setDate(schedule.date ? schedule.date.toDate() : undefined);
+            setDate(schedule.date ? safeToDate(schedule.date) : undefined);
             const validTypes: ValidShiftType[] = ['piket-demak', 'siang-malam', 'malam', 'ijin', 'cuti', 'weekend-duty', 'holiday-duty', 'tukar-jaga'];
             if (schedule.shiftType && validTypes.includes(schedule.shiftType as any)) {
                 setShiftType(schedule.shiftType as ValidShiftType);
@@ -224,8 +231,8 @@ export default function AdminSchedulesPage() {
             if (!isARequest && isBRequest) return 1;
 
             // For items of the same priority (both requests or both not), sort by date descending
-            const dateA = a.date.toDate().getTime();
-            const dateB = b.date.toDate().getTime();
+            const dateA = safeToDate(a.date)?.getTime() ?? 0;
+            const dateB = safeToDate(b.date)?.getTime() ?? 0;
             if (dateB !== dateA) {
                 return dateB - dateA;
             }
@@ -355,7 +362,7 @@ export default function AdminSchedulesPage() {
         }
     };
 
-    const handleFormSubmit = async (data: Partial<Schedule>) => {
+    const handleFormSubmit = (data: Partial<Schedule>) => {
         if (!firestore || !data.userId || !data.date) {
             toast({ variant: 'destructive', title: 'Data tidak lengkap' });
             return;
@@ -365,50 +372,56 @@ export default function AdminSchedulesPage() {
         const scheduleId = `${data.userId}_${format(scheduleDate, 'yyyy-MM-dd')}`;
         const scheduleDocRef = doc(firestore, 'schedules', scheduleId);
     
-        if (swapSourceSchedule) {
-            const batch = writeBatch(firestore);
-            
-            // 1. Create the new schedule for the replacement user with the correct composite ID
-            batch.set(scheduleDocRef, { ...data, id: scheduleId, createdAt: Timestamp.now() }, { merge: true });
-    
-            // 2. Delete the original 'tukar-jaga' request
-            const originalRequestRef = doc(firestore, 'schedules', swapSourceSchedule.id);
-            batch.delete(originalRequestRef);
-    
-            await batch.commit();
-    
-            const replacementUser = activeUsers.find(u => u.id === data.userId);
-            toast({
-                title: 'Tukar Jaga Berhasil Disetujui',
-                description: `Jadwal baru untuk ${replacementUser?.displayName} telah dibuat. Jadwal ${swapSourceSchedule.userName} telah dikosongkan.`,
-                duration: 7000
-            });
-            setSwapSourceSchedule(null);
-        } else {
-            let docToDeleteRef: DocumentReference | null = null;
-            // Check if it's an edit and if the ID has changed (due to date or user change)
-            if (scheduleToEdit?.id && scheduleToEdit.id !== scheduleId) {
-                docToDeleteRef = doc(firestore, 'schedules', scheduleToEdit.id);
-            }
-    
-            if (docToDeleteRef) {
-                // This is an edit where the ID changed, so we need a batch write.
+        const performWrite = async () => {
+            if (swapSourceSchedule) {
                 const batch = writeBatch(firestore);
-                batch.delete(docToDeleteRef); // Delete the old document
-                batch.set(scheduleDocRef, { ...data, id: scheduleId, createdAt: Timestamp.now() }, { merge: true }); // Set the new one
-                await batch.commit();
-                toast({ title: 'Jadwal Diperbarui' });
+                batch.set(scheduleDocRef, { ...data, id: scheduleId, createdAt: Timestamp.now() }, { merge: true });
+                const originalRequestRef = doc(firestore, 'schedules', swapSourceSchedule.id);
+                batch.delete(originalRequestRef);
+                return batch.commit();
             } else {
-                // This is a new schedule or an edit where the ID remains the same.
-                // `setDoc` with `merge: true` handles both creating and updating safely.
-                await setDoc(scheduleDocRef, { ...data, id: scheduleId, createdAt: Timestamp.now() }, { merge: true });
-                toast({ title: scheduleToEdit?.id ? 'Jadwal Diperbarui' : 'Jadwal Ditambahkan' });
+                let docToDeleteRef: DocumentReference | null = null;
+                if (scheduleToEdit?.id && scheduleToEdit.id !== scheduleId) {
+                    docToDeleteRef = doc(firestore, 'schedules', scheduleToEdit.id);
+                }
+    
+                if (docToDeleteRef) {
+                    const batch = writeBatch(firestore);
+                    batch.delete(docToDeleteRef);
+                    batch.set(scheduleDocRef, { ...data, id: scheduleId, createdAt: Timestamp.now() }, { merge: true });
+                    return batch.commit();
+                } else {
+                    return setDoc(scheduleDocRef, { ...data, id: scheduleId, createdAt: Timestamp.now() }, { merge: true });
+                }
             }
-        }
-        
-        setIsFormDialogOpen(false);
-        setScheduleToEdit(null);
+        };
+    
+        performWrite()
+            .then(() => {
+                let toastTitle = 'Jadwal Ditambahkan';
+                let toastDescription = '';
+    
+                if (swapSourceSchedule) {
+                    const replacementUser = activeUsers.find(u => u.id === data.userId);
+                    toastTitle = 'Tukar Jaga Berhasil Disetujui';
+                    toastDescription = `Jadwal baru untuk ${replacementUser?.displayName} telah dibuat. Jadwal ${swapSourceSchedule.userName} telah dikosongkan.`;
+                } else if (scheduleToEdit?.id) {
+                    toastTitle = 'Jadwal Diperbarui';
+                }
+    
+                toast({ title: toastTitle, description: toastDescription, duration: 7000 });
+                
+                // Reset states after successful operation
+                setIsFormDialogOpen(false);
+                setScheduleToEdit(null);
+                setSwapSourceSchedule(null);
+            })
+            .catch((error) => {
+                console.error("Failed to save schedule:", error);
+                toast({ variant: 'destructive', title: 'Gagal Menyimpan' });
+            });
     };
+    
 
     const handleExportTemplate = async () => {
         const XLSX = await import('xlsx');
@@ -633,7 +646,7 @@ export default function AdminSchedulesPage() {
                             </AlertDialogFooter>
                         </AlertDialogContent>
                     </AlertDialog>
-                    <Dialog open={isFormDialogOpen} onOpenChange={setIsFormDialogOpen}>
+                    <Dialog open={isFormDialogOpen} onOpenChange={setIsFormDialogOpen} modal={true}>
                         <DialogTrigger asChild>
                             <Button onClick={handleCreate} disabled={activeUsers.length === 0}>
                                 <PlusCircle className="mr-2 h-4 w-4" />Buat Jadwal Manual
@@ -720,7 +733,7 @@ export default function AdminSchedulesPage() {
                                 paginatedSchedules.map(schedule => (
                                     <TableRow key={schedule.id}>
                                         <TableCell className="font-medium">{userMap.get(schedule.userId) || schedule.userEmail}</TableCell>
-                                        <TableCell>{format(schedule.date.toDate(), 'eeee, dd MMMM yyyy', { locale: idLocale })}</TableCell>
+                                        <TableCell>{format(safeToDate(schedule.date)!, 'eeee, dd MMMM yyyy', { locale: idLocale })}</TableCell>
                                         <TableCell>{shiftTypeLabels[schedule.shiftType] ?? schedule.shiftType}</TableCell>
                                         <TableCell>
                                             {schedule.shiftType === 'tukar-jaga' ? (
@@ -823,7 +836,7 @@ export default function AdminSchedulesPage() {
 
             <AlertDialog open={!!scheduleToDelete} onOpenChange={(open) => !open && setScheduleToDelete(null)}>
                 <AlertDialogContent>
-                    <AlertDialogHeader><AlertDialogTitle>Anda yakin?</AlertDialogTitle><AlertDialogDescription>Tindakan ini akan menghapus jadwal untuk {userMap.get(scheduleToDelete?.userId || '')} pada {scheduleToDelete?.date ? format(scheduleToDelete.date.toDate(), 'dd MMM yyyy', {locale: idLocale}) : ''}.</AlertDialogDescription></AlertDialogHeader>
+                    <AlertDialogHeader><AlertDialogTitle>Anda yakin?</AlertDialogTitle><AlertDialogDescription>Tindakan ini akan menghapus jadwal untuk {userMap.get(scheduleToDelete?.userId || '')} pada {scheduleToDelete?.date ? format(safeToDate(scheduleToDelete.date)!, 'dd MMM yyyy', {locale: idLocale}) : ''}.</AlertDialogDescription></AlertDialogHeader>
                     <AlertDialogFooter><AlertDialogCancel>Batal</AlertDialogCancel><AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Hapus</AlertDialogAction></AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
