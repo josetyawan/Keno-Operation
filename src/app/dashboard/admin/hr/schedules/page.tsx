@@ -216,11 +216,24 @@ export default function AdminSchedulesPage() {
             : schedules;
 
         return [...filtered].sort((a, b) => {
+            const isARequest = a.shiftType === 'tukar-jaga';
+            const isBRequest = b.shiftType === 'tukar-jaga';
+
+            // Prioritize requests
+            if (isARequest && !isBRequest) return -1;
+            if (!isARequest && isBRequest) return 1;
+
+            // For items of the same priority (both requests or both not), sort by date descending
+            const dateA = a.date.toDate().getTime();
+            const dateB = b.date.toDate().getTime();
+            if (dateB !== dateA) {
+                return dateB - dateA;
+            }
+
+            // If dates are the same, sort by user name
             const nameA = userMap.get(a.userId) || a.userEmail;
             const nameB = userMap.get(b.userId) || b.userEmail;
-            if (nameA < nameB) return -1;
-            if (nameA > nameB) return 1;
-            return b.date.toDate().getTime() - a.date.toDate().getTime();
+            return nameA.localeCompare(nameB);
         });
     }, [schedules, userMap, searchQuery]);
 
@@ -270,10 +283,13 @@ export default function AdminSchedulesPage() {
         }
 
         // If not found by ID, and there's a username, try to find by username.
-        // This handles requests made by users who can't select an ID.
         if (!targetUser && scheduleToApprove.swapTargetUserName) {
             const targetName = scheduleToApprove.swapTargetUserName.trim().toLowerCase();
-            targetUser = activeUsers.find(u => (u.displayName || '').trim().toLowerCase() === targetName);
+            // More robust check: exact match on displayName OR on the username part of the email
+            targetUser = activeUsers.find(u => 
+                (u.displayName || '').trim().toLowerCase() === targetName ||
+                (u.email || '').split('@')[0].toLowerCase() === targetName
+            );
         }
         
         // If still no user is found, show an error.
@@ -701,7 +717,7 @@ export default function AdminSchedulesPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Daftar Jadwal</CardTitle>
-                    <CardDescription>Semua jadwal & status yang telah dibuat, diurutkan berdasarkan nama.</CardDescription>
+                    <CardDescription>Semua jadwal & status yang telah dibuat, diurutkan berdasarkan prioritas dan tanggal.</CardDescription>
                     <div className="pt-4">
                         <Input
                             placeholder="Cari nama teknisi..."
@@ -837,5 +853,7 @@ export default function AdminSchedulesPage() {
         </>
     );
 }
+
+    
 
     
