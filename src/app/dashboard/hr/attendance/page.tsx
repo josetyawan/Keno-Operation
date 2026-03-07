@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
@@ -199,7 +198,7 @@ function CheckInUI({
                  <Alert variant="default"><Info className="h-4 w-4" />
                     <AlertTitle>Belum Waktunya Absen</AlertTitle>
                     <AlertDescription>
-                        Waktu absen untuk shift Anda dimulai pukul {format(checkInWindow.start, 'HH:mm')}. Batas absen tepat waktu adalah pukul {format(checkInWindow.target, 'HH:mm')}.
+                        Waktu absen untuk shift Anda ({shiftTypeLabels[todaySchedule.shiftType]}) dimulai pukul {format(checkInWindow.start, 'HH:mm')}. Batas absen tepat waktu adalah pukul {format(checkInWindow.target, 'HH:mm')}.
                     </AlertDescription>
                 </Alert>
             )}
@@ -208,7 +207,7 @@ function CheckInUI({
                    <AlertTriangle className="h-4 w-4" />
                    <AlertTitle>Peringatan: Anda Belum Absen!</AlertTitle>
                    <AlertDescription>
-                       Silakan lakukan absensi. Batas absen tepat waktu adalah pukul {format(checkInWindow.target, 'HH:mm')}. Absen setelah itu akan ditandai terlambat.
+                       Batas absen tepat waktu untuk shift Anda ({shiftTypeLabels[todaySchedule.shiftType]}) adalah pukul {format(checkInWindow.target, 'HH:mm')}. Absen setelah jam tersebut akan ditandai sebagai terlambat.
                    </AlertDescription>
                </Alert>
             )}
