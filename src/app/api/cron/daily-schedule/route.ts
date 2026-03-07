@@ -36,10 +36,10 @@ function generateRekapString(userInfos: UserDailyInfo[], title: string, dateHead
     rekap += `SA KUDUS ${dateHeader}\n`;
     rekap += `PT TELKOM AKSES\n`;
     rekap += `=============================\n`;
-    rekap += `TOTAL : ${total}\n`;
-    rekap += `HADIR : ${hadir.length}\n`;
-    rekap += `IJIN  : ${ijin.length}\n`;
-    rekap += `LIBUR : ${libur.length}\n`;
+    rekap += `TOTAL   : ${total}\n`;
+    rekap += `HADIR   : ${hadir.length}\n`;
+    rekap += `IJIN    : ${ijin.length}\n`;
+    rekap += `LIBUR   : ${libur.length}\n`;
     rekap += `% HADIR : ${persenHadir}%\n\n`;
 
     rekap += `👷 MASUK\n`;
@@ -129,8 +129,8 @@ export async function GET(request: NextRequest) {
         const provisioningUsers = allUserStatuses.filter(u => u.user.unit === 'Provisioning');
 
         const rekapMessages: string[] = [];
-        if (provisioningUsers.length > 0) rekapMessages.push(generateRekapString(provisioningUsers, 'PROVI', formattedDateHeader));
-        if (assuranceB2CUsers.length > 0) rekapMessages.push(generateRekapString(assuranceB2CUsers, 'ASSURANCE - B2C', formattedDateHeader));
+        if (provisioningUsers.length > 0) rekapMessages.push(generateRekapString(provisioningUsers, 'PROVISIONING', formattedDateHeader));
+        if (assuranceB2CUsers.length > 0) rekapMessages.push(generateRekapString(assuranceB2CUsers, 'ASSURANCE - B2C & MTC', formattedDateHeader));
         if (assuranceB2BUsers.length > 0) rekapMessages.push(generateRekapString(assuranceB2BUsers, 'ASSURANCE - B2B', formattedDateHeader));
         
         let photosToSend: string[] = [];
