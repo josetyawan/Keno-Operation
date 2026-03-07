@@ -72,8 +72,8 @@ service cloud.firestore {
       }
       
       allow create: if request.auth.uid == userId && request.resource.data.email is string && request.resource.data.role == 'teknisi' && request.resource.data.registrationStatus == 'pending';
-      // READ: Any approved user can get any user's profile. This is needed for chat.
-      allow get: if isApproved();
+      // READ: Any approved user can get any other user's profile. A user can always get their own.
+      allow get: if isApproved() || isOwner(userId);
       allow list: if isApproved();
       allow update: if isAdmin() || (isOwner(userId) && userCanUpdateOwnProfile());
       allow delete: if isAdmin() && request.auth.uid != userId;
@@ -170,24 +170,17 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
-      // Allow read (get/list) if the user is a participant.
-      // This rule works with the client-side query: `where('participants', 'array-contains', request.auth.uid)`
-      allow read: if isSignedIn() && request.auth.uid in resource.data.participants;
-      
-      // Allow write (create/update) if the user is a participant (based on the immutable doc ID) and the new data is valid.
+      allow read: if isSignedIn() && request.auth.uid in chatId.split('_');
       allow write: if isSignedIn() &&
                       request.auth.uid in chatId.split('_') &&
                       request.resource.data.participants.hasAll(chatId.split('_')) &&
                       request.resource.data.participants.size() == 2;
       
       match /messages/{messageId} {
-        // `get` (read one doc) and `write` can use get() to check parent document's participants list.
         allow get, write: if isSignedIn() &&
                              exists(/databases/$(database)/documents/chats/$(chatId)) &&
                              request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
                              
-        // `list` (queries) cannot use `get()` or `exists()`. 
-        // We rely on the `chatId` itself, which is a composite of the two participant UIDs.
         allow list: if isSignedIn() && request.auth.uid in chatId.split('_');
       }
     }
