@@ -112,11 +112,34 @@ export default function AttendanceRekapPage() {
 
         toast({
             title: 'Mempersiapkan unduhan...',
-            description: 'Kolase sedang dibuat, ini mungkin butuh beberapa saat.',
+            description: 'Memuat semua gambar sebelum membuat kolase.',
+        });
+
+        // Get all images within the printable area
+        const images = Array.from(printableArea.getElementsByTagName('img'));
+        const imageLoadPromises = images.map(img => {
+            // If the image is already loaded and has valid dimensions, resolve immediately.
+            if (img.complete && img.naturalHeight !== 0) {
+                return Promise.resolve();
+            }
+            // Otherwise, wait for it to load or fail.
+            return new Promise<void>((resolve) => {
+                img.onload = () => resolve();
+                // On error, we still resolve so that one broken image doesn't prevent the download.
+                img.onerror = () => {
+                    console.warn(`Could not load image for download: ${img.src}`);
+                    resolve(); 
+                };
+            });
         });
 
         try {
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await Promise.all(imageLoadPromises);
+            
+            toast({
+                title: 'Membuat kolase...',
+                description: 'Semua gambar telah dimuat, proses pembuatan file JPG dimulai.',
+            });
 
             const dataUrl = await toJpeg(printableArea, { 
                 quality: 0.95,
