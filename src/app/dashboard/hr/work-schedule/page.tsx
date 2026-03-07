@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -89,9 +87,42 @@ export default function WorkSchedulePage() {
   const schedulesMap = useMemo(() => {
     const map = new Map<string, string>(); // Key: 'userId-yyyy-MM-dd', Value: shiftType
     if (!allSchedules) return map;
+
+    const shiftPriority: Record<string, number> = {
+        'ijin': 1,
+        'cuti': 1,
+        'tukar-jaga': 2,
+        'h': 3,
+        'pu': 3,
+        'pb': 3,
+        'ptm': 3,
+        'pt/bd': 3,
+        'weekend-duty': 4,
+        'holiday-duty': 4,
+        'piket-demak': 5,
+        'siang-malam': 5,
+        'malam': 5,
+        'libur-dijadwalkan': 6,
+        'l': 6
+    };
+
     allSchedules.forEach(schedule => {
       const dateKey = format(schedule.date.toDate(), 'yyyy-MM-dd');
-      map.set(`${schedule.userId}-${dateKey}`, schedule.shiftType);
+      const mapKey = `${schedule.userId}-${dateKey}`;
+      const newShift = schedule.shiftType;
+      const existingShift = map.get(mapKey);
+
+      if (existingShift) {
+        const newPriority = shiftPriority[newShift.toLowerCase()] || 99;
+        const existingPriority = shiftPriority[existingShift.toLowerCase()] || 99;
+        // If the new shift has a higher priority (lower number), replace the existing one.
+        if (newPriority < existingPriority) {
+          map.set(mapKey, newShift);
+        }
+      } else {
+        // If no entry exists, just add the new one.
+        map.set(mapKey, newShift);
+      }
     });
     return map;
   }, [allSchedules]);
@@ -127,22 +158,25 @@ export default function WorkSchedulePage() {
         'tukar-jaga': 'TJ', 'libur-dijadwalkan': 'L', 'l': 'L'
     };
 
-    // 1. If a specific schedule exists (from import or manual entry), use it.
     if (shift) {
-        const displayStatus = shiftMapping[shift.toLowerCase()] || shift.toUpperCase();
+        const lowerShift = shift.toLowerCase();
+        const displayStatus = shiftMapping[lowerShift] || shift.toUpperCase();
+        
         // A "jaga" shift is only colored purple if it's on an actual off day.
-        const isJagaShift = (shift.toLowerCase() === 'weekend-duty' || shift.toLowerCase() === 'holiday-duty') && isOffDay;
+        const isJagaShift = (lowerShift === 'weekend-duty' || lowerShift === 'holiday-duty') && isOffDay;
+
         return { status: displayStatus, isJaga: isJagaShift };
     }
 
-    // 2. If no specific schedule, determine if it's a workday or off day.
+    // If no specific schedule, determine if it's a workday or off day.
     if (isOffDay) {
         return { status: 'L', isJaga: false };
     }
 
-    // 3. Default for a workday with no schedule is 'H'.
+    // Default for a workday with no schedule is 'H'.
     return { status: 'H', isJaga: false };
   };
+
 
   const changeMonth = (amount: number) => {
     setCurrentDate(prev => amount > 0 ? addMonths(prev, 1) : subMonths(prev, 1));
