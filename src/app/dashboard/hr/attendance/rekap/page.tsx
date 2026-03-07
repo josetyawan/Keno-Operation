@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -82,7 +83,7 @@ export default function AttendanceRekapPage() {
         }
         
         if(chunks.length > 1) {
-             toast({variant: 'destructive', title: 'Terlalu Banyak Pengguna', description: `Hanya nama untuk 30 dari ${''${userIds.length}} pengguna pertama yang dapat ditampilkan.`})
+             toast({variant: 'destructive', title: 'Terlalu Banyak Pengguna', description: `Hanya nama untuk 30 dari ${userIds.length} pengguna pertama yang dapat ditampilkan.`})
         }
         
         return query(collection(firestore, 'users'), where('id', 'in', chunks[0]));
@@ -119,7 +120,7 @@ export default function AttendanceRekapPage() {
             return new Promise<void>((resolve) => {
                 img.onload = () => resolve();
                 img.onerror = () => {
-                    console.warn(`Could not load image for download: ${''${img.src}}`);
+                    console.warn(`Could not load image for download: ${img.src}`);
                     resolve(); 
                 };
             });
@@ -133,7 +134,7 @@ export default function AttendanceRekapPage() {
                 description: 'Semua gambar telah dimuat, proses pembuatan file JPG dimulai.',
             });
             
-            const filter = (node: Node): boolean => {
+            const filter = (node: HTMLElement): boolean => {
               if (node instanceof HTMLLinkElement && node.href.includes('fonts.googleapis.com')) {
                 return false;
               }
@@ -145,11 +146,11 @@ export default function AttendanceRekapPage() {
                 backgroundColor: '#ffffff',
                 pixelRatio: 2,
                 cacheBust: true,
-                filter: filter,
+                filter,
              });
             const link = document.createElement('a');
             const dateString = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : 'rekap';
-            link.download = `rekap-absensi-${''${dateString}}.jpg`;
+            link.download = `rekap-absensi-${dateString}.jpg`;
             link.href = dataUrl;
             link.click();
             link.remove();
@@ -178,7 +179,7 @@ export default function AttendanceRekapPage() {
             await batch.commit();
             toast({
                 title: "Semua Absensi Dihapus",
-                description: `${''${attendances.length}} data absensi untuk tanggal ini telah berhasil dihapus.`,
+                description: `${attendances.length} data absensi untuk tanggal ini telah berhasil dihapus.`,
             });
             setIsDeleteAllDialogOpen(false);
         } catch (error: any) {
@@ -282,12 +283,12 @@ export default function AttendanceRekapPage() {
                         {attendances.map(att => (
                             <Card key={att.id} className="overflow-hidden break-inside-avoid group relative">
                                 <div className="relative aspect-square w-full">
-                                    <Image src={att.checkInPhotoUrl} alt={`Foto absen ${''${userMap.get(att.userId)}}`} fill className="object-cover" />
+                                    <Image src={att.checkInPhotoUrl} alt={`Foto absen ${userMap.get(att.userId)}`} fill className="object-cover" />
                                 </div>
                                 <CardContent className="p-3 text-sm">
                                     <p className="font-semibold truncate">{userMap.get(att.userId) || 'Memuat...'}</p>
                                     <p className="text-muted-foreground">{format(att.checkInTime.toDate(), 'HH:mm:ss', {locale: idLocale})}</p>
-                                    <Link href={`https://www.google.com/maps/search/?api=1&query=${''${att.checkInCoordinates}}`} target="_blank" rel="noopener noreferrer">
+                                    <Link href={`https://www.google.com/maps/search/?api=1&query=${att.checkInCoordinates}`} target="_blank" rel="noopener noreferrer">
                                         <div className="text-blue-600 hover:underline flex items-center gap-1 mt-1">
                                             <MapPin className="h-3 w-3"/>
                                             <span>Lihat Lokasi</span>
