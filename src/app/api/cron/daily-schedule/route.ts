@@ -1,3 +1,4 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 import { initializeFirebase } from '@/firebase/init';
 import { getFirestore, collection, getDocs, query, where, Timestamp } from 'firebase/firestore';
@@ -87,40 +88,35 @@ export async function GET(request: NextRequest) {
             fetchCollection<Holiday>(firestore, 'holidays', [where('date', '==', Timestamp.fromDate(dateForScheduleQuery))])
         ]);
         
+        const scheduleMap = new Map(schedules.map(s => [s.userId, s]));
         const isTodayHoliday = holidays.length > 0;
         const isTodayWeekend = isWeekend(today);
-
-        const scheduleMap = new Map(schedules.map(s => [s.userId, s]));
-        const attendanceMap = new Map(attendances.map(a => [a.userId, a]));
 
         const allUserStatuses: UserDailyInfo[] = users
             .filter(u => u.role === 'teknisi')
             .map(user => {
-                const schedule = scheduleMap.get(user.id);
-                const attendance = attendanceMap.get(user.id);
+                const userSchedule = scheduleMap.get(user.id);
                 const sto = user.psa || 'KDS'; 
 
-                let status: DailyStatus = 'Libur';
+                let status: DailyStatus = 'Hadir'; // Default to 'Hadir' on a workday
 
-                if (schedule) {
-                    if (schedule.shiftType === 'ijin') status = 'Izin';
-                    else if (schedule.shiftType === 'cuti') status = 'Cuti';
-                    else if (schedule.shiftType === 'malam') status = 'Shift Malam';
-                    else if (['piket-demak', 'siang-malam', 'weekend-duty', 'holiday-duty'].includes(schedule.shiftType)) {
-                         status = attendance ? 'Hadir' : 'Libur';
-                    }
+                if (userSchedule) {
+                    const shiftType = userSchedule.shiftType;
+                    if (shiftType === 'ijin') status = 'Izin';
+                    else if (shiftType === 'cuti') status = 'Cuti';
+                    else if (shiftType === 'malam') status = 'Shift Malam';
+                    else if (shiftType === 'l' || shiftType === 'libur-dijadwalkan') status = 'Libur';
+                    // All other codes ('H', 'PU', 'PB', 'PDM', etc.) are treated as 'Hadir'
+                    else status = 'Hadir'; 
                 } else {
-                    if (!isTodayWeekend && !isTodayHoliday) {
-                       status = attendance ? 'Hadir' : 'Libur';
+                    // If no specific schedule, determine status based on day type
+                    if (isTodayHoliday || isTodayWeekend) {
+                        status = 'Libur';
                     } else {
-                       status = 'Libur';
+                        status = 'Hadir'; // Default for a workday
                     }
                 }
                 
-                if (attendance && status !== 'Izin' && status !== 'Cuti') {
-                    status = 'Hadir';
-                }
-
                 return { user, status, sto };
             });
 
@@ -133,11 +129,14 @@ export async function GET(request: NextRequest) {
         if (assuranceB2CUsers.length > 0) rekapMessages.push(generateRekapString(assuranceB2CUsers, 'ASSURANCE - B2C & MTC', formattedDateHeader));
         if (assuranceB2BUsers.length > 0) rekapMessages.push(generateRekapString(assuranceB2BUsers, 'ASSURANCE - B2B', formattedDateHeader));
         
+        // --- Photo logic remains unchanged ---
         let photosToSend: string[] = [];
         const hasNightShift = allUserStatuses.some(u => u.status === 'Shift Malam');
-        const isJagaDay = isTodayWeekend || isTodayHoliday || hasNightShift;
+        const hasWeekendDuty = schedules.some(s => s.shiftType === 'weekend-duty');
+        const hasHolidayDuty = schedules.some(s => s.shiftType === 'holiday-duty');
+        const isJagaDay = (isTodayWeekend && hasWeekendDuty) || (isTodayHoliday && hasHolidayDuty) || hasNightShift;
         
-        if (isJagaDay) {
+        if (isJagaDay && attendances.length > 0) {
             photosToSend = attendances.map(a => a.checkInPhotoUrl).filter((url): url is string => !!url);
         }
 
