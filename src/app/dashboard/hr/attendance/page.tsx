@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
@@ -190,7 +191,7 @@ function CheckInUI({
                <Alert variant="destructive"><AlertTriangle className="h-4 w-4" />
                    <AlertTitle>Waktu Absen Sudah Lewat</AlertTitle>
                    <AlertDescription>
-                       Waktu absen untuk shift ini telah berakhir pada pukul {format(checkInWindow.end, 'HH:mm')}. Silakan hubungi atasan Anda.
+                       Waktu absen untuk shift ini telah berakhir. Batas akhir adalah pukul {format(checkInWindow.end, 'HH:mm')}. Silakan hubungi atasan Anda.
                    </AlertDescription>
                </Alert>
             )}
@@ -198,7 +199,7 @@ function CheckInUI({
                  <Alert variant="default"><Info className="h-4 w-4" />
                     <AlertTitle>Belum Waktunya Absen</AlertTitle>
                     <AlertDescription>
-                        Waktu absen untuk shift Anda dimulai pukul {format(checkInWindow.start, 'HH:mm')} hingga {format(checkInWindow.end, 'HH:mm')}.
+                        Waktu absen untuk shift Anda dimulai pukul {format(checkInWindow.start, 'HH:mm')}. Batas absen tepat waktu adalah pukul {format(checkInWindow.target, 'HH:mm')}.
                     </AlertDescription>
                 </Alert>
             )}
@@ -207,7 +208,7 @@ function CheckInUI({
                    <AlertTriangle className="h-4 w-4" />
                    <AlertTitle>Peringatan: Anda Belum Absen!</AlertTitle>
                    <AlertDescription>
-                       Silakan lakukan absensi sebelum pukul {format(checkInWindow.end, 'HH:mm')}.
+                       Silakan lakukan absensi. Batas absen tepat waktu adalah pukul {format(checkInWindow.target, 'HH:mm')}. Absen setelah itu akan ditandai terlambat.
                    </AlertDescription>
                </Alert>
             )}
@@ -694,6 +695,18 @@ export default function AttendancePage() {
             const storageRef = ref(storage, filePath);
             await uploadBytes(storageRef, blob);
             const photoUrl = await getDownloadURL(storageRef);
+            
+            const checkInWindow = getCheckInWindow(todaySchedule.shiftType);
+            const now = new Date();
+            let attendanceStatus: 'present' | 'late' = 'present';
+            let attendanceReason: string | undefined = undefined;
+            let noticeStatus = 'Hadir Tepat Waktu';
+
+            if (checkInWindow && now > checkInWindow.target) {
+                attendanceStatus = 'late';
+                attendanceReason = `Absen terlambat di luar jam toleransi. Batas waktu: ${format(checkInWindow.target, 'HH:mm')}.`;
+                noticeStatus = `Terlambat (Absen Pukul ${format(now, 'HH:mm')})`;
+            }
 
             const newAttendance: Omit<Attendance, 'id'> = {
                 userId: user.uid,
@@ -701,16 +714,18 @@ export default function AttendancePage() {
                 checkInTime: Timestamp.now(),
                 checkInPhotoUrl: photoUrl,
                 checkInCoordinates: coordinates,
-                status: 'present',
+                status: attendanceStatus,
+                reason: attendanceReason,
             };
             
             await addDoc(collection(firestore, 'attendances'), newAttendance);
 
             sendAttendanceNotice({
                 userName: userProfile.displayName || user.email!,
-                status: 'Hadir Tepat Waktu',
+                status: noticeStatus,
                 photoUrl: photoUrl,
                 coordinates: coordinates,
+                reason: attendanceReason,
             }).catch(err => console.error("Telegram notification failed:", err));
 
             router.push('/dashboard/hr/attendance/goodbye');
