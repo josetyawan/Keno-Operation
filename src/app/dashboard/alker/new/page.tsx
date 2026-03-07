@@ -15,7 +15,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useFirestore, useUser, useStorage, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, serverTimestamp, query, orderBy, doc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { useForm, useFieldArray, Controller, useWatch } from 'react-hook-form';
 import type { AlkerChecklist, AlkerTool, UserProfile } from '@/lib/types';
 import Image from 'next/image';
 
@@ -43,7 +43,12 @@ const toolsWithTwoPhotos = ["Splicer", "Optical Power Meter", "Optical Fiber Ran
 
 type FormValues = {
   crewUserId: string;
-  tools: (Omit<AlkerTool, 'photoUrl1' | 'photoUrl2'> & { photo1?: FileList; photo2?: FileList })[];
+  tools: (Omit<AlkerTool, 'photoUrl1' | 'photoUrl2'> & { 
+    photo1?: FileList; 
+    photo2?: FileList;
+    photoUrl1?: string;
+    photoUrl2?: string;
+  })[];
 };
 
 export default function NewAlkerPage() {
@@ -126,7 +131,7 @@ export default function NewAlkerPage() {
   }, [otherTeknisi]);
 
   // --- Form Management ---
-  const { register, control, handleSubmit, formState: { errors }, reset } = useForm<FormValues>({
+  const { register, control, handleSubmit, formState: { errors }, reset, watch, setValue } = useForm<FormValues>({
     defaultValues: {
       crewUserId: '',
       tools: toolList.map(name => ({
@@ -134,29 +139,26 @@ export default function NewAlkerPage() {
         condition: 'baik',
         serialNumber: '',
         brand: '',
+        photoUrl1: '',
+        photoUrl2: ''
       })),
     },
   });
 
   const { fields } = useFieldArray({ control, name: "tools" });
+  const watchedTools = watch("tools");
 
   useEffect(() => {
     if (existingChecklist) {
       const mergedTools = toolList.map(toolName => {
         const existingTool = existingChecklist.tools.find(t => t.toolName === toolName);
-        if (existingTool) {
-          return {
-            toolName: existingTool.toolName,
-            condition: existingTool.condition,
-            serialNumber: existingTool.serialNumber || '',
-            brand: existingTool.brand || '',
-          };
-        }
         return {
           toolName: toolName,
-          condition: 'baik' as 'baik' | 'rusak',
-          serialNumber: '',
-          brand: '',
+          condition: existingTool?.condition || 'baik',
+          serialNumber: existingTool?.serialNumber || '',
+          brand: existingTool?.brand || '',
+          photoUrl1: existingTool?.photoUrl1 || '',
+          photoUrl2: existingTool?.photoUrl2 || '',
         };
       });
 
@@ -231,16 +233,16 @@ export default function NewAlkerPage() {
 
       for (let i = 0; i < data.tools.length; i++) {
         const tool = data.tools[i];
-        const existingToolData = existingChecklist?.tools.find(t => t.toolName === tool.toolName);
+        
+        let finalPhotoUrl1 = tool.photoUrl1 || '';
+        let finalPhotoUrl2 = tool.photoUrl2 || '';
 
-        let photoUrl1: string | undefined = existingToolData?.photoUrl1;
-        let photoUrl2: string | undefined = existingToolData?.photoUrl2;
-
+        // If a new file is uploaded, it replaces the existing URL
         if (tool.photo1 && tool.photo1.length > 0) {
-          photoUrl1 = await uploadPhoto(tool.photo1[0]);
+          finalPhotoUrl1 = await uploadPhoto(tool.photo1[0]);
         }
         if (tool.photo2 && tool.photo2.length > 0) {
-          photoUrl2 = await uploadPhoto(tool.photo2[0]);
+          finalPhotoUrl2 = await uploadPhoto(tool.photo2[0]);
         }
         
         const toolEntry: AlkerTool = {
@@ -250,8 +252,8 @@ export default function NewAlkerPage() {
           brand: tool.brand || '',
         };
 
-        if (photoUrl1) toolEntry.photoUrl1 = photoUrl1;
-        if (photoUrl2) toolEntry.photoUrl2 = photoUrl2;
+        if (finalPhotoUrl1) toolEntry.photoUrl1 = finalPhotoUrl1;
+        if (finalPhotoUrl2) toolEntry.photoUrl2 = finalPhotoUrl2;
         
         toolDataWithUrls.push(toolEntry);
       }
@@ -370,6 +372,12 @@ export default function NewAlkerPage() {
                         {fields.map((item, index) => {
                             const needsTwoPhotos = toolsWithTwoPhotos.some(t => item.toolName.startsWith(t));
                             const isKbmR2 = item.toolName === 'KBM Roda 2';
+                            const watchedPhoto1 = watch(`tools.${index}.photo1`);
+                            const watchedPhoto2 = watch(`tools.${index}.photo2`);
+                            
+                            const photo1Preview = watchedPhoto1?.[0] ? URL.createObjectURL(watchedPhoto1[0]) : watchedTools[index]?.photoUrl1;
+                            const photo2Preview = watchedPhoto2?.[0] ? URL.createObjectURL(watchedPhoto2[0]) : watchedTools[index]?.photoUrl2;
+
                             return (
                                 <AccordionItem value={`item-${index}`} key={item.id}>
                                     <AccordionTrigger>{index + 1}. {item.toolName}</AccordionTrigger>
@@ -397,13 +405,29 @@ export default function NewAlkerPage() {
                                                 <Input id={`brand-${index}`} {...register(`tools.${index}.brand`)} placeholder="Contoh: Fujikura, Joinwit" />
                                             </div>
                                             <div className="grid gap-4 grid-cols-2">
-                                                 <div className="grid gap-2">
+                                                <div className="grid gap-2">
                                                     <Label htmlFor={`photo1-${index}`}>{needsTwoPhotos ? 'Foto Alat' : 'Foto'}</Label>
+                                                    {photo1Preview && (
+                                                        <div className="relative group aspect-square w-full">
+                                                          <Image src={photo1Preview} alt="Preview" fill className="object-cover rounded-md" />
+                                                          <Button type="button" variant="destructive" size="icon" className="absolute -top-2 -right-2 h-6 w-6 rounded-full z-10" onClick={() => { setValue(`tools.${index}.photo1`, undefined); setValue(`tools.${index}.photoUrl1`, ''); }}>
+                                                            <X className="h-4 w-4" />
+                                                          </Button>
+                                                        </div>
+                                                    )}
                                                     <Input id={`photo1-${index}`} type="file" accept="image/*" {...register(`tools.${index}.photo1`)} />
                                                 </div>
                                                 {needsTwoPhotos && (
-                                                     <div className="grid gap-2">
+                                                    <div className="grid gap-2">
                                                         <Label htmlFor={`photo2-${index}`}>Foto SN</Label>
+                                                        {photo2Preview && (
+                                                            <div className="relative group aspect-square w-full">
+                                                              <Image src={photo2Preview} alt="Preview SN" fill className="object-cover rounded-md" />
+                                                              <Button type="button" variant="destructive" size="icon" className="absolute -top-2 -right-2 h-6 w-6 rounded-full z-10" onClick={() => { setValue(`tools.${index}.photo2`, undefined); setValue(`tools.${index}.photoUrl2`, ''); }}>
+                                                                <X className="h-4 w-4" />
+                                                              </Button>
+                                                            </div>
+                                                        )}
                                                         <Input id={`photo2-${index}`} type="file" accept="image/*" {...register(`tools.${index}.photo2`)} />
                                                     </div>
                                                 )}
