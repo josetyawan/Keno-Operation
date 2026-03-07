@@ -120,9 +120,9 @@ export async function GET(request: NextRequest) {
                 return { user, status, sto };
             });
 
-        const assuranceB2CUsers = allUserStatuses.filter(u => u.user.unit === 'B2C' || u.user.unit === 'MTC');
-        const assuranceB2BUsers = allUserStatuses.filter(u => u.user.unit === 'B2B');
-        const provisioningUsers = allUserStatuses.filter(u => u.user.unit === 'Provisioning');
+        const assuranceB2CUsers = allUserStatuses.filter(u => u.user.unit?.trim().toUpperCase() === 'B2C' || u.user.unit?.trim().toUpperCase() === 'MTC');
+        const assuranceB2BUsers = allUserStatuses.filter(u => u.user.unit?.trim().toUpperCase() === 'B2B');
+        const provisioningUsers = allUserStatuses.filter(u => u.user.unit?.trim().toUpperCase() === 'PROVISIONING');
 
         const rekapMessages: string[] = [];
         if (provisioningUsers.length > 0) rekapMessages.push(generateRekapString(provisioningUsers, 'PROVISIONING', formattedDateHeader));
