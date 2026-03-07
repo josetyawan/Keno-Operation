@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -117,7 +118,7 @@ export default function WorkSchedulePage() {
     const isDayHoliday = holidaysMap.has(dateKey);
     const isOffDay = isDayWeekend || isDayHoliday;
 
-    // 1. Highest priority: explicit leave/request status from schedule
+    // 1. Check for leave/request types first, as they have the highest priority.
     if (shift) {
         switch (shift) {
             case 'ijin': return { status: 'i', isJaga: false };
@@ -127,31 +128,48 @@ export default function WorkSchedulePage() {
         }
     }
     
-    // 2. If it's a general off day (weekend/holiday) AND there is no overriding work schedule ('weekend-duty', 'holiday-duty')
-    if (isOffDay && (!shift || (shift !== 'weekend-duty' && shift !== 'holiday-duty'))) {
-      return { status: 'L', isJaga: false };
+    // 2. Handle workdays
+    if (!isOffDay) {
+        // a. Check for special PSA code. If it exists, it overrides any other work schedule for that day.
+        const psa = user.psa?.trim().toUpperCase();
+        const specialPsaCodes = ['PU', 'PB', 'PTM', 'PT/BD'];
+        if (psa && specialPsaCodes.includes(psa)) {
+            return { status: psa, isJaga: false };
+        }
+        
+        // b. If no special PSA, check for other scheduled shifts.
+        if (shift) {
+            switch (shift) {
+                case 'piket-demak': return { status: 'PDM', isJaga: false };
+                case 'siang-malam': return { status: 'S/MC', isJaga: false };
+                case 'malam': return { status: 'M', isJaga: false };
+                // This case handles a 'weekend-duty' scheduled on a normal weekday, which should just be 'Hadir'
+                case 'weekend-duty':
+                case 'holiday-duty':
+                    return { status: 'H', isJaga: false };
+            }
+        }
+        
+        // c. If no special PSA and no scheduled shift, it's a normal workday.
+        return { status: 'H', isJaga: false };
     }
     
-    // 3. It's a work day. Check for special area code from user profile. This overrides default work statuses.
-    const psa = user.psa?.trim().toUpperCase();
-    const specialPsaCodes = ['PU', 'PB', 'PTM', 'PT/BD'];
-    if (psa && specialPsaCodes.includes(psa)) {
-        return { status: psa, isJaga: false };
-    }
-
-    // 4. If no special area, THEN check for specific work shift types.
-    if (shift) {
-        switch (shift) {
-            case 'piket-demak': return { status: 'PDM', isJaga: false };
-            case 'siang-malam': return { status: 'S/MC', isJaga: false };
-            case 'malam': return { status: 'M', isJaga: false };
-            case 'weekend-duty':
-            case 'holiday-duty':
-                return { status: 'H', isJaga: isOffDay };
+    // 3. Handle off-days (weekends/holidays)
+    if (isOffDay) {
+        // a. Check for a specific on-duty schedule.
+        if (shift === 'weekend-duty' || shift === 'holiday-duty') {
+            return { status: 'H', isJaga: true };
         }
+        // Also check for regular piket shifts that might be scheduled on an off-day
+        if (shift === 'piket-demak') return { status: 'PDM', isJaga: true };
+        if (shift === 'siang-malam') return { status: 'S/MC', isJaga: true };
+        if (shift === 'malam') return { status: 'M', isJaga: true };
+
+        // b. If no on-duty schedule, it's a day off.
+        return { status: 'L', isJaga: false };
     }
 
-    // 5. Default workday status is 'H'
+    // This should theoretically not be reached, but as a fallback:
     return { status: 'H', isJaga: false };
   };
 
