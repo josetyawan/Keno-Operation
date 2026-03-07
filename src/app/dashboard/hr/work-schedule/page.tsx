@@ -130,7 +130,6 @@ export default function WorkSchedulePage() {
             case 'libur-dijadwalkan': return { status: 'L', isJaga: false };
             case 'weekend-duty':
             case 'holiday-duty':
-                // A shift is only 'jaga' (special on-duty) if it occurs on an actual off-day.
                 return { status: 'H', isJaga: isOffDay };
         }
     }
@@ -139,12 +138,7 @@ export default function WorkSchedulePage() {
         return { status: 'L', isJaga: false };
     }
     
-    const psa = user.psa || '';
-    // Only display PSA if it's a short code, not a full Service Area name.
-    const displayPsa = psa && !psa.toUpperCase().includes('SA') && !psa.toUpperCase().includes('KUDUS');
-    const status = displayPsa ? psa : 'H';
-
-    return { status, isJaga: false };
+    return { status: 'H', isJaga: false };
   };
 
   const changeMonth = (amount: number) => {
