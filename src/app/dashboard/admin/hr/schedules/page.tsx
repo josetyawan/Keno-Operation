@@ -118,7 +118,7 @@ function ScheduleForm({ schedule, users, onFormSubmit }: { schedule?: Partial<Sc
                     <SelectTrigger><SelectValue placeholder="Pilih jenis" /></SelectTrigger>
                     <SelectContent>
                         <SelectItem value="piket-demak">Piket Demak (PDM)</SelectItem>
-                        <SelectItem value="siang-malam">Piket Siang-Malam (SM)</SelectItem>
+                        <SelectItem value="siang-malam">Piket Siang-Malam (S/MC)</SelectItem>
                         <SelectItem value="malam">Piket Malam (M)</SelectItem>
                         <SelectItem value="weekend-duty">Jaga Akhir Pekan</SelectItem>
                         <SelectItem value="holiday-duty">Jaga Hari Libur</SelectItem>
@@ -169,7 +169,7 @@ export default function AdminSchedulesPage() {
 
     const shiftTypeLabels: Record<string, string> = {
         'piket-demak': 'Piket Demak (PDM)',
-        'siang-malam': 'Piket Siang-Malam (SM)',
+        'siang-malam': 'Piket Siang-Malam (S/MC)',
         'malam': 'Piket Malam (M)',
         'ijin': 'Ijin (i)',
         'cuti': 'Cuti (C)',

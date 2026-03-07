@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
@@ -44,7 +45,7 @@ const getStartOfDay = () => {
 
 const shiftTypeLabels: Record<string, string> = {
   'piket-demak': 'Piket Demak (PDM)',
-  'siang-malam': 'Piket Siang-Malam (SM)',
+  'siang-malam': 'Piket Siang-Malam (S/MC)',
   'malam': 'Piket Malam (M)',
   'ijin': 'Izin',
   'cuti': 'Cuti',
