@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -84,7 +85,7 @@ export default function WorkSchedulePage() {
     return activeUsers.filter(u => u.unit?.trim().toUpperCase() === selectedUnit.toUpperCase());
   }, [allUsers, selectedUnit]);
 
-  // SIMPLIFIED: Just map the data. The Firestore document ID ensures one schedule per user per day.
+  // The scheduleMap is the single source of truth for display.
   const schedulesMap = useMemo(() => {
     const map = new Map<string, string>(); // Key: 'userId-yyyy-MM-dd', Value: shiftType
     if (!allSchedules) return map;
@@ -112,37 +113,36 @@ export default function WorkSchedulePage() {
   const daysInMonth = getDaysInMonth(currentDate);
   const daysArray = Array.from({ length: daysInMonth }, (_, i) => new Date(monthStart.getFullYear(), monthStart.getMonth(), i + 1));
 
-  // SIMPLIFIED AND CORRECTED LOGIC
+  // This is the final, corrected logic. It prioritizes the imported Excel data above all else.
   const getDayStatus = (user: UserProfile, day: Date): DayStatusInfo => {
     const dateKey = format(day, 'yyyy-MM-dd');
-    const shift = schedulesMap.get(`${user.id}-${dateKey}`);
+    const scheduleFromImport = schedulesMap.get(`${user.id}-${dateKey}`);
 
     const isDayWeekend = isWeekend(day);
     const isDayHoliday = holidaysMap.has(dateKey);
     const isOffDay = isDayWeekend || isDayHoliday;
 
     const shiftMapping: Record<string, string> = {
-        'h': 'H', 'pu': 'PU', 'pb': 'PB', 'ptm': 'PTM', 'pt/bd': 'PT/BD',
         'piket-demak': 'PDM', 'siang-malam': 'S/MC', 'malam': 'M',
+        'ijin': 'i', 'cuti': 'C',
         'weekend-duty': 'H',
         'holiday-duty': 'H',
-        'ijin': 'i', 'cuti': 'C',
         'tukar-jaga': 'TJ',
-        'libur-dijadwalkan': 'L', 'l': 'L'
+        'libur-dijadwalkan': 'L',
+        'h': 'H', 'pu': 'PU', 'pb': 'PB', 'ptm': 'PTM', 'pt/bd': 'PT/BD', 'l': 'L'
     };
 
-    // Priority 1: Check for an explicit schedule from Excel/Manual Input
-    if (shift) {
-        const lowerShift = shift.toLowerCase();
-        const displayStatus = shiftMapping[lowerShift] || shift.toUpperCase();
+    // Priority 1: Always show the data from the schedule import first.
+    if (scheduleFromImport) {
+        const lowerShift = scheduleFromImport.toLowerCase();
+        const displayStatus = shiftMapping[lowerShift] || scheduleFromImport.toUpperCase();
         
-        // A "jaga" shift is only colored purple if it's on an actual off-day.
         const isJagaShift = (lowerShift === 'weekend-duty' || lowerShift === 'holiday-duty') && isOffDay;
 
         return { status: displayStatus, isJaga: isJagaShift };
     }
 
-    // Priority 2: If no explicit schedule, determine if it's a default off day.
+    // Priority 2: If no imported schedule, it's a default off day.
     if (isOffDay) {
         return { status: 'L', isJaga: false };
     }

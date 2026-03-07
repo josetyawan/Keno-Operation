@@ -34,7 +34,7 @@ const safeToDate = (timestamp: any): Date | null => {
     return isValid(d) ? d : null;
 };
 
-type ValidShiftType = 'piket-demak' | 'siang-malam' | 'malam' | 'ijin' | 'cuti' | 'weekend-duty' | 'holiday-duty' | 'tukar-jaga' | 'libur-dijadwalkan' ;
+type ValidShiftType = 'piket-demak' | 'siang-malam' | 'malam' | 'ijin' | 'cuti' | 'weekend-duty' | 'holiday-duty' | 'tukar-jaga' | 'libur-dijadwalkan' | 'h' | 'pu' | 'pb' | 'ptm' | 'pt/bd' | 'l';
 
 function ScheduleForm({ schedule, users, onFormSubmit }: { schedule?: Partial<Schedule> | null, users: UserProfile[], onFormSubmit: (data: Partial<Schedule>) => void }) {
     const [userId, setUserId] = useState('');
@@ -46,7 +46,7 @@ function ScheduleForm({ schedule, users, onFormSubmit }: { schedule?: Partial<Sc
         if (schedule) {
             setUserId(schedule.userId || '');
             setDate(schedule.date ? safeToDate(schedule.date) : undefined);
-            const validTypes: ValidShiftType[] = ['piket-demak', 'siang-malam', 'malam', 'ijin', 'cuti', 'weekend-duty', 'holiday-duty', 'tukar-jaga', 'libur-dijadwalkan'];
+            const validTypes: ValidShiftType[] = ['piket-demak', 'siang-malam', 'malam', 'ijin', 'cuti', 'weekend-duty', 'holiday-duty', 'tukar-jaga', 'libur-dijadwalkan', 'h', 'pu', 'pb', 'ptm', 'pt/bd', 'l'];
             if (schedule.shiftType && validTypes.includes(schedule.shiftType as any)) {
                 setShiftType(schedule.shiftType as ValidShiftType);
             } else {
@@ -117,6 +117,11 @@ function ScheduleForm({ schedule, users, onFormSubmit }: { schedule?: Partial<Sc
                 <Select value={shiftType} onValueChange={(value) => setShiftType(value as any)}>
                     <SelectTrigger><SelectValue placeholder="Pilih jenis" /></SelectTrigger>
                     <SelectContent>
+                        <SelectItem value="h">Hadir (H)</SelectItem>
+                        <SelectItem value="pu">Hadir - Area Utara (PU)</SelectItem>
+                        <SelectItem value="pb">Hadir - Area Barat (PB)</SelectItem>
+                        <SelectItem value="ptm">Hadir - Area Timur (PTM)</SelectItem>
+                        <SelectItem value="pt/bd">Hadir - Area Demak (PT/BD)</SelectItem>
                         <SelectItem value="piket-demak">Piket Demak (PDM)</SelectItem>
                         <SelectItem value="siang-malam">Piket Siang-Malam (S/MC)</SelectItem>
                         <SelectItem value="malam">Piket Malam (M)</SelectItem>
@@ -177,8 +182,12 @@ export default function AdminSchedulesPage() {
         'holiday-duty': 'Jaga Hari Libur',
         'tukar-jaga': 'Request Tukar Jaga',
         'libur-dijadwalkan': 'Libur (L)',
-        'H': 'Masuk',
-        'L': 'Libur',
+        'h': 'Hadir (H)',
+        'pu': 'Hadir - Area Utara (PU)',
+        'pb': 'Hadir - Area Barat (PB)',
+        'ptm': 'Hadir - Area Timur (PTM)',
+        'pt/bd': 'Hadir - Area Demak (PT/BD)',
+        'l': 'Libur (L)',
     };
 
     const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
@@ -524,11 +533,15 @@ export default function AdminSchedulesPage() {
             const shiftCodeMap: Record<string, ValidShiftType> = {
                 'smc': 'siang-malam', 's/mc': 'siang-malam', 'sm': 'siang-malam',
                 'm': 'malam',
-                'pt/bd': 'piket-demak', 'pdm': 'piket-demak', 'ptm': 'piket-demak', 'pu': 'piket-demak', 'pb': 'piket-demak',
+                'pdm': 'piket-demak',
                 'i': 'ijin', 'c': 'cuti',
-                'h': 'weekend-duty', 'p': 'weekend-duty',
+                'h': 'h',
+                'pu': 'pu',
+                'pb': 'pb',
+                'ptm': 'ptm',
+                'pt/bd': 'pt/bd',
                 'jaga': 'weekend-duty', 'weekend': 'weekend-duty', 'holiday': 'holiday-duty',
-                'l': 'libur-dijadwalkan',
+                'l': 'l',
             };
             
             let processedRows = 0;
@@ -846,7 +859,3 @@ export default function AdminSchedulesPage() {
         </>
     );
 }
-
-    
-
-    
