@@ -8,3 +8,8 @@ runtime: nodejs18
 
 runConfig:
   maxInstances: 1
+
+cron:
+  - schedule: '0 8 * * *'
+    uri: '/api/cron/daily-schedule'
+    timeZone: 'Asia/Jakarta'
