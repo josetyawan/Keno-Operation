@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -134,23 +132,20 @@ export default function AttendanceRekapPage() {
                 title: 'Membuat kolase...',
                 description: 'Semua gambar telah dimuat, proses pembuatan file JPG dimulai.',
             });
-
+            
             const filter = (node: Node): boolean => {
-                if (node.nodeName === 'LINK') {
-                    const link = node as HTMLLinkElement;
-                    if (link.href && link.href.includes('fonts.googleapis.com')) {
-                        return false;
-                    }
-                }
-                return true;
+              if (node instanceof HTMLLinkElement && node.href.includes('fonts.googleapis.com')) {
+                return false;
+              }
+              return true;
             };
 
             const dataUrl = await toJpeg(printableArea, { 
                 quality: 0.95,
                 backgroundColor: '#ffffff',
                 pixelRatio: 2,
-                filter: filter,
                 cacheBust: true,
+                filter: filter,
              });
             const link = document.createElement('a');
             const dateString = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : 'rekap';
