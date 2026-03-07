@@ -356,7 +356,7 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished, userProfile, can
                     setIsSubmitting(false);
                     return;
                 }
-                const filePath = `hr_evidence/${user.uid}/${Date.now()}-${evidenceFile.name}`;
+                const filePath = `notas/${user.uid}/hr_evidence_${Date.now()}-${evidenceFile.name}`;
                 const storageRef = ref(storage, filePath);
                 await uploadBytes(storageRef, evidenceFile);
                 const evidenceUrl = await getDownloadURL(storageRef);
@@ -399,7 +399,7 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished, userProfile, can
                 // Convert data URL to blob and upload
                 const res = await fetch(selfie);
                 const blob = await res.blob();
-                const filePath = `hr_attendance/${user.uid}/${Date.now()}-izin.jpg`;
+                const filePath = `notas/${user.uid}/hr_attendance_izin_${Date.now()}.jpg`;
                 const storageRef = ref(storage, filePath);
                 await uploadBytes(storageRef, blob);
                 const photoUrl = await getDownloadURL(storageRef);
@@ -690,7 +690,7 @@ export default function AttendancePage() {
             const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
             if (!blob) throw new Error('Gagal membuat file gambar dari canvas.');
 
-            const filePath = `hr_attendance/${user.uid}/${Date.now()}.jpg`;
+            const filePath = `notas/${user.uid}/hr_attendance_${Date.now()}.jpg`;
             const storageRef = ref(storage, filePath);
             await uploadBytes(storageRef, blob);
             const photoUrl = await getDownloadURL(storageRef);
