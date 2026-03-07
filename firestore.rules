@@ -170,11 +170,11 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
-      // Allow read (get/list) if the user is a participant.
-      // This rule works with the client-side query: `where('participants', 'array-contains', request.auth.uid)`
-      allow read: if isSignedIn() && request.auth.uid in resource.data.participants;
+      // Allow read if the user's UID is part of the composite document ID.
+      // This works for get() on non-existent docs and list() with client-side filtering.
+      allow read: if isSignedIn() && request.auth.uid in chatId.split('_');
       
-      // Allow write (create/update) if the user is a participant (based on the immutable doc ID) and the new data is valid.
+      // Allow write (create/update) if the user is a participant and the data is valid.
       allow write: if isSignedIn() &&
                       request.auth.uid in chatId.split('_') &&
                       request.resource.data.participants.hasAll(chatId.split('_')) &&
