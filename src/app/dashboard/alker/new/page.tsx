@@ -223,7 +223,7 @@ export default function NewAlkerPage() {
 
       const uploadPhoto = async (file: File) => {
           const compressedFile = await compressImage(file);
-          const filePath = `alker-photos/${user.uid}/${Date.now()}-${file.name}`;
+          const filePath = `notas/${user.uid}/alker-${Date.now()}-${file.name}`;
           const storageRef = ref(storage, filePath);
           await uploadBytes(storageRef, compressedFile);
           return getDownloadURL(storageRef);

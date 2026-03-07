@@ -39,9 +39,5 @@ service firebase.storage {
     match /gamas-photos/{userId}/{allPaths=**} {
        allow write: if isApproved() && isOwner(userId);
     }
-
-    match /alker-photos/{userId}/{allPaths=**} {
-       allow write: if isApproved() && isOwner(userId);
-    }
   }
 }
