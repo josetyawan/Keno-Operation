@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc, updateDocumentNonBlocking } from '@/firebase';
-import { collection, query, orderBy, serverTimestamp, doc, arrayUnion } from 'firebase/firestore';
+import { collection, query, orderBy, serverTimestamp, doc, arrayUnion, updateDoc } from 'firebase/firestore';
 import type { OrbitInventory, UserProfile } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useState, useMemo } from 'react';
@@ -220,5 +220,3 @@ export default function ViewOrbitInventoryPage() {
     </>
   );
 }
-
-    
