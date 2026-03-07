@@ -84,45 +84,15 @@ export default function WorkSchedulePage() {
     return activeUsers.filter(u => u.unit?.trim().toUpperCase() === selectedUnit.toUpperCase());
   }, [allUsers, selectedUnit]);
 
+  // SIMPLIFIED: Just map the data. The Firestore document ID ensures one schedule per user per day.
   const schedulesMap = useMemo(() => {
     const map = new Map<string, string>(); // Key: 'userId-yyyy-MM-dd', Value: shiftType
     if (!allSchedules) return map;
 
-    const shiftPriority: Record<string, number> = {
-        'ijin': 1,
-        'cuti': 1,
-        'tukar-jaga': 2,
-        'h': 3,
-        'pu': 3,
-        'pb': 3,
-        'ptm': 3,
-        'pt/bd': 3,
-        'weekend-duty': 4,
-        'holiday-duty': 4,
-        'piket-demak': 5,
-        'siang-malam': 5,
-        'malam': 5,
-        'libur-dijadwalkan': 6,
-        'l': 6
-    };
-
     allSchedules.forEach(schedule => {
       const dateKey = format(schedule.date.toDate(), 'yyyy-MM-dd');
       const mapKey = `${schedule.userId}-${dateKey}`;
-      const newShift = schedule.shiftType;
-      const existingShift = map.get(mapKey);
-
-      if (existingShift) {
-        const newPriority = shiftPriority[newShift.toLowerCase()] || 99;
-        const existingPriority = shiftPriority[existingShift.toLowerCase()] || 99;
-        // If the new shift has a higher priority (lower number), replace the existing one.
-        if (newPriority < existingPriority) {
-          map.set(mapKey, newShift);
-        }
-      } else {
-        // If no entry exists, just add the new one.
-        map.set(mapKey, newShift);
-      }
+      map.set(mapKey, schedule.shiftType);
     });
     return map;
   }, [allSchedules]);
@@ -142,6 +112,7 @@ export default function WorkSchedulePage() {
   const daysInMonth = getDaysInMonth(currentDate);
   const daysArray = Array.from({ length: daysInMonth }, (_, i) => new Date(monthStart.getFullYear(), monthStart.getMonth(), i + 1));
 
+  // SIMPLIFIED AND CORRECTED LOGIC
   const getDayStatus = (user: UserProfile, day: Date): DayStatusInfo => {
     const dateKey = format(day, 'yyyy-MM-dd');
     const shift = schedulesMap.get(`${user.id}-${dateKey}`);
@@ -153,27 +124,30 @@ export default function WorkSchedulePage() {
     const shiftMapping: Record<string, string> = {
         'h': 'H', 'pu': 'PU', 'pb': 'PB', 'ptm': 'PTM', 'pt/bd': 'PT/BD',
         'piket-demak': 'PDM', 'siang-malam': 'S/MC', 'malam': 'M',
-        'weekend-duty': 'H', 'holiday-duty': 'H',
+        'weekend-duty': 'H',
+        'holiday-duty': 'H',
         'ijin': 'i', 'cuti': 'C',
-        'tukar-jaga': 'TJ', 'libur-dijadwalkan': 'L', 'l': 'L'
+        'tukar-jaga': 'TJ',
+        'libur-dijadwalkan': 'L', 'l': 'L'
     };
 
+    // Priority 1: Check for an explicit schedule from Excel/Manual Input
     if (shift) {
         const lowerShift = shift.toLowerCase();
         const displayStatus = shiftMapping[lowerShift] || shift.toUpperCase();
         
-        // A "jaga" shift is only colored purple if it's on an actual off day.
+        // A "jaga" shift is only colored purple if it's on an actual off-day.
         const isJagaShift = (lowerShift === 'weekend-duty' || lowerShift === 'holiday-duty') && isOffDay;
 
         return { status: displayStatus, isJaga: isJagaShift };
     }
 
-    // If no specific schedule, determine if it's a workday or off day.
+    // Priority 2: If no explicit schedule, determine if it's a default off day.
     if (isOffDay) {
         return { status: 'L', isJaga: false };
     }
 
-    // Default for a workday with no schedule is 'H'.
+    // Priority 3: Default to 'H' for a regular workday with no schedule.
     return { status: 'H', isJaga: false };
   };
 
