@@ -27,8 +27,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { ArrowLeft, Loader2 } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc, updateDocumentNonBlocking } from '@/firebase';
-import { collection, query, orderBy, serverTimestamp, doc, arrayUnion, updateDoc, Timestamp } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
+import { collection, query, orderBy, doc, arrayUnion, updateDoc, Timestamp, getDoc } from 'firebase/firestore';
 import type { OrbitInventory, UserProfile } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useState, useMemo } from 'react';
@@ -75,7 +75,10 @@ export default function ViewOrbitInventoryPage() {
 
       try {
           const docRef = doc(firestore, 'orbit-inventory', item.id);
-          let updateData: Partial<OrbitInventory> = {};
+          
+          // Read-modify-write to avoid arrayUnion issues
+          const docSnap = await getDoc(docRef);
+          const existingHistory = docSnap.exists() ? docSnap.data().loanHistory || [] : [];
           
           const historyEvent = {
               status: action === 'borrow' ? 'borrowed' : 'returned',
@@ -84,13 +87,17 @@ export default function ViewOrbitInventoryPage() {
               date: Timestamp.now(),
           };
 
+          const newHistory = [...existingHistory, historyEvent];
+
+          let updateData: Partial<OrbitInventory> = {};
+
           if (action === 'borrow') {
               updateData = {
                   status: 'borrowed',
                   borrowedByUserId: user.uid,
                   borrowedByName: userProfile.displayName || user.email,
                   borrowedDate: Timestamp.now(),
-                  loanHistory: arrayUnion(historyEvent)
+                  loanHistory: newHistory
               };
           } else {
               updateData = {
@@ -98,7 +105,7 @@ export default function ViewOrbitInventoryPage() {
                   borrowedByUserId: '',
                   borrowedByName: '',
                   borrowedDate: null,
-                  loanHistory: arrayUnion(historyEvent)
+                  loanHistory: newHistory
               };
           }
           
