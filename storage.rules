@@ -8,6 +8,11 @@ service firebase.storage {
       return request.auth != null;
     }
 
+    // isApproved requires a cross-service call to Firestore.
+    function isApproved() {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.registrationStatus == 'approved';
+    }
+
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
@@ -18,25 +23,25 @@ service firebase.storage {
     }
 
     // --- WRITE RULES ---
-    // General principle: A user can only write to their own folder if they are signed in.
+    // General principle: A user can only write to their own folder if they are approved.
     match /notas/{userId}/{allPaths=**} {
-      allow write: if isSignedIn() && isOwner(userId);
+      allow write: if isApproved() && isOwner(userId);
     }
 
     match /pelanggan_photos/{userId}/{allPaths=**} {
-      allow write: if isSignedIn() && isOwner(userId);
+      allow write: if isApproved() && isOwner(userId);
     }
 
     match /hr_attendance/{userId}/{allPaths=**} {
-      allow write: if isSignedIn() && isOwner(userId);
+      allow write: if isApproved() && isOwner(userId);
     }
     
     match /gamas-photos/{userId}/{allPaths=**} {
-       allow write: if isSignedIn() && isOwner(userId);
+       allow write: if isApproved() && isOwner(userId);
     }
 
     match /alker-photos/{userId}/{allPaths=**} {
-       allow write: if isSignedIn() && isOwner(userId);
+       allow write: if isApproved() && isOwner(userId);
     }
   }
 }

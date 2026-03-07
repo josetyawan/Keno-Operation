@@ -3,7 +3,7 @@
 
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -50,7 +50,7 @@ export default function NewAlkerPage() {
   const router = useRouter();
   const { toast } = useToast();
   const firestore = useFirestore();
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const storage = useStorage();
   const [isSaving, setIsSaving] = useState(false);
   
@@ -60,6 +60,20 @@ export default function NewAlkerPage() {
   // --- Data Fetching ---
   const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+  
+  useEffect(() => {
+    if (!isUserLoading && !isProfileLoading) {
+      if (!currentUserProfile) {
+          router.push('/login');
+          return;
+      }
+      const isApproved = currentUserProfile?.registrationStatus === 'approved';
+      const hasAccess = currentUserProfile?.role === 'admin' || currentUserProfile?.role === 'korlap' || currentUserProfile?.appAccess === 'allpro' || currentUserProfile?.appAccess === 'all';
+      if (!isApproved || !hasAccess) {
+        router.push('/dashboard');
+      }
+    }
+  }, [user, currentUserProfile, isUserLoading, isProfileLoading, router]);
 
   const checklistDocRef = useMemoFirebase(() => {
     if (!user) return null;
@@ -153,6 +167,48 @@ export default function NewAlkerPage() {
     }
   }, [existingChecklist, reset]);
 
+ const compressImage = (file: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const img = document.createElement('img');
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        if(typeof e.target?.result === 'string') {
+          img.src = e.target.result;
+        } else {
+          reject(new Error('Gagal membaca file.'));
+        }
+      }
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 1024;
+        let { width, height } = img;
+
+        if (width > MAX_WIDTH) {
+          height *= MAX_WIDTH / width;
+          width = MAX_WIDTH;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return reject(new Error('Tidak dapat memuat konteks canvas'));
+
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }));
+          } else {
+            reject(new Error('Gagal membuat blob dari canvas.'));
+          }
+        }, 'image/jpeg', 0.8);
+      };
+      img.onerror = (err) => reject(err);
+    });
+  };
 
   const onSubmit = async (data: FormValues) => {
     setIsSaving(true);
@@ -166,9 +222,10 @@ export default function NewAlkerPage() {
       const toolDataWithUrls: AlkerTool[] = [];
 
       const uploadPhoto = async (file: File) => {
+          const compressedFile = await compressImage(file);
           const filePath = `alker-photos/${user.uid}/${Date.now()}-${file.name}`;
           const storageRef = ref(storage, filePath);
-          await uploadBytes(storageRef, file);
+          await uploadBytes(storageRef, compressedFile);
           return getDownloadURL(storageRef);
       };
 
@@ -361,7 +418,7 @@ export default function NewAlkerPage() {
             </Card>
         </div>
 
-        <div className="flex items-center justify-end gap-2 mt-4">
+        <div className="flex items-center justify-end gap-2 mt-4 md:hidden">
           <Button onClick={() => router.back()} variant="outline" type="button">Batal</Button>
           <Button type="submit" disabled={isSaving}>
             {isSaving ? <><Loader2 className="animate-spin mr-2" /> Menyimpan...</> : 'Simpan Laporan'}
