@@ -120,33 +120,27 @@ export default function WorkSchedulePage() {
     const isOffDay = isDayWeekend || isDayHoliday;
 
     const shiftMapping: Record<string, string> = {
-        'h': 'H',
-        'pu': 'PU',
-        'pb': 'PB',
-        'ptm': 'PTM',
-        'pt/bd': 'PT/BD',
-        'piket-demak': 'PDM',
-        'siang-malam': 'S/MC',
-        'malam': 'M',
-        'weekend-duty': 'H',
-        'holiday-duty': 'H',
-        'ijin': 'i',
-        'cuti': 'C',
-        'tukar-jaga': 'TJ',
-        'libur-dijadwalkan': 'L',
-        'l': 'L'
+        'h': 'H', 'pu': 'PU', 'pb': 'PB', 'ptm': 'PTM', 'pt/bd': 'PT/BD',
+        'piket-demak': 'PDM', 'siang-malam': 'S/MC', 'malam': 'M',
+        'weekend-duty': 'H', 'holiday-duty': 'H',
+        'ijin': 'i', 'cuti': 'C',
+        'tukar-jaga': 'TJ', 'libur-dijadwalkan': 'L', 'l': 'L'
     };
 
+    // 1. If a specific schedule exists (from import or manual entry), use it.
     if (shift) {
         const displayStatus = shiftMapping[shift.toLowerCase()] || shift.toUpperCase();
+        // A "jaga" shift is only colored purple if it's on an actual off day.
         const isJagaShift = (shift.toLowerCase() === 'weekend-duty' || shift.toLowerCase() === 'holiday-duty') && isOffDay;
         return { status: displayStatus, isJaga: isJagaShift };
     }
 
+    // 2. If no specific schedule, determine if it's a workday or off day.
     if (isOffDay) {
         return { status: 'L', isJaga: false };
     }
 
+    // 3. Default for a workday with no schedule is 'H'.
     return { status: 'H', isJaga: false };
   };
 

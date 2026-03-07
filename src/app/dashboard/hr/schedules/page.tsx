@@ -34,7 +34,7 @@ const safeToDate = (timestamp: any): Date | null => {
     return isValid(d) ? d : null;
 };
 
-type ValidShiftType = 'piket-demak' | 'siang-malam' | 'malam' | 'ijin' | 'cuti' | 'weekend-duty' | 'holiday-duty' | 'tukar-jaga' | 'libur-dijadwalkan' | 'h' | 'pu' | 'pb' | 'ptm' | 'pt/bd';
+type ValidShiftType = 'piket-demak' | 'siang-malam' | 'malam' | 'ijin' | 'cuti' | 'weekend-duty' | 'holiday-duty' | 'tukar-jaga' | 'libur-dijadwalkan' | 'h' | 'pu' | 'pb' | 'ptm' | 'pt/bd' | 'l';
 
 function ScheduleForm({ schedule, users, onFormSubmit }: { schedule?: Partial<Schedule> | null, users: UserProfile[], onFormSubmit: (data: Partial<Schedule>) => void }) {
     const [userId, setUserId] = useState('');
@@ -46,7 +46,7 @@ function ScheduleForm({ schedule, users, onFormSubmit }: { schedule?: Partial<Sc
         if (schedule) {
             setUserId(schedule.userId || '');
             setDate(schedule.date ? safeToDate(schedule.date) : undefined);
-            const validTypes: ValidShiftType[] = ['piket-demak', 'siang-malam', 'malam', 'ijin', 'cuti', 'weekend-duty', 'holiday-duty', 'tukar-jaga', 'libur-dijadwalkan', 'h', 'pu', 'pb', 'ptm', 'pt/bd'];
+            const validTypes: ValidShiftType[] = ['piket-demak', 'siang-malam', 'malam', 'ijin', 'cuti', 'weekend-duty', 'holiday-duty', 'tukar-jaga', 'libur-dijadwalkan', 'h', 'pu', 'pb', 'ptm', 'pt/bd', 'l'];
             if (schedule.shiftType && validTypes.includes(schedule.shiftType as any)) {
                 setShiftType(schedule.shiftType as ValidShiftType);
             } else {
@@ -187,6 +187,7 @@ export default function AdminSchedulesPage() {
         'pb': 'Hadir - Area Barat (PB)',
         'ptm': 'Hadir - Area Timur (PTM)',
         'pt/bd': 'Hadir - Demak (PT/BD)',
+        'l': 'Libur (L)',
     };
 
     const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
@@ -540,7 +541,7 @@ export default function AdminSchedulesPage() {
                 'ptm': 'ptm',
                 'pt/bd': 'pt/bd',
                 'jaga': 'weekend-duty', 'weekend': 'weekend-duty', 'holiday': 'holiday-duty',
-                'l': 'libur-dijadwalkan',
+                'l': 'l',
             };
             
             let processedRows = 0;
@@ -862,3 +863,4 @@ export default function AdminSchedulesPage() {
     
 
     
+
