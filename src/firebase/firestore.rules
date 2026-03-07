@@ -40,16 +40,42 @@ service cloud.firestore {
       return isApproved() && (userProfile.role == 'admin' || userProfile.appAccess == 'allpro' || userProfile.appAccess == 'all');
     }
 
+    function isBorrowingDevice() {
+        return request.resource.data.status == 'borrowed'
+            && resource.data.status == 'available'
+            && request.resource.data.borrowedByUserId == request.auth.uid;
+    }
+
+    function isReturningDevice() {
+        return request.resource.data.status == 'available'
+            && resource.data.status == 'borrowed'
+            && resource.data.borrowedByUserId == request.auth.uid;
+    }
+
+    function isChangingLoanStatus() {
+        return isApproved() && (isBorrowingDevice() || isReturningDevice());
+    }
+
     // -------------------------------------------------------------------------
     // Rules
     // -------------------------------------------------------------------------
     
     match /users/{userId} {
+      function userCanUpdateOwnProfile() {
+        let incoming = request.resource.data;
+        let existing = resource.data;
+        // Fields a user CANNOT change for themselves. They can only be changed by an admin.
+        return incoming.role == existing.role &&
+               incoming.registrationStatus == existing.registrationStatus &&
+               incoming.appAccess == existing.appAccess &&
+               incoming.nik == existing.nik;
+      }
+      
       allow create: if request.auth.uid == userId && request.resource.data.email is string && request.resource.data.role == 'teknisi' && request.resource.data.registrationStatus == 'pending';
-      // READ: A user can get their own profile. Admins/Korlaps can get any profile.
-      allow get: if isOwner(userId) || isAdmin() || isKorlap();
+      // READ: Any signed-in user can get any user's profile. This is required for various features like chat and helpers like isApproved/isAdmin.
+      allow get: if isSignedIn();
       allow list: if isApproved();
-      allow update: if isOwner(userId) || isAdmin();
+      allow update: if isAdmin() || (isOwner(userId) && userCanUpdateOwnProfile());
       allow delete: if isAdmin() && request.auth.uid != userId;
     }
 
@@ -58,6 +84,12 @@ service cloud.firestore {
       allow create: if isApproved() && isCreatingOwn('userId');
       allow update: if (isApproved() && isUpdatingOwn('userId')) || isAdmin();
       allow delete: if (isApproved() && isUpdatingOwn('userId')) || isAdmin();
+    }
+    
+    match /gamas-reports/{reportId} {
+      allow read: if isApproved() || isAdmin() || isKorlap();
+      allow create: if isApproved() && isCreatingOwn('userId');
+      allow update, delete: if (isApproved() && isUpdatingOwn('userId')) || isAdmin() || isKorlap();
     }
 
     match /project-ids/{projectId} {
@@ -97,6 +129,13 @@ service cloud.firestore {
       allow get, list: if hasAllProAccess() || isKorlap();
       allow write: if isAdmin();
     }
+    
+    match /orbit-inventory/{inventoryId} {
+      allow get, list: if isApproved();
+      allow create, delete: if isAdmin();
+      // Allow admin to update anything, and approved users to borrow/return.
+      allow update: if isAdmin() || isChangingLoanStatus();
+    }
 
     match /holidays/{holidayId} {
       allow get, list: if isApproved();
@@ -106,7 +145,7 @@ service cloud.firestore {
     match /schedules/{scheduleId} {
       allow get: if isOwner(resource.data.userId) || isAdmin() || isKorlap();
       allow list: if isApproved();
-      allow create: if (isAdmin() || isKorlap()) || (isCreatingOwn('userId') && (request.resource.data.shiftType == 'ijin' || request.resource.data.shiftType == 'cuti'));
+      allow create: if (isAdmin() || isKorlap()) || (isCreatingOwn('userId') && (request.resource.data.shiftType == 'ijin' || request.resource.data.shiftType == 'cuti' || request.resource.data.shiftType == 'tukar-jaga'));
       allow update: if isOwner(resource.data.userId) || isAdmin() || isKorlap();
       allow delete: if isAdmin() || isKorlap();
     }
@@ -131,9 +170,10 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
-      // Allow read (get/list) if the user is a participant.
-      // This rule works with the client-side query: `where('participants', 'array-contains', request.auth.uid)`
-      allow read: if isSignedIn() && request.auth.uid in resource.data.participants;
+      // A user can read a chat document if they are a participant.
+      // This rule works for both `get` and `list` (queries).
+      // For 'list', the client MUST include a `where('participants', 'array-contains', request.auth.uid)` clause.
+      allow read: if isSignedIn() && 'participants' in resource.data && request.auth.uid in resource.data.participants;
 
       // Allow write (create/update) if the user is a participant (based on the immutable doc ID) and the new data is valid.
       allow write: if isSignedIn() &&
@@ -151,6 +191,13 @@ service cloud.firestore {
         // We rely on the `chatId` itself, which is a composite of the two participant UIDs.
         allow list: if isSignedIn() && request.auth.uid in chatId.split('_');
       }
+    }
+    
+    match /performance/{performanceId} {
+       // Allow admin/korlap to read anything. Regular users can list their own records.
+       allow get: if isAdmin() || isKorlap() || (isSignedIn() && resource.data.userId == request.auth.uid);
+       allow list: if isApproved();
+       allow write: if isAdmin() || isKorlap();
     }
   }
 }
