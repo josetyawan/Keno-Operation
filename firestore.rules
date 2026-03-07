@@ -72,7 +72,7 @@ service cloud.firestore {
       }
       
       allow create: if request.auth.uid == userId && request.resource.data.email is string && request.resource.data.role == 'teknisi' && request.resource.data.registrationStatus == 'pending';
-      // READ: Any approved user can get any other user's profile. A user can always get their own.
+      // READ: An approved user can get any other user's profile. A user can always get their own.
       allow get: if isOwner(userId) || isApproved();
       allow list: if isApproved();
       allow update: if isAdmin() || (isOwner(userId) && userCanUpdateOwnProfile());
@@ -171,9 +171,10 @@ service cloud.firestore {
 
     match /chats/{chatId} {
       // A user can read a chat document if they are a participant.
-      // This rule works for both `get` and `list` (queries).
-      // For 'list', the client MUST include a `where('participants', 'array-contains', request.auth.uid)` clause.
-      allow read: if isSignedIn() && 'participants' in resource.data && request.auth.uid in resource.data.participants;
+      allow get: if isSignedIn() && request.auth.uid in chatId.split('_');
+
+      // For list queries, the client MUST include a `where('participants', 'array-contains', request.auth.uid)` clause.
+      allow list: if isSignedIn() && request.auth.uid in resource.data.participants;
 
       // Allow write (create/update) if the user is a participant (based on the immutable doc ID) and the new data is valid.
       allow write: if isSignedIn() &&
@@ -201,3 +202,5 @@ service cloud.firestore {
     }
   }
 }
+
+    
