@@ -119,46 +119,38 @@ export default function WorkSchedulePage() {
     const isDayHoliday = holidaysMap.has(dateKey);
     const isOffDay = isDayWeekend || isDayHoliday;
 
-    // 1. High priority leave/requests
-    if (shift === 'ijin') return { status: 'i', isJaga: false };
-    if (shift === 'cuti') return { status: 'C', isJaga: false };
-    if (shift === 'tukar-jaga') return { status: 'TJ', isJaga: false };
-    if (shift === 'libur-dijadwalkan') return { status: 'L', isJaga: false };
+    // Direct mapping from Excel code to display code
+    const shiftMapping: Record<string, string> = {
+        'h': 'H',
+        'pu': 'PU',
+        'pb': 'PB',
+        'ptm': 'PTM',
+        'pt/bd': 'PT/BD',
+        'piket-demak': 'PDM',
+        'siang-malam': 'S/MC',
+        'malam': 'M',
+        'weekend-duty': 'H',
+        'holiday-duty': 'H',
+        'ijin': 'i',
+        'cuti': 'C',
+        'tukar-jaga': 'TJ',
+        'libur-dijadwalkan': 'L',
+        'l': 'L'
+    };
 
-    // 2. On-duty shifts (Piket, Jaga) that happen on an off-day
+    // 1. If there's a specific schedule from the import for this day, use it.
+    if (shift && shiftMapping[shift.toLowerCase()]) {
+        const displayStatus = shiftMapping[shift.toLowerCase()];
+        const isJagaShift = ['weekend-duty', 'holiday-duty'].includes(shift.toLowerCase());
+        return { status: displayStatus, isJaga: isJagaShift };
+    }
+
+    // 2. If NO schedule from import, determine status based on day type.
     if (isOffDay) {
-        const onDutyShifts: Record<string, string> = {
-            'piket-demak': 'PDM',
-            'siang-malam': 'S/MC',
-            'malam': 'M',
-            'weekend-duty': 'H',
-            'holiday-duty': 'H',
-            'h': 'H', 'pu': 'PU', 'pb': 'PB', 'ptm': 'PTM', 'pt/bd': 'PT/BD'
-        };
-        if (shift && onDutyShifts[shift]) {
-            return { status: onDutyShifts[shift], isJaga: true };
-        }
-        // If it's an off day with no specific on-duty schedule, it's a day off
-        return { status: 'L', isJaga: false };
-    }
-    
-    // 3. Regular workdays
-    if (!isOffDay) {
-        // If there is any shift scheduled from Excel, it takes priority
-        if (shift) {
-            const shiftMapping: Record<string, string> = {
-                'h': 'H', 'pu': 'PU', 'pb': 'PB', 'ptm': 'PTM', 'pt/bd': 'PT/BD',
-                'piket-demak': 'PDM', 'siang-malam': 'S/MC', 'malam': 'M'
-            };
-             if (shiftMapping[shift]) {
-                return { status: shiftMapping[shift], isJaga: false };
-            }
-        }
-        // If no schedule from Excel, it's a normal work day
-        return { status: 'H', isJaga: false };
+        return { status: 'L', isJaga: false }; // It's a weekend/holiday and no specific duty was scheduled
     }
 
-    // Fallback case (should not be reached)
+    // 3. If it's a regular workday with NO schedule from import, it's 'H'
     return { status: 'H', isJaga: false };
   };
 
