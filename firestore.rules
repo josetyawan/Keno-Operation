@@ -73,7 +73,7 @@ service cloud.firestore {
       
       allow create: if request.auth.uid == userId && request.resource.data.email is string && request.resource.data.role == 'teknisi' && request.resource.data.registrationStatus == 'pending';
       // READ: Any approved user can get any other user's profile. A user can always get their own.
-      allow get: if isApproved() || isOwner(userId);
+      allow get: if isOwner(userId) || isApproved();
       allow list: if isApproved();
       allow update: if isAdmin() || (isOwner(userId) && userCanUpdateOwnProfile());
       allow delete: if isAdmin() && request.auth.uid != userId;
@@ -170,17 +170,25 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
-      allow read: if isSignedIn() && request.auth.uid in chatId.split('_');
+      // Allow 'get' if the user is a participant. 'resource.data' is available for 'get'.
+      allow get: if isSignedIn() && request.auth.uid in resource.data.participants;
+      // Allow 'list' for a user to query for their own chats.
+      // The client query MUST include `where('participants', 'array-contains', request.auth.uid)` for this to be secure.
+      allow list: if isSignedIn();
+
       allow write: if isSignedIn() &&
                       request.auth.uid in chatId.split('_') &&
                       request.resource.data.participants.hasAll(chatId.split('_')) &&
                       request.resource.data.participants.size() == 2;
       
       match /messages/{messageId} {
+        // `get` (read one doc) and `write` can use get() to check parent document's participants list.
         allow get, write: if isSignedIn() &&
                              exists(/databases/$(database)/documents/chats/$(chatId)) &&
                              request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
                              
+        // `list` (queries) cannot use `get()` or `exists()`. 
+        // We rely on the `chatId` itself, which is a composite of the two participant UIDs.
         allow list: if isSignedIn() && request.auth.uid in chatId.split('_');
       }
     }
