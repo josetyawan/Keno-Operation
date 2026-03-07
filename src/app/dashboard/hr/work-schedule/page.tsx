@@ -119,7 +119,6 @@ export default function WorkSchedulePage() {
     const isDayHoliday = holidaysMap.has(dateKey);
     const isOffDay = isDayWeekend || isDayHoliday;
 
-    // Direct mapping from Excel code to display code
     const shiftMapping: Record<string, string> = {
         'h': 'H',
         'pu': 'PU',
@@ -138,19 +137,16 @@ export default function WorkSchedulePage() {
         'l': 'L'
     };
 
-    // 1. If there's a specific schedule from the import for this day, use it.
-    if (shift && shiftMapping[shift.toLowerCase()]) {
-        const displayStatus = shiftMapping[shift.toLowerCase()];
-        const isJagaShift = ['weekend-duty', 'holiday-duty'].includes(shift.toLowerCase());
+    if (shift) {
+        const displayStatus = shiftMapping[shift.toLowerCase()] || shift.toUpperCase();
+        const isJagaShift = (shift.toLowerCase() === 'weekend-duty' || shift.toLowerCase() === 'holiday-duty') && isOffDay;
         return { status: displayStatus, isJaga: isJagaShift };
     }
 
-    // 2. If NO schedule from import, determine status based on day type.
     if (isOffDay) {
-        return { status: 'L', isJaga: false }; // It's a weekend/holiday and no specific duty was scheduled
+        return { status: 'L', isJaga: false };
     }
 
-    // 3. If it's a regular workday with NO schedule from import, it's 'H'
     return { status: 'H', isJaga: false };
   };
 
