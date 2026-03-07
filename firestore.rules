@@ -12,7 +12,7 @@ service cloud.firestore {
     }
 
     function isApproved() {
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.registrationStatus == 'approved';
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.registrationStatus == 'approved';
     }
 
     function isOwner(userId) {
@@ -20,11 +20,11 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.lower() == 'admin';
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.lower() == 'admin';
     }
     
     function isKorlap() {
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.lower() == 'korlap';
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.lower() == 'korlap';
     }
 
     function isCreatingOwn(docName) {
@@ -72,7 +72,7 @@ service cloud.firestore {
       }
       
       allow create: if request.auth.uid == userId && request.resource.data.email is string && request.resource.data.role == 'teknisi' && request.resource.data.registrationStatus == 'pending';
-      // READ: Any signed-in user can get any user's profile. This is required for various features and helpers like isApproved/isAdmin.
+      // READ: Allow a user to read their own profile, or allow any approved user to read any profile.
       allow get: if isSignedIn();
       allow list: if isApproved();
       allow update: if isAdmin() || (isOwner(userId) && userCanUpdateOwnProfile());
@@ -171,10 +171,10 @@ service cloud.firestore {
 
     match /chats/{chatId} {
       // A user can read a chat document if they are a participant.
-      allow get: if isSignedIn() && request.auth.uid in chatId.split('_');
+      allow get: if isSignedIn() && 'participants' in resource.data && request.auth.uid in resource.data.participants;
 
       // For list queries, the client MUST include a `where('participants', 'array-contains', request.auth.uid)` clause.
-      allow list: if isSignedIn() && resource != null && 'participants' in resource.data && request.auth.uid in resource.data.participants;
+      allow list: if isSignedIn() && 'participants' in resource.data && request.auth.uid in resource.data.participants;
       
       // Allow write (create/update) if the user is a participant (based on the immutable doc ID) and the new data is valid.
       allow write: if isSignedIn() &&
