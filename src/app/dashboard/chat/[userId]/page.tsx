@@ -46,8 +46,6 @@ export default function PrivateChatPage() {
   }, [firestore, chatId]);
 
   const { data: messages, isLoading: areMessagesLoading } = useCollection<PrivateMessage>(messagesQuery);
-  const chatRoomRef = useMemoFirebase(() => chatId ? doc(firestore, 'chats', chatId) : null, [chatId, firestore]);
-  const { data: chatRoom } = useDoc<ChatRoom>(chatRoomRef);
 
   const threeDaysAgo = useMemo(() => {
     const date = new Date();
@@ -71,10 +69,12 @@ export default function PrivateChatPage() {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !user || !currentUserProfile || !otherUserProfile || !chatId || !chatRoomRef) return;
+    if (!newMessage.trim() || !user || !currentUserProfile || !otherUserProfile || !chatId) return;
     
     const textToSend = newMessage.trim();
     setNewMessage('');
+
+    const chatRoomRef = doc(firestore, 'chats', chatId);
 
     const chatRoomData: Partial<ChatRoom> = {
         id: chatId,
