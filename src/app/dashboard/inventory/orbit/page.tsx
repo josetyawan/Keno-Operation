@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -90,7 +89,7 @@ export default function ViewOrbitInventoryPage() {
                   status: 'borrowed',
                   borrowedByUserId: user.uid,
                   borrowedByName: userProfile.displayName || user.email,
-                  borrowedDate: serverTimestamp(),
+                  borrowedDate: Timestamp.now(),
                   loanHistory: arrayUnion(historyEvent)
               };
           } else {
