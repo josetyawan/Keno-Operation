@@ -138,6 +138,13 @@ export default function WorkSchedulePage() {
         return { status: 'L', isJaga: false };
     }
     
+    // New logic: Check for special PSA codes on regular workdays
+    const psa = user.psa?.trim().toUpperCase();
+    const specialPsaCodes = ['PU', 'PB', 'PTM', 'PT/BD'];
+    if (psa && specialPsaCodes.includes(psa)) {
+        return { status: psa, isJaga: false };
+    }
+
     return { status: 'H', isJaga: false };
   };
 
@@ -253,7 +260,7 @@ export default function WorkSchedulePage() {
                 </div>
                 <div className="mt-2 text-xs text-muted-foreground space-y-1">
                     <p>S/MC: Siang/Malam on Call | PDM: Piket Demak | M: Piket Malam</p>
-                    <p>PU: Area Utara | PB: Area Barat | PTM: Area Timur | PT/BD: Area Demak</p>
+                    <p>PU: Area Utara | PB: Area Barat | PTM: Area Timur | PT/BD: Area Demak FAC, FN, FM</p>
                 </div>
            </div>
         </CardContent>
