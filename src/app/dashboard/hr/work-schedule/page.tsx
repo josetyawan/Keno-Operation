@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -118,58 +119,46 @@ export default function WorkSchedulePage() {
     const isDayHoliday = holidaysMap.has(dateKey);
     const isOffDay = isDayWeekend || isDayHoliday;
 
-    // 1. Check for leave/request types first, as they have the highest priority.
-    if (shift) {
-        switch (shift) {
-            case 'ijin': return { status: 'i', isJaga: false };
-            case 'cuti': return { status: 'C', isJaga: false };
-            case 'tukar-jaga': return { status: 'TJ', isJaga: false };
-            case 'libur-dijadwalkan': return { status: 'L', isJaga: false };
-        }
-    }
-    
-    // 2. Handle workdays
-    if (!isOffDay) {
-        // a. Check for special PSA code. If it exists, it overrides any other work schedule for that day.
-        const psa = user.psa?.trim().toUpperCase();
-        const specialPsaCodes = ['PU', 'PB', 'PTM', 'PT/BD'];
-        if (psa && specialPsaCodes.includes(psa)) {
-            return { status: psa, isJaga: false };
-        }
-        
-        // b. If no special PSA, check for other scheduled shifts.
-        if (shift) {
-            switch (shift) {
-                case 'piket-demak': return { status: 'PDM', isJaga: false };
-                case 'siang-malam': return { status: 'S/MC', isJaga: false };
-                case 'malam': return { status: 'M', isJaga: false };
-                // This case handles a 'weekend-duty' scheduled on a normal weekday, which should just be 'Hadir'
-                case 'weekend-duty':
-                case 'holiday-duty':
-                    return { status: 'H', isJaga: false };
-            }
-        }
-        
-        // c. If no special PSA and no scheduled shift, it's a normal workday.
-        return { status: 'H', isJaga: false };
-    }
-    
-    // 3. Handle off-days (weekends/holidays)
-    if (isOffDay) {
-        // a. Check for a specific on-duty schedule.
-        if (shift === 'weekend-duty' || shift === 'holiday-duty') {
-            return { status: 'H', isJaga: true };
-        }
-        // Also check for regular piket shifts that might be scheduled on an off-day
-        if (shift === 'piket-demak') return { status: 'PDM', isJaga: true };
-        if (shift === 'siang-malam') return { status: 'S/MC', isJaga: true };
-        if (shift === 'malam') return { status: 'M', isJaga: true };
+    // 1. High priority leave/requests
+    if (shift === 'ijin') return { status: 'i', isJaga: false };
+    if (shift === 'cuti') return { status: 'C', isJaga: false };
+    if (shift === 'tukar-jaga') return { status: 'TJ', isJaga: false };
+    if (shift === 'libur-dijadwalkan') return { status: 'L', isJaga: false };
 
-        // b. If no on-duty schedule, it's a day off.
+    // 2. On-duty shifts (Piket, Jaga) that happen on an off-day
+    if (isOffDay) {
+        const onDutyShifts: Record<string, string> = {
+            'piket-demak': 'PDM',
+            'siang-malam': 'S/MC',
+            'malam': 'M',
+            'weekend-duty': 'H',
+            'holiday-duty': 'H',
+            'h': 'H', 'pu': 'PU', 'pb': 'PB', 'ptm': 'PTM', 'pt/bd': 'PT/BD'
+        };
+        if (shift && onDutyShifts[shift]) {
+            return { status: onDutyShifts[shift], isJaga: true };
+        }
+        // If it's an off day with no specific on-duty schedule, it's a day off
         return { status: 'L', isJaga: false };
     }
+    
+    // 3. Regular workdays
+    if (!isOffDay) {
+        // If there is any shift scheduled from Excel, it takes priority
+        if (shift) {
+            const shiftMapping: Record<string, string> = {
+                'h': 'H', 'pu': 'PU', 'pb': 'PB', 'ptm': 'PTM', 'pt/bd': 'PT/BD',
+                'piket-demak': 'PDM', 'siang-malam': 'S/MC', 'malam': 'M'
+            };
+             if (shiftMapping[shift]) {
+                return { status: shiftMapping[shift], isJaga: false };
+            }
+        }
+        // If no schedule from Excel, it's a normal work day
+        return { status: 'H', isJaga: false };
+    }
 
-    // This should theoretically not be reached, but as a fallback:
+    // Fallback case (should not be reached)
     return { status: 'H', isJaga: false };
   };
 
