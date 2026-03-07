@@ -170,8 +170,8 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
-      // Allow read if the user is a participant. This works for `get` on existing docs
-      // and for `list` with a `where('participants', 'array-contains', ...)` query.
+      // Allow read (get/list) if the user is a participant.
+      // This rule works with the client-side query: `where('participants', 'array-contains', request.auth.uid)`
       allow read: if isSignedIn() && request.auth.uid in resource.data.participants;
       
       // Allow write (create/update) if the user is a participant (based on the immutable doc ID) and the new data is valid.
@@ -193,10 +193,9 @@ service cloud.firestore {
     }
     
     match /performance/{performanceId} {
-       // Allow admin/korlap to read anything.
-       // Allow a regular user to read a document if their UID matches the userId field in the document.
-       allow read: if isAdmin() || isKorlap() || (isSignedIn() && resource.data.userId == request.auth.uid);
-
+       // Allow admin/korlap to read anything. Regular users can list their own records.
+       allow get: if isAdmin() || isKorlap() || (isSignedIn() && resource.data.userId == request.auth.uid);
+       allow list: if isApproved();
        allow write: if isAdmin() || isKorlap();
     }
   }
