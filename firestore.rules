@@ -170,12 +170,12 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
-      // Allow 'get' if the user is a participant. 'resource.data' is available for 'get'.
-      allow get: if isSignedIn() && request.auth.uid in resource.data.participants;
-      // Allow 'list' for a user to query for their own chats.
-      // The client query MUST include `where('participants', 'array-contains', request.auth.uid)` for this to be secure.
-      allow list: if isSignedIn();
+      // A user can read a chat document if they are a participant.
+      // This rule works for both `get` and `list` (queries).
+      // For 'list', the client MUST include a `where('participants', 'array-contains', request.auth.uid)` clause.
+      allow read: if isSignedIn() && 'participants' in resource.data && request.auth.uid in resource.data.participants;
 
+      // Allow write (create/update) if the user is a participant (based on the immutable doc ID) and the new data is valid.
       allow write: if isSignedIn() &&
                       request.auth.uid in chatId.split('_') &&
                       request.resource.data.participants.hasAll(chatId.split('_')) &&
