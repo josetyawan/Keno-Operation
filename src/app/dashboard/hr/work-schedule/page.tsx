@@ -139,7 +139,12 @@ export default function WorkSchedulePage() {
         return { status: 'L', isJaga: false };
     }
     
-    return { status: user.psa || 'H', isJaga: false };
+    const psa = user.psa || '';
+    // Only display PSA if it's a short code, not a full Service Area name.
+    const displayPsa = psa && !psa.toUpperCase().includes('SA') && !psa.toUpperCase().includes('KUDUS');
+    const status = displayPsa ? psa : 'H';
+
+    return { status, isJaga: false };
   };
 
   const changeMonth = (amount: number) => {
