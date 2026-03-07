@@ -141,12 +141,9 @@ export default function AttendanceRekapPage() {
                 description: 'Semua gambar telah dimuat, proses pembuatan file JPG dimulai.',
             });
 
-            const filter = (node: HTMLElement) => {
-                if (
-                    node.tagName === 'LINK' &&
-                    node.hasAttribute('href') &&
-                    (node.getAttribute('href') || '').includes('fonts.googleapis.com')
-                ) {
+            const filter = (node: Node): boolean => {
+                const isLink = node instanceof HTMLLinkElement;
+                if (isLink && node.href.includes('fonts.googleapis.com')) {
                     return false;
                 }
                 return true;
@@ -156,7 +153,7 @@ export default function AttendanceRekapPage() {
                 quality: 0.95,
                 backgroundColor: '#ffffff',
                 pixelRatio: 2,
-                filter: filter,
+                filter,
              });
             const link = document.createElement('a');
             const dateString = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : 'rekap';
