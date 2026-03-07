@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -119,32 +117,41 @@ export default function WorkSchedulePage() {
     const isDayHoliday = holidaysMap.has(dateKey);
     const isOffDay = isDayWeekend || isDayHoliday;
 
+    // 1. Highest priority: explicit leave/request status from schedule
     if (shift) {
         switch (shift) {
-            case 'piket-demak': return { status: 'PDM', isJaga: false };
-            case 'siang-malam': return { status: 'S/MC', isJaga: false };
-            case 'malam': return { status: 'M', isJaga: false };
             case 'ijin': return { status: 'i', isJaga: false };
             case 'cuti': return { status: 'C', isJaga: false };
             case 'tukar-jaga': return { status: 'TJ', isJaga: false };
             case 'libur-dijadwalkan': return { status: 'L', isJaga: false };
-            case 'weekend-duty':
-            case 'holiday-duty':
-                return { status: 'H', isJaga: isOffDay };
         }
     }
-
-    if (isOffDay) {
-        return { status: 'L', isJaga: false };
+    
+    // 2. If it's a general off day (weekend/holiday) AND there is no overriding work schedule ('weekend-duty', 'holiday-duty')
+    if (isOffDay && (!shift || (shift !== 'weekend-duty' && shift !== 'holiday-duty'))) {
+      return { status: 'L', isJaga: false };
     }
     
-    // New logic: Check for special PSA codes on regular workdays
+    // 3. It's a work day. Check for special area code from user profile. This overrides default work statuses.
     const psa = user.psa?.trim().toUpperCase();
     const specialPsaCodes = ['PU', 'PB', 'PTM', 'PT/BD'];
     if (psa && specialPsaCodes.includes(psa)) {
         return { status: psa, isJaga: false };
     }
 
+    // 4. If no special area, THEN check for specific work shift types.
+    if (shift) {
+        switch (shift) {
+            case 'piket-demak': return { status: 'PDM', isJaga: false };
+            case 'siang-malam': return { status: 'S/MC', isJaga: false };
+            case 'malam': return { status: 'M', isJaga: false };
+            case 'weekend-duty':
+            case 'holiday-duty':
+                return { status: 'H', isJaga: isOffDay };
+        }
+    }
+
+    // 5. Default workday status is 'H'
     return { status: 'H', isJaga: false };
   };
 
