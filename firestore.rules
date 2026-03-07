@@ -72,7 +72,7 @@ service cloud.firestore {
       }
       
       allow create: if request.auth.uid == userId && request.resource.data.email is string && request.resource.data.role == 'teknisi' && request.resource.data.registrationStatus == 'pending';
-      // READ: An approved user can get any other user's profile. A user can always get their own.
+      // A user can always get their own doc (for isApproved checks) or an approved user can get any doc.
       allow get: if isOwner(userId) || isApproved();
       allow list: if isApproved();
       allow update: if isAdmin() || (isOwner(userId) && userCanUpdateOwnProfile());
@@ -174,7 +174,7 @@ service cloud.firestore {
       allow get: if isSignedIn() && request.auth.uid in chatId.split('_');
 
       // For list queries, the client MUST include a `where('participants', 'array-contains', request.auth.uid)` clause.
-      allow list: if isSignedIn() && request.auth.uid in resource.data.participants;
+      allow list: if isSignedIn() && 'participants' in resource.data && request.auth.uid in resource.data.participants;
 
       // Allow write (create/update) if the user is a participant (based on the immutable doc ID) and the new data is valid.
       allow write: if isSignedIn() &&
@@ -202,5 +202,3 @@ service cloud.firestore {
     }
   }
 }
-
-    
