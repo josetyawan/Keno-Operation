@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -115,53 +116,53 @@ export default function ManualRekapPage() {
             const isTodayWeekend = isWeekend(today);
 
             const scheduleMap = new Map(schedules.map(s => [s.userId, s]));
-            const attendanceMap = new Map(attendances.map(a => [a.userId, a]));
 
             const allUserStatuses: UserDailyInfo[] = users
                 .filter(u => u.role === 'teknisi')
                 .map(user => {
-                    const schedule = scheduleMap.get(user.id);
-                    const attendance = attendanceMap.get(user.id);
+                    const userSchedule = scheduleMap.get(user.id);
                     const sto = user.psa || 'KDS'; 
 
-                    let status: DailyStatus = 'Libur';
+                    let status: DailyStatus = 'Hadir'; // Default to 'Hadir' on a workday
 
-                    if (schedule) {
-                        if (schedule.shiftType === 'ijin') status = 'Izin';
-                        else if (schedule.shiftType === 'cuti') status = 'Cuti';
-                        else if (schedule.shiftType === 'malam') status = 'Shift Malam';
-                        else if (['piket-demak', 'siang-malam', 'weekend-duty', 'holiday-duty'].includes(schedule.shiftType)) {
-                            status = attendance ? 'Hadir' : 'Libur';
-                        }
-                    } else {
-                        if (!isTodayWeekend && !isTodayHoliday) {
-                        status = attendance ? 'Hadir' : 'Libur';
+                    if (userSchedule) { // If there is an imported schedule
+                        const shiftType = userSchedule.shiftType;
+                         if (shiftType === 'ijin') status = 'Izin';
+                         else if (shiftType === 'cuti') status = 'Cuti';
+                         else if (shiftType === 'malam') status = 'Shift Malam';
+                         else if (['l', 'libur-dijadwalkan', 'tukar-jaga'].includes(shiftType)) status = 'Libur';
+                         // All other codes ('H', 'PU', 'PB', 'PDM', etc.) are treated as 'Hadir'
+                         else status = 'Hadir';
+                    } else { // No imported schedule for today
+                        // If no specific schedule, determine status based on day type
+                        if (isTodayHoliday || isTodayWeekend) {
+                            status = 'Libur';
                         } else {
-                        status = 'Libur';
+                            status = 'Hadir'; // Default for a workday
                         }
                     }
                     
-                    if (attendance && status !== 'Izin' && status !== 'Cuti') {
-                        status = 'Hadir';
-                    }
-
                     return { user, status, sto };
                 });
             
-            const assuranceB2CUsers = allUserStatuses.filter(u => u.user.unit === 'B2C' || u.user.unit === 'MTC');
-            const assuranceB2BUsers = allUserStatuses.filter(u => u.user.unit === 'B2B');
-            const provisioningUsers = allUserStatuses.filter(u => u.user.unit === 'Provisioning');
+            const assuranceB2CUsers = allUserStatuses.filter(u => u.user.unit?.trim().toUpperCase() === 'B2C');
+            const mtcUsers = allUserStatuses.filter(u => u.user.unit?.trim().toUpperCase() === 'MTC');
+            const assuranceB2BUsers = allUserStatuses.filter(u => u.user.unit?.trim().toUpperCase() === 'B2B');
+            const provisioningUsers = allUserStatuses.filter(u => u.user.unit?.trim().toUpperCase() === 'PROVISIONING');
 
             const rekapMessages: string[] = [];
             if (provisioningUsers.length > 0) rekapMessages.push(generateRekapString(provisioningUsers, 'PROVISIONING', formattedDateHeader));
-            if (assuranceB2CUsers.length > 0) rekapMessages.push(generateRekapString(assuranceB2CUsers, 'ASSURANCE - B2C & MTC', formattedDateHeader));
+            if (assuranceB2CUsers.length > 0) rekapMessages.push(generateRekapString(assuranceB2CUsers, 'ASSURANCE - B2C', formattedDateHeader));
+            if (mtcUsers.length > 0) rekapMessages.push(generateRekapString(mtcUsers, 'ASSURANCE - MTC', formattedDateHeader));
             if (assuranceB2BUsers.length > 0) rekapMessages.push(generateRekapString(assuranceB2BUsers, 'ASSURANCE - B2B', formattedDateHeader));
             
             let photosToSend: string[] = [];
             const hasNightShift = allUserStatuses.some(u => u.status === 'Shift Malam');
+            const hasWeekendDuty = schedules.some(s => s.shiftType === 'weekend-duty');
+            const hasHolidayDuty = schedules.some(s => s.shiftType === 'holiday-duty');
             const isJagaDay = isTodayWeekend || isTodayHoliday || hasNightShift;
             
-            if (isJagaDay) {
+            if (isJagaDay && attendances.length > 0) {
                 photosToSend = attendances.map(a => a.checkInPhotoUrl).filter((url): url is string => !!url);
             }
             

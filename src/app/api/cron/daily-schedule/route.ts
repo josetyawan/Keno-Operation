@@ -100,15 +100,15 @@ export async function GET(request: NextRequest) {
 
                 let status: DailyStatus = 'Hadir'; // Default to 'Hadir' on a workday
 
-                if (userSchedule) {
+                if (userSchedule) { // If there is an imported schedule
                     const shiftType = userSchedule.shiftType;
-                    if (shiftType === 'ijin') status = 'Izin';
-                    else if (shiftType === 'cuti') status = 'Cuti';
-                    else if (shiftType === 'malam') status = 'Shift Malam';
-                    else if (shiftType === 'l' || shiftType === 'libur-dijadwalkan') status = 'Libur';
-                    // All other codes ('H', 'PU', 'PB', 'PDM', etc.) are treated as 'Hadir'
-                    else status = 'Hadir'; 
-                } else {
+                     if (shiftType === 'ijin') status = 'Izin';
+                     else if (shiftType === 'cuti') status = 'Cuti';
+                     else if (shiftType === 'malam') status = 'Shift Malam';
+                     else if (['l', 'libur-dijadwalkan', 'tukar-jaga'].includes(shiftType)) status = 'Libur';
+                     // All other codes ('H', 'PU', 'PB', 'PDM', etc.) are treated as 'Hadir'
+                     else status = 'Hadir';
+                } else { // No imported schedule for today
                     // If no specific schedule, determine status based on day type
                     if (isTodayHoliday || isTodayWeekend) {
                         status = 'Libur';
@@ -120,13 +120,15 @@ export async function GET(request: NextRequest) {
                 return { user, status, sto };
             });
 
-        const assuranceB2CUsers = allUserStatuses.filter(u => u.user.unit?.trim().toUpperCase() === 'B2C' || u.user.unit?.trim().toUpperCase() === 'MTC');
+        const assuranceB2CUsers = allUserStatuses.filter(u => u.user.unit?.trim().toUpperCase() === 'B2C');
+        const mtcUsers = allUserStatuses.filter(u => u.user.unit?.trim().toUpperCase() === 'MTC');
         const assuranceB2BUsers = allUserStatuses.filter(u => u.user.unit?.trim().toUpperCase() === 'B2B');
         const provisioningUsers = allUserStatuses.filter(u => u.user.unit?.trim().toUpperCase() === 'PROVISIONING');
 
         const rekapMessages: string[] = [];
         if (provisioningUsers.length > 0) rekapMessages.push(generateRekapString(provisioningUsers, 'PROVISIONING', formattedDateHeader));
-        if (assuranceB2CUsers.length > 0) rekapMessages.push(generateRekapString(assuranceB2CUsers, 'ASSURANCE - B2C & MTC', formattedDateHeader));
+        if (assuranceB2CUsers.length > 0) rekapMessages.push(generateRekapString(assuranceB2CUsers, 'ASSURANCE - B2C', formattedDateHeader));
+        if (mtcUsers.length > 0) rekapMessages.push(generateRekapString(mtcUsers, 'ASSURANCE - MTC', formattedDateHeader));
         if (assuranceB2BUsers.length > 0) rekapMessages.push(generateRekapString(assuranceB2BUsers, 'ASSURANCE - B2B', formattedDateHeader));
         
         // --- Photo logic remains unchanged ---

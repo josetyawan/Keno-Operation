@@ -264,7 +264,7 @@ export default function WorkSchedulePage() {
                 </div>
                 <div className="mt-2 text-xs text-muted-foreground space-y-1">
                     <p>S/MC: Siang/Malam on Call | PDM: Piket Demak | M: Piket Malam</p>
-                    <p>PU: Area Utara | PB: Area Barat | PTM: Area Timur | PT/BD: Area Demak FAC, FN, FM</p>
+                    <p>PU: Area Utara | PB: Area Barat | PTM: Area Timur | PT/BD: Demak FAC, FN, FM</p>
                 </div>
            </div>
         </CardContent>
