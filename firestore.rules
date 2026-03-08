@@ -53,6 +53,8 @@ service cloud.firestore {
     }
 
     function isChangingLoanStatus() {
+        // This rule is simpler because the page-level read rules already enforce 'isApproved'.
+        // This rule only needs to validate the state transition itself.
         return isSignedIn() && (isBorrowingDevice() || isReturningDevice());
     }
 
