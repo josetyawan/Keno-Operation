@@ -8,7 +8,6 @@ service firebase.storage {
       return request.auth != null;
     }
 
-    // isApproved requires a cross-service call to Firestore.
     function isApproved() {
       return isSignedIn() &&
              exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
@@ -42,8 +41,8 @@ service firebase.storage {
       allow write: if isApproved() && isOwner(userId);
     }
 
-    match /pelanggan_photos/{fileName} {
-      allow write: if isSignedIn();
+    match /pelanggan_photos/{userId}/{allPaths=**} {
+      allow write: if isApproved() && isOwner(userId);
     }
 
     match /hr_attendance/{userId}/{allPaths=**} {
