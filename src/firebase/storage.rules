@@ -8,16 +8,16 @@ service firebase.storage {
       return request.auth != null;
     }
 
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
     function isApproved() {
       return isSignedIn() &&
              exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.registrationStatus == 'approved';
     }
 
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-    
     function isAdmin() {
       return isSignedIn() && 
              exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
@@ -31,7 +31,6 @@ service firebase.storage {
     }
 
     function hasAllProAccess() {
-      // Efficiently check for all conditions in a single function to avoid nested get() calls.
       if (request.auth == null) {
         return false;
       }

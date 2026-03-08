@@ -8,14 +8,14 @@ service firebase.storage {
       return request.auth != null;
     }
 
-    function isApproved() {
-      return isSignedIn() && 
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.registrationStatus == 'approved';
-    }
-
     function isOwner(userId) {
       return request.auth.uid == userId;
+    }
+    
+    function isApproved() {
+      return isSignedIn() &&
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.registrationStatus == 'approved';
     }
 
     function isAdmin() {
@@ -29,9 +29,8 @@ service firebase.storage {
              exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.lower() == 'korlap';
     }
-    
+
     function hasAllProAccess() {
-      // Efficiently check for all conditions in a single function to avoid nested get() calls.
       if (request.auth == null) {
         return false;
       }
@@ -54,6 +53,7 @@ service firebase.storage {
     }
 
     // --- WRITE RULES ---
+    
     match /notas/{userId}/{allPaths=**} {
       allow write: if isApproved() && isOwner(userId);
     }
@@ -67,6 +67,10 @@ service firebase.storage {
     }
     
     match /gamas-photos/{userId}/{allPaths=**} {
+       allow write: if isApproved() && isOwner(userId);
+    }
+
+    match /alker-photos/{userId}/{allPaths=**} {
        allow write: if isApproved() && isOwner(userId);
     }
   }
