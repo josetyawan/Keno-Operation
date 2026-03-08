@@ -43,7 +43,7 @@ service firebase.storage {
     }
 
     match /pelanggan_photos/{fileName} {
-      allow write: if isApproved();
+      allow write: if isSignedIn();
     }
 
     match /hr_attendance/{userId}/{allPaths=**} {
