@@ -142,7 +142,7 @@ function NewPelangganDialog({ isOpen, onOpenChange, onFinished }: { isOpen: bool
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!user || !user.email || !noService || !namaPelanggan || !koordinat || !serviceArea) {
-            toast({ variant: 'destructive', title: 'Data tidak lengkap' });
+            toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Harap isi semua kolom yang ditandai dengan tanda bintang (*).' });
             return;
         }
         setIsSaving(true);
@@ -970,6 +970,8 @@ export default function AdminPelangganPage() {
     </>
   );
 }
+
+    
 
     
 
