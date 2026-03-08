@@ -10,7 +10,9 @@ service firebase.storage {
 
     // isApproved requires a cross-service call to Firestore.
     function isApproved() {
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.registrationStatus == 'approved';
+      return isSignedIn() &&
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.registrationStatus == 'approved';
     }
 
     function isOwner(userId) {
@@ -18,7 +20,9 @@ service firebase.storage {
     }
     
     function isAdmin() {
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.lower() == 'admin';
+      return isSignedIn() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.lower() == 'admin';
     }
 
     // Public read access is fine for image URLs
@@ -45,5 +49,8 @@ service firebase.storage {
        allow write: if isApproved() && isOwner(userId);
     }
 
+    match /alker-photos/{userId}/{allPaths=**} {
+       allow write: if isApproved() && isOwner(userId);
+    }
   }
 }
