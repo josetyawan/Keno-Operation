@@ -42,11 +42,8 @@ service firebase.storage {
       allow write: if isApproved() && isOwner(userId);
     }
 
-    match /pelanggan_photos/{userId}/{allPaths=**} {
-      // Allow any authenticated user to write to their OWN folder.
-      // This is the simplest rule and avoids complex Firestore lookups that can fail.
-      // Page-level access to the upload feature is already controlled by other logic.
-      allow write: if request.auth.uid == userId;
+    match /pelanggan_photos/{fileName} {
+      allow write: if isApproved();
     }
 
     match /hr_attendance/{userId}/{allPaths=**} {
