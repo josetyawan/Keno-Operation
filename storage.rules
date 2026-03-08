@@ -30,23 +30,6 @@ service firebase.storage {
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.lower() == 'korlap';
     }
 
-    function hasAllProAccess() {
-      if (request.auth == null) {
-        return false;
-      }
-      let userDocPath = /databases/$(database)/documents/users/$(request.auth.uid);
-      if (!exists(userDocPath)) {
-        return false;
-      }
-      let userProfile = get(userDocPath).data;
-      
-      let isApproved = userProfile.registrationStatus == 'approved';
-      let hasRoleAccess = userProfile.role == 'admin' || userProfile.role == 'korlap';
-      let hasAppAccess = userProfile.appAccess == 'allpro' || userProfile.appAccess == 'all';
-      
-      return isApproved && (hasRoleAccess || hasAppAccess);
-    }
-
     // Public read access is fine for image URLs
     match /{allPaths=**} {
       allow read;
@@ -59,6 +42,8 @@ service firebase.storage {
     }
 
     match /pelanggan_photos/{userId}/{allPaths=**} {
+      // Simplified rule: Any signed-in user can write to their OWN folder.
+      // Page-level access control already prevents unauthorized users from reaching the upload UI.
       allow write: if isSignedIn() && isOwner(userId);
     }
 
