@@ -73,7 +73,7 @@ service cloud.firestore {
       
       allow create: if request.auth.uid == userId && request.resource.data.email is string && request.resource.data.role == 'teknisi' && request.resource.data.registrationStatus == 'pending';
       // READ: Allow a user to read their own profile, or allow any approved user to read any profile.
-      allow get: if isSignedIn();
+      allow get: if isOwner(userId) || isApproved();
       allow list: if isApproved();
       allow update: if isAdmin() || (isOwner(userId) && userCanUpdateOwnProfile());
       allow delete: if isAdmin() && request.auth.uid != userId;
