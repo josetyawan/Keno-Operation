@@ -864,7 +864,7 @@ export default function AdminPelangganPage() {
                                 ) : '-'}
                             </dd>
                          </div>
-                        {searchedPelanggan.lastEditedBy && searchedPelanggan.lastEditedDate && (
+                        {searchedPelanggan.lastEditedBy && safeToDate(searchedPelanggan.lastEditedDate) && (
                             <div className="flex flex-col md:col-span-3 border-t pt-4 mt-2">
                                 <dt className="text-muted-foreground">Terakhir Diubah</dt>
                                 <dd>
@@ -970,5 +970,7 @@ export default function AdminPelangganPage() {
     </>
   );
 }
+
+    
 
     
