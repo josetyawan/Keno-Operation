@@ -39,10 +39,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Edit, PlusCircle, Trash2, Loader2 } from 'lucide-react';
+import { Edit, PlusCircle, Trash2, History } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, doc, orderBy, serverTimestamp, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
-import type { UserProfile, OrbitInventory } from '@/lib/types';
+import type { UserProfile, OrbitInventory, LoanEvent } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
@@ -50,6 +50,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 function InventoryForm({ item, onFormSubmit }: { item?: OrbitInventory | null, onFormSubmit: (data: Partial<Omit<OrbitInventory, 'id' | 'dateAdded' | 'addedBy'>>) => void }) {
   const [snOrbit, setSnOrbit] = useState('');
@@ -96,6 +97,58 @@ function InventoryForm({ item, onFormSubmit }: { item?: OrbitInventory | null, o
   );
 }
 
+function HistoryDialog({ item, isOpen, onOpenChange }: { item: OrbitInventory | null, isOpen: boolean, onOpenChange: (open: boolean) => void }) {
+    if (!item) return null;
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>Riwayat Peminjaman</DialogTitle>
+                    <DialogDescription>SN Orbit: {item.snOrbit}</DialogDescription>
+                </DialogHeader>
+                <ScrollArea className="max-h-96">
+                    <div className="py-4">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Tanggal</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Pengguna</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {item.loanHistory && item.loanHistory.length > 0 ? (
+                                    [...item.loanHistory].reverse().map((event, index) => (
+                                        <TableRow key={index}>
+                                            <TableCell className="text-sm">{format(event.date.toDate(), 'dd MMM yyyy, HH:mm', { locale: idLocale })}</TableCell>
+                                            <TableCell>
+                                                <Badge variant={event.status === 'borrowed' ? 'destructive' : 'secondary'}>
+                                                    {event.status === 'borrowed' ? 'Dipinjam' : 'Dikembalikan'}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-sm">{event.userName}</TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow>
+                                        <TableCell colSpan={3} className="h-24 text-center">Belum ada riwayat.</TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </ScrollArea>
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button type="button">Tutup</Button>
+                    </DialogClose>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 export default function AdminOrbitInventoryPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
@@ -105,6 +158,7 @@ export default function AdminOrbitInventoryPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [itemToEdit, setItemToEdit] = useState<OrbitInventory | null>(null);
   const [itemToDelete, setItemToDelete] = useState<OrbitInventory | null>(null);
+  const [historyToView, setHistoryToView] = useState<OrbitInventory | null>(null);
 
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
     useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
@@ -162,7 +216,7 @@ export default function AdminOrbitInventoryPage() {
           toast({ title: 'Inventaris Diperbarui' });
         } else {
           const inventoryCollection = collection(firestore, 'orbit-inventory');
-          await addDoc(inventoryCollection, { ...data, dateAdded: serverTimestamp(), addedBy: user.email });
+          await addDoc(inventoryCollection, { ...data, dateAdded: serverTimestamp(), addedBy: user.email, loanHistory: [] });
           toast({ title: 'Inventaris Dibuat' });
         }
     } catch(e) {
@@ -229,6 +283,7 @@ export default function AdminOrbitInventoryPage() {
                         )}
                       </TableCell>
                     <TableCell className="text-right">
+                       <Button variant="ghost" size="icon" onClick={() => setHistoryToView(item)}><History className="h-4 w-4" /></Button>
                        <Button variant="ghost" size="icon" onClick={() => handleEdit(item)}><Edit className="h-4 w-4" /></Button>
                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDelete(item)}><Trash2 className="h-4 w-4" /></Button>
                     </TableCell>
@@ -248,10 +303,8 @@ export default function AdminOrbitInventoryPage() {
             <AlertDialogFooter><AlertDialogCancel>Batal</AlertDialogCancel><AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Hapus</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      <HistoryDialog item={historyToView} isOpen={!!historyToView} onOpenChange={(open) => !open && setHistoryToView(null)} />
     </>
   );
 }
-
-    
-
-    

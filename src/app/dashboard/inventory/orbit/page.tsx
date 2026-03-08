@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -29,7 +30,7 @@ import {
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, query, orderBy, doc, arrayUnion, updateDoc, Timestamp, getDoc } from 'firebase/firestore';
-import type { OrbitInventory, UserProfile } from '@/lib/types';
+import type { OrbitInventory, UserProfile, LoanEvent } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
@@ -39,10 +40,12 @@ import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
 
 export default function ViewOrbitInventoryPage() {
   const firestore = useFirestore();
   const { user } = useUser();
+  const router = useRouter();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
@@ -80,10 +83,10 @@ export default function ViewOrbitInventoryPage() {
           const docSnap = await getDoc(docRef);
           const existingHistory = docSnap.exists() ? docSnap.data().loanHistory || [] : [];
           
-          const historyEvent = {
-              status: action === 'borrow' ? 'borrowed' : 'returned',
+          const historyEvent: LoanEvent = {
+              status: action,
               userId: user.uid,
-              userName: userProfile.displayName || user.email,
+              userName: userProfile.displayName || user.email!,
               date: Timestamp.now(),
           };
 
@@ -111,6 +114,10 @@ export default function ViewOrbitInventoryPage() {
           
           await updateDoc(docRef, updateData);
           toast({ title: 'Sukses', description: `Perangkat berhasil di${action === 'borrow' ? 'pinjam' : 'kembalikan'}.` });
+          
+          if(action === 'borrow') {
+              router.push('/dashboard/inventory/orbit/goodbye');
+          }
 
       } catch (error: any) {
           toast({ variant: 'destructive', title: 'Gagal', description: error.message });
@@ -127,7 +134,7 @@ export default function ViewOrbitInventoryPage() {
           <h1 className="text-3xl font-bold tracking-tight">Inventaris Orbit & Mikrotik</h1>
           <p className="text-muted-foreground mt-1">Daftar perangkat yang terdaftar di sistem.</p>
         </div>
-        <Link href="/dashboard/inventory/orbit/goodbye">
+        <Link href="/dashboard">
           <Button variant="outline">
               <ArrowLeft className="mr-2 h-4 w-4" /> Kembali ke Dashboard
           </Button>
