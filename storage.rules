@@ -8,7 +8,6 @@ service firebase.storage {
       return request.auth != null;
     }
 
-    // isApproved requires a cross-service call to Firestore.
     function isApproved() {
       return isSignedIn() && 
              exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
@@ -19,19 +18,48 @@ service firebase.storage {
       return request.auth.uid == userId;
     }
 
+    function isAdmin() {
+      return isSignedIn() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.lower() == 'admin';
+    }
+
+    function isKorlap() {
+      return isSignedIn() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.lower() == 'korlap';
+    }
+    
+    function hasAllProAccess() {
+      // Efficiently check for all conditions in a single function to avoid nested get() calls.
+      if (request.auth == null) {
+        return false;
+      }
+      let userDocPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      if (!exists(userDocPath)) {
+        return false;
+      }
+      let userProfile = get(userDocPath).data;
+      
+      let isApproved = userProfile.registrationStatus == 'approved';
+      let hasRoleAccess = userProfile.role == 'admin' || userProfile.role == 'korlap';
+      let hasAppAccess = userProfile.appAccess == 'allpro' || userProfile.appAccess == 'all';
+      
+      return isApproved && (hasRoleAccess || hasAppAccess);
+    }
+
     // Public read access is fine for image URLs
     match /{allPaths=**} {
       allow read;
     }
 
     // --- WRITE RULES ---
-    // General principle: A user can only write to their own folder if they are approved.
     match /notas/{userId}/{allPaths=**} {
       allow write: if isApproved() && isOwner(userId);
     }
 
     match /pelanggan_photos/{userId}/{allPaths=**} {
-      allow write: if isApproved() && isOwner(userId);
+      allow write: if hasAllProAccess() && isOwner(userId);
     }
 
     match /hr_attendance/{userId}/{allPaths=**} {
