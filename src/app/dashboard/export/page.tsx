@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -102,6 +103,39 @@ const statusLabels: Record<string, string> = {
 };
 
 
+const bbmR2R4Segments = [
+    'BBM R2 Harian B2B IOAN', 'BBM R2 Harian PROVISIONING',
+    'BBM R4 Harian B2B IOAN', 'BBM R4 Harian PROVISIONING',
+    'BBM R4 Turlap B2B IOAN', 'BBM R4 Turlap PROVISIONING',
+    'BBM R4 UT B2B IOAN', 'BBM R4 UT PROVISIONING',
+    'BBM R4 Pengiriman Warehouse',
+];
+const jasaSegments = ['Jasa B2B IOAN', 'Jasa PROVISIONING', 'Perincian Nota Pengiriman B2B IOAN', 'Perincian Nota Pengiriman PROVISIONING'];
+const konsumsiSegments = [
+    'Konsumsi Turlap B2B IOAN', 'Konsumsi Turlap PROVISIONING',
+    'Konsumsi UT B2B IOAN', 'Konsumsi UT PROVISIONING',
+    'Konsumsi Lembur B2B IOAN', 'Konsumsi Lembur PROVISIONING',
+];
+const individualMaterialSegments = [
+    'Pembelian Material Non stok B2B IOAN',
+    'Pembelian Material Non stok PROVISIONING',
+    'Perincian Nota ATK',
+    'BBM Genset',
+    'MATERIAL SPPG',
+    'ISI PANTRY',
+];
+
+const getKeteranganForSegmen = (segmen: string): string => {
+    if (segmen.startsWith('BBM R2')) return 'BBM R2 Operasional';
+    if (segmen.startsWith('BBM R4')) return 'BBM R4 Operasional';
+    if (jasaSegments.includes(segmen)) return 'Jasa Ekspedisi (POS/JNE/J&T dll)';
+    if (konsumsiSegments.includes(segmen)) return 'Konsumsi';
+    if (segmen === 'Perincian Nota ATK') return 'ATK';
+    if (segmen === 'ISI PANTRY') return 'Isi Pantry';
+    if (segmen.includes('Pembelian Material Non stok')) return 'Pembelian Material Non Stok';
+    return segmen; // Fallback to original segment name if no specific group
+};
+
 // --- Report Generation Logic ---
 
 const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectType: ProjectType, pids: ProjectID[]): string => {
@@ -118,29 +152,27 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
     
     const idProjectForSummary = pids.find(p => p.projectType.toLowerCase() === projectType.toLowerCase())?.pid || (projectType === 'BBM GENSET' ? 'Ditagihkan ke Unit Lain' : '-');
 
-    const groupedBySegmen = notas.reduce((acc, nota) => {
-        const key = nota.segmen;
+    const groupedByKeterangan = notas.reduce((acc, nota) => {
+        const key = getKeteranganForSegmen(nota.segmen);
         if (!acc[key]) {
-            acc[key] = { total: 0 };
+            acc[key] = { total: 0, firstNota: nota };
         }
         acc[key].total += nota.nominal;
+        if ((safeToDate(nota.tanggal)?.getTime() ?? Infinity) < (safeToDate(acc[key].firstNota.tanggal)?.getTime() ?? Infinity)) {
+            acc[key].firstNota = nota;
+        }
         return acc;
-    }, {} as Record<string, { total: number }>);
+    }, {} as Record<string, { total: number, firstNota: Nota }>);
+
 
     let grandTotal = 0;
-    const tableRows = Object.entries(groupedBySegmen).map(([segmen, data], index) => {
+    const tableRows = Object.entries(groupedByKeterangan).map(([keterangan, data], index) => {
         grandTotal += data.total;
         
-        const segmenNotas = notas.filter(n => n.segmen === segmen);
-        const earliestDate = segmenNotas.reduce((earliest, current) => {
-            const currentDate = safeToDate(current.tanggal);
-            if (!currentDate) return earliest;
-            return (earliest && earliest < currentDate) ? earliest : currentDate;
-        }, null as Date | null);
-        
+        const earliestDate = safeToDate(data.firstNota.tanggal);
         const nominalFormatted = data.total.toLocaleString('id-ID');
         
-        const segmenProjectType = getProjectType(segmen);
+        const segmenProjectType = getProjectType(data.firstNota.segmen);
         
         const idProjectForRow = pids.find(p => p.projectType.toLowerCase() === segmenProjectType.toLowerCase())?.pid || '-';
 
@@ -149,7 +181,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${index + 1}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${earliestDate ? format(earliestDate, 'dd/MM/yyyy') : '-'}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${index + 1}</td>
-                <td style="border: 1px solid black; padding: 2px 4px;">${segmen}</td>
+                <td style="border: 1px solid black; padding: 2px 4px;">${keterangan}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">${idProjectForRow}</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: center;">-</td>
                 <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${nominalFormatted}</td>
@@ -197,7 +229,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
                             <td style="border: 1px solid black; padding: 2px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
                         </tr>
                     </tbody>
-                    <tfoot style="font-weight: bold;">
+                    <tfoot style="font-weight: bold; background-color: #DDEEFF; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                          <tr>
                             <td colspan="3" style="border: 1px solid black; padding: 2px; text-align: center;">JUMLAH</td>
                             <td style="border: 1px solid black; padding: 2px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
@@ -328,8 +360,8 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
 
 
 const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectType: ProjectType, pids: ProjectID[]): string => {
-    const groupedBySegmen = notas.reduce((acc, nota) => {
-        const key = nota.segmen;
+    const groupedByKeterangan = notas.reduce((acc, nota) => {
+        const key = getKeteranganForSegmen(nota.segmen);
         if (!acc[key]) {
             acc[key] = { items: [], total: 0 };
         }
@@ -338,21 +370,19 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
         return acc;
     }, {} as Record<string, { items: Nota[], total: number }>);
 
-    const isJasa = (segmen: string) => {
-        const lowerSegmen = segmen.toLowerCase();
-        return lowerSegmen.includes('jasa') || lowerSegmen.includes('pengiriman');
-    };
 
     let grandTotalJumlah = 0;
     let grandTotalDpp = 0;
     let grandTotalPph = 0;
 
-    const tableRows = Object.entries(groupedBySegmen).map(([segmen, data], index) => {
+    const tableRows = Object.entries(groupedByKeterangan).map(([keterangan, data], index) => {
         const totalJumlahForSegmen = data.total;
         let dpp = totalJumlahForSegmen;
         let pph = 0;
 
-        if (isJasa(segmen)) {
+        const isGroupJasa = keterangan === 'Jasa Ekspedisi (POS/JNE/J&T dll)';
+
+        if (isGroupJasa) {
             dpp = totalJumlahForSegmen / 1.02; // Reverse calculation from service charge
             pph = dpp * 0.02;
         }
@@ -364,7 +394,7 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
         return `
             <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <td style="padding: 4px 8px; border: 1px solid black; text-align: center;">${index + 1}</td>
-                <td style="padding: 4px 8px; border: 1px solid black;">${segmen}</td>
+                <td style="padding: 4px 8px; border: 1px solid black;">${keterangan}</td>
                 <td style="padding: 4px 8px; border: 1px solid black; text-align: right;">Rp ${Math.round(dpp).toLocaleString('id-ID')}</td>
                 <td style="padding: 4px 8px; border: 1px solid black; text-align: right;">${pph > 0 ? `Rp ${Math.round(pph).toLocaleString('id-ID')}` : '-'}</td>
                 <td style="padding: 4px 8px; border: 1px solid black; text-align: right;">Rp ${totalJumlahForSegmen.toLocaleString('id-ID')}</td>
@@ -853,7 +883,7 @@ const generateSimpleEvidenReport = (notas: Nota[], title: string): string => {
         <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
             <td style="border: 1px solid black; padding: 4px; text-align: center; vertical-align: top;">${index + 1}</td>
             <td style="border: 1px solid black; padding: 4px; vertical-align: top; white-space: nowrap;">${notaDate ? format(notaDate, 'dd MMMM yyyy', { locale: idLocale }) : '-'}</td>
-            <td style="border: 1px solid black; padding: 4px; vertical-align: top;">${nota.namaBarang || nota.keterangan || '-'}</td>
+            <td style="border: 1px solid black; padding: 4px; vertical-align: top;">${nota.keterangan || '-'}</td>
             <td style="border: 1px solid black; padding: 4px; vertical-align: top;">${evidenCellContent}</td>
             <td style="border: 1px solid black; padding: 4px; vertical-align: top;">${nota.namaPic}</td>
             <td style="border: 1px solid black; padding: 4px; text-align: right; vertical-align: top;">Rp${nota.nominal.toLocaleString('id-ID')}</td>
@@ -1143,15 +1173,7 @@ export default function ExportPage() {
                 ws['!cols'] = objectMaxLength.map((w: number) => ({ width: w + 2 }));
             };
             
-            const bbmR2R4Segments = [
-                'BBM R2 Harian B2B IOAN', 'BBM R2 Harian PROVISIONING',
-                'BBM R4 Harian B2B IOAN', 'BBM R4 Harian PROVISIONING',
-                'BBM R4 Turlap B2B IOAN', 'BBM R4 Turlap PROVISIONING',
-                'BBM R4 UT B2B IOAN', 'BBM R4 UT PROVISIONING',
-                'BBM R4 Pengiriman Warehouse',
-            ];
-            const jasaSegments = ['Jasa B2B IOAN', 'Jasa PROVISIONING', 'Perincian Nota Pengiriman B2B IOAN', 'Perincian Nota Pengiriman PROVISIONING'];
-             const groupedByProject = sortedNotas.reduce((acc, nota) => {
+            const groupedByProject = sortedNotas.reduce((acc, nota) => {
                 const pType = getProjectType(nota.segmen);
                 if (!acc[pType]) acc[pType] = [];
                 acc[pType].push(nota);
@@ -1241,6 +1263,7 @@ export default function ExportPage() {
                 const jasaData = jasaNotas.map((nota, index) => ({
                      'No': index + 1,
                     'Tanggal': safeToDate(nota.tanggal) ? format(safeToDate(nota.tanggal)!, 'dd/MM/yyyy') : '-',
+                    'Nama Toko/Warung': nota.namaBarang || '-',
                     'Keterangan': nota.keterangan || nota.namaBarang || '-',
                     'DPP': nota.nominal / 1.02,
                     'PPH 2%': nota.nominal - (nota.nominal / 1.02),
@@ -1338,31 +1361,6 @@ export default function ExportPage() {
         const sortedNotas = selectedNotas.sort((a,b) => (safeToDate(a.tanggal)?.getTime() ?? 0) - (safeToDate(b.tanggal)?.getTime() ?? 0));
         const pages: {html: string, orientation: 'portrait' | 'landscape'}[] = [];
         
-        const bbmR2R4Segments = [
-            'BBM R2 Harian B2B IOAN', 'BBM R2 Harian PROVISIONING',
-            'BBM R4 Harian B2B IOAN', 'BBM R4 Harian PROVISIONING',
-            'BBM R4 Turlap B2B IOAN', 'BBM R4 Turlap PROVISIONING',
-            'BBM R4 UT B2B IOAN', 'BBM R4 UT PROVISIONING',
-            'BBM R4 Pengiriman Warehouse',
-        ];
-
-        const jasaSegments = ['Jasa B2B IOAN', 'Jasa PROVISIONING', 'Perincian Nota Pengiriman B2B IOAN', 'Perincian Nota Pengiriman PROVISIONING'];
-        
-        const konsumsiSegments = [
-            'Konsumsi Turlap B2B IOAN', 'Konsumsi Turlap PROVISIONING',
-            'Konsumsi UT B2B IOAN', 'Konsumsi UT PROVISIONING',
-            'Konsumsi Lembur B2B IOAN', 'Konsumsi Lembur PROVISIONING',
-        ];
-
-        const individualMaterialSegments = [
-            'Pembelian Material Non stok B2B IOAN',
-            'Pembelian Material Non stok PROVISIONING',
-            'Perincian Nota ATK',
-            'BBM Genset',
-            'MATERIAL SPPG',
-            'ISI PANTRY',
-        ];
-
         try {
             const groupedByProject = sortedNotas.reduce((acc, nota) => {
                 const pType = getProjectType(nota.segmen);
@@ -1391,7 +1389,6 @@ export default function ExportPage() {
                     const rekapHtml = generateRekapitulasiReport(notasForProject, reportSA, projectType, pids || []);
                     pages.push({ html: rekapHtml, orientation: 'portrait' });
                     
-                    // --- Rincian & Eviden BBM ---
                     const bbmR2Notas = notasForProject.filter(n => n.segmen.startsWith('BBM R2'));
                     if (bbmR2Notas.length > 0) {
                         const title = `Perincian Nota BBM R2 Operasional<br/>Pekerjaan : Operasional ${saTitlePart}`;
@@ -1399,24 +1396,22 @@ export default function ExportPage() {
                         const evidenTitle = `EVIDEN Nota BBM R2 Operasional<br/>Pekerjaan : Operasional ${saTitlePart}`;
                         pages.push({ html: generateEvidenReport(bbmR2Notas, evidenTitle), orientation: 'portrait' });
                     }
-                    const bbmR4Notas = notasForProject.filter(n => n.segmen.startsWith('BBM R4'));
-                    if (bbmR4Notas.length > 0) {
+                    const bbmR4Notas = notasForProject.filter(n => bbmR2R4Segments.includes(n.segmen) && n.segmen.startsWith('BBM R4'));
+                     if (bbmR4Notas.length > 0) {
                         const title = `Perincian Nota BBM R4 Operasional<br/>Pekerjaan : Operasional ${saTitlePart}`;
                         pages.push({ html: generateBBMReport(bbmR4Notas, title), orientation: 'portrait' });
                         const evidenTitle = `EVIDEN Nota BBM R4 Operasional<br/>Pekerjaan : Operasional ${saTitlePart}`;
                         pages.push({ html: generateEvidenReport(bbmR4Notas, evidenTitle), orientation: 'portrait' });
                     }
 
-                    // --- Rincian & Eviden Jasa / Pengiriman ---
                     const jasaNotas = notasForProject.filter(n => jasaSegments.includes(n.segmen));
                     if (jasaNotas.length > 0) {
                         const title = `Perincian Nota Ekspedisi (POS/JNE/J&T dll)<br/>Pekerjaan : Operasional ${saTitlePart}`;
                         pages.push({ html: generateJasaReport(jasaNotas, title), orientation: 'portrait' });
-                        const evidenTitle = `Eviden Nota Ekspedisi<br/>Pekerjaan : Operasional ${saTitlePart}`;
+                        const evidenTitle = `Eviden Nota Ekspedisi (POS/JNE/J&T dll)<br/>Pekerjaan : Operasional ${saTitlePart}`;
                         pages.push({ html: generateSimpleEvidenReport(jasaNotas, evidenTitle), orientation: 'portrait' });
                     }
                     
-                    // --- Rincian & Eviden Konsumsi (Combined) ---
                     const konsumsiNotas = notasForProject.filter(n => konsumsiSegments.includes(n.segmen));
                     if(konsumsiNotas.length > 0) {
                          const title = `Perincian Nota Konsumsi<br/>Pekerjaan : Operasional ${saTitlePart}`;
@@ -1425,16 +1420,12 @@ export default function ExportPage() {
                          pages.push({ html: generateSimpleEvidenReport(konsumsiNotas, evidenTitle), orientation: 'portrait' });
                     }
                     
-                    // --- Rincian & Eviden for other individual segments ---
-                    for (const segment of individualMaterialSegments) {
-                        const notasInSegment = notasForProject.filter(n => n.segmen === segment);
-                        if (notasInSegment.length === 0) continue;
-                        
-                        const title = `Perincian Nota ${segment}<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        pages.push({ html: generateMaterialReport(notasInSegment, title), orientation: 'portrait' });
-                        
-                        const evidenTitle = `Eviden Nota ${segment}<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        pages.push({ html: generateSimpleEvidenReport(notasInSegment, evidenTitle), orientation: 'portrait' });
+                    const materialAndOtherNotas = notasForProject.filter(n => individualMaterialSegments.includes(n.segmen));
+                     if (materialAndOtherNotas.length > 0) {
+                        const title = `Perincian Nota Material & Lainnya<br/>Pekerjaan : Operasional ${saTitlePart}`;
+                        pages.push({ html: generateMaterialReport(materialAndOtherNotas, title), orientation: 'portrait' });
+                        const evidenTitle = `Eviden Nota Material & Lainnya<br/>Pekerjaan : Operasional ${saTitlePart}`;
+                        pages.push({ html: generateSimpleEvidenReport(materialAndOtherNotas, evidenTitle), orientation: 'portrait' });
                     }
                 }
             }
