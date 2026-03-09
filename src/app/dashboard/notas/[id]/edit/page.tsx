@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useRouter, useParams } from 'next/navigation';
@@ -125,7 +124,7 @@ function EditNotaForm({ nota, isAdmin }: { nota: Nota, isAdmin: boolean }) {
     const [imageUrls, setImageUrls] = useState<(string | null)[]>(initialUrls);
     const [previews, setPreviews] = useState<(string | null)[]>(initialUrls);
   
-    const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA'];
+    const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
     const bbmKendaraanSegments = [
         'BBM R2 Harian B2B IOAN',
         'BBM R2 Harian PROVISIONING',
@@ -176,12 +175,11 @@ function EditNotaForm({ nota, isAdmin }: { nota: Nota, isAdmin: boolean }) {
             setKmAwal('');
             setKmAkhir('');
         }
-        if (value.startsWith('Pembelian Material Non stok')) {
-            setKeterangan('Pembelian Material Non stok');
-        } else if (value === 'MATERIAL SPPG') {
+        
+        if (value === 'MATERIAL SPPG') {
             setKeterangan('Material SPPG');
         } else {
-            if (keterangan.startsWith('Pembelian Material Non stok') || keterangan === 'Material SPPG') {
+             if (keterangan === 'Material SPPG') {
                 setKeterangan('');
             }
         }
@@ -377,13 +375,21 @@ function EditNotaForm({ nota, isAdmin }: { nota: Nota, isAdmin: boolean }) {
                             )}
 
                             {isNonBBMKendaraan && (
-                                <div className="grid gap-3"><Label htmlFor="namaBarang">{segmen.startsWith('Jasa') || segmen.startsWith('Perincian Nota Pengiriman') ? 'Nama Jasa / Pengiriman' : 'Nama Barang'}</Label>
-                                    <Input id="namaBarang" type="text" placeholder={segmen.startsWith('Jasa') || segmen.startsWith('Perincian Nota Pengiriman') ? 'Contoh: Jasa perbaikan / Pengiriman barang' : 'Nama barang yang dibeli...'} value={namaBarang} onChange={(e) => setNamaBarang(e.target.value)} />
+                                <div className="grid gap-3">
+                                    <Label htmlFor="namaBarang">Nama Toko/Warung</Label>
+                                    <Input id="namaBarang" type="text" placeholder="Contoh: Toko ATK Jaya, Warung Makan Bu Tini" value={namaBarang} onChange={(e) => setNamaBarang(e.target.value)} />
                                 </div>
                             )}
 
-                            <div className="grid gap-3"><Label htmlFor="keterangan">Keterangan</Label>
-                                <Textarea id="keterangan" placeholder="Keterangan tambahan..." value={keterangan} onChange={(e) => setKeterangan(e.target.value)} readOnly={keterangan.startsWith('Pembelian Material Non stok') || keterangan === 'Material SPPG'} />
+                            <div className="grid gap-3">
+                                <Label htmlFor="keterangan">Keterangan</Label>
+                                <Textarea
+                                id="keterangan"
+                                placeholder={isNonBBMKendaraan ? 'Isi nama barang/jasa lengkap sesuai nota...' : 'Keterangan tambahan...'}
+                                value={keterangan}
+                                onChange={(e) => setKeterangan(e.target.value)}
+                                readOnly={keterangan === 'Material SPPG'}
+                                />
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

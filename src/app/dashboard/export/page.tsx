@@ -70,7 +70,7 @@ const safeToDate = (timestamp: any): Date | null => {
 
 
 const getProjectType = (segmen: string): ProjectType => {
-    if (segmen === 'BBM R4 Pengiriman Warehouse') return 'B2B IOAN'; // Now maps to B2B IOAN
+    if (segmen === 'BBM R4 Pengiriman Warehouse') return 'B2B IOAN';
     if (segmen === 'BBM Genset') return 'BBM GENSET';
     if (segmen.includes('SPPG')) return 'SPPG';
     if (segmen.includes('B2B IOAN') || segmen === 'ISI PANTRY') return 'B2B IOAN';
@@ -108,10 +108,8 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
     const today = new Date();
     const firstNotaDate = (notas.length > 0) ? safeToDate(notas[0].tanggal) : null;
     
-    // Use today's date for signature and document dates, as requested.
     const formattedDate = format(today, 'dd/MM/yyyy');
     
-    // Use the nota's period for the project name month.
     const periodDate = firstNotaDate || today;
     const monthName = format(periodDate, 'MMM', { locale: idLocale });
     
@@ -175,7 +173,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
             </td>
             <td style="width: 50%; vertical-align: top;">
                 <table style="width: 100%; font-size: 8pt; border-collapse: collapse; border: 1px solid black;">
-                    <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                    <thead style="background-color: #DDEEFF; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                         <tr>
                             <th style="border: 1px solid black; padding: 2px;">No.</th>
                             <th style="border: 1px solid black; padding: 2px;">ID PROJECT</th>
@@ -292,7 +290,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
         </table>
 
         <table style="width: 100%; border-collapse: collapse; font-size: 7pt;">
-            <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+            <thead style="background-color: #DDEEFF; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                  <tr>
                     <th rowspan="2" style="border: 1px solid black; padding: 2px; vertical-align: middle;">No. Urut</th>
                     <th rowspan="2" style="border: 1px solid black; padding: 2px; vertical-align: middle;">TANGGAL</th>
@@ -408,7 +406,7 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
         </div>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 1px solid black;">
-            <thead style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+            <thead style="background-color: #DDEEFF; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr>
                     <th style="padding: 4px 8px; border: 1px solid black; width: 5%;">NO</th>
                     <th style="padding: 4px 8px; border: 1px solid black;">KETERANGAN</th>
@@ -421,7 +419,7 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
                 ${tableRows}
             </tbody>
             <tfoot style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
-                <tr style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                <tr style="background-color: #DDEEFF; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                     <td colspan="2" style="padding: 4px 8px; border: 1px solid black; text-align: center;">TOTAL</td>
                     <td style="padding: 4px 8px; border: 1px solid black; text-align: right;">Rp ${Math.round(grandTotalDpp).toLocaleString('id-ID')}</td>
                     <td style="padding: 4px 8px; border: 1px solid black; text-align: right;">${grandTotalPph > 0 ? `Rp ${Math.round(grandTotalPph).toLocaleString('id-ID')}` : '-'}</td>
@@ -521,7 +519,7 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
         <div style="font-size: 12pt; margin: 0; font-weight: bold; text-align: left; line-height: 1.2;">${title}</div>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
-            <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+            <thead style="background-color: #DDEEFF; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr>
                     <th style="padding: 4px; border: 1px solid black; width: 5%;">NO</th>
                     ${['TANGGAL', 'KETERANGAN', 'NO PLAT', 'KM AWAL', 'KM AKHIR', 'URAIAN PEKERJAAN', 'JUMLAH', 'NAMA'].map(h => `<th style="padding: 4px; border: 1px solid black;">${h}</th>`).join('')}
@@ -529,7 +527,7 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
             </thead>
             <tbody>${tableRows}</tbody>
             <tfoot style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
-                <tr style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                <tr style="background-color: #DDEEFF; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                     <td colspan="7" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">GRAND TOTAL</td>
                     <td style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">Rp${grandTotal.toLocaleString('id-ID')}</td>
                     <td style="padding: 4px; border: 1px solid black;"></td>
@@ -619,7 +617,7 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
         <div style="font-size: 12pt; margin: 0; font-weight: bold; text-align: left; line-height: 1.2;">${title}</div>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 1px solid black; font-size: 8pt;">
-            <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+            <thead style="background-color: #DDEEFF; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr>
                     ${headers.map(h => `<th style="border: 1px solid black; padding: 4px; vertical-align: middle;">${h}</th>`).join('')}
                 </tr>
@@ -630,7 +628,6 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
 };
 
 const generateJasaReport = (notas: Nota[], title: string): string => {
-    // Group notas by date
     const groupedByDate = notas.reduce((acc, nota) => {
         const notaDate = safeToDate(nota.tanggal);
         const dateKey = notaDate ? format(notaDate, 'yyyy-MM-dd') : 'invalid-date';
@@ -685,7 +682,6 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
         grandTotalDpp += dateSubtotalDpp;
         grandTotalPph += dateSubtotalPph;
 
-        // Render subtotal row for the date
         tableRows += `
             <tr style="font-weight: bold; background-color: #FFFF00; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <td colspan="3" style="padding: 4px; border: 1px solid black; text-align: right;">TOTAL</td>
@@ -706,14 +702,14 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
         <div style="font-size: 12pt; margin: 0; font-weight: bold; text-align: left; line-height: 1.2;">${title}</div>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
-            <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+            <thead style="background-color: #DDEEFF; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr>
                     ${['NO', 'TANGGAL', 'URAIAN', 'DPP', 'PPH', 'JUMLAH', 'KETERANGAN', 'NAMA'].map(h => `<th style="padding: 4px; border: 1px solid black;">${h}</th>`).join('')}
                 </tr>
             </thead>
             <tbody>${tableRows}</tbody>
             <tfoot style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
-                <tr style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                <tr style="background-color: #DDEEFF; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                     <td colspan="3" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">GRAND TOTAL</td>
                     <td style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">Rp${Math.round(grandTotalDpp).toLocaleString('id-ID')}</td>
                     <td style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">Rp${Math.round(grandTotalPph).toLocaleString('id-ID')}</td>
@@ -807,15 +803,15 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
         <div style="font-size: 12pt; margin: 0; font-weight: bold; text-align: left; line-height: 1.2;">${title}</div>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
-            <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+            <thead style="background-color: #DDEEFF; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr>
                     <th style="padding: 4px; border: 1px solid black; width: 5%;">NO</th>
-                    ${['TANGGAL', 'NAMA BARANG', 'KETERANGAN', 'JUMLAH', 'NAMA'].map(h => `<th style="padding: 4px; border: 1px solid black;">${h}</th>`).join('')}
+                    ${['TANGGAL', 'URAIAN', 'KETERANGAN', 'JUMLAH', 'NAMA'].map(h => `<th style="padding: 4px; border: 1px solid black;">${h}</th>`).join('')}
                 </tr>
             </thead>
             <tbody>${tableRows}</tbody>
             <tfoot style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
-                <tr style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                <tr style="background-color: #DDEEFF; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                     <td colspan="4" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">GRAND TOTAL</td>
                     <td style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">Rp${grandTotal.toLocaleString('id-ID')}</td>
                     <td style="padding: 4px; border: 1px solid black;"></td>
@@ -876,7 +872,7 @@ const generateSimpleEvidenReport = (notas: Nota[], title: string): string => {
         <div style="font-size: 12pt; margin: 0; font-weight: bold; text-align: left;">${title}</div>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 1px solid black; font-size: 10pt;">
-            <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+            <thead style="background-color: #DDEEFF; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr>
                     ${headers.map(h => `<th style="border: 1px solid black; padding: 4px; vertical-align: middle;">${h}</th>`).join('')}
                 </tr>
@@ -1160,10 +1156,7 @@ export default function ExportPage() {
                 'BBM R4 UT B2B IOAN', 'BBM R4 UT PROVISIONING',
                 'BBM R4 Pengiriman Warehouse',
             ];
-            const jasaSegments = [
-                'Jasa B2B IOAN', 'Jasa PROVISIONING',
-                'Perincian Nota Pengiriman B2B IOAN', 'Perincian Nota Pengiriman PROVISIONING'
-            ];
+            const jasaSegments = ['Jasa B2B IOAN', 'Jasa PROVISIONING', 'Perincian Nota Pengiriman B2B IOAN', 'Perincian Nota Pengiriman PROVISIONING'];
              const groupedByProject = sortedNotas.reduce((acc, nota) => {
                 const pType = getProjectType(nota.segmen);
                 if (!acc[pType]) acc[pType] = [];
@@ -1404,34 +1397,18 @@ export default function ExportPage() {
                         pages.push({ html: generateBBMReport(bbmR4Operasional, title), orientation: 'portrait' });
                     }
 
-                    const groupedBySegment = notasForProject.reduce((acc, nota) => {
-                        if (!acc[nota.segmen]) acc[nota.segmen] = [];
-                        acc[nota.segmen].push(nota);
-                        return acc;
-                    }, {} as Record<string, Nota[]>);
-                    
-                    for (const segment in groupedBySegment) {
-                        const notasInSegment = groupedBySegment[segment];
-                        if (notasInSegment.length === 0) continue;
-                        if (segment.startsWith('BBM R')) continue; // Skip BBM as it's handled above
+                    // Handle new segments with MaterialReport format
+                    const materialAndOtherNotas = notasForProject.filter(n => !bbmR2R4Segments.includes(n.segmen) && !jasaSegments.includes(n.segmen));
+                    if (materialAndOtherNotas.length > 0) {
+                        const title = `Perincian Nota Material & Lainnya<br/>Pekerjaan : Operasional ${saTitlePart}`;
+                        pages.push({ html: generateMaterialReport(materialAndOtherNotas, title), orientation: 'portrait' });
+                    }
 
-                        let title: string;
-                        let segmentHtml: string;
-                        
-                        if (jasaSegments.includes(segment)) {
-                            title = `Perincian Nota Ekspedisi (POS/JNE/J&T dll)<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                            segmentHtml = generateJasaReport(notasInSegment, title);
-                        } else {
-                            if (materialSegments.includes(segment)) {
-                                title = `Perincian Nota ${segment}<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                            } else if (konsumsiSegments.includes(segment)) {
-                                title = `Perincian Nota Konsumsi<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                            } else {
-                                title = `Perincian Nota ${segment}<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                            }
-                            segmentHtml = generateMaterialReport(notasInSegment, title);
-                        }
-                        pages.push({ html: segmentHtml, orientation: 'portrait' });
+                    // Handle Jasa segments
+                    const jasaNotas = notasForProject.filter(n => jasaSegments.includes(n.segmen));
+                    if (jasaNotas.length > 0) {
+                        const title = `Perincian Nota Ekspedisi (POS/JNE/J&T dll)<br/>Pekerjaan : Operasional ${saTitlePart}`;
+                        pages.push({ html: generateJasaReport(jasaNotas, title), orientation: 'portrait' });
                     }
 
                     // Eviden Reports

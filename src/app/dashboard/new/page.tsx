@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -162,15 +161,14 @@ export default function NewNotaPage() {
       setKmAkhir('');
     }
     
-    if (value.startsWith('Pembelian Material Non stok')) {
-        setKeterangan('Pembelian Material Non stok');
-    } else if (value === 'MATERIAL SPPG') {
+    // Clear the keterangan field if it's not a special segment anymore
+    if (keterangan === 'Material SPPG' && value !== 'MATERIAL SPPG') {
+        setKeterangan('');
+    }
+
+    // Set a default keterangan for SPPG, but allow changes
+    if (value === 'MATERIAL SPPG') {
         setKeterangan('Material SPPG');
-    } else {
-        // If switching away from a static segment, clear the text area
-        if (keterangan.startsWith('Pembelian Material Non stok') || keterangan === 'Material SPPG') {
-            setKeterangan('');
-        }
     }
   };
 
@@ -423,11 +421,11 @@ export default function NewNotaPage() {
               
               {isNonBBMKendaraan && (
                 <div className="grid gap-3">
-                    <Label htmlFor="namaBarang">{segmen.startsWith('Jasa') || segmen.startsWith('Perincian Nota Pengiriman') ? 'Nama Jasa / Pengiriman' : 'Nama Barang'}</Label>
+                    <Label htmlFor="namaBarang">Nama Toko/Warung</Label>
                     <Input
                         id="namaBarang"
                         type="text"
-                        placeholder={segmen.startsWith('Jasa') || segmen.startsWith('Perincian Nota Pengiriman') ? 'Contoh: Jasa perbaikan / Pengiriman barang' : 'Nama barang yang dibeli...'}
+                        placeholder="Contoh: Toko ATK Jaya, Warung Makan Bu Tini"
                         value={namaBarang}
                         onChange={(e) => setNamaBarang(e.target.value)}
                     />
@@ -438,10 +436,10 @@ export default function NewNotaPage() {
                 <Label htmlFor="keterangan">Keterangan</Label>
                 <Textarea
                   id="keterangan"
-                  placeholder="Keterangan tambahan..."
+                  placeholder={isNonBBMKendaraan ? 'Isi nama barang/jasa lengkap sesuai nota...' : 'Keterangan tambahan...'}
                   value={keterangan}
                   onChange={(e) => setKeterangan(e.target.value)}
-                  readOnly={keterangan.startsWith('Pembelian Material Non stok') || keterangan === 'Material SPPG'}
+                  readOnly={keterangan === 'Material SPPG'}
                 />
               </div>
 
