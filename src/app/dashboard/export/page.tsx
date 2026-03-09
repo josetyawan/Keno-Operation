@@ -41,7 +41,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { ArrowLeft, Edit, Trash2, Filter, FileArchive, Printer, Calendar as CalendarIcon, Loader2, Files, FileSpreadsheet } from 'lucide-react';
-import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
+import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
 import { format, getMonth, getYear, startOfDay, endOfDay, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
@@ -308,7 +308,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
             <tbody>
                 ${tableRows}
             </tbody>
-            <tfoot style="font-weight: bold;">
+            <tfoot style="font-weight: bold; background-color: #DDEEFF; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr style="font-size: 8pt;">
                     <td colspan="6" style="border: 1px solid black; padding: 2px 4px; text-align: center;">JUMLAH</td>
                     <td style="border: 1px solid black; padding: 2px 4px; text-align: right;">${grandTotal.toLocaleString('id-ID')}</td>
@@ -353,8 +353,8 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
         let pph = 0;
 
         if (isJasa(segmen)) {
-            dpp = totalJumlahForSegmen / 0.98;
-            pph = dpp - totalJumlahForSegmen;
+            dpp = totalJumlahForSegmen / 1.02; // Reverse calculation from service charge
+            pph = dpp * 0.02;
         }
         
         grandTotalJumlah += totalJumlahForSegmen;
@@ -627,6 +627,45 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
     </div>`;
 };
 
+const generateSimpleEvidenReport = (notas: Nota[], title: string): string => {
+    const tableRows = notas.map((nota, index) => {
+        const notaDate = safeToDate(nota.tanggal);
+        const evidenImagesHtml = (nota.fotoEvidenUrls || []).filter((url): url is string => !!url).map(url => 
+             `<div style="display: flex; flex-wrap: wrap; align-items: flex-start;">
+                <img src="${url}" style="width: 100px; height: auto; object-fit: contain; border: 1px solid #eee; border-radius: 4px; margin: 2px;"/>
+              </div>`
+        ).join('');
+        
+        const evidenCellContent = `<div style="display: flex; flex-wrap: wrap; align-items: flex-start;">${evidenImagesHtml}</div>`;
+
+        return `
+        <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+            <td style="border: 1px solid black; padding: 4px; text-align: center; vertical-align: top;">${index + 1}</td>
+            <td style="border: 1px solid black; padding: 4px; vertical-align: top; white-space: nowrap;">${notaDate ? format(notaDate, 'dd MMMM yyyy', { locale: idLocale }) : '-'}</td>
+            <td style="border: 1px solid black; padding: 4px; vertical-align: top;">${nota.namaBarang || nota.keterangan || '-'}</td>
+            <td style="border: 1px solid black; padding: 4px; vertical-align: top;">${evidenCellContent}</td>
+            <td style="border: 1px solid black; padding: 4px; vertical-align: top;">${nota.namaPic}</td>
+            <td style="border: 1px solid black; padding: 4px; text-align: right; vertical-align: top;">Rp${nota.nominal.toLocaleString('id-ID')}</td>
+        </tr>`;
+    }).join('');
+
+    const headers = ['NO', 'Tanggal', 'Keterangan', 'Eviden', 'PIC', 'Nilai'];
+
+    return `
+    <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; background-color: white; page-break-inside: avoid;">
+        <div style="font-size: 12pt; margin: 0; font-weight: bold; text-align: left;">${title}</div>
+        <br/>
+        <table style="width: 100%; border-collapse: collapse; border: 1px solid black; font-size: 10pt;">
+            <thead style="background-color: #DDEEFF; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                <tr>
+                    ${headers.map(h => `<th style="border: 1px solid black; padding: 4px; vertical-align: middle;">${h}</th>`).join('')}
+                </tr>
+            </thead>
+            <tbody>${tableRows}</tbody>
+        </table>
+    </div>`;
+};
+
 const generateJasaReport = (notas: Nota[], title: string): string => {
     const groupedByDate = notas.reduce((acc, nota) => {
         const notaDate = safeToDate(nota.tanggal);
@@ -840,45 +879,6 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
                 </tr>
             </table>
         </div>
-    </div>`;
-};
-
-const generateSimpleEvidenReport = (notas: Nota[], title: string): string => {
-    const tableRows = notas.map((nota, index) => {
-        const notaDate = safeToDate(nota.tanggal);
-        const evidenImagesHtml = (nota.fotoEvidenUrls || []).filter((url): url is string => !!url).map(url => 
-             `<div style="display: flex; flex-wrap: wrap; align-items: flex-start;">
-                <img src="${url}" style="width: 100px; height: auto; object-fit: contain; border: 1px solid #eee; border-radius: 4px; margin: 2px;"/>
-              </div>`
-        ).join('');
-        
-        const evidenCellContent = `<div style="display: flex; flex-wrap: wrap; align-items: flex-start;">${evidenImagesHtml}</div>`;
-
-        return `
-        <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
-            <td style="border: 1px solid black; padding: 4px; text-align: center; vertical-align: top;">${index + 1}</td>
-            <td style="border: 1px solid black; padding: 4px; vertical-align: top; white-space: nowrap;">${notaDate ? format(notaDate, 'dd MMMM yyyy', { locale: idLocale }) : '-'}</td>
-            <td style="border: 1px solid black; padding: 4px; vertical-align: top;">${nota.namaBarang || nota.keterangan || '-'}</td>
-            <td style="border: 1px solid black; padding: 4px; vertical-align: top;">${evidenCellContent}</td>
-            <td style="border: 1px solid black; padding: 4px; vertical-align: top;">${nota.namaPic}</td>
-            <td style="border: 1px solid black; padding: 4px; text-align: right; vertical-align: top;">Rp${nota.nominal.toLocaleString('id-ID')}</td>
-        </tr>`;
-    }).join('');
-
-    const headers = ['NO', 'Tanggal', 'Keterangan', 'Eviden', 'PIC', 'Nilai'];
-
-    return `
-    <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; background-color: white; page-break-inside: avoid;">
-        <div style="font-size: 12pt; margin: 0; font-weight: bold; text-align: left;">${title}</div>
-        <br/>
-        <table style="width: 100%; border-collapse: collapse; border: 1px solid black; font-size: 10pt;">
-            <thead style="background-color: #DDEEFF; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
-                <tr>
-                    ${headers.map(h => `<th style="border: 1px solid black; padding: 4px; vertical-align: middle;">${h}</th>`).join('')}
-                </tr>
-            </thead>
-            <tbody>${tableRows}</tbody>
-        </table>
     </div>`;
 };
 
@@ -1351,6 +1351,14 @@ export default function ExportPage() {
         const selectedNotas = filteredNotas.filter(n => selectedNotaIds.includes(n.id)) || [];
         const sortedNotas = selectedNotas.sort((a,b) => (safeToDate(a.tanggal)?.getTime() ?? 0) - (safeToDate(b.tanggal)?.getTime() ?? 0));
         const pages: {html: string, orientation: 'portrait' | 'landscape'}[] = [];
+        
+        const bbmR2R4Segments = [
+            'BBM R2 Harian B2B IOAN', 'BBM R2 Harian PROVISIONING',
+            'BBM R4 Harian B2B IOAN', 'BBM R4 Harian PROVISIONING',
+            'BBM R4 Turlap B2B IOAN', 'BBM R4 Turlap PROVISIONING',
+            'BBM R4 UT B2B IOAN', 'BBM R4 UT PROVISIONING',
+            'BBM R4 Pengiriman Warehouse',
+        ];
 
         try {
             const groupedByProject = sortedNotas.reduce((acc, nota) => {
@@ -1367,11 +1375,13 @@ export default function ExportPage() {
                 const reportSA = selectedSA === 'all' ? 'SEMUA SA' : selectedSA;
 
                 const bbmR2Operasional = notasForProject.filter(n => n.segmen.startsWith('BBM R2'));
-                const bbmR4Operasional = notasForProject.filter(n => n.segmen.startsWith('BBM R4'));
+                const bbmR4Operasional = notasForProject.filter(n => n.segmen.startsWith('BBM R4') && n.segmen !== 'BBM R4 Pengiriman Warehouse');
+                const bbmR4Provi = notasForProject.filter(n => n.segmen.includes('PROVISIONING') && n.segmen.startsWith('BBM R4'));
+                const bbmR4Warehouse = notasForProject.filter(n => n.segmen === 'BBM R4 Pengiriman Warehouse');
+                
                 const jasaSegments = ['Jasa B2B IOAN', 'Jasa PROVISIONING', 'Perincian Nota Pengiriman B2B IOAN', 'Perincian Nota Pengiriman PROVISIONING'];
-                const materialSegments = ['Pembelian Material Non stok B2B IOAN', 'Pembelian Material Non stok PROVISIONING', 'Perincian Nota ATK', 'MATERIAL SPPG', 'ISI PANTRY'];
-                const konsumsiSegments = ['Konsumsi Turlap B2B IOAN', 'Konsumsi Turlap PROVISIONING', 'Konsumsi UT B2B IOAN', 'Konsumsi UT PROVISIONING', 'Konsumsi Lembur B2B IOAN', 'Konsumsi Lembur PROVISIONING'];
-
+                
+                const materialAndOtherNotas = notasForProject.filter(n => !bbmR2R4Segments.includes(n.segmen) && !jasaSegments.includes(n.segmen));
 
                 // Landscape pages
                 if (orientation === 'landscape' || orientation === 'all') {
@@ -1388,23 +1398,26 @@ export default function ExportPage() {
                     
                     const saTitlePart = reportSA === 'SEMUA SA' ? 'SEMUA SA' : `SA ${reportSA.replace('SA ', '')}`;
                     
+                    const combinedBbmR4Ops = [...bbmR4Operasional, ...bbmR4Warehouse];
+
                     if (bbmR2Operasional.length > 0) {
                         const title = `Perincian Nota BBM R2 Operasional<br/>Pekerjaan : Operasional ${saTitlePart}`;
                         pages.push({ html: generateBBMReport(bbmR2Operasional, title), orientation: 'portrait' });
                     }
-                    if (bbmR4Operasional.length > 0) {
+                    if (combinedBbmR4Ops.length > 0) {
                         const title = `Perincian Nota BBM R4 Operasional<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        pages.push({ html: generateBBMReport(bbmR4Operasional, title), orientation: 'portrait' });
+                        pages.push({ html: generateBBMReport(combinedBbmR4Ops, title), orientation: 'portrait' });
+                    }
+                     if (bbmR4Provi.length > 0) {
+                        const title = `Perincian Nota BBM R4 Operasional<br/>Pekerjaan : Operasional ${saTitlePart}`;
+                        pages.push({ html: generateBBMReport(bbmR4Provi, title), orientation: 'portrait' });
                     }
 
-                    // Handle new segments with MaterialReport format
-                    const materialAndOtherNotas = notasForProject.filter(n => !bbmR2R4Segments.includes(n.segmen) && !jasaSegments.includes(n.segmen));
                     if (materialAndOtherNotas.length > 0) {
                         const title = `Perincian Nota Material & Lainnya<br/>Pekerjaan : Operasional ${saTitlePart}`;
                         pages.push({ html: generateMaterialReport(materialAndOtherNotas, title), orientation: 'portrait' });
                     }
 
-                    // Handle Jasa segments
                     const jasaNotas = notasForProject.filter(n => jasaSegments.includes(n.segmen));
                     if (jasaNotas.length > 0) {
                         const title = `Perincian Nota Ekspedisi (POS/JNE/J&T dll)<br/>Pekerjaan : Operasional ${saTitlePart}`;
@@ -1416,9 +1429,13 @@ export default function ExportPage() {
                         const title = `EVIDEN Nota BBM R2 Operasional<br/>Pekerjaan : Operasional ${saTitlePart}`;
                         pages.push({ html: generateEvidenReport(bbmR2Operasional, title), orientation: 'portrait' });
                     }
-                    if (bbmR4Operasional.length > 0) {
+                     if (combinedBbmR4Ops.length > 0) {
                         const title = `EVIDEN Nota BBM R4 Operasional<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        pages.push({ html: generateEvidenReport(bbmR4Operasional, title), orientation: 'portrait' });
+                        pages.push({ html: generateEvidenReport(combinedBbmR4Ops, title), orientation: 'portrait' });
+                    }
+                     if (bbmR4Provi.length > 0) {
+                        const title = `EVIDEN Nota BBM R4 Operasional<br/>Pekerjaan : Operasional ${saTitlePart}`;
+                        pages.push({ html: generateEvidenReport(bbmR4Provi, title), orientation: 'portrait' });
                     }
 
                     const otherNotasForEviden = notasForProject.filter(n => !n.segmen.startsWith('BBM'));
