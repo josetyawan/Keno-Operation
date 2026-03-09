@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -71,11 +70,11 @@ const safeToDate = (timestamp: any): Date | null => {
 
 
 const getProjectType = (segmen: string): ProjectType => {
-    if (segmen === 'BBM R4 Pengiriman Warehouse') return 'B2B IOAN';
-    if (segmen === 'BBM Genset') return 'BBM GENSET';
     if (segmen.includes('SPPG')) return 'SPPG';
-    if (segmen.includes('B2B IOAN') || segmen === 'ISI PANTRY') return 'B2B IOAN';
-    if (segmen.includes('PROVISIONING') || segmen === 'Perincian Nota ATK') return 'PROVISIONING';
+    if (segmen.includes('B2B IOAN')) return 'B2B IOAN';
+    if (segmen.includes('PROVISIONING')) return 'PROVISIONING';
+    if (segmen === 'BBM Genset') return 'BBM GENSET';
+    if (segmen === 'ISI PANTRY' || segmen === 'Perincian Nota ATK') return 'PROVISIONING';
     return 'Lainnya';
 };
 
@@ -457,7 +456,6 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
 };
 
 const generateBBMReport = (notas: Nota[], title: string): string => {
-    // Group notas by date
     const groupedByDate = notas.reduce((acc, nota) => {
         const notaDate = safeToDate(nota.tanggal);
         const dateKey = notaDate ? format(notaDate, 'yyyy-MM-dd') : 'invalid-date';
@@ -501,7 +499,6 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
             itemNumber++;
         }
 
-        // Render subtotal row for the date
         tableRows += `
             <tr style="font-weight: bold; background-color: #FFFF00; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <td colspan="7" style="padding: 4px; border: 1px solid black; text-align: right;">TOTAL</td>
@@ -589,8 +586,7 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
         };
         
         const selisih = (nota.kmAkhir != null && nota.kmAwal != null && nota.kmAkhir > nota.kmAwal) ? (nota.kmAkhir - nota.kmAwal) : '';
-
-        // Split by space and join with <br/> for multiline effect as in the image.
+        
         const ketText = nota.segmen.replace(/ /g, '<br/>');
 
         return `
@@ -618,45 +614,6 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
         <div style="font-size: 12pt; margin: 0; font-weight: bold; text-align: left; line-height: 1.2;">${title}</div>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 1px solid black; font-size: 8pt;">
-            <thead style="background-color: #DDEEFF; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
-                <tr>
-                    ${headers.map(h => `<th style="border: 1px solid black; padding: 4px; vertical-align: middle;">${h}</th>`).join('')}
-                </tr>
-            </thead>
-            <tbody>${tableRows}</tbody>
-        </table>
-    </div>`;
-};
-
-const generateSimpleEvidenReport = (notas: Nota[], title: string): string => {
-    const tableRows = notas.map((nota, index) => {
-        const notaDate = safeToDate(nota.tanggal);
-        const evidenImagesHtml = (nota.fotoEvidenUrls || []).filter((url): url is string => !!url).map(url => 
-             `<div style="display: flex; flex-wrap: wrap; align-items: flex-start;">
-                <img src="${url}" style="width: 100px; height: auto; object-fit: contain; border: 1px solid #eee; border-radius: 4px; margin: 2px;"/>
-              </div>`
-        ).join('');
-        
-        const evidenCellContent = `<div style="display: flex; flex-wrap: wrap; align-items: flex-start;">${evidenImagesHtml}</div>`;
-
-        return `
-        <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
-            <td style="border: 1px solid black; padding: 4px; text-align: center; vertical-align: top;">${index + 1}</td>
-            <td style="border: 1px solid black; padding: 4px; vertical-align: top; white-space: nowrap;">${notaDate ? format(notaDate, 'dd MMMM yyyy', { locale: idLocale }) : '-'}</td>
-            <td style="border: 1px solid black; padding: 4px; vertical-align: top;">${nota.namaBarang || nota.keterangan || '-'}</td>
-            <td style="border: 1px solid black; padding: 4px; vertical-align: top;">${evidenCellContent}</td>
-            <td style="border: 1px solid black; padding: 4px; vertical-align: top;">${nota.namaPic}</td>
-            <td style="border: 1px solid black; padding: 4px; text-align: right; vertical-align: top;">Rp${nota.nominal.toLocaleString('id-ID')}</td>
-        </tr>`;
-    }).join('');
-
-    const headers = ['NO', 'Tanggal', 'Keterangan', 'Eviden', 'PIC', 'Nilai'];
-
-    return `
-    <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; background-color: white; page-break-inside: avoid;">
-        <div style="font-size: 12pt; margin: 0; font-weight: bold; text-align: left;">${title}</div>
-        <br/>
-        <table style="width: 100%; border-collapse: collapse; border: 1px solid black; font-size: 10pt;">
             <thead style="background-color: #DDEEFF; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr>
                     ${headers.map(h => `<th style="border: 1px solid black; padding: 4px; vertical-align: middle;">${h}</th>`).join('')}
@@ -880,6 +837,45 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
     </div>`;
 };
 
+
+const generateSimpleEvidenReport = (notas: Nota[], title: string): string => {
+    const tableRows = notas.map((nota, index) => {
+        const notaDate = safeToDate(nota.tanggal);
+        const evidenImagesHtml = (nota.fotoEvidenUrls || []).filter((url): url is string => !!url).map(url => 
+             `<div style="display: flex; flex-wrap: wrap; align-items: flex-start;">
+                <img src="${url}" style="width: 100px; height: auto; object-fit: contain; border: 1px solid #eee; border-radius: 4px; margin: 2px;"/>
+              </div>`
+        ).join('');
+        
+        const evidenCellContent = `<div style="display: flex; flex-wrap: wrap; align-items: flex-start;">${evidenImagesHtml}</div>`;
+
+        return `
+        <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+            <td style="border: 1px solid black; padding: 4px; text-align: center; vertical-align: top;">${index + 1}</td>
+            <td style="border: 1px solid black; padding: 4px; vertical-align: top; white-space: nowrap;">${notaDate ? format(notaDate, 'dd MMMM yyyy', { locale: idLocale }) : '-'}</td>
+            <td style="border: 1px solid black; padding: 4px; vertical-align: top;">${nota.namaBarang || nota.keterangan || '-'}</td>
+            <td style="border: 1px solid black; padding: 4px; vertical-align: top;">${evidenCellContent}</td>
+            <td style="border: 1px solid black; padding: 4px; vertical-align: top;">${nota.namaPic}</td>
+            <td style="border: 1px solid black; padding: 4px; text-align: right; vertical-align: top;">Rp${nota.nominal.toLocaleString('id-ID')}</td>
+        </tr>`;
+    }).join('');
+
+    const headers = ['NO', 'Tanggal', 'Keterangan', 'Eviden', 'PIC', 'Nilai'];
+
+    return `
+    <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; background-color: white; page-break-inside: avoid;">
+        <div style="font-size: 12pt; margin: 0; font-weight: bold; text-align: left;">${title}</div>
+        <br/>
+        <table style="width: 100%; border-collapse: collapse; border: 1px solid black; font-size: 10pt;">
+            <thead style="background-color: #DDEEFF; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                <tr>
+                    ${headers.map(h => `<th style="border: 1px solid black; padding: 4px; vertical-align: middle;">${h}</th>`).join('')}
+                </tr>
+            </thead>
+            <tbody>${tableRows}</tbody>
+        </table>
+    </div>`;
+};
 
 // --- Preview Component ---
 function ReportPreview({
@@ -1329,20 +1325,12 @@ export default function ExportPage() {
     
     const generatePages = (orientation: 'portrait' | 'landscape' | 'all') => {
         if (selectedNotaIds.length === 0) {
-            toast({
-                variant: "destructive",
-                title: "Tidak ada laporan dipilih",
-                description: "Silakan pilih setidaknya satu laporan untuk membuat rekap.",
-            });
+            toast({ variant: "destructive", title: "Tidak ada laporan dipilih", description: "Silakan pilih setidaknya satu laporan untuk membuat rekap." });
             return [];
         }
         
         if (isLoadingPids) {
-            toast({
-                variant: "destructive",
-                title: "Data PID belum termuat",
-                description: "Silakan tunggu sebentar dan coba lagi.",
-            });
+            toast({ variant: "destructive", title: "Data PID belum termuat", description: "Silakan tunggu sebentar dan coba lagi." });
             return [];
         }
 
@@ -1357,18 +1345,20 @@ export default function ExportPage() {
             'BBM R4 UT B2B IOAN', 'BBM R4 UT PROVISIONING',
             'BBM R4 Pengiriman Warehouse',
         ];
+
         const jasaSegments = ['Jasa B2B IOAN', 'Jasa PROVISIONING', 'Perincian Nota Pengiriman B2B IOAN', 'Perincian Nota Pengiriman PROVISIONING'];
-        const materialLikeSegments = [
+        
+        const konsumsiSegments = [
+            'Konsumsi Turlap B2B IOAN', 'Konsumsi Turlap PROVISIONING',
+            'Konsumsi UT B2B IOAN', 'Konsumsi UT PROVISIONING',
+            'Konsumsi Lembur B2B IOAN', 'Konsumsi Lembur PROVISIONING',
+        ];
+
+        const individualMaterialSegments = [
             'Pembelian Material Non stok B2B IOAN',
             'Pembelian Material Non stok PROVISIONING',
             'Perincian Nota ATK',
             'BBM Genset',
-            'Konsumsi Turlap B2B IOAN',
-            'Konsumsi Turlap PROVISIONING',
-            'Konsumsi UT B2B IOAN',
-            'Konsumsi UT PROVISIONING',
-            'Konsumsi Lembur B2B IOAN',
-            'Konsumsi Lembur PROVISIONING',
             'MATERIAL SPPG',
             'ISI PANTRY',
         ];
@@ -1386,7 +1376,6 @@ export default function ExportPage() {
             for (const projectType of projectTypes) {
                 const notasForProject = groupedByProject[projectType];
                 const reportSA = selectedSA === 'all' ? 'SEMUA SA' : selectedSA;
-
                 const saTitlePart = reportSA === 'SEMUA SA' ? 'SEMUA SA' : `SA ${reportSA.replace('SA ', '')}`;
                 
                 // Landscape pages (Cover)
@@ -1402,49 +1391,50 @@ export default function ExportPage() {
                     const rekapHtml = generateRekapitulasiReport(notasForProject, reportSA, projectType, pids || []);
                     pages.push({ html: rekapHtml, orientation: 'portrait' });
                     
-                    // --- Rincian BBM ---
-                    const bbmR2Operasional = notasForProject.filter(n => n.segmen.startsWith('BBM R2'));
-                    const bbmR4Operasional = notasForProject.filter(n => n.segmen.startsWith('BBM R4'));
-
-                    if (bbmR2Operasional.length > 0) {
+                    // --- Rincian & Eviden BBM ---
+                    const bbmR2Notas = notasForProject.filter(n => n.segmen.startsWith('BBM R2'));
+                    if (bbmR2Notas.length > 0) {
                         const title = `Perincian Nota BBM R2 Operasional<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        pages.push({ html: generateBBMReport(bbmR2Operasional, title), orientation: 'portrait' });
+                        pages.push({ html: generateBBMReport(bbmR2Notas, title), orientation: 'portrait' });
+                        const evidenTitle = `EVIDEN Nota BBM R2 Operasional<br/>Pekerjaan : Operasional ${saTitlePart}`;
+                        pages.push({ html: generateEvidenReport(bbmR2Notas, evidenTitle), orientation: 'portrait' });
                     }
-                    if (bbmR4Operasional.length > 0) {
+                    const bbmR4Notas = notasForProject.filter(n => n.segmen.startsWith('BBM R4'));
+                    if (bbmR4Notas.length > 0) {
                         const title = `Perincian Nota BBM R4 Operasional<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        pages.push({ html: generateBBMReport(bbmR4Operasional, title), orientation: 'portrait' });
+                        pages.push({ html: generateBBMReport(bbmR4Notas, title), orientation: 'portrait' });
+                        const evidenTitle = `EVIDEN Nota BBM R4 Operasional<br/>Pekerjaan : Operasional ${saTitlePart}`;
+                        pages.push({ html: generateEvidenReport(bbmR4Notas, evidenTitle), orientation: 'portrait' });
                     }
 
-                    // --- Rincian Jasa / Ekspedisi ---
+                    // --- Rincian & Eviden Jasa / Pengiriman ---
                     const jasaNotas = notasForProject.filter(n => jasaSegments.includes(n.segmen));
                     if (jasaNotas.length > 0) {
                         const title = `Perincian Nota Ekspedisi (POS/JNE/J&T dll)<br/>Pekerjaan : Operasional ${saTitlePart}`;
                         pages.push({ html: generateJasaReport(jasaNotas, title), orientation: 'portrait' });
+                        const evidenTitle = `Eviden Nota Ekspedisi<br/>Pekerjaan : Operasional ${saTitlePart}`;
+                        pages.push({ html: generateSimpleEvidenReport(jasaNotas, evidenTitle), orientation: 'portrait' });
                     }
-
-                    // --- Rincian Material & Lainnya (Per Segment) ---
-                    for (const segment of materialLikeSegments) {
+                    
+                    // --- Rincian & Eviden Konsumsi (Combined) ---
+                    const konsumsiNotas = notasForProject.filter(n => konsumsiSegments.includes(n.segmen));
+                    if(konsumsiNotas.length > 0) {
+                         const title = `Perincian Nota Konsumsi<br/>Pekerjaan : Operasional ${saTitlePart}`;
+                         pages.push({ html: generateMaterialReport(konsumsiNotas, title), orientation: 'portrait' });
+                         const evidenTitle = `Eviden Nota Konsumsi<br/>Pekerjaan : Operasional ${saTitlePart}`;
+                         pages.push({ html: generateSimpleEvidenReport(konsumsiNotas, evidenTitle), orientation: 'portrait' });
+                    }
+                    
+                    // --- Rincian & Eviden for other individual segments ---
+                    for (const segment of individualMaterialSegments) {
                         const notasInSegment = notasForProject.filter(n => n.segmen === segment);
                         if (notasInSegment.length === 0) continue;
+                        
                         const title = `Perincian Nota ${segment}<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        const segmentHtml = generateMaterialReport(notasInSegment, title);
-                        pages.push({ html: segmentHtml, orientation: 'portrait' });
-                    }
-
-                    // --- Eviden Reports ---
-                    if (bbmR2Operasional.length > 0) {
-                        const title = `EVIDEN Nota BBM R2 Operasional<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        pages.push({ html: generateEvidenReport(bbmR2Operasional, title), orientation: 'portrait' });
-                    }
-                     if (bbmR4Operasional.length > 0) {
-                        const title = `EVIDEN Nota BBM R4 Operasional<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        pages.push({ html: generateEvidenReport(bbmR4Operasional, title), orientation: 'portrait' });
-                    }
-
-                    const otherNotasForEviden = notasForProject.filter(n => !bbmR2R4Segments.includes(n.segmen));
-                    if (otherNotasForEviden.length > 0) {
-                        const title = `Eviden Foto - Perincian Nota Lainnya<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        pages.push({ html: generateSimpleEvidenReport(otherNotasForEviden, title), orientation: 'portrait' });
+                        pages.push({ html: generateMaterialReport(notasInSegment, title), orientation: 'portrait' });
+                        
+                        const evidenTitle = `Eviden Nota ${segment}<br/>Pekerjaan : Operasional ${saTitlePart}`;
+                        pages.push({ html: generateSimpleEvidenReport(notasInSegment, evidenTitle), orientation: 'portrait' });
                     }
                 }
             }
