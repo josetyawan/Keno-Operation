@@ -448,7 +448,7 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
             </tfoot>
         </table>
         <div style="margin-top: 20px;">
-            <p style="margin: 0;">Terbilang : (${terbilangText.charAt(0).toUpperCase() + terbilangText.slice(1)} Rupiah)</p>
+            <p style="margin: 0;">Terbilang : (${toWords(grandTotalJumlah).charAt(0).toUpperCase() + toWords(grandTotalJumlah).slice(1)} Rupiah)</p>
         </div>
         <br/><br/>
         <div style="width: 100%; text-align: center; font-size: 11pt; page-break-inside: avoid;">
@@ -548,7 +548,7 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
             <tbody>${tableRows}</tbody>
             <tfoot style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
-                    <td colspan="7" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">TOTAL</td>
+                    <td colspan="7" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">GRAND TOTAL</td>
                     <td style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">Rp${grandTotal.toLocaleString('id-ID')}</td>
                     <td style="padding: 4px; border: 1px solid black;"></td>
                 </tr>
@@ -644,6 +644,224 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
             </thead>
             <tbody>${tableRows}</tbody>
         </table>
+    </div>`;
+};
+
+const generateJasaReport = (notas: Nota[], title: string): string => {
+    // Group notas by date
+    const groupedByDate = notas.reduce((acc, nota) => {
+        const notaDate = safeToDate(nota.tanggal);
+        const dateKey = notaDate ? format(notaDate, 'yyyy-MM-dd') : 'invalid-date';
+        if (!acc[dateKey]) {
+            acc[dateKey] = [];
+        }
+        acc[dateKey].push(nota);
+        return acc;
+    }, {} as Record<string, Nota[]>);
+    
+    const sortedDates = Object.keys(groupedByDate).sort();
+    
+    let grandTotalJumlah = 0;
+    let grandTotalDpp = 0;
+    let grandTotalPph = 0;
+    let tableRows = '';
+    let itemNumber = 1;
+
+    for (const dateKey of sortedDates) {
+        if(dateKey === 'invalid-date') continue;
+        const notasOnDate = groupedByDate[dateKey];
+        let dateSubtotalJumlah = 0;
+        let dateSubtotalDpp = 0;
+        let dateSubtotalPph = 0;
+
+        for (const nota of notasOnDate) {
+            const notaDate = safeToDate(nota.tanggal);
+            const jumlah = nota.nominal;
+            const dpp = jumlah / 1.02;
+            const pph = dpp * 0.02;
+            
+            dateSubtotalJumlah += jumlah;
+            dateSubtotalDpp += dpp;
+            dateSubtotalPph += pph;
+
+            tableRows += `
+                <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                    <td style="padding: 4px; border: 1px solid black; text-align: center;">${itemNumber}</td>
+                    <td style="padding: 4px; border: 1px solid black;">${notaDate ? format(notaDate, 'dd-MMM-yy', { locale: idLocale }) : '-'}</td>
+                    <td style="padding: 4px; border: 1px solid black; white-space: normal; word-break: break-all;">${nota.keterangan || nota.namaBarang || '-'}</td>
+                    <td style="padding: 4px; border: 1px solid black; text-align: right;">Rp${Math.round(dpp).toLocaleString('id-ID')}</td>
+                    <td style="padding: 4px; border: 1px solid black; text-align: right;">Rp${Math.round(pph).toLocaleString('id-ID')}</td>
+                    <td style="padding: 4px; border: 1px solid black; text-align: right;">Rp${jumlah.toLocaleString('id-ID')}</td>
+                     <td style="padding: 4px; border: 1px solid black;">-</td>
+                    <td style="padding: 4px; border: 1px solid black;">${nota.namaPic}</td>
+                </tr>
+            `;
+            itemNumber++;
+        }
+        
+        grandTotalJumlah += dateSubtotalJumlah;
+        grandTotalDpp += dateSubtotalDpp;
+        grandTotalPph += dateSubtotalPph;
+
+        // Render subtotal row for the date
+        tableRows += `
+            <tr style="font-weight: bold; background-color: #FFFF00; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                <td colspan="3" style="padding: 4px; border: 1px solid black; text-align: right;">TOTAL</td>
+                <td style="padding: 4px; border: 1px solid black; text-align: right;">Rp${Math.round(dateSubtotalDpp).toLocaleString('id-ID')}</td>
+                <td style="padding: 4px; border: 1px solid black; text-align: right;">Rp${Math.round(dateSubtotalPph).toLocaleString('id-ID')}</td>
+                <td style="padding: 4px; border: 1px solid black; text-align: right;">Rp${dateSubtotalJumlah.toLocaleString('id-ID')}</td>
+                <td colspan="2" style="padding: 4px; border: 1px solid black;"></td>
+            </tr>
+        `;
+    }
+
+    const today = new Date();
+    const formattedDate = format(today, 'dd MMMM yyyy', { locale: idLocale });
+
+
+    return `
+    <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; background-color: white; page-break-inside: avoid;">
+        <div style="font-size: 12pt; margin: 0; font-weight: bold; text-align: left; line-height: 1.2;">${title}</div>
+        <br/>
+        <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
+            <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                <tr>
+                    ${['NO', 'TANGGAL', 'URAIAN', 'DPP', 'PPH', 'JUMLAH', 'KETERANGAN', 'NAMA'].map(h => `<th style="padding: 4px; border: 1px solid black;">${h}</th>`).join('')}
+                </tr>
+            </thead>
+            <tbody>${tableRows}</tbody>
+            <tfoot style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                <tr style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                    <td colspan="3" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">GRAND TOTAL</td>
+                    <td style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">Rp${Math.round(grandTotalDpp).toLocaleString('id-ID')}</td>
+                    <td style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">Rp${Math.round(grandTotalPph).toLocaleString('id-ID')}</td>
+                    <td style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">Rp${grandTotalJumlah.toLocaleString('id-ID')}</td>
+                    <td colspan="2" style="padding: 4px; border: 1px solid black;"></td>
+                </tr>
+            </tfoot>
+        </table>
+        <br/><br/>
+        <div style="width: 100%; text-align: center; font-size: 11pt; page-break-inside: avoid;">
+            <table style="width: 100%; text-align: center; font-size: 11pt;">
+                <tr>
+                    <td style="width: 50%; vertical-align: top;">
+                        <p style="margin: 0;">&nbsp;</p>
+                        <p style="margin: 0;">Menyetujui,</p>
+                        <br/><br/><br/><br/>
+                        <p style="font-weight: bold; margin: 0; text-decoration: underline;">GALIH AJI KUSUMAH</p>
+                        <p style="margin: 0;">MGR BRANCH SEMARANG</p>
+                    </td>
+                    <td style="width: 50%; vertical-align: top;">
+                        <p style="margin: 0;">Kudus, ${formattedDate}</p>
+                        <p style="margin: 0;">Pembuat Rincian</p>
+                        <br/><br/><br/><br/>
+                        <p style="font-weight: bold; margin: 0; text-decoration: underline;">J. WAHYU SETYAWAN</p>
+                        <p style="margin: 0;">Officer 3 Service Area Kudus</p>
+                        <p style="margin: 0;">876858</p>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>`;
+};
+
+const generateMaterialReport = (notas: Nota[], title: string): string => {
+    // Group notas by date
+    const groupedByDate = notas.reduce((acc, nota) => {
+        const notaDate = safeToDate(nota.tanggal);
+        const dateKey = notaDate ? format(notaDate, 'yyyy-MM-dd') : 'invalid-date';
+        if (!acc[dateKey]) {
+            acc[dateKey] = [];
+        }
+        acc[dateKey].push(nota);
+        return acc;
+    }, {} as Record<string, Nota[]>);
+    
+    const sortedDates = Object.keys(groupedByDate).sort();
+    
+    let grandTotal = 0;
+    let tableRows = '';
+    let itemNumber = 1;
+
+    for (const dateKey of sortedDates) {
+        if(dateKey === 'invalid-date') continue;
+        const notasOnDate = groupedByDate[dateKey];
+        let dateSubtotal = 0;
+
+        for (const nota of notasOnDate) {
+            const notaDate = safeToDate(nota.tanggal);
+            grandTotal += nota.nominal;
+            dateSubtotal += nota.nominal;
+
+            tableRows += `
+                <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                    <td style="padding: 4px; border: 1px solid black; text-align: center;">${itemNumber}</td>
+                    <td style="padding: 4px; border: 1px solid black;">${notaDate ? format(notaDate, 'dd-MMM-yy', { locale: idLocale }) : '-'}</td>
+                    <td style="padding: 4px; border: 1px solid black; white-space: normal; word-break: break-all;">${nota.namaBarang || '-'}</td>
+                    <td style="padding: 4px; border: 1px solid black; white-space: normal; word-break: break-all;">${nota.keterangan || '-'}</td>
+                    <td style="padding: 4px; border: 1px solid black; text-align: right;">Rp${nota.nominal.toLocaleString('id-ID')}</td>
+                    <td style="padding: 4px; border: 1px solid black;">${nota.namaPic}</td>
+                </tr>
+            `;
+            itemNumber++;
+        }
+
+        // Render subtotal row for the date
+        tableRows += `
+            <tr style="font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                <td colspan="4" style="padding: 4px; border: 1px solid black; text-align: right;">TOTAL</td>
+                <td style="padding: 4px; border: 1px solid black; text-align: right;">Rp${dateSubtotal.toLocaleString('id-ID')}</td>
+                <td style="padding: 4px; border: 1px solid black;"></td>
+            </tr>
+        `;
+    }
+
+    const today = new Date();
+    const formattedDate = format(today, 'dd MMMM yyyy', { locale: idLocale });
+
+
+    return `
+    <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; background-color: white; page-break-inside: avoid;">
+        <div style="font-size: 12pt; margin: 0; font-weight: bold; text-align: left; line-height: 1.2;">${title}</div>
+        <br/>
+        <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
+            <thead style="background-color: #FED7AA; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                <tr>
+                    <th style="padding: 4px; border: 1px solid black; width: 5%;">NO</th>
+                    ${['TANGGAL', 'NAMA BARANG', 'KETERANGAN', 'JUMLAH', 'NAMA'].map(h => `<th style="padding: 4px; border: 1px solid black;">${h}</th>`).join('')}
+                </tr>
+            </thead>
+            <tbody>${tableRows}</tbody>
+            <tfoot style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                <tr style="background-color: #FED7AA; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                    <td colspan="4" style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">GRAND TOTAL</td>
+                    <td style="padding: 4px; border: 1px solid black; font-weight: bold; text-align: right;">Rp${grandTotal.toLocaleString('id-ID')}</td>
+                    <td style="padding: 4px; border: 1px solid black;"></td>
+                </tr>
+            </tfoot>
+        </table>
+        <br/><br/>
+        <div style="width: 100%; text-align: center; font-size: 11pt; page-break-inside: avoid;">
+            <table style="width: 100%; text-align: center; font-size: 11pt;">
+                <tr>
+                    <td style="width: 50%; vertical-align: top;">
+                        <p style="margin: 0;">&nbsp;</p>
+                        <p style="margin: 0;">Menyetujui,</p>
+                        <br/><br/><br/><br/>
+                        <p style="font-weight: bold; margin: 0; text-decoration: underline;">GALIH AJI KUSUMAH</p>
+                        <p style="margin: 0;">MGR BRANCH SEMARANG</p>
+                    </td>
+                    <td style="width: 50%; vertical-align: top;">
+                        <p style="margin: 0;">Kudus, ${formattedDate}</p>
+                        <p style="margin: 0;">Pembuat Rincian</p>
+                        <br/><br/><br/><br/>
+                        <p style="font-weight: bold; margin: 0; text-decoration: underline;">J. WAHYU SETYAWAN</p>
+                        <p style="margin: 0;">Officer 3 Service Area Kudus</p>
+                        <p style="margin: 0;">876858</p>
+                    </td>
+                </tr>
+            </table>
+        </div>
     </div>`;
 };
 
@@ -1235,8 +1453,7 @@ export default function ExportPage() {
                     }
                     if (jasaNotas.length > 0) {
                         const title = `Perincian Nota Ekspedisi (POS/JNE/J&T dll)<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        // This logic needs a specific report function, let's assume it exists
-                        // pages.push({ html: generateJasaReport(jasaNotas, title), orientation: 'portrait' });
+                        pages.push({ html: generateJasaReport(jasaNotas, title), orientation: 'portrait' });
                     }
 
                     for (const segment in otherSegments) {
@@ -1258,7 +1475,7 @@ export default function ExportPage() {
                     }
                      for (const segment in { ...otherSegments, 'Jasa': jasaNotas }) {
                         const notasInSegment = segment === 'Jasa' ? jasaNotas : otherSegments[segment];
-                        if (notasInSegment.length === 0) continue;
+                        if (!notasInSegment || notasInSegment.length === 0) continue;
                         const title = `Eviden Foto - Perincian Nota ${segment}<br/>Pekerjaan : Operasional ${saTitlePart}`;
                         const segmentHtml = generateSimpleEvidenReport(notasInSegment, title);
                         pages.push({ html: segmentHtml, orientation: 'portrait' });
