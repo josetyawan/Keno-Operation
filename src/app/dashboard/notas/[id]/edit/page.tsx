@@ -176,12 +176,10 @@ function EditNotaForm({ nota, isAdmin }: { nota: Nota, isAdmin: boolean }) {
             setKmAkhir('');
         }
         
-        if (value === 'MATERIAL SPPG') {
+        if (value !== 'MATERIAL SPPG' && keterangan === 'Material SPPG') {
+            setKeterangan('');
+        } else if (value === 'MATERIAL SPPG') {
             setKeterangan('Material SPPG');
-        } else {
-             if (keterangan === 'Material SPPG') {
-                setKeterangan('');
-            }
         }
     };
 
@@ -388,7 +386,6 @@ function EditNotaForm({ nota, isAdmin }: { nota: Nota, isAdmin: boolean }) {
                                 placeholder={isNonBBMKendaraan ? 'Isi nama barang/jasa lengkap sesuai nota...' : 'Keterangan tambahan...'}
                                 value={keterangan}
                                 onChange={(e) => setKeterangan(e.target.value)}
-                                readOnly={keterangan === 'Material SPPG'}
                                 />
                             </div>
 

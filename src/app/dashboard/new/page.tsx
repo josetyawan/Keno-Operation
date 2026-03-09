@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -160,14 +161,10 @@ export default function NewNotaPage() {
       setKmAwal('');
       setKmAkhir('');
     }
-    
-    // Clear the keterangan field if it's not a special segment anymore
-    if (keterangan === 'Material SPPG' && value !== 'MATERIAL SPPG') {
-        setKeterangan('');
-    }
 
-    // Set a default keterangan for SPPG, but allow changes
-    if (value === 'MATERIAL SPPG') {
+    if (value !== 'MATERIAL SPPG' && keterangan === 'Material SPPG') {
+        setKeterangan('');
+    } else if (value === 'MATERIAL SPPG') {
         setKeterangan('Material SPPG');
     }
   };
@@ -439,7 +436,6 @@ export default function NewNotaPage() {
                   placeholder={isNonBBMKendaraan ? 'Isi nama barang/jasa lengkap sesuai nota...' : 'Keterangan tambahan...'}
                   value={keterangan}
                   onChange={(e) => setKeterangan(e.target.value)}
-                  readOnly={keterangan === 'Material SPPG'}
                 />
               </div>
 

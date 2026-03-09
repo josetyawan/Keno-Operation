@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -596,7 +597,7 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
         <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
             <td style="border: 1px solid black; padding: 4px; text-align: center; vertical-align: top;">${index + 1}</td>
             <td style="border: 1px solid black; padding: 4px; vertical-align: top; white-space: nowrap;">${notaDate ? format(notaDate, 'dd MMMM yyyy', { locale: idLocale }) : '-'}</td>
-            <td style="border: 1px solid black; padding: 4px; background-color: #FFDDDD; vertical-align: top; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${ketText}</td>
+            <td style="border: 1px solid black; padding: 4px; background-color: #DDEEFF; vertical-align: top; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">${ketText}</td>
             <td style="border: 1px solid black; padding: 4px; vertical-align: top;">${nota.noPlatKendaraan || '-'}</td>
             <td style="border: 1px solid black; padding: 4px; text-align: center; vertical-align: top;">${selisih}</td>
             <td style="border: 1px solid black; padding: 4px; text-align: center; vertical-align: top;">${nota.kmAwal ?? '-'}</td>
@@ -783,7 +784,6 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
 };
 
 const generateMaterialReport = (notas: Nota[], title: string): string => {
-    // Group notas by date
     const groupedByDate = notas.reduce((acc, nota) => {
         const notaDate = safeToDate(nota.tanggal);
         const dateKey = notaDate ? format(notaDate, 'yyyy-MM-dd') : 'invalid-date';
@@ -823,7 +823,6 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
             itemNumber++;
         }
 
-        // Render subtotal row for the date
         tableRows += `
             <tr style="font-weight: bold; background-color: #FFFF00; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <td colspan="4" style="padding: 4px; border: 1px solid black; text-align: right;">TOTAL</td>
@@ -844,8 +843,7 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
         <table style="width: 100%; border-collapse: collapse; border: 2px solid black; font-size: 9pt;">
             <thead style="background-color: #DDEEFF; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <tr>
-                    <th style="padding: 4px; border: 1px solid black; width: 5%;">NO</th>
-                    ${['TANGGAL', 'URAIAN', 'KETERANGAN', 'JUMLAH', 'NAMA'].map(h => `<th style="padding: 4px; border: 1px solid black;">${h}</th>`).join('')}
+                    ${['NO', 'TANGGAL', 'URAIAN', 'KETERANGAN', 'JUMLAH', 'NAMA'].map(h => `<th style="padding: 4px; border: 1px solid black;">${h}</th>`).join('')}
                 </tr>
             </thead>
             <tbody>${tableRows}</tbody>
@@ -881,6 +879,7 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
         </div>
     </div>`;
 };
+
 
 // --- Preview Component ---
 function ReportPreview({
@@ -1148,7 +1147,6 @@ export default function ExportPage() {
                 ws['!cols'] = objectMaxLength.map((w: number) => ({ width: w + 2 }));
             };
             
-            // --- Helper data and groupings ---
             const bbmR2R4Segments = [
                 'BBM R2 Harian B2B IOAN', 'BBM R2 Harian PROVISIONING',
                 'BBM R4 Harian B2B IOAN', 'BBM R4 Harian PROVISIONING',
@@ -1263,7 +1261,7 @@ export default function ExportPage() {
                 const materialData = materialNotas.map((nota, index) => ({
                      'No': index + 1,
                     'Tanggal': safeToDate(nota.tanggal) ? format(safeToDate(nota.tanggal)!, 'dd/MM/yyyy') : '-',
-                    'Nama Barang': nota.namaBarang || '-',
+                    'Nama Toko/Warung': nota.namaBarang || '-',
                     'Keterangan': nota.keterangan || '-',
                     'Jumlah': nota.nominal,
                 }));
@@ -1295,7 +1293,7 @@ export default function ExportPage() {
                     'No Plat Kendaraan': nota.noPlatKendaraan || '-',
                     'KM Awal': nota.kmAwal || '-',
                     'KM Akhir': nota.kmAkhir || '-',
-                    'Nama Barang/Jasa': nota.namaBarang || '-',
+                    'Nama Toko/Warung': nota.namaBarang || '-',
                     'Keterangan': nota.keterangan || '-',
                     'Foto 1': fotoUrls[0] || '-',
                     'Foto 2': fotoUrls[1] || '-',
@@ -1359,6 +1357,21 @@ export default function ExportPage() {
             'BBM R4 UT B2B IOAN', 'BBM R4 UT PROVISIONING',
             'BBM R4 Pengiriman Warehouse',
         ];
+        const jasaSegments = ['Jasa B2B IOAN', 'Jasa PROVISIONING', 'Perincian Nota Pengiriman B2B IOAN', 'Perincian Nota Pengiriman PROVISIONING'];
+        const materialLikeSegments = [
+            'Pembelian Material Non stok B2B IOAN',
+            'Pembelian Material Non stok PROVISIONING',
+            'Perincian Nota ATK',
+            'BBM Genset',
+            'Konsumsi Turlap B2B IOAN',
+            'Konsumsi Turlap PROVISIONING',
+            'Konsumsi UT B2B IOAN',
+            'Konsumsi UT PROVISIONING',
+            'Konsumsi Lembur B2B IOAN',
+            'Konsumsi Lembur PROVISIONING',
+            'MATERIAL SPPG',
+            'ISI PANTRY',
+        ];
 
         try {
             const groupedByProject = sortedNotas.reduce((acc, nota) => {
@@ -1374,16 +1387,9 @@ export default function ExportPage() {
                 const notasForProject = groupedByProject[projectType];
                 const reportSA = selectedSA === 'all' ? 'SEMUA SA' : selectedSA;
 
-                const bbmR2Operasional = notasForProject.filter(n => n.segmen.startsWith('BBM R2'));
-                const bbmR4Operasional = notasForProject.filter(n => n.segmen.startsWith('BBM R4') && n.segmen !== 'BBM R4 Pengiriman Warehouse');
-                const bbmR4Provi = notasForProject.filter(n => n.segmen.includes('PROVISIONING') && n.segmen.startsWith('BBM R4'));
-                const bbmR4Warehouse = notasForProject.filter(n => n.segmen === 'BBM R4 Pengiriman Warehouse');
+                const saTitlePart = reportSA === 'SEMUA SA' ? 'SEMUA SA' : `SA ${reportSA.replace('SA ', '')}`;
                 
-                const jasaSegments = ['Jasa B2B IOAN', 'Jasa PROVISIONING', 'Perincian Nota Pengiriman B2B IOAN', 'Perincian Nota Pengiriman PROVISIONING'];
-                
-                const materialAndOtherNotas = notasForProject.filter(n => !bbmR2R4Segments.includes(n.segmen) && !jasaSegments.includes(n.segmen));
-
-                // Landscape pages
+                // Landscape pages (Cover)
                 if (orientation === 'landscape' || orientation === 'all') {
                     if (projectType !== 'BBM GENSET') {
                         const coverHtml = generateImprestFundCover(notasForProject, reportSA, projectType, pids || []);
@@ -1391,54 +1397,51 @@ export default function ExportPage() {
                     }
                 }
 
-                // Portrait pages
+                // Portrait pages (Details)
                 if (orientation === 'portrait' || orientation === 'all') {
                     const rekapHtml = generateRekapitulasiReport(notasForProject, reportSA, projectType, pids || []);
                     pages.push({ html: rekapHtml, orientation: 'portrait' });
                     
-                    const saTitlePart = reportSA === 'SEMUA SA' ? 'SEMUA SA' : `SA ${reportSA.replace('SA ', '')}`;
-                    
-                    const combinedBbmR4Ops = [...bbmR4Operasional, ...bbmR4Warehouse];
+                    // --- Rincian BBM ---
+                    const bbmR2Operasional = notasForProject.filter(n => n.segmen.startsWith('BBM R2'));
+                    const bbmR4Operasional = notasForProject.filter(n => n.segmen.startsWith('BBM R4'));
 
                     if (bbmR2Operasional.length > 0) {
                         const title = `Perincian Nota BBM R2 Operasional<br/>Pekerjaan : Operasional ${saTitlePart}`;
                         pages.push({ html: generateBBMReport(bbmR2Operasional, title), orientation: 'portrait' });
                     }
-                    if (combinedBbmR4Ops.length > 0) {
+                    if (bbmR4Operasional.length > 0) {
                         const title = `Perincian Nota BBM R4 Operasional<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        pages.push({ html: generateBBMReport(combinedBbmR4Ops, title), orientation: 'portrait' });
-                    }
-                     if (bbmR4Provi.length > 0) {
-                        const title = `Perincian Nota BBM R4 Operasional<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        pages.push({ html: generateBBMReport(bbmR4Provi, title), orientation: 'portrait' });
+                        pages.push({ html: generateBBMReport(bbmR4Operasional, title), orientation: 'portrait' });
                     }
 
-                    if (materialAndOtherNotas.length > 0) {
-                        const title = `Perincian Nota Material & Lainnya<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        pages.push({ html: generateMaterialReport(materialAndOtherNotas, title), orientation: 'portrait' });
-                    }
-
+                    // --- Rincian Jasa / Ekspedisi ---
                     const jasaNotas = notasForProject.filter(n => jasaSegments.includes(n.segmen));
                     if (jasaNotas.length > 0) {
                         const title = `Perincian Nota Ekspedisi (POS/JNE/J&T dll)<br/>Pekerjaan : Operasional ${saTitlePart}`;
                         pages.push({ html: generateJasaReport(jasaNotas, title), orientation: 'portrait' });
                     }
 
-                    // Eviden Reports
+                    // --- Rincian Material & Lainnya (Per Segment) ---
+                    for (const segment of materialLikeSegments) {
+                        const notasInSegment = notasForProject.filter(n => n.segmen === segment);
+                        if (notasInSegment.length === 0) continue;
+                        const title = `Perincian Nota ${segment}<br/>Pekerjaan : Operasional ${saTitlePart}`;
+                        const segmentHtml = generateMaterialReport(notasInSegment, title);
+                        pages.push({ html: segmentHtml, orientation: 'portrait' });
+                    }
+
+                    // --- Eviden Reports ---
                     if (bbmR2Operasional.length > 0) {
                         const title = `EVIDEN Nota BBM R2 Operasional<br/>Pekerjaan : Operasional ${saTitlePart}`;
                         pages.push({ html: generateEvidenReport(bbmR2Operasional, title), orientation: 'portrait' });
                     }
-                     if (combinedBbmR4Ops.length > 0) {
+                     if (bbmR4Operasional.length > 0) {
                         const title = `EVIDEN Nota BBM R4 Operasional<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        pages.push({ html: generateEvidenReport(combinedBbmR4Ops, title), orientation: 'portrait' });
-                    }
-                     if (bbmR4Provi.length > 0) {
-                        const title = `EVIDEN Nota BBM R4 Operasional<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        pages.push({ html: generateEvidenReport(bbmR4Provi, title), orientation: 'portrait' });
+                        pages.push({ html: generateEvidenReport(bbmR4Operasional, title), orientation: 'portrait' });
                     }
 
-                    const otherNotasForEviden = notasForProject.filter(n => !n.segmen.startsWith('BBM'));
+                    const otherNotasForEviden = notasForProject.filter(n => !bbmR2R4Segments.includes(n.segmen));
                     if (otherNotasForEviden.length > 0) {
                         const title = `Eviden Foto - Perincian Nota Lainnya<br/>Pekerjaan : Operasional ${saTitlePart}`;
                         pages.push({ html: generateSimpleEvidenReport(otherNotasForEviden, title), orientation: 'portrait' });
@@ -1500,42 +1503,35 @@ export default function ExportPage() {
         iframeDoc.write(htmlContent);
         iframeDoc.close();
 
-        // New robust image loading logic
         const images = Array.from(iframeDoc.getElementsByTagName('img'));
         const imageLoadPromises = images.map(img => {
             return new Promise<void>((resolve) => {
-                // If the image is already loaded (e.g., from cache) and has valid dimensions, resolve immediately.
                 if (img.complete && img.naturalHeight !== 0) {
                     resolve();
                     return;
                 }
-                // Set up listeners for load and error events.
                 img.onload = () => resolve();
-                // On error, we still resolve so that one broken image doesn't prevent printing the rest.
                 img.onerror = () => {
                     console.warn(`Gagal memuat gambar untuk dicetak: ${img.src}`);
-                    resolve(); // Resolve anyway to not block printing.
+                    resolve();
                 };
             });
         });
 
-        // This function will be called after all images have been processed (loaded or failed).
         const triggerPrint = () => {
              try {
                 const iw = printIframe.contentWindow;
                 if (!iw) throw new Error("Iframe window not found");
                 
                 iw.focus();
-                // A small timeout can sometimes help the browser's rendering engine catch up.
                 setTimeout(() => {
                     iw.print();
-                    // Clean up the iframe after a delay.
                      setTimeout(() => {
                         if (document.body.contains(printIframe)) {
                             document.body.removeChild(printIframe);
                         }
                     }, 2000);
-                }, 250); // 250ms buffer
+                }, 250);
 
             } catch (e) {
                 console.error('Gagal memulai proses cetak:', e);
@@ -1546,7 +1542,6 @@ export default function ExportPage() {
             }
         };
 
-        // Wait for all image promises to settle.
         Promise.all(imageLoadPromises).then(triggerPrint);
     };
     
