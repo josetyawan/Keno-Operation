@@ -70,7 +70,7 @@ const safeToDate = (timestamp: any): Date | null => {
 
 
 const getProjectType = (segmen: string): ProjectType => {
-    if (segmen === 'BBM R4 Pengiriman Warehouse') return 'WAREHOUSE';
+    if (segmen === 'BBM R4 Pengiriman Warehouse') return 'B2B IOAN'; // Now maps to B2B IOAN
     if (segmen === 'BBM Genset') return 'BBM GENSET';
     if (segmen.includes('SPPG')) return 'SPPG';
     if (segmen.includes('B2B IOAN') || segmen === 'ISI PANTRY') return 'B2B IOAN';
@@ -116,9 +116,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
     const monthName = format(periodDate, 'MMM', { locale: idLocale });
     
     const saShort = serviceArea.replace('SA ', '');
-    const projectName = projectType === 'WAREHOUSE'
-        ? `IF JATENG - SS SMG - Ops IAM Semarang (${monthName})`
-        : `IF JATENG - SMG OPR - Ops SA ${saShort} (${monthName})`;
+    const projectName = `IF JATENG - SMG OPR - Ops SA ${saShort} (${monthName})`;
     
     const idProjectForSummary = pids.find(p => p.projectType.toLowerCase() === projectType.toLowerCase())?.pid || (projectType === 'BBM GENSET' ? 'Ditagihkan ke Unit Lain' : '-');
 
@@ -146,9 +144,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
         
         const segmenProjectType = getProjectType(segmen);
         
-        const idProjectForRow = segmen === 'BBM R4 Pengiriman Warehouse'
-            ? pids?.find(p => p.projectType.toLowerCase() === 'b2b ioan')?.pid // Override for Warehouse BBM
-            : pids.find(p => p.projectType.toLowerCase() === segmenProjectType.toLowerCase())?.pid || '-';
+        const idProjectForRow = pids.find(p => p.projectType.toLowerCase() === segmenProjectType.toLowerCase())?.pid || '-';
 
         return `
             <tr style="font-size: 8pt;">
@@ -346,9 +342,6 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
 
     const isJasa = (segmen: string) => {
         const lowerSegmen = segmen.toLowerCase();
-        if (lowerSegmen === 'bbm r4 pengiriman warehouse') {
-            return false;
-        }
         return lowerSegmen.includes('jasa') || lowerSegmen.includes('pengiriman');
     };
 
@@ -388,18 +381,9 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
     let saShort = serviceArea.replace('SA ', '');
     let pekerjaan = saShort;
     
-    let idProject;
-    if (projectType === 'WAREHOUSE') {
-      // For warehouse, if it's the BBM segmen, it should use B2B IOAN PID
-      idProject = pids.find(p => p.projectType.toLowerCase() === 'b2b ioan')?.pid || '-';
-    } else {
-      idProject = pids.find(p => p.projectType.toLowerCase() === projectType.toLowerCase())?.pid || (projectType === 'BBM GENSET' ? 'Ditagihkan ke Unit Lain' : '-');
-    }
+    let idProject = pids.find(p => p.projectType.toLowerCase() === projectType.toLowerCase())?.pid || (projectType === 'BBM GENSET' ? 'Ditagihkan ke Unit Lain' : '-');
 
-    if (projectType === 'WAREHOUSE') {
-        saShort = 'SS SMG';
-        pekerjaan = 'SS SMG';
-    } else if (projectType === 'B2B IOAN') {
+    if (projectType === 'B2B IOAN') {
         pekerjaan = `B2B IOAN ${saShort}`;
     } else if (projectType === 'PROVISIONING') {
         pekerjaan = `PROVISIONING ${saShort}`;
@@ -412,9 +396,7 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
         saShort = '';
     }
     
-    const areaTitle = projectType === 'WAREHOUSE'
-        ? 'SS SMG'
-        : (saShort ? `SERVICE AREA ${saShort.toUpperCase()}` : 'SEMUA');
+    const areaTitle = saShort ? `SERVICE AREA ${saShort.toUpperCase()}` : 'SEMUA';
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 11pt; background-color: white; page-break-inside: avoid;">
@@ -522,7 +504,7 @@ const generateBBMReport = (notas: Nota[], title: string): string => {
 
         // Render subtotal row for the date
         tableRows += `
-            <tr style="font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+            <tr style="font-weight: bold; background-color: #FFFF00; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <td colspan="7" style="padding: 4px; border: 1px solid black; text-align: right;">TOTAL</td>
                 <td style="padding: 4px; border: 1px solid black; text-align: right;">Rp${dateSubtotal.toLocaleString('id-ID')}</td>
                 <td style="padding: 4px; border: 1px solid black;"></td>
@@ -688,11 +670,11 @@ const generateJasaReport = (notas: Nota[], title: string): string => {
                 <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                     <td style="padding: 4px; border: 1px solid black; text-align: center;">${itemNumber}</td>
                     <td style="padding: 4px; border: 1px solid black;">${notaDate ? format(notaDate, 'dd-MMM-yy', { locale: idLocale }) : '-'}</td>
-                    <td style="padding: 4px; border: 1px solid black; white-space: normal; word-break: break-all;">${nota.keterangan || nota.namaBarang || '-'}</td>
+                    <td style="padding: 4px; border: 1px solid black; white-space: normal; word-break: break-all;">${nota.namaBarang || '-'}</td>
                     <td style="padding: 4px; border: 1px solid black; text-align: right;">Rp${Math.round(dpp).toLocaleString('id-ID')}</td>
                     <td style="padding: 4px; border: 1px solid black; text-align: right;">Rp${Math.round(pph).toLocaleString('id-ID')}</td>
                     <td style="padding: 4px; border: 1px solid black; text-align: right;">Rp${jumlah.toLocaleString('id-ID')}</td>
-                     <td style="padding: 4px; border: 1px solid black;">-</td>
+                    <td style="padding: 4px; border: 1px solid black; white-space: normal; word-break: break-all;">${nota.keterangan || '-'}</td>
                     <td style="padding: 4px; border: 1px solid black;">${nota.namaPic}</td>
                 </tr>
             `;
@@ -808,7 +790,7 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
 
         // Render subtotal row for the date
         tableRows += `
-            <tr style="font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+            <tr style="font-weight: bold; background-color: #FFFF00; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                 <td colspan="4" style="padding: 4px; border: 1px solid black; text-align: right;">TOTAL</td>
                 <td style="padding: 4px; border: 1px solid black; text-align: right;">Rp${dateSubtotal.toLocaleString('id-ID')}</td>
                 <td style="padding: 4px; border: 1px solid black;"></td>
@@ -1385,49 +1367,19 @@ export default function ExportPage() {
                 return acc;
             }, {} as Record<ProjectType, Nota[]>);
             
-            // Special Handling for Warehouse BBM
-            const warehouseBbmNotas = groupedByProject['WAREHOUSE']?.filter(n => n.segmen.includes('BBM R4')) || [];
-            if (warehouseBbmNotas.length > 0) {
-                if (!groupedByProject['B2B IOAN']) {
-                    groupedByProject['B2B IOAN'] = [];
-                }
-                groupedByProject['B2B IOAN'].push(...warehouseBbmNotas);
-                if (groupedByProject['WAREHOUSE']) {
-                    groupedByProject['WAREHOUSE'] = groupedByProject['WAREHOUSE'].filter(n => !n.segmen.includes('BBM R4'));
-                    if (groupedByProject['WAREHOUSE'].length === 0) {
-                        delete groupedByProject['WAREHOUSE'];
-                    }
-                }
-            }
-
-
             const projectTypes = Object.keys(groupedByProject).sort() as ProjectType[];
             
             for (const projectType of projectTypes) {
                 const notasForProject = groupedByProject[projectType];
                 const reportSA = selectedSA === 'all' ? 'SEMUA SA' : selectedSA;
 
-                const bbmR2Operasional: Nota[] = [];
-                const bbmR4Operasional: Nota[] = [];
-                const jasaNotas: Nota[] = [];
-                const otherSegments: Record<string, Nota[]> = {};
+                const bbmR2Operasional = notasForProject.filter(n => n.segmen.startsWith('BBM R2'));
+                const bbmR4Operasional = notasForProject.filter(n => n.segmen.startsWith('BBM R4'));
+                const jasaSegments = ['Jasa B2B IOAN', 'Jasa PROVISIONING', 'Perincian Nota Pengiriman B2B IOAN', 'Perincian Nota Pengiriman PROVISIONING'];
+                const materialSegments = ['Pembelian Material Non stok B2B IOAN', 'Pembelian Material Non stok PROVISIONING', 'Perincian Nota ATK', 'MATERIAL SPPG', 'ISI PANTRY'];
+                const konsumsiSegments = ['Konsumsi Turlap B2B IOAN', 'Konsumsi Turlap PROVISIONING', 'Konsumsi UT B2B IOAN', 'Konsumsi UT PROVISIONING', 'Konsumsi Lembur B2B IOAN', 'Konsumsi Lembur PROVISIONING'];
 
-                notasForProject.forEach(nota => {
-                    if (nota.segmen.includes('BBM R2')) {
-                        bbmR2Operasional.push(nota);
-                    } else if (nota.segmen.includes('BBM R4')) {
-                        bbmR4Operasional.push(nota);
-                    } else if (nota.segmen.toLowerCase().includes('jasa') || nota.segmen.toLowerCase().includes('pengiriman')) {
-                        jasaNotas.push(nota);
-                    }
-                    else {
-                        if (!otherSegments[nota.segmen]) {
-                            otherSegments[nota.segmen] = [];
-                        }
-                        otherSegments[nota.segmen].push(nota);
-                    }
-                });
-                
+
                 // Landscape pages
                 if (orientation === 'landscape' || orientation === 'all') {
                     if (projectType !== 'BBM GENSET') {
@@ -1451,16 +1403,34 @@ export default function ExportPage() {
                         const title = `Perincian Nota BBM R4 Operasional<br/>Pekerjaan : Operasional ${saTitlePart}`;
                         pages.push({ html: generateBBMReport(bbmR4Operasional, title), orientation: 'portrait' });
                     }
-                    if (jasaNotas.length > 0) {
-                        const title = `Perincian Nota Ekspedisi (POS/JNE/J&T dll)<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        pages.push({ html: generateJasaReport(jasaNotas, title), orientation: 'portrait' });
-                    }
 
-                    for (const segment in otherSegments) {
-                        const notasInSegment = otherSegments[segment];
+                    const groupedBySegment = notasForProject.reduce((acc, nota) => {
+                        if (!acc[nota.segmen]) acc[nota.segmen] = [];
+                        acc[nota.segmen].push(nota);
+                        return acc;
+                    }, {} as Record<string, Nota[]>);
+                    
+                    for (const segment in groupedBySegment) {
+                        const notasInSegment = groupedBySegment[segment];
                         if (notasInSegment.length === 0) continue;
-                        const title = `Perincian Nota ${segment}<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        const segmentHtml = generateMaterialReport(notasInSegment, title);
+                        if (segment.startsWith('BBM R')) continue; // Skip BBM as it's handled above
+
+                        let title: string;
+                        let segmentHtml: string;
+                        
+                        if (jasaSegments.includes(segment)) {
+                            title = `Perincian Nota Ekspedisi (POS/JNE/J&T dll)<br/>Pekerjaan : Operasional ${saTitlePart}`;
+                            segmentHtml = generateJasaReport(notasInSegment, title);
+                        } else {
+                            if (materialSegments.includes(segment)) {
+                                title = `Perincian Nota ${segment}<br/>Pekerjaan : Operasional ${saTitlePart}`;
+                            } else if (konsumsiSegments.includes(segment)) {
+                                title = `Perincian Nota Konsumsi<br/>Pekerjaan : Operasional ${saTitlePart}`;
+                            } else {
+                                title = `Perincian Nota ${segment}<br/>Pekerjaan : Operasional ${saTitlePart}`;
+                            }
+                            segmentHtml = generateMaterialReport(notasInSegment, title);
+                        }
                         pages.push({ html: segmentHtml, orientation: 'portrait' });
                     }
 
@@ -1473,12 +1443,11 @@ export default function ExportPage() {
                         const title = `EVIDEN Nota BBM R4 Operasional<br/>Pekerjaan : Operasional ${saTitlePart}`;
                         pages.push({ html: generateEvidenReport(bbmR4Operasional, title), orientation: 'portrait' });
                     }
-                     for (const segment in { ...otherSegments, 'Jasa': jasaNotas }) {
-                        const notasInSegment = segment === 'Jasa' ? jasaNotas : otherSegments[segment];
-                        if (!notasInSegment || notasInSegment.length === 0) continue;
-                        const title = `Eviden Foto - Perincian Nota ${segment}<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        const segmentHtml = generateSimpleEvidenReport(notasInSegment, title);
-                        pages.push({ html: segmentHtml, orientation: 'portrait' });
+
+                    const otherNotasForEviden = notasForProject.filter(n => !n.segmen.startsWith('BBM'));
+                    if (otherNotasForEviden.length > 0) {
+                        const title = `Eviden Foto - Perincian Nota Lainnya<br/>Pekerjaan : Operasional ${saTitlePart}`;
+                        pages.push({ html: generateSimpleEvidenReport(otherNotasForEviden, title), orientation: 'portrait' });
                     }
                 }
             }
