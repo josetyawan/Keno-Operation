@@ -29,6 +29,14 @@ service firebase.storage {
              exists(/databases/(default)/documents/users/$(request.auth.uid)) &&
              get(/databases/(default)/documents/users/$(request.auth.uid)).data.role.lower() == 'korlap';
     }
+    
+     function hasAllProAccess() {
+      // This single read is more efficient than calling isApproved() then reading role/appAccess separately.
+      let userProfile = get(/databases/(default)/documents/users/$(request.auth.uid)).data;
+      return isSignedIn() &&
+            userProfile.registrationStatus == 'approved' &&
+            (userProfile.role == 'admin' || userProfile.role == 'korlap' || userProfile.appAccess == 'allpro' || userProfile.appAccess == 'all');
+    }
 
     // Public read access is fine for image URLs
     match /{allPaths=**} {
@@ -44,6 +52,10 @@ service firebase.storage {
     match /pelanggan_photos/{userId}/{allPaths=**} {
       allow write: if isSignedIn();
     }
+    
+    match /gangguan_evidence/{userId}/{allPaths=**} {
+      allow write: if isApproved() && isOwner(userId);
+    }
 
     match /hr_attendance/{userId}/{allPaths=**} {
       allow write: if isApproved() && isOwner(userId);
@@ -55,10 +67,6 @@ service firebase.storage {
 
     match /alker-photos/{userId}/{allPaths=**} {
        allow write: if isApproved() && isOwner(userId);
-    }
-    
-     match /gangguan_evidence/{userId}/{allPaths=**} {
-      allow write: if isSignedIn() && isOwner(userId);
     }
   }
 }

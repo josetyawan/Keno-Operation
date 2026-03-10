@@ -416,7 +416,7 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
                     const evidenceUploadPromises = Object.entries(evidenceFiles)
                         .filter(([, file]) => file)
                         .map(async ([evidenceName, file]) => {
-                            const filePath = `gangguan_evidence/${user.uid}/${Date.now()}-${file!.name}`;
+                            const filePath = `notas/${user.uid}/gangguan_${Date.now()}-${file!.name}`;
                             const storageRef = ref(storage, filePath);
                             await uploadBytes(storageRef, file!);
                             const photoUrl = await getDownloadURL(storageRef);
@@ -1342,6 +1342,7 @@ export default function AdminPelangganPage() {
     </>
   );
 }
+
 
 
 
