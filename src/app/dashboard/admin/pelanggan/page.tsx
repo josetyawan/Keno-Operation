@@ -488,7 +488,7 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
             
             const processedMaterials = await Promise.all(materialEvidencePromises);
 
-            const newRiwayatData: Omit<RiwayatGangguan, 'id'> = {
+            const newRiwayatData: Omit<RiwayatGangguan, 'id'> & { typeOrder?: string } = {
                 pelangganId: pelanggan.id,
                 userId: user.uid,
                 noService: pelanggan.noService,
@@ -497,7 +497,6 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
                 namaPetugas: currentUserProfile.displayName || currentUserProfile.email,
                 nik: currentUserProfile.nik || '',
                 jenisOrder,
-                typeOrder: showTypeOrder ? typeOrder : undefined,
                 keterangan,
                 sto: pelanggan.sto || '',
                 tanggalOpen: Timestamp.fromDate(new Date(tanggalOpen)),
@@ -507,6 +506,11 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
                 evidenSccUrl: evidenSccUrl,
                 dorongClose: dorongClose,
             };
+            
+            if (showTypeOrder) {
+                newRiwayatData.typeOrder = typeOrder;
+            }
+
             const docRef = await addDoc(collection(firestore, 'riwayat-gangguan'), newRiwayatData);
             onFinished({ id: docRef.id, ...newRiwayatData } as RiwayatGangguan);
             toast({ title: 'Laporan Gangguan Disimpan' });
@@ -1460,6 +1464,7 @@ export default function AdminPelangganPage() {
     </>
   );
 }
+
 
 
 
