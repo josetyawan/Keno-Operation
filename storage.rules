@@ -50,7 +50,11 @@ service firebase.storage {
     }
 
     match /pelanggan_photos/{userId}/{allPaths=**} {
-      allow write: if isSignedIn();
+      allow write: if (hasAllProAccess() || isKorlap()) && isOwner(userId);
+    }
+    
+    match /gangguan_evidence/{userId}/{allPaths=**} {
+      allow write: if isApproved() && isOwner(userId);
     }
 
     match /hr_attendance/{userId}/{allPaths=**} {
@@ -63,10 +67,6 @@ service firebase.storage {
 
     match /alker-photos/{userId}/{allPaths=**} {
        allow write: if isApproved() && isOwner(userId);
-    }
-
-    match /gangguan_evidence/{userId}/{allPaths=**} {
-      allow write: if isApproved() && isOwner(userId);
     }
   }
 }
