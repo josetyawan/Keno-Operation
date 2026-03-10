@@ -85,10 +85,12 @@ const getGeneralReportName = (segmen: string): string => {
     if (cleanedSegmen.includes('bbm r2')) return 'BBM R2 Operasional';
     if (cleanedSegmen.includes('bbm r4')) return 'BBM R4 Operasional';
     if (cleanedSegmen.includes('jasa') || cleanedSegmen.includes('pengiriman')) return 'Jasa Ekspedisi (POS/JNE/J&T dll)';
-    if (cleanedSegmen.includes('konsumsi')) return 'Konsumsi';
-    if (cleanedSegmen.includes('material non stok')) return 'Pembelian Material Non Stok';
+    if (cleanedSegmen.includes('konsumsi')) return 'Perincian Nota Konsumsi';
+    if (cleanedSegmen.includes('material non stok')) return 'Perincian Nota Material Non Stok';
     if (cleanedSegmen.includes('atk')) return 'Perincian Nota ATK';
-    if (cleanedSegmen.includes('pantry')) return 'ISI PANTRY';
+    if (cleanedSegmen.includes('pantry')) return 'Perincian Nota Isi Pantry';
+    if (cleanedSegmen.includes('genset')) return 'Perincian BBM Genset';
+    if (cleanedSegmen.includes('sppg')) return 'Perincian Material SPPG';
     
     return segmen; // Fallback to the original segment name
 };
@@ -126,20 +128,6 @@ const bbmR2R4Segments = [
     'BBM R4 Pengiriman Warehouse',
 ];
 const jasaSegments = ['Jasa B2B IOAN', 'Jasa PROVISIONING', 'Perincian Nota Pengiriman B2B IOAN', 'Perincian Nota Pengiriman PROVISIONING'];
-const konsumsiSegments = [
-    'Konsumsi Turlap B2B IOAN', 'Konsumsi Turlap PROVISIONING',
-    'Konsumsi UT B2B IOAN', 'Konsumsi UT PROVISIONING',
-    'Konsumsi Lembur B2B IOAN', 'Konsumsi Lembur PROVISIONING',
-];
-const materialNonStokSegments = [
-    'Pembelian Material Non stok B2B IOAN',
-    'Pembelian Material Non stok PROVISIONING',
-];
-const atkSegments = ['Perincian Nota ATK'];
-const pantrySegments = ['ISI PANTRY'];
-const bbmGensetSegments = ['BBM Genset'];
-const sppgSegments = ['MATERIAL SPPG'];
-
 
 // --- Report Generation Logic ---
 
@@ -622,7 +610,7 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
         
         const selisih = (nota.kmAkhir != null && nota.kmAwal != null && nota.kmAkhir > nota.kmAwal) ? (nota.kmAkhir - nota.kmAwal) : '';
         
-        const ketText = nota.segmen.replace(/ /g, '<br/>');
+        const ketText = getGeneralReportName(nota.segmen).replace(/ /g, '<br/>');
 
         return `
         <tr style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
@@ -1159,144 +1147,28 @@ export default function ExportPage() {
     
             const wb = XLSX.utils.book_new();
 
-            const fitCols = (ws: XLSX.WorkSheet) => {
-                const objectMaxLength: any[] = [];
-                const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
-                data.forEach((row: any) => {
-                    Object.keys(row).forEach((key) => {
-                        const value = row[key as any];
-                        if (typeof value === 'undefined' || value === null) return;
-                        const len = typeof value === 'number' ? (value.toString().length + 2) : String(value).length;
-                        objectMaxLength[key] = Math.max(objectMaxLength[key] || 0, len);
-                    });
-                });
-                const headers = Object.keys(data[0] as any);
-                headers.forEach((h, i) => {
-                    objectMaxLength[i] = Math.max(objectMaxLength[i], h.length);
-                });
-
-                ws['!cols'] = objectMaxLength.map((w: number) => ({ width: w + 2 }));
-            };
-            
-            const groupedByProject = sortedNotas.reduce((acc, nota) => {
-                const pType = getProjectType(nota.segmen);
-                if (!acc[pType]) acc[pType] = [];
-                acc[pType].push(nota);
-                return acc;
-            }, {} as Record<ProjectType, Nota[]>);
-
-
-            // --- Sheet 1: Imprest Fund Cover ---
-            const coverData: any[] = [];
-            for (const projectType in groupedByProject) {
-                const notasInProject = groupedByProject[projectType as ProjectType];
-                const groupedBySegmen = notasInProject.reduce((acc, nota) => {
-                    if (!acc[nota.segmen]) acc[nota.segmen] = 0;
-                    acc[nota.segmen] += nota.nominal;
-                    return acc;
-                }, {} as Record<string, number>);
-
-                let segmenIndex = 1;
-                for (const segmen in groupedBySegmen) {
-                    const total = groupedBySegmen[segmen];
-                    const earliestNota = notasInProject.find(n => n.segmen === segmen);
-                    const segmenProjectType = getProjectType(segmen);
-                    const idProjectForRow = pids?.find(p => p.projectType.toLowerCase() === segmenProjectType.toLowerCase())?.pid || '-';
-                    
-                    coverData.push({
-                        'Project': projectType,
-                        'No. Urut': segmenIndex++,
-                        'Tanggal': earliestNota?.tanggal?.toDate ? format(earliestNota.tanggal.toDate(), 'dd/MM/yyyy') : '-',
-                        'No. Kuitansi': segmenIndex - 1, // Replicating logic from PDF
-                        'Uraian': segmen,
-                        'ID Project': idProjectForRow,
-                        'Nilai Pertanggungan': total,
-                        'Bayar Ke Mitra': total
-                    });
-                }
-            }
-            if (coverData.length > 0) {
-                const wsCover = XLSX.utils.json_to_sheet(coverData);
-                XLSX.utils.book_append_sheet(wb, wsCover, '1. Rekap Cover');
-                fitCols(wsCover);
-            }
-
-            // --- Sheet 2: Rekapitulasi Perincian ---
-            const rekapData: any[] = [];
+            // --- Sheet 1: Rekapitulasi Rincian ---
             const groupedBySegmenForRekap = sortedNotas.reduce((acc, nota) => {
-                if (!acc[nota.segmen]) acc[nota.segmen] = 0;
-                acc[nota.segmen] += nota.nominal;
+                const reportName = getGeneralReportName(nota.segmen);
+                if (!acc[reportName]) acc[reportName] = 0;
+                acc[reportName] += nota.nominal;
                 return acc;
             }, {} as Record<string, number>);
 
-            let rekapIndex = 1;
-            for (const segmen in groupedBySegmenForRekap) {
-                rekapData.push({
-                    'No': rekapIndex++,
-                    'Keterangan': segmen,
-                    'Jumlah': groupedBySegmenForRekap[segmen]
-                });
-            }
+            const rekapData = Object.entries(groupedBySegmenForRekap).map(([keterangan, jumlah], index) => ({
+                'No': index + 1,
+                'Keterangan': keterangan,
+                'Jumlah': jumlah
+            }));
+
             if (rekapData.length > 0) {
                 const wsRekap = XLSX.utils.json_to_sheet(rekapData);
-                XLSX.utils.book_append_sheet(wb, wsRekap, '2. Rekap Rincian');
-                fitCols(wsRekap);
+                const totalRekap = rekapData.reduce((sum, item) => sum + item.Jumlah, 0);
+                XLSX.utils.sheet_add_aoa(wsRekap, [['', 'GRAND TOTAL', totalRekap]], { origin: -1 });
+                XLSX.utils.book_append_sheet(wb, wsRekap, 'Rekapitulasi');
             }
 
-            // --- Sheet 3: Detail BBM ---
-            const bbmNotas = sortedNotas.filter(n => bbmR2R4Segments.includes(n.segmen));
-            if (bbmNotas.length > 0) {
-                const bbmData = bbmNotas.map((nota, index) => ({
-                    'No': index + 1,
-                    'Tanggal': safeToDate(nota.tanggal) ? format(safeToDate(nota.tanggal)!, 'dd-MMM-yy', { locale: idLocale }) : '-',
-                    'Keterangan Segmen': nota.segmen,
-                    'No Plat': nota.noPlatKendaraan || '-',
-                    'KM Awal': nota.kmAwal || '-',
-                    'KM Akhir': nota.kmAkhir || '-',
-                    'Uraian Pekerjaan': nota.keterangan || '-',
-                    'Jumlah': nota.nominal,
-                    'Nama PIC': nota.namaPic,
-                }));
-                const wsBBM = XLSX.utils.json_to_sheet(bbmData);
-                XLSX.utils.book_append_sheet(wb, wsBBM, '3. Detail BBM');
-                fitCols(wsBBM);
-            }
-
-            // --- Sheet 4: Detail Jasa ---
-            const jasaNotas = sortedNotas.filter(n => jasaSegments.includes(n.segmen));
-            if (jasaNotas.length > 0) {
-                const jasaData = jasaNotas.map((nota, index) => ({
-                     'No': index + 1,
-                    'Tanggal': safeToDate(nota.tanggal) ? format(safeToDate(nota.tanggal)!, 'dd/MM/yyyy') : '-',
-                    'Uraian': nota.namaBarang || '-',
-                    'DPP': nota.nominal / 1.02,
-                    'PPH 2%': nota.nominal - (nota.nominal / 1.02),
-                    'Jumlah': nota.nominal,
-                    'Keterangan': nota.keterangan || '-',
-                    'Nama PIC': nota.namaPic,
-                }));
-                 const wsJasa = XLSX.utils.json_to_sheet(jasaData);
-                XLSX.utils.book_append_sheet(wb, wsJasa, '4. Detail Jasa');
-                fitCols(wsJasa);
-            }
-
-            // --- Sheet 5: Detail Material & Lainnya ---
-            const materialNotas = sortedNotas.filter(n => !bbmR2R4Segments.includes(n.segmen) && !jasaSegments.includes(n.segmen));
-            if (materialNotas.length > 0) {
-                const materialData = materialNotas.map((nota, index) => ({
-                     'No': index + 1,
-                    'Tanggal': safeToDate(nota.tanggal) ? format(safeToDate(nota.tanggal)!, 'dd/MM/yyyy') : '-',
-                    'Uraian': nota.namaBarang || '-',
-                    'Keterangan': nota.keterangan || '-',
-                    'Jumlah': nota.nominal,
-                    'Nama PIC': nota.namaPic,
-                }));
-                const wsMaterial = XLSX.utils.json_to_sheet(materialData);
-                XLSX.utils.book_append_sheet(wb, wsMaterial, '5. Detail Material');
-                fitCols(wsMaterial);
-            }
-
-            // --- Sheet 6: Data Lengkap (Raw) ---
+            // --- Sheet 2: Data Mentah (Raw Data) ---
             const allData = sortedNotas.map(nota => {
                 const pType = getProjectType(nota.segmen);
                 const pidValue = pids?.find(p => p.projectType.toLowerCase() === pType.toLowerCase())?.pid || '-';
@@ -1319,8 +1191,8 @@ export default function ExportPage() {
                     'No Plat Kendaraan': nota.noPlatKendaraan || '-',
                     'KM Awal': nota.kmAwal || '-',
                     'KM Akhir': nota.kmAkhir || '-',
-                    'Uraian': nota.namaBarang || '-',
-                    'Keterangan': nota.keterangan || '-',
+                    'Nama Toko/Warung (Uraian)': nota.namaBarang || '-',
+                    'Keterangan (Nama Barang)': nota.keterangan || '-',
                     'Foto 1': fotoUrls[0] || '-',
                     'Foto 2': fotoUrls[1] || '-',
                     'Foto 3': fotoUrls[2] || '-',
@@ -1331,8 +1203,19 @@ export default function ExportPage() {
                 };
             });
             const wsAllData = XLSX.utils.json_to_sheet(allData);
-            XLSX.utils.book_append_sheet(wb, wsAllData, '6. Semua Data Mentah');
-            fitCols(wsAllData);
+            
+            // Auto-fit columns
+            const objectMaxLength: any[] = [];
+            allData.forEach(row => {
+                Object.entries(row).forEach(([key, value], colIndex) => {
+                    const headerLength = key.length;
+                    const cellLength = value ? String(value).length : 0;
+                    objectMaxLength[colIndex] = Math.max(objectMaxLength[colIndex] || headerLength, cellLength);
+                });
+            });
+            wsAllData['!cols'] = objectMaxLength.map(w => ({ width: w + 2 }));
+
+            XLSX.utils.book_append_sheet(wb, wsAllData, 'Data Mentah');
     
             XLSX.writeFile(wb, `Laporan Nota - ${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
     
@@ -1384,11 +1267,9 @@ export default function ExportPage() {
                 const saTitlePart = reportSA === 'SEMUA SA' ? 'SEMUA SA' : `SA ${reportSA.replace('SA ', '')}`;
                 
                 // --- Cover (Landscape) ---
-                if (orientation === 'landscape' || orientation === 'all') {
-                    if (projectType !== 'BBM GENSET') {
-                        const coverHtml = generateImprestFundCover(notasForProject, reportSA, projectType, pids || []);
-                        pages.push({ html: coverHtml, orientation: 'landscape' });
-                    }
+                if ((orientation === 'landscape' || orientation === 'all') && projectType !== 'BBM GENSET') {
+                    const coverHtml = generateImprestFundCover(notasForProject, reportSA, projectType, pids || []);
+                    pages.push({ html: coverHtml, orientation: 'landscape' });
                 }
 
                 // --- Details (Portrait) ---
@@ -1396,75 +1277,30 @@ export default function ExportPage() {
                     const rekapHtml = generateRekapitulasiReport(notasForProject, reportSA, projectType, pids || []);
                     pages.push({ html: rekapHtml, orientation: 'portrait' });
                     
-                    const bbmR2Notas = notasForProject.filter(n => n.segmen.startsWith('BBM R2'));
-                    if (bbmR2Notas.length > 0) {
-                        const title = `Perincian Nota BBM R2 Operasional<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        pages.push({ html: generateBBMReport(bbmR2Notas, title), orientation: 'portrait' });
-                        const evidenTitle = `EVIDEN Nota BBM R2 Operasional<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        pages.push({ html: generateEvidenReport(bbmR2Notas, evidenTitle), orientation: 'portrait' });
-                    }
-                    const bbmR4Notas = notasForProject.filter(n => bbmR2R4Segments.includes(n.segmen) && n.segmen.startsWith('BBM R4'));
-                     if (bbmR4Notas.length > 0) {
-                        const title = `Perincian Nota BBM R4 Operasional<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        pages.push({ html: generateBBMReport(bbmR4Notas, title), orientation: 'portrait' });
-                        const evidenTitle = `EVIDEN Nota BBM R4 Operasional<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        pages.push({ html: generateEvidenReport(bbmR4Notas, evidenTitle), orientation: 'portrait' });
-                    }
+                    const groupedByReportName = notasForProject.reduce((acc, nota) => {
+                        const name = getGeneralReportName(nota.segmen);
+                        if (!acc[name]) acc[name] = [];
+                        acc[name].push(nota);
+                        return acc;
+                    }, {} as Record<string, Nota[]>);
 
-                    const jasaNotas = notasForProject.filter(n => jasaSegments.includes(n.segmen));
-                    if (jasaNotas.length > 0) {
-                        const title = `Perincian Nota Ekspedisi (POS/JNE/J&T dll)<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        pages.push({ html: generateJasaReport(jasaNotas, title), orientation: 'portrait' });
-                        const evidenTitle = `Eviden Nota Ekspedisi (POS/JNE/J&T dll)<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        pages.push({ html: generateSimpleEvidenReport(jasaNotas, evidenTitle), orientation: 'portrait' });
-                    }
-                    
-                    const konsumsiNotas = notasForProject.filter(n => konsumsiSegments.includes(n.segmen));
-                    if(konsumsiNotas.length > 0) {
-                         const title = `Perincian Nota Konsumsi<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                         pages.push({ html: generateMaterialReport(konsumsiNotas, title), orientation: 'portrait' });
-                         const evidenTitle = `Eviden Nota Konsumsi<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                         pages.push({ html: generateSimpleEvidenReport(konsumsiNotas, evidenTitle), orientation: 'portrait' });
-                    }
-                    
-                    const materialNotas = notasForProject.filter(n => materialNonStokSegments.includes(n.segmen));
-                    if (materialNotas.length > 0) {
-                        const title = `Perincian Nota Material Non Stok<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        pages.push({ html: generateMaterialReport(materialNotas, title), orientation: 'portrait' });
-                        const evidenTitle = `Eviden Nota Material Non Stok<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        pages.push({ html: generateSimpleEvidenReport(materialNotas, evidenTitle), orientation: 'portrait' });
-                    }
-                    
-                    const atkNotas = notasForProject.filter(n => atkSegments.includes(n.segmen));
-                    if (atkNotas.length > 0) {
-                        const title = `Perincian Nota ATK<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        pages.push({ html: generateMaterialReport(atkNotas, title), orientation: 'portrait' });
-                        const evidenTitle = `Eviden Nota ATK<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        pages.push({ html: generateSimpleEvidenReport(atkNotas, evidenTitle), orientation: 'portrait' });
-                    }
+                    for (const reportName in groupedByReportName) {
+                        const notasInSegment = groupedByReportName[reportName];
+                        if (notasInSegment.length === 0) continue;
 
-                    const pantryNotas = notasForProject.filter(n => pantrySegments.includes(n.segmen));
-                    if (pantryNotas.length > 0) {
-                        const title = `Perincian Nota Isi Pantry<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        pages.push({ html: generateMaterialReport(pantryNotas, title), orientation: 'portrait' });
-                        const evidenTitle = `Eviden Nota Isi Pantry<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        pages.push({ html: generateSimpleEvidenReport(pantryNotas, evidenTitle), orientation: 'portrait' });
-                    }
-
-                    const gensetNotas = notasForProject.filter(n => bbmGensetSegments.includes(n.segmen));
-                    if (gensetNotas.length > 0) {
-                        const title = `Perincian Nota BBM Genset<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        pages.push({ html: generateMaterialReport(gensetNotas, title), orientation: 'portrait' });
-                        const evidenTitle = `Eviden Nota BBM Genset<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        pages.push({ html: generateSimpleEvidenReport(gensetNotas, evidenTitle), orientation: 'portrait' });
-                    }
-
-                    const sppgNotas = notasForProject.filter(n => sppgSegments.includes(n.segmen));
-                    if (sppgNotas.length > 0) {
-                        const title = `Perincian Nota MATERIAL SPPG<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        pages.push({ html: generateMaterialReport(sppgNotas, title), orientation: 'portrait' });
-                        const evidenTitle = `Eviden Nota MATERIAL SPPG<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        pages.push({ html: generateSimpleEvidenReport(sppgNotas, evidenTitle), orientation: 'portrait' });
+                        const title = `${reportName}<br/>Pekerjaan : Operasional ${saTitlePart}`;
+                        const evidenTitle = `EVIDEN ${reportName}<br/>Pekerjaan : Operasional ${saTitlePart}`;
+                        
+                        if (reportName.includes('BBM R2') || reportName.includes('BBM R4')) {
+                            pages.push({ html: generateBBMReport(notasInSegment, title), orientation: 'portrait' });
+                            pages.push({ html: generateEvidenReport(notasInSegment, evidenTitle), orientation: 'portrait' });
+                        } else if (reportName.includes('Jasa')) {
+                            pages.push({ html: generateJasaReport(notasInSegment, title), orientation: 'portrait' });
+                            pages.push({ html: generateSimpleEvidenReport(notasInSegment, evidenTitle), orientation: 'portrait' });
+                        } else {
+                            pages.push({ html: generateMaterialReport(notasInSegment, title), orientation: 'portrait' });
+                            pages.push({ html: generateSimpleEvidenReport(notasInSegment, evidenTitle), orientation: 'portrait' });
+                        }
                     }
                 }
             }
@@ -1574,7 +1410,7 @@ export default function ExportPage() {
         setIsGenerating(false);
     };
     
-    const isActionInProgress = isGenerating || isExporting;
+    const isActionInProgress = isGenerating || isExporting || isDeleting;
 
     return (
         <>
@@ -1846,3 +1682,4 @@ export default function ExportPage() {
         </>
     );
 }
+
