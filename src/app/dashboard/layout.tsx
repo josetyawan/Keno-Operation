@@ -51,7 +51,6 @@ const adminNavGroups = [
       { href: '/dashboard/hr/attendance/rekap', label: 'Rekap Absensi', icon: ClipboardCheck, access: 'korlap' },
       { href: '/dashboard/alker/rekap', label: 'Rekap Alker', icon: ClipboardCheck, access: 'korlap' },
       { href: '/dashboard/admin/hr/manual-rekap', label: 'Trigger Rekap Manual', icon: Bot, access: 'korlap' },
-      { href: '/dashboard/admin/reports/assurance-rekap', label: 'Rekap Assurance', icon: FileSpreadsheet, access: 'korlap' },
     ]
   },
   {
@@ -79,6 +78,7 @@ const adminNavGroups = [
       { href: '/dashboard/admin/gamas-approval', label: 'Persetujuan Gamas', icon: ClipboardCheck, access: 'korlap' },
       { href: '/dashboard/admin/inventory/orbit', label: 'Inventory Orbit', icon: Component, access: 'admin' },
       { href: '/dashboard/admin/broadcast', label: 'Broadcast Pesan', icon: Send, access: 'admin' },
+      { href: '/dashboard/admin/reports/assurance-rekap', label: 'Rekap Assurance', icon: FileSpreadsheet, access: 'korlap' },
     ]
   }
 ];
