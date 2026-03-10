@@ -275,7 +275,7 @@
         "evidenSccUrl": { "type": "string", "format": "uri", "description": "URL for the SCC evidence photo." },
         "dorongClose": { "type": "boolean", "description": "Indicates if the ticket was pushed to close without full evidence." }
       },
-      "required": ["id", "noService", "tanggalLapor", "namaPetugas", "nik", "jenisOrder", "userId", "tanggalOpen", "tanggalClose"]
+      "required": ["id", "noService", "tanggalLapor", "namaPetugas", "nik", "jenisOrder", "userId", "tanggalOpen"]
     },
     "NetworkStats": {
       "title": "Network Statistics",
@@ -491,3 +491,4 @@
     "reasoning": "The data is structured with a top-level `users` collection for profiles and a top-level `notas` collection for all user-generated notes. This flat structure for `notas` simplifies querying, allowing all users to view all notes easily, which aligns with the application's requirements. Security is enforced within the rules: while reads are permissive, writes (create, update, delete) are strictly controlled. A user can only create a nota with their own `userId`, and can only update or delete notas they own. Admins are granted special privileges to update any nota for verification purposes. A `network-assets` collection is added for managing network equipment, with admin-only write access. This design is efficient and secure for the specified use case."
   }
 }
+

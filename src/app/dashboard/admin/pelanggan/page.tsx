@@ -501,7 +501,7 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
                 keterangan,
                 sto: pelanggan.sto || '',
                 tanggalOpen: Timestamp.fromDate(new Date(tanggalOpen)),
-                tanggalClose: Timestamp.fromDate(tanggalClose ? new Date(tanggalClose) : new Date()),
+                tanggalClose: tanggalClose ? Timestamp.fromDate(new Date(tanggalClose)) : null,
                 layanan: selectedLayanan,
                 materials: processedMaterials,
                 evidenSccUrl: evidenSccUrl,
@@ -1460,6 +1460,7 @@ export default function AdminPelangganPage() {
     </>
   );
 }
+
 
 
 
