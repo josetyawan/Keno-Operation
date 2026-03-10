@@ -39,7 +39,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, MapPin, Loader2, Search, History, Phone, Pencil, Wrench, QrCode, FileSpreadsheet, AlertCircle, Info, Upload, Trash2, Bot } from 'lucide-react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { PlusCircle, MapPin, Loader2, Search, History, Phone, Pencil, Wrench, QrCode, FileSpreadsheet, AlertCircle, Info, Upload, Trash2, Bot, CalendarIcon, MessageSquare } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, useStorage, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, query, doc, serverTimestamp, where, getDocs, limit, orderBy, Timestamp, writeBatch, deleteDoc, addDoc, updateDoc } from 'firebase/firestore';
@@ -54,6 +60,8 @@ import Image from 'next/image';
 import { format, isValid, parse } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { cn } from '@/lib/utils';
+
 
 const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
 
@@ -91,6 +99,7 @@ function NewPelangganDialog({ isOpen, onOpenChange, onFinished }: { isOpen: bool
     const [nomorTelepon, setNomorTelepon] = useState('');
     const [koordinat, setKoordinat] = useState('');
     const [serviceArea, setServiceArea] = useState('');
+    const [sto, setSto] = useState('');
     const [odpName, setOdpName] = useState('');
     const [odpPort, setOdpPort] = useState('');
     const [odpQRCodeUrl, setOdpQRCodeUrl] = useState('');
@@ -107,6 +116,7 @@ function NewPelangganDialog({ isOpen, onOpenChange, onFinished }: { isOpen: bool
             setNomorTelepon('');
             setKoordinat('');
             setServiceArea('');
+            setSto('');
             setOdpName('');
             setOdpPort('');
             setOdpQRCodeUrl('');
@@ -114,6 +124,20 @@ function NewPelangganDialog({ isOpen, onOpenChange, onFinished }: { isOpen: bool
             setFotoCpPreview(null);
         }
     }, [isOpen]);
+    
+    useEffect(() => {
+        if (odpName) {
+            const parts = odpName.trim().toUpperCase().split('-');
+            if (parts.length > 1) {
+                setSto(parts[1]);
+            } else {
+                setSto('');
+            }
+        } else {
+            setSto('');
+        }
+    }, [odpName]);
+
 
     const handleGetLocation = () => {
         setIsGettingLocation(true);
@@ -162,6 +186,7 @@ function NewPelangganDialog({ isOpen, onOpenChange, onFinished }: { isOpen: bool
                 nomorTelepon: nomorTelepon ? [nomorTelepon] : [],
                 koordinat,
                 serviceArea,
+                sto: sto,
                 odpName: odpName.trim(),
                 odpPort: odpPort.trim(),
                 odpQRCodeUrl: odpQRCodeUrl.trim(),
@@ -219,10 +244,16 @@ function NewPelangganDialog({ isOpen, onOpenChange, onFinished }: { isOpen: bool
                         <SelectContent>{serviceAreas.map(sa => <SelectItem key={sa} value={sa}>{sa}</SelectItem>)}</SelectContent>
                       </Select>
                   </div>
-                   <div className="grid gap-2">
-                    <Label htmlFor="new-odpName">Nama ODP</Label>
-                    <Input id="new-odpName" value={odpName} onChange={(e) => setOdpName(e.target.value)} placeholder="Contoh: ODP-KDS-FA/001" />
-                  </div>
+                   <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="new-odpName">Nama ODP</Label>
+                            <Input id="new-odpName" value={odpName} onChange={(e) => setOdpName(e.target.value)} placeholder="Contoh: ODP-KDS-FA/001" />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="new-sto">STO</Label>
+                            <Input id="new-sto" value={sto} disabled placeholder="Otomatis dari ODP" />
+                        </div>
+                   </div>
                    <div className="grid gap-2">
                     <Label htmlFor="new-odpPort">Port ODP</Label>
                     <Input id="new-odpPort" value={odpPort} onChange={(e) => setOdpPort(e.target.value)} placeholder="Contoh: 5" />
@@ -239,6 +270,95 @@ function NewPelangganDialog({ isOpen, onOpenChange, onFinished }: { isOpen: bool
                   <DialogFooter>
                     <DialogClose asChild><Button type="button" variant="secondary">Batal</Button></DialogClose>
                     <Button type="submit" disabled={isSaving}>{isSaving ? <Loader2 className="animate-spin" /> : 'Simpan'}</Button>
+                  </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished }: { pelanggan: Pelanggan, isOpen: boolean, onOpenChange: (open: boolean) => void, onFinished: (riwayat: RiwayatGangguan) => void }) {
+    const firestore = useFirestore();
+    const { toast } = useToast();
+    const [isSaving, setIsSaving] = useState(false);
+    
+    const [tanggalLapor, setTanggalLapor] = useState<Date | undefined>(new Date());
+    const [noTiket, setNoTiket] = useState('');
+    const [teknisi, setTeknisi] = useState('');
+    const [keterangan, setKeterangan] = useState('');
+
+    useEffect(() => {
+        if (!isOpen) {
+            setTanggalLapor(new Date());
+            setNoTiket('');
+            setTeknisi('');
+            setKeterangan('');
+        }
+    }, [isOpen]);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!tanggalLapor) {
+            toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Harap isi tanggal laporan.' });
+            return;
+        }
+        setIsSaving(true);
+        try {
+            const newRiwayatData: Omit<RiwayatGangguan, 'id'> = {
+                pelangganId: pelanggan.id,
+                noService: pelanggan.noService,
+                tanggalLapor: Timestamp.fromDate(tanggalLapor),
+                noTiket,
+                teknisi,
+                keterangan,
+            };
+            const docRef = await addDoc(collection(firestore, 'riwayat-gangguan'), newRiwayatData);
+            onFinished({ id: docRef.id, ...newRiwayatData } as RiwayatGangguan);
+            toast({ title: 'Laporan Gangguan Disimpan' });
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Gagal menyimpan', description: error.message });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+    
+    return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                    <DialogTitle>Input Laporan Gangguan</DialogTitle>
+                    <DialogDescription>Catat laporan gangguan baru untuk {pelanggan.namaPelanggan}.</DialogDescription>
+                </DialogHeader>
+                 <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="riwayat-tanggal">Tanggal Lapor *</Label>
+                     <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant={'outline'} className={cn('w-full justify-start text-left font-normal', !tanggalLapor && 'text-muted-foreground')}>
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {tanggalLapor ? format(tanggalLapor, 'PPP', {locale: idLocale}) : <span>Pilih tanggal</span>}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                            <Calendar mode="single" selected={tanggalLapor} onSelect={setTanggalLapor} initialFocus />
+                        </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="riwayat-tiket">No. Tiket</Label>
+                    <Input id="riwayat-tiket" value={noTiket} onChange={(e) => setNoTiket(e.target.value)} placeholder="Contoh: INC123..." />
+                  </div>
+                   <div className="grid gap-2">
+                    <Label htmlFor="riwayat-teknisi">Teknisi</Label>
+                    <Input id="riwayat-teknisi" value={teknisi} onChange={(e) => setTeknisi(e.target.value)} placeholder="Nama teknisi yang menangani" />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="riwayat-keterangan">Keterangan</Label>
+                    <Textarea id="riwayat-keterangan" value={keterangan} onChange={(e) => setKeterangan(e.target.value)} placeholder="Deskripsi gangguan dan penanganan..." />
+                  </div>
+                  <DialogFooter>
+                    <DialogClose asChild><Button type="button" variant="secondary">Batal</Button></DialogClose>
+                    <Button type="submit" disabled={isSaving}>{isSaving ? <Loader2 className="animate-spin" /> : 'Simpan Laporan'}</Button>
                   </DialogFooter>
                 </form>
             </DialogContent>
@@ -382,7 +502,30 @@ function UpdateAssetDialog({ pelanggan, isOpen, onOpenChange, onFinished, curren
     const [odpName, setOdpName] = useState(pelanggan.odpName || '');
     const [odpPort, setOdpPort] = useState(pelanggan.odpPort || '');
     const [odpQRCodeUrl, setOdpQRCodeUrl] = useState(pelanggan.odpQRCodeUrl || '');
+    const [sto, setSto] = useState(pelanggan.sto || '');
     const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        if (odpName) {
+            const parts = odpName.trim().toUpperCase().split('-');
+            if (parts.length > 1) {
+                setSto(parts[1]);
+            } else {
+                setSto('');
+            }
+        } else {
+            setSto('');
+        }
+    }, [odpName]);
+    
+    useEffect(() => {
+        if (isOpen) {
+            setOdpName(pelanggan.odpName || '');
+            setOdpPort(pelanggan.odpPort || '');
+            setOdpQRCodeUrl(pelanggan.odpQRCodeUrl || '');
+            setSto(pelanggan.sto || '');
+        }
+    }, [isOpen, pelanggan]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -392,6 +535,7 @@ function UpdateAssetDialog({ pelanggan, isOpen, onOpenChange, onFinished, curren
                 odpName: odpName.trim(),
                 odpPort: odpPort.trim(),
                 odpQRCodeUrl: odpQRCodeUrl.trim(),
+                sto: sto.trim(),
                 lastEditedBy: currentUserEmail,
                 lastEditedDate: serverTimestamp(),
             };
@@ -414,9 +558,15 @@ function UpdateAssetDialog({ pelanggan, isOpen, onOpenChange, onFinished, curren
                     <DialogDescription>Perbarui nama ODP, port, dan QR Code yang terhubung dengan pelanggan ini.</DialogDescription>
                 </DialogHeader>
                  <form onSubmit={handleSubmit} className="grid gap-4 py-4">
-                    <div className="grid gap-2">
-                        <Label htmlFor="update-odp-name">Nama ODP</Label>
-                        <Input id="update-odp-name" value={odpName} onChange={(e) => setOdpName(e.target.value)} placeholder="Contoh: ODP-KDS-FA/001" />
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="update-odp-name">Nama ODP</Label>
+                            <Input id="update-odp-name" value={odpName} onChange={(e) => setOdpName(e.target.value)} placeholder="Contoh: ODP-KDS-FA/001" />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="update-sto">STO</Label>
+                            <Input id="update-sto" value={sto} disabled placeholder="Otomatis dari ODP" />
+                        </div>
                     </div>
                      <div className="grid gap-2">
                         <Label htmlFor="update-odp-port">Port ODP</Label>
@@ -451,6 +601,7 @@ export default function AdminPelangganPage() {
   const [searchPerformed, setSearchPerformed] = useState(false);
   
   const [isNewPelangganDialogOpen, setIsNewPelangganDialogOpen] = useState(false);
+  const [isNewRiwayatDialogOpen, setIsNewRiwayatDialogOpen] = useState(false);
   const [isAddContactDialogOpen, setIsAddContactDialogOpen] = useState(false);
   const [isUpdateLocationDialogOpen, setIsUpdateLocationDialogOpen] = useState(false);
   const [isUpdateAssetDialogOpen, setIsUpdateAssetDialogOpen] = useState(false);
@@ -691,6 +842,7 @@ export default function AdminPelangganPage() {
         'No. Service': p.noService,
         'Nama Pelanggan': p.namaPelanggan,
         'Service Area': p.serviceArea,
+        'STO': p.sto || '',
         'Alamat': p.alamat || '',
         'Koordinat': p.koordinat,
         'Nomor Telepon': Array.isArray(p.nomorTelepon) ? p.nomorTelepon.join(', ') : p.nomorTelepon || '',
@@ -761,14 +913,7 @@ export default function AdminPelangganPage() {
                     <Label htmlFor="no-service-search">Nomor Service</Label>
                     <Input id="no-service-search" placeholder="Masukkan No. Service..." value={searchNoService} onChange={(e) => setSearchNoService(e.target.value)} />
                 </div>
-                <div className="flex gap-2">
-                    <Button type="submit" disabled={isSearching}>{isSearching ? <Loader2 className="animate-spin" /> : 'Cari'}</Button>
-                    <Button asChild variant="secondary">
-                        <Link href="https://t.me/B2BLapor_bot" target="_blank">
-                            <Bot className="mr-2 h-4 w-4" /> Lanjut ke Bot
-                        </Link>
-                    </Button>
-                </div>
+                <Button type="submit" disabled={isSearching}>{isSearching ? <Loader2 className="animate-spin" /> : 'Cari'}</Button>
             </form>
         </CardContent>
       </Card>
@@ -779,14 +924,7 @@ export default function AdminPelangganPage() {
           <Card>
               <CardContent className="p-6 text-center">
                   <p className="text-muted-foreground mb-4">Pelanggan dengan No. Service "{searchNoService}" tidak ditemukan di database aplikasi.</p>
-                  <div className="flex justify-center gap-2">
-                    <Button onClick={() => setIsNewPelangganDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/>Tambah Pelanggan Baru</Button>
-                     <Button asChild variant="secondary">
-                        <Link href="https://t.me/B2BLapor_bot" target="_blank">
-                            <Bot className="mr-2 h-4 w-4" /> Lanjut Lapor ke Bot
-                        </Link>
-                    </Button>
-                  </div>
+                  <Button onClick={() => setIsNewPelangganDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/>Tambah Pelanggan Baru</Button>
               </CardContent>
           </Card>
       )}
@@ -821,11 +959,7 @@ export default function AdminPelangganPage() {
                                 </AlertDialogContent>
                             </AlertDialog>
                         )}
-                        <Button asChild variant="outline" size="sm">
-                            <Link href="https://t.me/B2BLapor_bot" target="_blank">
-                                <Bot className="mr-2 h-4 w-4" /> Lanjut ke Bot
-                            </Link>
-                        </Button>
+                        <Button variant="default" size="sm" onClick={() => setIsNewRiwayatDialogOpen(true)}><MessageSquare className="mr-2 h-4 w-4"/>Input Laporan Gangguan</Button>
                         <Button variant="outline" size="sm" onClick={() => setIsAddContactDialogOpen(true)}><Phone className="mr-2 h-4 w-4"/>Tambah Kontak</Button>
                         <Button variant="outline" size="sm" onClick={() => setIsUpdateLocationDialogOpen(true)}><Pencil className="mr-2 h-4 w-4"/>Ubah Lokasi</Button>
                         <Button variant="outline" size="sm" onClick={() => setIsUpdateAssetDialogOpen(true)}><Wrench className="mr-2 h-4 w-4"/>Ubah Info Aset</Button>
@@ -853,6 +987,7 @@ export default function AdminPelangganPage() {
                         </div>
                          <div className="flex flex-col"><dt className="text-muted-foreground">ODP Terhubung</dt><dd>{searchedPelanggan.odpName || '-'}</dd></div>
                          <div className="flex flex-col"><dt className="text-muted-foreground">Port ODP</dt><dd>{searchedPelanggan.odpPort || '-'}</dd></div>
+                         <div className="flex flex-col"><dt className="text-muted-foreground">STO</dt><dd className="font-medium">{searchedPelanggan.sto || '-'}</dd></div>
                          <div className="flex flex-col"><dt className="text-muted-foreground">QR Code ODP</dt>
                             <dd>
                                 {searchedPelanggan.odpQRCodeUrl ? (
@@ -923,14 +1058,20 @@ export default function AdminPelangganPage() {
             toast({
                 title: 'Pelanggan Dibuat',
                 description: `${newPelanggan.namaPelanggan} telah berhasil ditambahkan.`,
-                action: (
-                    <Button asChild>
-                        <Link href="https://t.me/B2BLapor_bot" target="_blank">Lanjut ke Bot</Link>
-                    </Button>
-                )
             });
         }}
       />
+       {searchedPelanggan && (
+        <NewRiwayatDialog
+            pelanggan={searchedPelanggan}
+            isOpen={isNewRiwayatDialogOpen}
+            onOpenChange={setIsNewRiwayatDialogOpen}
+            onFinished={() => {
+                setIsNewRiwayatDialogOpen(false);
+                // Data will refresh automatically via useCollection
+            }}
+        />
+       )}
       {searchedPelanggan && currentUserProfile && (
           <>
             <AddContactDialog 
@@ -974,4 +1115,5 @@ export default function AdminPelangganPage() {
     
 
     
+
 

@@ -215,6 +215,7 @@
         "koordinat": { "type": "string", "description": "GPS coordinates of the customer's location." },
         "fotoCpUrl": { "type": "string", "description": "URL of the customer's location photo.", "format": "uri" },
         "serviceArea": { "type": "string", "description": "The service area the customer belongs to." },
+        "sto": { "type": "string", "description": "STO location identifier, derived from ODP name." },
         "dateAdded": { "type": "string", "format": "date-time", "description": "The date the customer was added." },
         "odpName": { "type": "string", "description": "The name of the ODP asset connected to the customer (e.g., ODP-KDS-FA/001)." },
         "odpPort": { "type": "string", "description": "The ODP port number the customer is connected to." },
