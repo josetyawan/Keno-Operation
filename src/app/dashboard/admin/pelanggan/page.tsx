@@ -47,11 +47,11 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { PlusCircle, MapPin, Loader2, Search, History, Phone, Pencil, Wrench, QrCode, FileSpreadsheet, AlertCircle, Info, Upload, Trash2, Bot, CalendarIcon, MessageSquare } from 'lucide-react';
+import { PlusCircle, MapPin, Loader2, Search, History, Phone, Pencil, Wrench, QrCode, FileSpreadsheet, AlertCircle, Info, Upload, Trash2, Bot, CalendarIcon, MessageSquare, AlertTriangle } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, errorEmitter, FirestorePermissionError, useStorage } from '@/firebase';
 import { collection, query, doc, serverTimestamp, where, getDocs, limit, orderBy, Timestamp, writeBatch, deleteDoc, addDoc, updateDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL, getStorage } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { UserProfile, Pelanggan, RiwayatGangguan, MaterialEvidence } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -93,7 +93,7 @@ const formatWaNumber = (phone: string) => {
 function NewPelangganDialog({ isOpen, onOpenChange, onFinished }: { isOpen: boolean, onOpenChange: (open: boolean) => void, onFinished: (pelanggan: Pelanggan) => void }) {
     const { user } = useUser();
     const firestore = useFirestore();
-    const storage = getStorage();
+    const storage = useStorage();
     const { toast } = useToast();
     const [isSaving, setIsSaving] = useState(false);
     
@@ -324,7 +324,7 @@ const materialEvidenMap: Record<string, { evidences?: string[], quantity?: boole
 function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, currentUserProfile }: { pelanggan: Pelanggan, isOpen: boolean, onOpenChange: (open: boolean) => void, onFinished: (riwayat: RiwayatGangguan) => void, currentUserProfile: UserProfile | null }) {
     const { user } = useUser();
     const firestore = useFirestore();
-    const storage = getStorage();
+    const storage = useStorage();
     const { toast } = useToast();
     const [isSaving, setIsSaving] = useState(false);
     
@@ -341,6 +341,9 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
     const [materialFiles, setMaterialFiles] = useState<Record<string, Record<string, File | null>>>({});
     const [materialQuantities, setMaterialQuantities] = useState<Record<string, number>>({});
     const [materialDetails, setMaterialDetails] = useState<Record<string, Record<string, string>>>({});
+    const [evidenScc, setEvidenScc] = useState<File | null>(null);
+    const [dorongClose, setDorongClose] = useState(false);
+
     
     const showTypeOrder = useMemo(() => Object.keys(typeOrderOptions).includes(jenisOrder), [jenisOrder]);
     
@@ -357,6 +360,8 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
             setMaterialFiles({});
             setMaterialQuantities({});
             setMaterialDetails({});
+            setEvidenScc(null);
+            setDorongClose(false);
         }
     }, [isOpen]);
 
@@ -408,6 +413,17 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
         }
         setIsSaving(true);
         try {
+            const hasMaterialPhotos = Object.values(materialFiles).some(evidences => Object.values(evidences).some(file => file !== null));
+            if (!hasMaterialPhotos && !evidenScc && !dorongClose) {
+                toast({
+                    variant: 'destructive',
+                    title: 'Eviden Diperlukan',
+                    description: 'Harap unggah setidaknya satu foto eviden (material atau SCC), atau centang "Dorong Close".'
+                });
+                setIsSaving(false);
+                return;
+            }
+
             const materialEvidencePromises = Object.entries(selectedMaterials)
                 .filter(([, isSelected]) => isSelected)
                 .map(async ([materialName]) => {
@@ -440,6 +456,14 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
 
                     return materialEntry;
                 });
+
+            let evidenSccUrl: string | undefined;
+            if (evidenScc) {
+                const filePath = `notas/${user.uid}/gangguan_scc_${Date.now()}-${evidenScc.name}`;
+                const storageRef = ref(storage, filePath);
+                await uploadBytes(storageRef, evidenScc);
+                evidenSccUrl = await getDownloadURL(storageRef);
+            }
             
             const processedMaterials = await Promise.all(materialEvidencePromises);
 
@@ -459,6 +483,8 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
                 tanggalClose: Timestamp.fromDate(tanggalClose ? new Date(tanggalClose) : new Date()),
                 layanan: selectedLayanan,
                 materials: processedMaterials,
+                evidenSccUrl: evidenSccUrl,
+                dorongClose: dorongClose,
             };
             const docRef = await addDoc(collection(firestore, 'riwayat-gangguan'), newRiwayatData);
             onFinished({ id: docRef.id, ...newRiwayatData } as RiwayatGangguan);
@@ -587,6 +613,19 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
                         ))}
                     </Accordion>
                   </div>
+                  
+                  <div className="mt-6 space-y-4 rounded-md border p-4">
+                        <h4 className="font-medium">Eviden Tambahan</h4>
+                        <div className="grid gap-2">
+                            <Label htmlFor="eviden-scc">Eviden SCC</Label>
+                            <Input id="eviden-scc" type="file" accept="image/*" onChange={(e) => setEvidenScc(e.target.files?.[0] || null)} />
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <Checkbox id="dorong-close" checked={dorongClose} onCheckedChange={(checked) => setDorongClose(Boolean(checked))} />
+                            <Label htmlFor="dorong-close">Dorong Close (Jika tidak ada eviden)</Label>
+                        </div>
+                    </div>
+
 
                   <DialogFooter>
                     <DialogClose asChild><Button type="button" variant="secondary">Batal</Button></DialogClose>
@@ -1348,13 +1387,3 @@ export default function AdminPelangganPage() {
     </>
   );
 }
-
-
-
-
-
-
-
-
-
-

@@ -14,12 +14,12 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Check, X, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Check, X, Image as ImageIcon, AlertTriangle } from 'lucide-react';
 import type { RiwayatGangguan, UserProfile, MaterialEvidence } from '@/lib/types';
 import { useMemo, useState } from 'react';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 const safeToDate = (timestamp: any): Date | null => {
   if (!timestamp) return null;
@@ -141,6 +141,33 @@ export default function RiwayatDetailPage() {
             </dl>
         </CardContent>
       </Card>
+      
+      {(riwayat.evidenSccUrl || riwayat.dorongClose) && (
+        <Card>
+            <CardHeader>
+                <CardTitle>Eviden Tambahan</CardTitle>
+            </CardHeader>
+            <CardContent>
+                {riwayat.dorongClose && (
+                    <Alert variant="default" className="mb-4 bg-yellow-50 border-yellow-200">
+                        <AlertTriangle className="h-4 w-4" />
+                        <AlertTitle>Dorong Close</AlertTitle>
+                        <AlertDescription>Laporan ini ditandai untuk didorong close.</AlertDescription>
+                    </Alert>
+                )}
+                {riwayat.evidenSccUrl ? (
+                    <div>
+                        <p className="text-sm text-muted-foreground mb-2">Foto Eviden SCC</p>
+                        <div className="max-w-xs">
+                          <PhotoViewer url={riwayat.evidenSccUrl} label="Eviden SCC" />
+                        </div>
+                    </div>
+                ) : (
+                    !riwayat.dorongClose && <p className="text-sm text-muted-foreground">Tidak ada eviden tambahan.</p>
+                )}
+            </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

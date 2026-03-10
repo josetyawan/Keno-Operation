@@ -271,7 +271,9 @@
             },
             "required": ["materialName"]
           }
-        }
+        },
+        "evidenSccUrl": { "type": "string", "format": "uri", "description": "URL for the SCC evidence photo." },
+        "dorongClose": { "type": "boolean", "description": "Indicates if the ticket was pushed to close without full evidence." }
       },
       "required": ["id", "noService", "tanggalLapor", "namaPetugas", "nik", "jenisOrder", "userId", "tanggalOpen", "tanggalClose"]
     },

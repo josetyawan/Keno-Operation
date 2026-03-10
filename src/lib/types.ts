@@ -217,6 +217,8 @@ export type RiwayatGangguan = {
   tanggalClose: any; // Firestore Timestamp
   layanan?: string[];
   materials?: MaterialEvidence[];
+  evidenSccUrl?: string;
+  dorongClose?: boolean;
 };
 
 export type ServiceAreaStats = {
