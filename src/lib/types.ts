@@ -215,11 +215,25 @@ export type RiwayatGangguan = {
   // New fields
   sto?: string;
   tanggalOpen: any; // Firestore Timestamp
-  tanggalClose: any; // Firestore Timestamp
+  tanggalClose?: any | null; // Firestore Timestamp, can be null
   layanan?: string[];
   materials?: MaterialEvidence[];
   evidenSccUrl?: string;
   dorongClose?: boolean;
+};
+
+export type OtherWork = {
+  id: string;
+  userId: string;
+  userName: string;
+  nik: string;
+  namaPekerjaan?: string;
+  jenisOrder: string;
+  orderType?: string; // For GAMAS
+  tanggalPengerjaan: any; // Timestamp
+  tanggalSelesai: any; // Timestamp
+  keterangan?: string;
+  createdAt: any; // Timestamp
 };
 
 export type ServiceAreaStats = {
@@ -333,3 +347,5 @@ export type Performance = {
   totalPerformance: string;
   date: any; // Timestamp
 };
+
+  
