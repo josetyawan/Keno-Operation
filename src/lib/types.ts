@@ -189,6 +189,15 @@ export type Pelanggan = {
   lastEditedDate?: any;
 };
 
+export type MaterialEvidence = {
+    materialName: string;
+    quantity?: number;
+    evidences: {
+        evidenceName: string;
+        photoUrl: string;
+    }[];
+};
+
 export type RiwayatGangguan = {
   id: string;
   pelangganId?: string;
@@ -201,6 +210,12 @@ export type RiwayatGangguan = {
   jenisOrder: string;
   typeOrder?: string;
   keterangan?: string;
+  // New fields
+  sto?: string;
+  tanggalOpen: any; // Firestore Timestamp
+  tanggalClose: any; // Firestore Timestamp
+  layanan?: string[];
+  materials?: MaterialEvidence[];
 };
 
 export type ServiceAreaStats = {

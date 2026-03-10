@@ -1,4 +1,5 @@
 
+
 {
   "entities": {
     "User": {
@@ -234,15 +235,42 @@
         "pelangganId": { "type": "string", "description": "The ID of the customer this history belongs to." },
         "userId": { "type": "string", "description": "The ID of the user who created this record." },
         "noService": { "type": "string", "description": "The customer's service number." },
+        "sto": { "type": "string", "description": "STO location identifier." },
         "tanggalLapor": { "type": "string", "format": "date-time", "description": "The date the report was made." },
+        "tanggalOpen": { "type": "string", "format": "date-time", "description": "The date the incident was opened." },
+        "tanggalClose": { "type": "string", "format": "date-time", "description": "The date the incident was closed." },
         "noTiket": { "type": "string", "description": "The incident ticket number (e.g., INC...)." },
         "namaPetugas": { "type": "string", "description": "The name of the technician who handled the report." },
         "nik": { "type": "string", "description": "Technician's NIK." },
         "jenisOrder": { "type": "string", "description": "The type of service order." },
         "typeOrder": { "type": "string", "description": "The specific sub-type of the service order." },
-        "keterangan": { "type": "string", "description": "A description of the issue and resolution." }
+        "layanan": { "type": "array", "items": { "type": "string" }, "description": "List of affected services." },
+        "keterangan": { "type": "string", "description": "A description of the issue and resolution." },
+        "materials": {
+          "type": "array",
+          "description": "Materials and evidence used in the repair.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "materialName": { "type": "string" },
+              "quantity": { "type": "number" },
+              "evidences": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "evidenceName": { "type": "string" },
+                    "photoUrl": { "type": "string", "format": "uri" }
+                  },
+                  "required": ["evidenceName", "photoUrl"]
+                }
+              }
+            },
+            "required": ["materialName", "evidences"]
+          }
+        }
       },
-      "required": ["id", "noService", "tanggalLapor", "namaPetugas", "nik", "jenisOrder", "userId"]
+      "required": ["id", "noService", "tanggalLapor", "namaPetugas", "nik", "jenisOrder", "userId", "tanggalOpen", "tanggalClose"]
     },
     "NetworkStats": {
       "title": "Network Statistics",

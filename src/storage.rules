@@ -8,11 +8,10 @@ service firebase.storage {
       return request.auth != null;
     }
 
-    // isApproved requires a cross-service call to Firestore.
     function isApproved() {
       return isSignedIn() &&
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.registrationStatus == 'approved';
+             exists(/databases/(default)/documents/users/$(request.auth.uid)) &&
+             get(/databases/(default)/documents/users/$(request.auth.uid)).data.registrationStatus == 'approved';
     }
 
     function isOwner(userId) {
@@ -21,14 +20,22 @@ service firebase.storage {
     
     function isAdmin() {
       return isSignedIn() && 
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.lower() == 'admin';
+             exists(/databases/(default)/documents/users/$(request.auth.uid)) &&
+             get(/databases/(default)/documents/users/$(request.auth.uid)).data.role.lower() == 'admin';
     }
 
     function isKorlap() {
       return isSignedIn() && 
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.lower() == 'korlap';
+             exists(/databases/(default)/documents/users/$(request.auth.uid)) &&
+             get(/databases/(default)/documents/users/$(request.auth.uid)).data.role.lower() == 'korlap';
+    }
+    
+     function hasAllProAccess() {
+      // This single read is more efficient than calling isApproved() then reading role/appAccess separately.
+      let userProfile = get(/databases/(default)/documents/users/$(request.auth.uid)).data;
+      return isSignedIn() &&
+            userProfile.registrationStatus == 'approved' &&
+            (userProfile.role == 'admin' || userProfile.role == 'korlap' || userProfile.appAccess == 'allpro' || userProfile.appAccess == 'all');
     }
 
     // Public read access is fine for image URLs
@@ -37,14 +44,17 @@ service firebase.storage {
     }
 
     // --- WRITE RULES ---
-    // General principle: A user can only write to their own folder, and must be approved.
-
+    
     match /notas/{userId}/{allPaths=**} {
       allow write: if isApproved() && isOwner(userId);
     }
 
     match /pelanggan_photos/{userId}/{allPaths=**} {
-      allow write: if (isAdmin() || isKorlap()) && isOwner(userId);
+      allow write: if isSignedIn();
+    }
+    
+    match /gangguan_evidence/{userId}/{allPaths=**} {
+      allow write: if isApproved() && isOwner(userId);
     }
 
     match /hr_attendance/{userId}/{allPaths=**} {

@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -51,7 +52,7 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, useStorage, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, query, doc, serverTimestamp, where, getDocs, limit, orderBy, Timestamp, writeBatch, deleteDoc, addDoc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import type { UserProfile, Pelanggan, RiwayatGangguan } from '@/lib/types';
+import type { UserProfile, Pelanggan, RiwayatGangguan, MaterialEvidence } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
@@ -62,6 +63,8 @@ import { format, isValid, parse } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 
 const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
@@ -279,7 +282,7 @@ function NewPelangganDialog({ isOpen, onOpenChange, onFinished }: { isOpen: bool
 }
 
 const jenisOrderOptions = [
-  'Aktivasi Cross Connect TDE', 'Aktivasi/Migrasi/Dismantel DCS', 'Aktivasi/Migrasi/Dismantel Digiserve', 'Aktivasi/Migrasi/Dismantel Hypernet', 'Corrective Akses Tower CENTRATAMA', 'Corrective Akses Tower Lintasarta', 'Corrective Akses Tower UMT', 'Corrective Cross Connect TDE', 'Corrective CSA', 'Corrective DCS', 'Corrective Digiserve', 'Corrective Hypernet', 'Corrective MMP', 'Corrective Mitratel', 'Corrective MyRep', 'Corrective NuTech', 'Corrective SNT', 'Corrective SPBU', 'Corrective TBG', 'Corrective Tower POLARIS', 'Corrective Tower TIS', 'DISMANTLING FWA', 'DISMANTLING ONT', 'DISMANTLING PLC', 'DISMANTLING STB', 'DISMANTLING WIFI EXTENDER', 'Dismantling DC Infracare', 'Dismantling NTE B2B', 'EXPAND ODP', 'Inventory SPBU', 'IXSA FTM', 'IXSA ODC', 'IXSA OLT', 'Lapsung (Laporan Langsung)', 'MO/DO Indibiz / Datin', 'MO/DO Indihome', 'PDA PSB Indihome', 'PSB DATIN', 'PSB INDIBIZ', 'PSB MyRep', 'PSB OLO', 'PSB Surge', 'PSB WIFI', 'PT2 Simple', 'Patroli Akses', 'Preventif MMP', 'Preventive Akses Tower CENTRATAMA', 'Preventive Akses Tower Lintasarta', 'Preventive Akses Tower UMT', 'Preventive Asianet', 'Preventive CSA', 'Preventive FIberisasi', 'Preventive NuTech', 'Preventive SPBU', 'Preventive TBG', 'Preventive Tower POLARIS', 'Preventive Tower TIS', 'REPLACEMENT ONT Premium/Dual Band', 'REPLACEMENT STB', 'Relokasi DCS', 'Relokasi Digiserve', 'Relokasi Hypernet', 'Reseller', 'SQM Reguler', 'Tangible ODP HSI Indihome', 'Tangible ODP Tiket Datin Kategori 1', 'Tiket Datin Kategori 2', 'Tiket Datin Kategori 3', 'Tiket FFG DATIN', 'Tiket FFG HSI', 'Tiket FFG WIFI', 'Tiket FFG Indihome', 'Tiket GAMAS', 'Tiket HSI Indibiz', 'Tiket NodeB CNQ (Preventive/Quality)', 'Tiket NodeB Critical', 'Tiket NodeB Low', 'Tiket NodeB Major', 'Tiket NodeB Minor', 'Tiket NodeB Premium', 'Tiket NodeB Premium Preventive', 'Tiket OLO Datin Gamas', 'Tiket OLO Datin Non Gamas', 'Tiket OLO Datin Quality', 'Tiket OLO SL WDM', 'Tiket OLO SL WDM Quality', 'Tiket Pra SQM Gaul HSI', 'Tiket Reguler', 'Tiket SIP Trunk', 'Tiket SQM Datin', 'Tiket SQM HSI', 'Tiket WIFI ID', 'Tiket Wifi Logic', 'UNLOCK ODP', 'Unspec DATIN', 'Unspec HSI', 'Unspec Reguler', 'Unspec SITE/NODE-B', 'Unspec WIFI', 'Validasi Data EBIS', 'Validasi Data WIFI', 'Validasi Tiang', 'Valins FTM', 'Valins ODC', 'Valins Regular', 'WFM'
+  "Aktivasi Cross Connect TDE", "Aktivasi/Migrasi/Dismantel DCS", "Aktivasi/Migrasi/Dismantel Digiserve", "Aktivasi/Migrasi/Dismantel Hypernet", "Corrective Akses Tower CENTRATAMA", "Corrective Akses Tower Lintasarta", "Corrective Akses Tower UMT", "Corrective Cross Connect TDE", "Corrective CSA", "Corrective DCS", "Corrective Digiserve", "Corrective Hypernet", "Corrective MMP", "Corrective MyRep", "Corrective NuTech", "Corrective SNT", "Corrective SPBU", "Corrective TBG", "Corrective Tower POLARIS", "Corrective Tower TIS", "DISMANTLING FWA", "DISMANTLING ONT", "DISMANTLING PLC", "DISMANTLING STB", "DISMANTLING WIFI EXTENDER", "Dismantling DC Infracare", "Dismantling NTE B2B", "EXPAND ODP", "Inventory SPBU", "IXSA FTM", "IXSA ODC", "IXSA OLT", "Lapsung (Laporan Langsung)", "MO/DO Indibiz / Datin", "MO/DO Indihome", "PDA PSB Indihome", "PSB DATIN", "PSB INDIBIZ", "PSB MyRep", "PSB OLO", "PSB Surge", "PSB WIFI", "PT2 Simple", "Patroli Akses", "Preventif MMP", "Preventive Akses Tower CENTRATAMA", "Preventive Akses Tower Lintasarta", "Preventive Akses Tower UMT", "Preventive Asianet", "Preventive CSA", "Preventive FIberisasi", "Preventive NuTech", "Preventive SPBU", "Preventive TBG", "Preventive Tower POLARIS", "Preventive Tower TIS", "REPLACEMENT ONT Premium/Dual Band", "REPLACEMENT STB", "Relokasi DCS", "Relokasi Digiserve", "Relokasi Hypernet", "Reseller", "SQM Reguler", "Tangible ODP HSI Indihome", "Tangible ODP Tiket Datin Kategori 1", "Tiket Datin Kategori 2", "Tiket Datin Kategori 3", "Tiket FFG DATIN", "Tiket FFG HSI", "Tiket FFG WIFI", "Tiket FFG Indihome", "Tiket GAMAS", "Tiket HSI Indibiz", "Tiket NodeB CNQ (Preventive/Quality)", "Tiket NodeB Critical", "Tiket NodeB Low", "Tiket NodeB Major", "Tiket NodeB Minor", "Tiket NodeB Premium", "Tiket NodeB Premium Preventive", "Tiket OLO Datin Gamas", "Tiket OLO Datin Non Gamas", "Tiket OLO Datin Quality", "Tiket OLO SL WDM", "Tiket OLO SL WDM Quality", "Tiket Pra SQM Gaul HSI", "Tiket Reguler", "Tiket SIP Trunk", "Tiket SQM Datin", "Tiket SQM HSI", "Tiket WIFI ID", "Tiket Wifi Logic", "UNLOCK ODP", "Unspec DATIN", "Unspec HSI", "Unspec Reguler", "Unspec SITE/NODE-B", "Unspec WIFI", "Validasi Data EBIS", "Validasi Data WIFI", "Validasi Tiang", "Valins FTM", "Valins ODC", "Valins Regular", "WFM",
 ].sort();
 
 
@@ -289,58 +292,144 @@ const typeOrderOptions: Record<string, string[]> = {
     'Tiket GAMAS': ['DISTRIBUSI', 'FEEDER', 'ODC', 'ODP'],
 };
 
+const layananOptions = ["INTERNET", "VOICE", "USEETV", "WIFI MESH", "WIFI AP", "WIFI-LITE", "OLO", "METRO", "ASTINET", "VPNIP", "DATIN"];
+
+const materialEvidenMap: Record<string, { evidences: string[], quantity?: boolean, default?: number }> = {
+  "DROPCORE BARU": { evidences: ["eviden marking awal", "eviden marking akhir", "eviden dc", "eviden progres"] },
+  "DROPCORE REFURBISH": { evidences: ["eviden marking awal", "eviden marking akhir", "eviden dc", "eviden progres"] },
+  "ROSET": { evidences: ["eviden foto roset baru", "eviden roset lama", "eviden progres", "eviden saat terpasang"] },
+  "PIGTAIL SC": { evidences: ["eviden foto pigtail baru", "eviden pigtail lama", "eviden progres", "eviden saat terpasang"] },
+  "PATCHCORE 15": { evidences: ["eviden foto pathcore baru", "eviden pathcore lama", "eviden progres", "eviden saat terpasang"] },
+  "PATCHCORE 2 MTR": { evidences: ["eviden foto pathcore baru", "eviden pathcore lama", "eviden progres", "eviden saat terpasang"] },
+  "PATCHCORE 1 MTR": { evidences: ["eviden foto pathcore baru", "eviden pathcore lama", "eviden progres", "eviden saat terpasang"] },
+  "SPLITER 1:2": { evidences: ["eviden foto spliter baru", "eviden spliter lama", "eviden progres", "eviden saat terpasang"] },
+  "SPLITER 1:4": { evidences: ["eviden foto spliter baru", "eviden spliter lama", "eviden progres", "eviden saat terpasang"] },
+  "SPLITER 1:8": { evidences: ["eviden foto spliter baru", "eviden spliter lama", "eviden progres", "eviden saat terpasang"] },
+  "SPLITER 1:16": { evidences: ["eviden foto spliter baru", "eviden spliter lama", "eviden progres", "eviden saat terpasang"] },
+  "Termovit (cm)": { evidences: [], quantity: true, default: 15 },
+  "Adapter SC": { evidences: ["eviden foto adaptor baru", "eviden adaptor lama", "eviden progres", "eviden saat terpasang"] },
+  "RJ45": { evidences: ["eviden foto rj45 baru", "eviden rj45 lama", "eviden progres", "eviden saat terpasang"] },
+  "Protection Sleeve": { evidences: ["eviden foto sambung"] },
+  "Splice on Connector": { evidences: ["eviden SOC baru", "eviden progres", "eviden saat terpasang"] },
+  "Penarikan Kabel UTP (Mtr)": { evidences: ["eviden marking awal", "eviden marking akhir", "eviden dc", "eviden progres"], quantity: true },
+};
+
 
 function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, currentUserProfile }: { pelanggan: Pelanggan, isOpen: boolean, onOpenChange: (open: boolean) => void, onFinished: (riwayat: RiwayatGangguan) => void, currentUserProfile: UserProfile | null }) {
     const { user } = useUser();
     const firestore = useFirestore();
+    const storage = useStorage();
     const { toast } = useToast();
     const [isSaving, setIsSaving] = useState(false);
     
+    // Form state
     const [tanggalLapor, setTanggalLapor] = useState<Date | undefined>(new Date());
+    const [tanggalOpen, setTanggalOpen] = useState<Date | undefined>(new Date());
+    const [tanggalClose, setTanggalClose] = useState<Date | undefined>();
     const [noTiket, setNoTiket] = useState('');
     const [jenisOrder, setJenisOrder] = useState('');
     const [typeOrder, setTypeOrder] = useState('');
     const [keterangan, setKeterangan] = useState('');
+    const [selectedLayanan, setSelectedLayanan] = useState<string[]>([]);
+    const [selectedMaterials, setSelectedMaterials] = useState<Record<string, boolean>>({});
+    const [materialFiles, setMaterialFiles] = useState<Record<string, Record<string, File | null>>>({});
+    const [materialQuantities, setMaterialQuantities] = useState<Record<string, number>>({});
     
     const showTypeOrder = useMemo(() => Object.keys(typeOrderOptions).includes(jenisOrder), [jenisOrder]);
     
     useEffect(() => {
         if (!isOpen) {
             setTanggalLapor(new Date());
+            setTanggalOpen(new Date());
+            setTanggalClose(undefined);
             setNoTiket('');
             setJenisOrder('');
             setTypeOrder('');
             setKeterangan('');
+            setSelectedLayanan([]);
+            setSelectedMaterials({});
+            setMaterialFiles({});
+            setMaterialQuantities({});
         }
     }, [isOpen]);
 
     useEffect(() => {
-        // Reset typeOrder when jenisOrder changes and its not applicable
-        if (!showTypeOrder) {
-            setTypeOrder('');
-        }
+        if (!showTypeOrder) setTypeOrder('');
     }, [jenisOrder, showTypeOrder]);
 
+    const handleLayananChange = (layanan: string, checked: boolean) => {
+        setSelectedLayanan(prev => checked ? [...prev, layanan] : prev.filter(l => l !== layanan));
+    };
+
+    const handleMaterialToggle = (materialName: string, checked: boolean) => {
+        setSelectedMaterials(prev => ({ ...prev, [materialName]: checked }));
+        if (!checked) {
+            setMaterialFiles(prev => { const newState = { ...prev }; delete newState[materialName]; return newState; });
+            setMaterialQuantities(prev => { const newState = { ...prev }; delete newState[materialName]; return newState; });
+        } else {
+             const materialConfig = materialEvidenMap[materialName];
+             if(materialConfig.quantity && materialConfig.default) {
+                 setMaterialQuantities(prev => ({...prev, [materialName]: materialConfig.default!}));
+             }
+        }
+    };
+    
+    const handleFileChange = (materialName: string, evidenceName: string, file: File | null) => {
+        setMaterialFiles(prev => ({ ...prev, [materialName]: { ...(prev[materialName] || {}), [evidenceName]: file } }));
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!tanggalLapor || !jenisOrder || !currentUserProfile || !user) {
-            toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Harap isi Tanggal Lapor dan Jenis Order.' });
+        if (!tanggalOpen || !jenisOrder || !currentUserProfile || !user) {
+            toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Harap isi Tanggal Open dan Jenis Order.' });
             return;
         }
         setIsSaving(true);
         try {
+            const materialEvidencePromises = Object.entries(selectedMaterials)
+                .filter(([, isSelected]) => isSelected)
+                .map(async ([materialName]) => {
+                    const evidenceFiles = materialFiles[materialName] || {};
+                    const evidenceUploadPromises = Object.entries(evidenceFiles)
+                        .filter(([, file]) => file)
+                        .map(async ([evidenceName, file]) => {
+                            const filePath = `gangguan_evidence/${user.uid}/${Date.now()}-${file!.name}`;
+                            const storageRef = ref(storage, filePath);
+                            await uploadBytes(storageRef, file!);
+                            const photoUrl = await getDownloadURL(storageRef);
+                            return { evidenceName, photoUrl };
+                        });
+                    
+                    const uploadedEvidences = await Promise.all(evidenceUploadPromises);
+                    
+                    const materialEntry: MaterialEvidence = {
+                        materialName,
+                        evidences: uploadedEvidences,
+                    };
+                    if (materialEvidenMap[materialName]?.quantity) {
+                        materialEntry.quantity = materialQuantities[materialName] || 0;
+                    }
+                    return materialEntry;
+                });
+            
+            const processedMaterials = await Promise.all(materialEvidencePromises);
+
             const newRiwayatData: Omit<RiwayatGangguan, 'id'> = {
                 pelangganId: pelanggan.id,
                 userId: user.uid,
                 noService: pelanggan.noService,
-                tanggalLapor: Timestamp.fromDate(tanggalLapor),
+                tanggalLapor: Timestamp.fromDate(tanggalLapor || new Date()),
                 noTiket,
                 namaPetugas: currentUserProfile.displayName || currentUserProfile.email,
                 nik: currentUserProfile.nik || '',
-                jenisOrder: jenisOrder,
+                jenisOrder,
                 typeOrder: showTypeOrder ? typeOrder : undefined,
                 keterangan,
+                sto: pelanggan.sto || '',
+                tanggalOpen: Timestamp.fromDate(tanggalOpen),
+                tanggalClose: Timestamp.fromDate(tanggalClose || new Date()),
+                layanan: selectedLayanan,
+                materials: processedMaterials,
             };
             const docRef = await addDoc(collection(firestore, 'riwayat-gangguan'), newRiwayatData);
             onFinished({ id: docRef.id, ...newRiwayatData } as RiwayatGangguan);
@@ -354,39 +443,32 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
     
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-lg">
+            <DialogContent className="max-w-2xl">
                 <DialogHeader>
                     <DialogTitle>Input Laporan Gangguan</DialogTitle>
                     <DialogDescription>Catat laporan gangguan baru untuk {pelanggan.namaPelanggan}.</DialogDescription>
                 </DialogHeader>
-                 <form onSubmit={handleSubmit} className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="grid gap-2">
-                            <Label>NIK Petugas</Label>
-                            <Input value={currentUserProfile?.nik || ''} disabled />
-                        </div>
-                         <div className="grid gap-2">
-                            <Label>Nama Petugas</Label>
-                            <Input value={currentUserProfile?.displayName || ''} disabled />
-                        </div>
+                 <form onSubmit={handleSubmit} className="grid gap-6 py-4 max-h-[75vh] overflow-y-auto pr-6">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="grid gap-2"><Label>NIK Petugas</Label><Input value={currentUserProfile?.nik || ''} disabled /></div>
+                        <div className="grid gap-2 lg:col-span-2"><Label>Nama Petugas</Label><Input value={currentUserProfile?.displayName || ''} disabled /></div>
+                        <div className="grid gap-2"><Label>STO</Label><Input value={pelanggan.sto || ''} disabled /></div>
                     </div>
-                     <div className="grid gap-2">
-                        <Label>No. Service</Label>
-                        <Input value={pelanggan.noService} disabled />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2"><Label>No. Service</Label><Input value={pelanggan.noService} disabled /></div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                          <div className="grid gap-2">
-                            <Label htmlFor="riwayat-tanggal">Tanggal Lapor *</Label>
+                            <Label htmlFor="tanggal-open">Tanggal Open *</Label>
                              <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button variant={'outline'} className={cn('w-full justify-start text-left font-normal', !tanggalLapor && 'text-muted-foreground')}>
-                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {tanggalLapor ? format(tanggalLapor, 'PPP', {locale: idLocale}) : <span>Pilih tanggal</span>}
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0">
-                                    <Calendar mode="single" selected={tanggalLapor} onSelect={setTanggalLapor} initialFocus />
-                                </PopoverContent>
+                                <PopoverTrigger asChild><Button variant={'outline'} className={cn('w-full justify-start', !tanggalOpen && 'text-muted-foreground')}><CalendarIcon className="mr-2 h-4 w-4" />{tanggalOpen ? format(tanggalOpen, 'dd MMM yyyy') : <span>Pilih tanggal</span>}</Button></PopoverTrigger>
+                                <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={tanggalOpen} onSelect={setTanggalOpen} initialFocus /></PopoverContent>
+                            </Popover>
+                          </div>
+                          <div className="grid gap-2">
+                            <Label htmlFor="tanggal-close">Tanggal Close</Label>
+                             <Popover>
+                                <PopoverTrigger asChild><Button variant={'outline'} className={cn('w-full justify-start', !tanggalClose && 'text-muted-foreground')}><CalendarIcon className="mr-2 h-4 w-4" />{tanggalClose ? format(tanggalClose, 'dd MMM yyyy') : <span>Pilih tanggal</span>}</Button></PopoverTrigger>
+                                <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={tanggalClose} onSelect={setTanggalClose} initialFocus /></PopoverContent>
                             </Popover>
                           </div>
                           <div className="grid gap-2">
@@ -394,30 +476,78 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
                             <Input id="riwayat-tiket" value={noTiket} onChange={(e) => setNoTiket(e.target.value)} placeholder="Contoh: INC123..." />
                           </div>
                     </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="jenis-order">Jenis Order *</Label>
-                        <Select value={jenisOrder} onValueChange={setJenisOrder} required>
-                            <SelectTrigger id="jenis-order"><SelectValue placeholder="Pilih Jenis Order..." /></SelectTrigger>
-                            <SelectContent>
-                                {jenisOrderOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
+
+                    <div className="grid gap-3">
+                        <Label>Layanan Terdampak</Label>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2">
+                            {layananOptions.map(layanan => (
+                                <div key={layanan} className="flex items-center space-x-2">
+                                    <Checkbox id={`layanan-${layanan}`} checked={selectedLayanan.includes(layanan)} onCheckedChange={(checked) => handleLayananChange(layanan, !!checked)} />
+                                    <Label htmlFor={`layanan-${layanan}`} className="font-normal">{layanan}</Label>
+                                </div>
+                            ))}
+                        </div>
                     </div>
-                    {showTypeOrder && (
-                         <div className="grid gap-2">
-                            <Label htmlFor="type-order">Type Order *</Label>
-                            <Select value={typeOrder} onValueChange={setTypeOrder} required>
-                                <SelectTrigger id="type-order"><SelectValue placeholder="Pilih Type Order..." /></SelectTrigger>
-                                <SelectContent>
-                                    {typeOrderOptions[jenisOrder].map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                                </SelectContent>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="jenis-order">Jenis Order *</Label>
+                            <Select value={jenisOrder} onValueChange={setJenisOrder} required>
+                                <SelectTrigger id="jenis-order"><SelectValue placeholder="Pilih Jenis Order..." /></SelectTrigger>
+                                <SelectContent><ScrollArea className="h-72">{jenisOrderOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</ScrollArea></SelectContent>
                             </Select>
                         </div>
-                    )}
+                        {showTypeOrder && (
+                            <div className="grid gap-2">
+                                <Label htmlFor="type-order">Type Order *</Label>
+                                <Select value={typeOrder} onValueChange={setTypeOrder} required>
+                                    <SelectTrigger id="type-order"><SelectValue placeholder="Pilih Type Order..." /></SelectTrigger>
+                                    <SelectContent>{typeOrderOptions[jenisOrder].map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</SelectContent>
+                                </Select>
+                            </div>
+                        )}
+                    </div>
                   <div className="grid gap-2">
                     <Label htmlFor="riwayat-keterangan">Keterangan</Label>
                     <Textarea id="riwayat-keterangan" value={keterangan} onChange={(e) => setKeterangan(e.target.value)} placeholder="Deskripsi gangguan dan penanganan..." />
                   </div>
+
+                  <div className="grid gap-3">
+                    <Label>Material & Eviden</Label>
+                    <Accordion type="multiple" className="w-full">
+                        {Object.entries(materialEvidenMap).map(([materialName, config]) => (
+                            <div key={materialName} className="flex items-start gap-3 p-2 border-b">
+                                <Checkbox 
+                                    id={`material-${materialName}`}
+                                    className="mt-1"
+                                    checked={!!selectedMaterials[materialName]}
+                                    onCheckedChange={(checked) => handleMaterialToggle(materialName, !!checked)}
+                                />
+                                <div className="flex-1">
+                                    <Label htmlFor={`material-${materialName}`} className="font-medium cursor-pointer">{materialName}</Label>
+                                    {selectedMaterials[materialName] && (
+                                        <div className="mt-4 pl-2 border-l-2 ml-2 space-y-4">
+                                            {config.quantity && (
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="grid gap-2"><Label htmlFor={`qty-${materialName}`}>Jumlah ({materialName.split('(')[1]}`</Label>
+                                                        <Input id={`qty-${materialName}`} type="number" value={materialQuantities[materialName] ?? ''} onChange={e => setMaterialQuantities(prev => ({...prev, [materialName]: Number(e.target.value)}))} />
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {config.evidences.map(evidenName => (
+                                                <div key={evidenName} className="grid gap-2">
+                                                    <Label htmlFor={`file-${materialName}-${evidenName}`} className="capitalize">{evidenName}</Label>
+                                                    <Input id={`file-${materialName}-${evidenName}`} type="file" accept="image/*" onChange={(e) => handleFileChange(materialName, evidenName, e.target.files?.[0] || null)} />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </Accordion>
+                  </div>
+
                   <DialogFooter>
                     <DialogClose asChild><Button type="button" variant="secondary">Batal</Button></DialogClose>
                     <Button type="submit" disabled={isSaving}>{isSaving ? <Loader2 className="animate-spin" /> : 'Simpan Laporan'}</Button>
@@ -689,26 +819,20 @@ export default function AdminPelangganPage() {
   }, [user, currentUserProfile, isUserLoading, isProfileLoading, router]);
   
   const allRiwayatQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'riwayat-gangguan'));
-  }, [firestore]);
+    if (!firestore || !searchedPelanggan) return null;
+    return query(collection(firestore, 'riwayat-gangguan'), where('noService', '==', searchedPelanggan.noService));
+  }, [firestore, searchedPelanggan]);
 
   const { data: allRiwayat, isLoading: isRiwayatLoading } = useCollection<RiwayatGangguan>(allRiwayatQuery);
 
-  const unsortedRiwayat = useMemo(() => {
-      if (!allRiwayat || !searchedPelanggan) return null;
-      return allRiwayat.filter(riwayat => riwayat.noService === searchedPelanggan.noService);
-  }, [allRiwayat, searchedPelanggan]);
-
-
   const riwayatGangguan = useMemo(() => {
-    if (!unsortedRiwayat) return null;
-    return [...unsortedRiwayat].sort((a, b) => {
+    if (!allRiwayat) return null;
+    return [...allRiwayat].sort((a, b) => {
         const timeA = safeToDate(a.tanggalLapor)?.getTime() ?? 0;
         const timeB = safeToDate(b.tanggalLapor)?.getTime() ?? 0;
         return timeB - timeA; // descending
     });
-  }, [unsortedRiwayat]);
+  }, [allRiwayat]);
 
 
   const handleSearch = async (e: React.FormEvent) => {
@@ -810,6 +934,8 @@ export default function AdminPelangganPage() {
             const noTiketCol = findHeader(['no tiket', 'nomor tiket', 'ticket_id', 'ticket number', 'tiket']);
             const teknisiCol = findHeader(['teknisi', 'pic', 'nama petugas']);
             const keteranganCol = findHeader(['keterangan', 'deskripsi', 'description']);
+            const userIdCol = findHeader(['user id', 'userid']);
+            const nikCol = findHeader(['nik']);
 
             if (!noServiceCol || !tanggalLaporCol) {
                 throw new Error("Kolom wajib 'No Service' dan 'Tanggal Lapor' tidak ditemukan di file Excel Anda.");
@@ -843,8 +969,11 @@ export default function AdminPelangganPage() {
                     }
                 }
                 
-                const riwayatData: Omit<RiwayatGangguan, 'id' | 'namaPetugas' | 'nik' | 'jenisOrder' > = {
+                const riwayatData: Omit<RiwayatGangguan, 'id' | 'jenisOrder'> = {
                     noService: noService,
+                    userId: userIdCol && row[userIdCol] ? row[userIdCol].toString().trim() : 'system-import',
+                    nik: nikCol && row[nikCol] ? row[nikCol].toString().trim() : '',
+                    namaPetugas: teknisiCol && row[teknisiCol] ? row[teknisiCol].toString().trim() : 'System Import',
                     tanggalLapor: Timestamp.fromDate(tanggalLapor),
                     noTiket: noTiketCol && row[noTiketCol] ? row[noTiketCol].toString().trim() : '',
                     keterangan: keteranganCol && row[keteranganCol] ? row[keteranganCol].toString().trim() : '',
@@ -1172,3 +1301,4 @@ export default function AdminPelangganPage() {
     </>
   );
 }
+
