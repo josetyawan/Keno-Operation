@@ -320,49 +320,6 @@ const materialEvidenMap: Record<string, { evidences?: string[], quantity?: boole
   "AP Mesh": { inputs: ['SN'] }
 };
 
-function DateTimePicker({ value, onChange, disabled = false }: { value?: Date, onChange: (date?: Date) => void, disabled?: boolean }) {
-    const datePart = value;
-    const timePart = value ? format(value, 'HH:mm') : '00:00';
-
-    const handleDateChange = (newDate?: Date) => {
-        if (!newDate) {
-            onChange(undefined);
-            return;
-        }
-        const [currentHours, currentMinutes] = timePart.split(':').map(Number);
-        newDate.setHours(isNaN(currentHours) ? 0 : currentHours, isNaN(currentMinutes) ? 0 : currentMinutes, 0, 0);
-        onChange(newDate);
-    };
-
-    const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const [newHours, newMinutes] = e.target.value.split(':').map(Number);
-        const newDate = value ? new Date(value.getTime()) : new Date();
-        if (isNaN(newHours) || isNaN(newMinutes)) return;
-        newDate.setHours(newHours, newMinutes, 0, 0);
-        onChange(newDate);
-    };
-
-    return (
-        <Popover>
-            <PopoverTrigger asChild>
-                <Button variant={'outline'} disabled={disabled} className={cn('w-full justify-start text-left font-normal', !datePart && 'text-muted-foreground')}>
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {datePart ? format(datePart, 'dd MMM yyyy, HH:mm') : <span>Pilih tanggal & waktu</span>}
-                </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-                <Calendar mode="single" selected={datePart} onSelect={handleDateChange} initialFocus />
-                 <div className="p-2 border-t border-border">
-                    <Input
-                        type="time"
-                        value={timePart}
-                        onChange={handleTimeChange}
-                    />
-                </div>
-            </PopoverContent>
-        </Popover>
-    );
-}
 
 function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, currentUserProfile }: { pelanggan: Pelanggan, isOpen: boolean, onOpenChange: (open: boolean) => void, onFinished: (riwayat: RiwayatGangguan) => void, currentUserProfile: UserProfile | null }) {
     const { user } = useUser();
@@ -372,9 +329,9 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
     const [isSaving, setIsSaving] = useState(false);
     
     // Form state
-    const [tanggalLapor, setTanggalLapor] = useState<Date | undefined>(new Date());
-    const [tanggalOpen, setTanggalOpen] = useState<Date | undefined>(new Date());
-    const [tanggalClose, setTanggalClose] = useState<Date | undefined>();
+    const [tanggalOpen, setTanggalOpen] = useState<string>(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
+    const [tanggalClose, setTanggalClose] = useState<string>('');
+    const [tanggalLapor] = useState<Date>(new Date());
     const [noTiket, setNoTiket] = useState('');
     const [jenisOrder, setJenisOrder] = useState('');
     const [typeOrder, setTypeOrder] = useState('');
@@ -389,9 +346,8 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
     
     useEffect(() => {
         if (!isOpen) {
-            setTanggalLapor(new Date());
-            setTanggalOpen(new Date());
-            setTanggalClose(undefined);
+            setTanggalOpen(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
+            setTanggalClose('');
             setNoTiket('');
             setJenisOrder('');
             setTypeOrder('');
@@ -499,8 +455,8 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
                 typeOrder: showTypeOrder ? typeOrder : undefined,
                 keterangan,
                 sto: pelanggan.sto || '',
-                tanggalOpen: Timestamp.fromDate(tanggalOpen),
-                tanggalClose: Timestamp.fromDate(tanggalClose || new Date()),
+                tanggalOpen: Timestamp.fromDate(new Date(tanggalOpen)),
+                tanggalClose: Timestamp.fromDate(tanggalClose ? new Date(tanggalClose) : new Date()),
                 layanan: selectedLayanan,
                 materials: processedMaterials,
             };
@@ -532,11 +488,11 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                          <div className="grid gap-2">
                             <Label htmlFor="tanggal-open">Tanggal Open *</Label>
-                            <DateTimePicker value={tanggalOpen} onChange={setTanggalOpen} />
+                            <Input id="tanggal-open" type="datetime-local" value={tanggalOpen} onChange={e => setTanggalOpen(e.target.value)} required />
                           </div>
                           <div className="grid gap-2">
                             <Label htmlFor="tanggal-close">Tanggal Close</Label>
-                             <DateTimePicker value={tanggalClose} onChange={setTanggalClose} />
+                            <Input id="tanggal-close" type="datetime-local" value={tanggalClose} onChange={e => setTanggalClose(e.target.value)} />
                           </div>
                           <div className="grid gap-2">
                             <Label htmlFor="riwayat-tiket">No. Tiket</Label>
@@ -1386,6 +1342,7 @@ export default function AdminPelangganPage() {
     </>
   );
 }
+
 
 
 

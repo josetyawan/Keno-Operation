@@ -112,7 +112,7 @@ service cloud.firestore {
     }
 
     match /riwayat-gangguan/{riwayatId} {
-      allow create: if hasAllProAccess() && isCreatingOwn('userId');
+      allow create: if isApproved() && isCreatingOwn('userId');
       allow read: if hasAllProAccess() || isKorlap();
       allow update, delete: if isAdmin() || isKorlap();
     }
