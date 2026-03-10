@@ -112,9 +112,9 @@ service cloud.firestore {
     }
 
     match /riwayat-gangguan/{riwayatId} {
-      // Admins/Korlaps can write via file import. Server can write via webhook.
-      allow write: if isAdmin() || isKorlap(); 
+      allow create: if hasAllProAccess() && isCreatingOwn('userId');
       allow read: if hasAllProAccess() || isKorlap();
+      allow update, delete: if isAdmin() || isKorlap();
     }
 
     match /map-links/{mapLinkId} {

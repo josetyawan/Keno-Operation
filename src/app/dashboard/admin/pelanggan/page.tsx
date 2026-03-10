@@ -279,113 +279,9 @@ function NewPelangganDialog({ isOpen, onOpenChange, onFinished }: { isOpen: bool
 }
 
 const jenisOrderOptions = [
-  'Aktivasi Cross Connect TDE',
-  'Aktivasi/Migrasi/Dismantel DCS',
-  'Aktivasi/Migrasi/Dismantel Digiserve',
-  'Aktivasi/Migrasi/Dismantel Hypernet',
-  'Corrective Akses Tower CENTRATAMA',
-  'Corrective Akses Tower Lintasarta',
-  'Corrective Akses Tower UMT',
-  'Corrective Cross Connect TDE',
-  'Corrective CSA',
-  'Corrective DCS',
-  'Corrective Digiserve',
-  'Corrective Hypernet',
-  'Corrective MMP',
-  'Corrective Mitratel',
-  'Corrective MyRep',
-  'Corrective NuTech',
-  'Corrective SNT',
-  'Corrective SPBU',
-  'Corrective TBG',
-  'Corrective Tower POLARIS',
-  'Corrective Tower TIS',
-  'DISMANTLING FWA',
-  'DISMANTLING ONT',
-  'DISMANTLING PLC',
-  'DISMANTLING STB',
-  'DISMANTLING WIFI EXTENDER',
-  'Dismantling DC Infracare',
-  'Dismantling NTE B2B',
-  'EXPAND ODP',
-  'Inventory SPBU',
-  'IXSA FTM',
-  'IXSA ODC',
-  'IXSA OLT',
-  'Lapsung (Laporan Langsung)',
-  'MO/DO Indibiz / Datin',
-  'MO/DO Indihome',
-  'PDA PSB Indihome',
-  'PSB DATIN',
-  'PSB INDIBIZ',
-  'PSB MyRep',
-  'PSB OLO',
-  'PSB Surge',
-  'PSB WIFI',
-  'PT2 Simple',
-  'Patroli Akses',
-  'Preventif MMP',
-  'Preventive Akses Tower CENTRATAMA',
-  'Preventive Akses Tower Lintasarta',
-  'Preventive Akses Tower UMT',
-  'Preventive Asianet',
-  'Preventive CSA',
-  'Preventive FIberisasi',
-  'Preventive NuTech',
-  'Preventive SPBU',
-  'Preventive TBG',
-  'Preventive Tower POLARIS',
-  'Preventive Tower TIS',
-  'REPLACEMENT ONT Premium/Dual Band',
-  'REPLACEMENT STB',
-  'Relokasi DCS',
-  'Relokasi Digiserve',
-  'Relokasi Hypernet',
-  'Reseller',
-  'SQM Reguler',
-  'Tangible ODP HSI Indihome',
-  'Tangible ODP Tiket Datin Kategori 1',
-  'Tiket Datin Kategori 2',
-  'Tiket Datin Kategori 3',
-  'Tiket FFG DATIN',
-  'Tiket FFG HSI',
-  'Tiket FFG WIFI',
-  'Tiket FFG Indihome',
-  'Tiket GAMAS',
-  'Tiket HSI Indibiz',
-  'Tiket NodeB CNQ (Preventive/Quality)',
-  'Tiket NodeB Critical',
-  'Tiket NodeB Low',
-  'Tiket NodeB Major',
-  'Tiket NodeB Minor',
-  'Tiket NodeB Premium',
-  'Tiket NodeB Premium Preventive',
-  'Tiket OLO Datin Gamas',
-  'Tiket OLO Datin Non Gamas',
-  'Tiket OLO Datin Quality',
-  'Tiket OLO SL WDM',
-  'Tiket OLO SL WDM Quality',
-  'Tiket Pra SQM Gaul HSI',
-  'Tiket Reguler',
-  'Tiket SIP Trunk',
-  'Tiket SQM Datin',
-  'Tiket SQM HSI',
-  'Tiket WIFI ID',
-  'Tiket Wifi Logic',
-  'UNLOCK ODP',
-  'Unspec DATIN',
-  'Unspec HSI',
-  'Unspec Reguler',
-  'Unspec SITE/NODE-B',
-  'Unspec WIFI',
-  'Validasi Data EBIS',
-  'Validasi Data WIFI',
-  'Validasi Tiang',
-  'Valins FTM',
-  'Valins ODC',
-  'Valins Regular',
-  'WFM',
+  'Aktivasi Cross Connect TDE', 'Aktivasi/Migrasi/Dismantel DCS', 'Aktivasi/Migrasi/Dismantel Digiserve', 'Aktivasi/Migrasi/Dismantel Hypernet', 'Corrective Akses Tower CENTRATAMA', 'Corrective Akses Tower Lintasarta', 'Corrective Akses Tower UMT', 'Corrective Cross Connect TDE', 'Corrective CSA', 'Corrective DCS', 'Corrective Digiserve', 'Corrective Hypernet', 'Corrective MMP', 'Corrective Mitratel', 'Corrective MyRep', 'Corrective NuTech', 'Corrective SNT', 'Corrective SPBU', 'Corrective TBG', 'Corrective Tower POLARIS', 'Corrective Tower TIS', 'DISMANTLING FWA', 'DISMANTLING ONT', 'DISMANTLING PLC', 'DISMANTLING STB', 'DISMANTLING WIFI EXTENDER', 'Dismantling DC Infracare', 'Dismantling NTE B2B', 'EXPAND ODP', 'Inventory SPBU', 'IXSA FTM', 'IXSA ODC', 'IXSA OLT', 'Lapsung (Laporan Langsung)', 'MO/DO Indibiz / Datin', 'MO/DO Indihome', 'PDA PSB Indihome', 'PSB DATIN', 'PSB INDIBIZ', 'PSB MyRep', 'PSB OLO', 'PSB Surge', 'PSB WIFI', 'PT2 Simple', 'Patroli Akses', 'Preventif MMP', 'Preventive Akses Tower CENTRATAMA', 'Preventive Akses Tower Lintasarta', 'Preventive Akses Tower UMT', 'Preventive Asianet', 'Preventive CSA', 'Preventive FIberisasi', 'Preventive NuTech', 'Preventive SPBU', 'Preventive TBG', 'Preventive Tower POLARIS', 'Preventive Tower TIS', 'REPLACEMENT ONT Premium/Dual Band', 'REPLACEMENT STB', 'Relokasi DCS', 'Relokasi Digiserve', 'Relokasi Hypernet', 'Reseller', 'SQM Reguler', 'Tangible ODP HSI Indihome', 'Tangible ODP Tiket Datin Kategori 1', 'Tiket Datin Kategori 2', 'Tiket Datin Kategori 3', 'Tiket FFG DATIN', 'Tiket FFG HSI', 'Tiket FFG WIFI', 'Tiket FFG Indihome', 'Tiket GAMAS', 'Tiket HSI Indibiz', 'Tiket NodeB CNQ (Preventive/Quality)', 'Tiket NodeB Critical', 'Tiket NodeB Low', 'Tiket NodeB Major', 'Tiket NodeB Minor', 'Tiket NodeB Premium', 'Tiket NodeB Premium Preventive', 'Tiket OLO Datin Gamas', 'Tiket OLO Datin Non Gamas', 'Tiket OLO Datin Quality', 'Tiket OLO SL WDM', 'Tiket OLO SL WDM Quality', 'Tiket Pra SQM Gaul HSI', 'Tiket Reguler', 'Tiket SIP Trunk', 'Tiket SQM Datin', 'Tiket SQM HSI', 'Tiket WIFI ID', 'Tiket Wifi Logic', 'UNLOCK ODP', 'Unspec DATIN', 'Unspec HSI', 'Unspec Reguler', 'Unspec SITE/NODE-B', 'Unspec WIFI', 'Validasi Data EBIS', 'Validasi Data WIFI', 'Validasi Tiang', 'Valins FTM', 'Valins ODC', 'Valins Regular', 'WFM'
 ].sort();
+
 
 const typeOrderOptions: Record<string, string[]> = {
     'Tiket Reguler': ['VVIP', 'Diamond', 'Platinum', 'Gold', 'NonHVC', 'HVC_Diamond', 'HVC_Gold', 'HVC_Platinum', 'Reguler'],
@@ -395,6 +291,7 @@ const typeOrderOptions: Record<string, string[]> = {
 
 
 function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, currentUserProfile }: { pelanggan: Pelanggan, isOpen: boolean, onOpenChange: (open: boolean) => void, onFinished: (riwayat: RiwayatGangguan) => void, currentUserProfile: UserProfile | null }) {
+    const { user } = useUser();
     const firestore = useFirestore();
     const { toast } = useToast();
     const [isSaving, setIsSaving] = useState(false);
@@ -427,7 +324,7 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!tanggalLapor || !jenisOrder || !currentUserProfile) {
+        if (!tanggalLapor || !jenisOrder || !currentUserProfile || !user) {
             toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Harap isi Tanggal Lapor dan Jenis Order.' });
             return;
         }
@@ -435,6 +332,7 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
         try {
             const newRiwayatData: Omit<RiwayatGangguan, 'id'> = {
                 pelangganId: pelanggan.id,
+                userId: user.uid,
                 noService: pelanggan.noService,
                 tanggalLapor: Timestamp.fromDate(tanggalLapor),
                 noTiket,

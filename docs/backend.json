@@ -232,6 +232,7 @@
       "properties": {
         "id": { "type": "string" },
         "pelangganId": { "type": "string", "description": "The ID of the customer this history belongs to." },
+        "userId": { "type": "string", "description": "The ID of the user who created this record." },
         "noService": { "type": "string", "description": "The customer's service number." },
         "tanggalLapor": { "type": "string", "format": "date-time", "description": "The date the report was made." },
         "noTiket": { "type": "string", "description": "The incident ticket number (e.g., INC...)." },
@@ -241,7 +242,7 @@
         "typeOrder": { "type": "string", "description": "The specific sub-type of the service order." },
         "keterangan": { "type": "string", "description": "A description of the issue and resolution." }
       },
-      "required": ["id", "noService", "tanggalLapor", "namaPetugas", "nik", "jenisOrder"]
+      "required": ["id", "noService", "tanggalLapor", "namaPetugas", "nik", "jenisOrder", "userId"]
     },
     "NetworkStats": {
       "title": "Network Statistics",
