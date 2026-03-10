@@ -177,6 +177,11 @@ service cloud.firestore {
       allow create: if isApproved() && isCreatingOwn('userId');
     }
 
+    match /cashbook/{transactionId} {
+      allow read: if isApproved();
+      allow write: if isAdmin();
+    }
+
     match /chats/{chatId} {
       // A user can read a chat document if they are a participant.
       allow get: if isSignedIn() && 'participants' in resource.data && request.auth.uid in resource.data.participants;
@@ -211,4 +216,4 @@ service cloud.firestore {
   }
 }
 
-  
+    

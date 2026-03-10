@@ -1,7 +1,8 @@
+
 'use client';
 
 import Link from 'next/link';
-import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home, Network, Search, BarChart3, Map, FolderGit2, Contact, CalendarClock, ClipboardCheck, CalendarOff, UserCircle, Briefcase, Settings, Building, Wrench, CalendarDays, MessageSquare, Upload, Component, Send, FileWarning, FileSpreadsheet, Files } from 'lucide-react';
+import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home, Network, Search, BarChart3, Map, FolderGit2, Contact, CalendarClock, ClipboardCheck, CalendarOff, UserCircle, Briefcase, Settings, Building, Wrench, CalendarDays, MessageSquare, Upload, Component, Send, FileWarning, FileSpreadsheet, Files, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -60,6 +61,7 @@ const adminNavGroups = [
     links: [
       { href: '/dashboard/admin/pids', label: 'Manajemen PID', icon: Tags, access: 'admin' },
       { href: '/dashboard/rekap', label: 'Rekap Pembayaran', icon: Bot, access: 'admin' },
+      { href: '/dashboard/admin/finance/cashbook', label: 'Buku Kas', icon: BookOpen, access: 'admin' },
     ]
   },
   {
@@ -353,3 +355,5 @@ export default function DashboardLayout({
     </div>
   );
 }
+
+    

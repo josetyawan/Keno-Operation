@@ -49,6 +49,17 @@ export type Pendidikan = {
   tahunLulus?: string;
 };
 
+export type CashTransaction = {
+    id: string;
+    type: 'in' | 'out';
+    amount: number;
+    date: Timestamp;
+    description: string;
+    notaIds?: string[];
+    createdBy: string; // user email
+    createdAt: Timestamp;
+};
+
 export type UserProfile = {
     id: string;
     email: string;
@@ -349,3 +360,5 @@ export type Performance = {
 };
 
   
+
+    
