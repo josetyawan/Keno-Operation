@@ -50,7 +50,7 @@ service firebase.storage {
     }
 
     match /pelanggan_photos/{userId}/{allPaths=**} {
-      allow write: if isApproved() && isOwner(userId);
+      allow write: if isOwner(userId);
     }
     
     match /gangguan_evidence/{userId}/{allPaths=**} {
