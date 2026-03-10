@@ -137,6 +137,12 @@ export default function AssuranceRekapPage() {
                     materialQuantities[material.materialName] = material.quantity ?? '';
                 }
             });
+
+            // Auto-calculate Termovit based on Protection Sleeve for export
+            const protectionSleeveQty = materialQuantities['Protection Sleeve'];
+            if (protectionSleeveQty && typeof protectionSleeveQty === 'number' && protectionSleeveQty > 0) {
+                materialQuantities['Termovit (cm)'] = protectionSleeveQty * 15;
+            }
             
             const pelanggan = pelangganMap.get(riwayat.noService);
 
