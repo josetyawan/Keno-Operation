@@ -64,6 +64,11 @@ const getCheckInWindow = (shiftType: Schedule['shiftType']): { start: Date, end:
     let targetHour: number;
 
     switch (shiftType) {
+        case 'h':
+        case 'pu':
+        case 'pb':
+        case 'ptm':
+        case 'pt/bd':
         case 'piket-demak':
         case 'weekend-duty':
         case 'holiday-duty':
