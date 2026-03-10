@@ -296,22 +296,22 @@ const typeOrderOptions: Record<string, string[]> = {
 const layananOptions = ["INTERNET", "VOICE", "USEETV", "WIFI MESH", "WIFI AP", "WIFI-LITE", "OLO", "METRO", "ASTINET", "VPNIP", "DATIN"];
 
 const materialEvidenMap: Record<string, { evidences?: string[], quantity?: boolean, default?: number, inputs?: string[] }> = {
-  "DROPCORE BARU": { evidences: ["eviden marking awal", "eviden marking akhir", "eviden dc", "eviden progres"] },
-  "DROPCORE REFURBISH": { evidences: ["eviden marking awal", "eviden marking akhir", "eviden dc", "eviden progres"] },
-  "ROSET": { evidences: ["eviden foto roset baru", "eviden roset lama", "eviden progres", "eviden saat terpasang"] },
-  "PIGTAIL SC": { evidences: ["eviden foto pigtail baru", "eviden pigtail lama", "eviden progres", "eviden saat terpasang"] },
-  "PATCHCORE 15": { evidences: ["eviden foto pathcore baru", "eviden pathcore lama", "eviden progres", "eviden saat terpasang"] },
-  "PATCHCORE 2 MTR": { evidences: ["eviden foto pathcore baru", "eviden pathcore lama", "eviden progres", "eviden saat terpasang"] },
-  "PATCHCORE 1 MTR": { evidences: ["eviden foto pathcore baru", "eviden pathcore lama", "eviden progres", "eviden saat terpasang"] },
-  "SPLITER 1:2": { evidences: ["eviden foto spliter baru", "eviden spliter lama", "eviden progres", "eviden saat terpasang"] },
-  "SPLITER 1:4": { evidences: ["eviden foto spliter baru", "eviden spliter lama", "eviden progres", "eviden saat terpasang"] },
-  "SPLITER 1:8": { evidences: ["eviden foto spliter baru", "eviden spliter lama", "eviden progres", "eviden saat terpasang"] },
-  "SPLITER 1:16": { evidences: ["eviden foto spliter baru", "eviden spliter lama", "eviden progres", "eviden saat terpasang"] },
+  "DROPCORE BARU": { evidences: ["eviden marking awal", "eviden marking akhir", "eviden dc", "eviden progres"], quantity: true },
+  "DROPCORE REFURBISH": { evidences: ["eviden marking awal", "eviden marking akhir", "eviden dc", "eviden progres"], quantity: true },
+  "ROSET": { evidences: ["eviden foto roset baru", "eviden roset lama", "eviden progres", "eviden saat terpasang"], quantity: true },
+  "PIGTAIL SC": { evidences: ["eviden foto pigtail baru", "eviden pigtail lama", "eviden progres", "eviden saat terpasang"], quantity: true },
+  "PATCHCORE 15": { evidences: ["eviden foto pathcore baru", "eviden pathcore lama", "eviden progres", "eviden saat terpasang"], quantity: true },
+  "PATCHCORE 2 MTR": { evidences: ["eviden foto pathcore baru", "eviden pathcore lama", "eviden progres", "eviden saat terpasang"], quantity: true },
+  "PATCHCORE 1 MTR": { evidences: ["eviden foto pathcore baru", "eviden pathcore lama", "eviden progres", "eviden saat terpasang"], quantity: true },
+  "SPLITER 1:2": { evidences: ["eviden foto spliter baru", "eviden spliter lama", "eviden progres", "eviden saat terpasang"], quantity: true },
+  "SPLITER 1:4": { evidences: ["eviden foto spliter baru", "eviden spliter lama", "eviden progres", "eviden saat terpasang"], quantity: true },
+  "SPLITER 1:8": { evidences: ["eviden foto spliter baru", "eviden spliter lama", "eviden progres", "eviden saat terpasang"], quantity: true },
+  "SPLITER 1:16": { evidences: ["eviden foto spliter baru", "eviden spliter lama", "eviden progres", "eviden saat terpasang"], quantity: true },
   "Termovit (cm)": { evidences: [], quantity: true, default: 15 },
-  "Adapter SC": { evidences: ["eviden foto adaptor baru", "eviden adaptor lama", "eviden progres", "eviden saat terpasang"] },
-  "RJ45": { evidences: ["eviden foto rj45 baru", "eviden rj45 lama", "eviden progres", "eviden saat terpasang"] },
-  "Protection Sleeve": { evidences: ["eviden foto sambung"] },
-  "Splice on Connector": { evidences: ["eviden SOC baru", "eviden progres", "eviden saat terpasang"] },
+  "Adapter SC": { evidences: ["eviden foto adaptor baru", "eviden adaptor lama", "eviden progres", "eviden saat terpasang"], quantity: true },
+  "RJ45": { evidences: ["eviden foto rj45 baru", "eviden rj45 lama", "eviden progres", "eviden saat terpasang"], quantity: true },
+  "Protection Sleeve": { evidences: ["eviden foto sambung"], quantity: true },
+  "Splice on Connector": { evidences: ["eviden SOC baru", "eviden progres", "eviden saat terpasang"], quantity: true },
   "Penarikan Kabel UTP (Mtr)": { evidences: ["eviden marking awal", "eviden marking akhir", "eviden dc", "eviden progres"], quantity: true },
   "ONT": { inputs: ['SN ONT', 'Valins ID'] },
   "STB": { inputs: ['STB ID'] },
@@ -420,8 +420,12 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
             setMaterialDetails(prev => { const newState = { ...prev }; delete newState[materialName]; return newState; });
         } else {
              const materialConfig = materialEvidenMap[materialName];
-             if(materialConfig?.quantity && materialConfig.default) {
-                 setMaterialQuantities(prev => ({...prev, [materialName]: materialConfig.default!}));
+             if(materialConfig?.quantity) {
+                 if (materialConfig.default) {
+                    setMaterialQuantities(prev => ({...prev, [materialName]: materialConfig.default!}));
+                 } else if (!materialName.includes('(cm)') && !materialName.includes('(Mtr)')) {
+                    setMaterialQuantities(prev => ({...prev, [materialName]: 1}));
+                 }
              }
         }
     };
@@ -591,10 +595,16 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
                                     {selectedMaterials[materialName] && (
                                         <div className="mt-4 pl-2 border-l-2 ml-2 space-y-4">
                                             {config.quantity && (
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div className="grid gap-2"><Label htmlFor={`qty-${materialName}`}>Jumlah ({materialName.split('(')[1]}</Label>
-                                                        <Input id={`qty-${materialName}`} type="number" value={materialQuantities[materialName] ?? ''} onChange={e => setMaterialQuantities(prev => ({...prev, [materialName]: Number(e.target.value)}))} />
-                                                    </div>
+                                                <div className="grid gap-2">
+                                                    <Label htmlFor={`qty-${materialName}`}>Jumlah</Label>
+                                                    <Input 
+                                                        id={`qty-${materialName}`} 
+                                                        type="number"
+                                                        placeholder="Jumlah"
+                                                        value={materialQuantities[materialName] ?? ''}
+                                                        onChange={e => setMaterialQuantities(prev => ({...prev, [materialName]: Number(e.target.value)}))}
+                                                        className="w-32"
+                                                    />
                                                 </div>
                                             )}
                                             {config.inputs && config.inputs.map(inputLabel => (
@@ -1376,6 +1386,7 @@ export default function AdminPelangganPage() {
     </>
   );
 }
+
 
 
 
