@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -32,6 +30,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 
@@ -297,4 +296,3 @@ export default function RiwayatDetailPage() {
     </div>
   );
 }
-
