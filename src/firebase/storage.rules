@@ -58,7 +58,7 @@ service firebase.storage {
     }
     
      match /gangguan_evidence/{userId}/{allPaths=**} {
-      allow write: if isApproved() && isOwner(userId);
+      allow write: if isSignedIn() && isOwner(userId);
     }
   }
 }

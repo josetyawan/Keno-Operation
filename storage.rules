@@ -64,5 +64,9 @@ service firebase.storage {
     match /alker-photos/{userId}/{allPaths=**} {
        allow write: if isApproved() && isOwner(userId);
     }
+
+    match /gangguan_evidence/{userId}/{allPaths=**} {
+      allow write: if isSignedIn() && isOwner(userId);
+    }
   }
 }
