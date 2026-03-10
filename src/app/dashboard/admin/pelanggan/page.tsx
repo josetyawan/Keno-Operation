@@ -488,7 +488,7 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
             
             const processedMaterials = await Promise.all(materialEvidencePromises);
 
-            const newRiwayatData: Omit<RiwayatGangguan, 'id'> & { typeOrder?: string } = {
+            const newRiwayatData: Omit<RiwayatGangguan, 'id'> = {
                 pelangganId: pelanggan.id,
                 userId: user.uid,
                 noService: pelanggan.noService,
@@ -503,16 +503,20 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
                 tanggalClose: tanggalClose ? Timestamp.fromDate(new Date(tanggalClose)) : null,
                 layanan: selectedLayanan,
                 materials: processedMaterials,
-                evidenSccUrl: evidenSccUrl,
                 dorongClose: dorongClose,
             };
             
-            if (showTypeOrder) {
-                newRiwayatData.typeOrder = typeOrder;
+            const dataToSave: any = { ...newRiwayatData };
+
+            if (showTypeOrder && typeOrder) {
+                dataToSave.typeOrder = typeOrder;
+            }
+            if (evidenSccUrl) {
+                dataToSave.evidenSccUrl = evidenSccUrl;
             }
 
-            const docRef = await addDoc(collection(firestore, 'riwayat-gangguan'), newRiwayatData);
-            onFinished({ id: docRef.id, ...newRiwayatData } as RiwayatGangguan);
+            const docRef = await addDoc(collection(firestore, 'riwayat-gangguan'), dataToSave);
+            onFinished({ id: docRef.id, ...dataToSave } as RiwayatGangguan);
             toast({ title: 'Laporan Gangguan Disimpan' });
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Gagal menyimpan', description: error.message });
@@ -1464,6 +1468,7 @@ export default function AdminPelangganPage() {
     </>
   );
 }
+
 
 
 
