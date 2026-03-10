@@ -190,12 +190,12 @@ function NewPelangganDialog({ isOpen, onOpenChange, onFinished }: { isOpen: bool
                 alamat,
                 nomorTelepon: nomorTelepon ? [nomorTelepon] : [],
                 koordinat,
+                fotoCpUrl,
                 serviceArea,
                 sto: sto,
                 odpName: odpName.trim(),
                 odpPort: odpPort.trim(),
                 odpQRCodeUrl: odpQRCodeUrl.trim(),
-                // fotoCpUrl,
                 dateAdded: serverTimestamp(),
                 lastEditedBy: user.email,
                 lastEditedDate: serverTimestamp(),
@@ -329,8 +329,8 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
     const [isSaving, setIsSaving] = useState(false);
     
     // Form state
-    const [tanggalOpen, setTanggalOpen] = useState<string>(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
-    const [tanggalClose, setTanggalClose] = useState<string>('');
+    const [tanggalOpen, setTanggalOpen] = useState<Date | undefined>(new Date());
+    const [tanggalClose, setTanggalClose] = useState<Date | undefined>();
     const [tanggalLapor] = useState<Date>(new Date());
     const [noTiket, setNoTiket] = useState('');
     const [jenisOrder, setJenisOrder] = useState('');
@@ -349,8 +349,8 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
     
     useEffect(() => {
         if (!isOpen) {
-            setTanggalOpen(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
-            setTanggalClose('');
+            setTanggalOpen(new Date());
+            setTanggalClose(undefined);
             setNoTiket('');
             setJenisOrder('');
             setTypeOrder('');
@@ -514,11 +514,11 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                          <div className="grid gap-2">
                             <Label htmlFor="tanggal-open">Tanggal Open *</Label>
-                            <Input id="tanggal-open" type="datetime-local" value={tanggalOpen} onChange={e => setTanggalOpen(e.target.value)} required />
+                            <Input id="tanggal-open" type="datetime-local" value={tanggalOpen ? format(tanggalOpen, "yyyy-MM-dd'T'HH:mm") : ''} onChange={e => setTanggalOpen(new Date(e.target.value))} required />
                           </div>
                           <div className="grid gap-2">
                             <Label htmlFor="tanggal-close">Tanggal Close</Label>
-                            <Input id="tanggal-close" type="datetime-local" value={tanggalClose} onChange={e => setTanggalClose(e.target.value)} />
+                            <Input id="tanggal-close" type="datetime-local" value={tanggalClose ? format(tanggalClose, "yyyy-MM-dd'T'HH:mm") : ''} onChange={e => setTanggalClose(new Date(e.target.value))} />
                           </div>
                           <div className="grid gap-2">
                             <Label htmlFor="riwayat-tiket">No. Tiket</Label>
@@ -1236,46 +1236,62 @@ export default function AdminPelangganPage() {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <dl className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-6 text-sm">
-                        <div className="flex flex-col"><dt className="text-muted-foreground">No. Service</dt><dd className="font-bold text-base">{searchedPelanggan.noService}</dd></div>
-                        <div className="flex flex-col"><dt className="text-muted-foreground">Nama</dt><dd className="font-semibold">{searchedPelanggan.namaPelanggan}</dd></div>
-                        <div className="flex flex-col"><dt className="text-muted-foreground">Service Area</dt><dd>{searchedPelanggan.serviceArea}</dd></div>
-                        <div className="flex flex-col md:col-span-2"><dt className="text-muted-foreground">Alamat</dt><dd>{searchedPelanggan.alamat || '-'}</dd></div>
-                        <div className="flex flex-col"><dt className="text-muted-foreground">No. Telepon</dt>
-                            <dd className="flex flex-col gap-1">
-                                {(Array.isArray(searchedPelanggan.nomorTelepon) ? searchedPelanggan.nomorTelepon : [searchedPelanggan.nomorTelepon]).filter(Boolean).map((phone, i) => (
-                                    <a key={i} href={formatWaNumber(phone as string)} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">{phone}</a>
-                                ))}
-                            </dd>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="lg:col-span-2">
+                            <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6 text-sm">
+                                <div className="flex flex-col"><dt className="text-muted-foreground">No. Service</dt><dd className="font-bold text-base">{searchedPelanggan.noService}</dd></div>
+                                <div className="flex flex-col"><dt className="text-muted-foreground">Nama</dt><dd className="font-semibold">{searchedPelanggan.namaPelanggan}</dd></div>
+                                <div className="flex flex-col"><dt className="text-muted-foreground">Service Area</dt><dd>{searchedPelanggan.serviceArea}</dd></div>
+                                <div className="flex flex-col md:col-span-2"><dt className="text-muted-foreground">Alamat</dt><dd>{searchedPelanggan.alamat || '-'}</dd></div>
+                                <div className="flex flex-col"><dt className="text-muted-foreground">No. Telepon</dt>
+                                    <dd className="flex flex-col gap-1">
+                                        {(Array.isArray(searchedPelanggan.nomorTelepon) ? searchedPelanggan.nomorTelepon : [searchedPelanggan.nomorTelepon]).filter(Boolean).map((phone, i) => (
+                                            <a key={i} href={formatWaNumber(phone as string)} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">{phone}</a>
+                                        ))}
+                                    </dd>
+                                </div>
+                                <div className="flex flex-col"><dt className="text-muted-foreground">Koordinat</dt>
+                                    <dd>
+                                        <Link href={`https://www.google.com/maps/search/?api=1&query=${searchedPelanggan.koordinat}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
+                                            {searchedPelanggan.koordinat} <MapPin className="h-4 w-4" />
+                                        </Link>
+                                    </dd>
+                                </div>
+                                <div className="flex flex-col"><dt className="text-muted-foreground">ODP Terhubung</dt><dd>{searchedPelanggan.odpName || '-'}</dd></div>
+                                <div className="flex flex-col"><dt className="text-muted-foreground">Port ODP</dt><dd>{searchedPelanggan.odpPort || '-'}</dd></div>
+                                <div className="flex flex-col"><dt className="text-muted-foreground">STO</dt><dd className="font-medium">{searchedPelanggan.sto || '-'}</dd></div>
+                                <div className="flex flex-col"><dt className="text-muted-foreground">QR Code ODP</dt>
+                                    <dd>
+                                        {searchedPelanggan.odpQRCodeUrl ? (
+                                            <Link href={searchedPelanggan.odpQRCodeUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
+                                                <QrCode className="h-4 w-4" /> Lihat QR Code
+                                            </Link>
+                                        ) : '-'}
+                                    </dd>
+                                </div>
+                                {searchedPelanggan.lastEditedBy && safeToDate(searchedPelanggan.lastEditedDate) && (
+                                    <div className="flex flex-col md:col-span-2 border-t pt-4 mt-2">
+                                        <dt className="text-muted-foreground">Terakhir Diubah</dt>
+                                        <dd>
+                                            Oleh {searchedPelanggan.lastEditedBy} pada {format(safeToDate(searchedPelanggan.lastEditedDate)!, 'd MMM yyyy, HH:mm', { locale: idLocale })}
+                                        </dd>
+                                    </div>
+                                )}
+                            </dl>
                         </div>
-                        <div className="flex flex-col"><dt className="text-muted-foreground">Koordinat</dt>
-                            <dd>
-                                <Link href={`https://www.google.com/maps/search/?api=1&query=${searchedPelanggan.koordinat}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
-                                    {searchedPelanggan.koordinat} <MapPin className="h-4 w-4" />
-                                </Link>
-                            </dd>
+                        <div className="lg:col-span-1">
+                            <Label>Foto Lokasi</Label>
+                            {searchedPelanggan.fotoCpUrl ? (
+                                <div className="mt-2 relative aspect-[4/3] w-full rounded-md overflow-hidden border">
+                                    <Image src={searchedPelanggan.fotoCpUrl} alt={`Foto lokasi ${searchedPelanggan.namaPelanggan}`} fill className="object-cover" />
+                                </div>
+                            ) : (
+                                <div className="mt-2 flex text-sm flex-col items-center justify-center h-48 rounded-md border border-dashed text-muted-foreground">
+                                    <span>Tidak ada foto lokasi</span>
+                                </div>
+                            )}
                         </div>
-                         <div className="flex flex-col"><dt className="text-muted-foreground">ODP Terhubung</dt><dd>{searchedPelanggan.odpName || '-'}</dd></div>
-                         <div className="flex flex-col"><dt className="text-muted-foreground">Port ODP</dt><dd>{searchedPelanggan.odpPort || '-'}</dd></div>
-                         <div className="flex flex-col"><dt className="text-muted-foreground">STO</dt><dd className="font-medium">{searchedPelanggan.sto || '-'}</dd></div>
-                         <div className="flex flex-col"><dt className="text-muted-foreground">QR Code ODP</dt>
-                            <dd>
-                                {searchedPelanggan.odpQRCodeUrl ? (
-                                    <Link href={searchedPelanggan.odpQRCodeUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
-                                        <QrCode className="h-4 w-4" /> Lihat QR Code
-                                    </Link>
-                                ) : '-'}
-                            </dd>
-                         </div>
-                        {searchedPelanggan.lastEditedBy && safeToDate(searchedPelanggan.lastEditedDate) && (
-                            <div className="flex flex-col md:col-span-3 border-t pt-4 mt-2">
-                                <dt className="text-muted-foreground">Terakhir Diubah</dt>
-                                <dd>
-                                    Oleh {searchedPelanggan.lastEditedBy} pada {format(safeToDate(searchedPelanggan.lastEditedDate)!, 'd MMM yyyy, HH:mm', { locale: idLocale })}
-                                </dd>
-                            </div>
-                         )}
-                    </dl>
+                    </div>
                 </CardContent>
               </Card>
 

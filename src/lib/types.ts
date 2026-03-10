@@ -179,6 +179,7 @@ export type Pelanggan = {
   alamat?: string;
   nomorTelepon?: string[] | string;
   koordinat: string;
+  fotoCpUrl?: string;
   serviceArea: string;
   sto?: string;
   dateAdded: any;
