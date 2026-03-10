@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -28,6 +27,7 @@ const navLinks = [
   { href: '/dashboard/chat', label: 'Chat', icon: MessageSquare, access: 'public' },
   { href: '/dashboard/nota', label: 'Laporan Nota', icon: LayoutGrid, access: 'nota' },
   { href: '/dashboard/gamas', label: 'Laporan Gamas', icon: FileWarning, access: 'allpro' },
+  { href: '/dashboard/other-works/new', label: 'Input Pekerjaan Lain', icon: Briefcase, access: 'allpro' },
   { href: '/dashboard/search-assets', label: 'Network Cek', icon: Search, access: 'allpro' },
   { href: '/dashboard/allpro', label: 'Network Service Area', icon: BarChart3, access: 'allpro' },
   { href: '/dashboard/hr/performance', label: 'Performa Teknisi', icon: BarChart3, access: 'public' },
@@ -353,5 +353,3 @@ export default function DashboardLayout({
     </div>
   );
 }
-
-  
