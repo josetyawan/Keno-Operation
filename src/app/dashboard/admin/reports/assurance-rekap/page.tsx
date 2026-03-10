@@ -10,12 +10,13 @@ import { format, startOfDay, endOfDay } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import type { RiwayatGangguan, UserProfile, Pelanggan } from '@/lib/types';
 import { useRouter } from 'next/navigation';
-import { Calendar as CalendarIcon, FileSpreadsheet, Loader2 } from 'lucide-react';
+import { Calendar as CalendarIcon, FileSpreadsheet, Loader2, Files } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import type { DateRange } from 'react-day-picker';
 import * as XLSX from 'xlsx';
+import Link from 'next/link';
 
 const safeToDate = (timestamp: any): Date | null => {
     if (!timestamp) return null;
@@ -194,7 +195,7 @@ export default function AssuranceRekapPage() {
                 <CardHeader>
                     <CardTitle>Filter Periode Laporan</CardTitle>
                 </CardHeader>
-                <CardContent className="flex items-center gap-4">
+                <CardContent className="flex flex-wrap items-center gap-4">
                      <Popover>
                         <PopoverTrigger asChild>
                             <Button
@@ -231,10 +232,18 @@ export default function AssuranceRekapPage() {
                             />
                         </PopoverContent>
                     </Popover>
-                    <Button onClick={handleExport} disabled={isExporting || areRiwayatLoading || !riwayatList || riwayatList.length === 0}>
-                        {(isExporting || areRiwayatLoading) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-2 h-4 w-4" />}
-                        Export ke Excel
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                        <Button onClick={handleExport} disabled={isExporting || areRiwayatLoading || !riwayatList || riwayatList.length === 0}>
+                            {(isExporting || areRiwayatLoading) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-2 h-4 w-4" />}
+                            Export ke Excel
+                        </Button>
+                        <Button asChild variant="secondary">
+                            <Link href="/dashboard/export/gangguan">
+                                <Files className="mr-2 h-4 w-4" />
+                                Buat Rekap Eviden (DOCX)
+                            </Link>
+                        </Button>
+                    </div>
                 </CardContent>
             </Card>
 

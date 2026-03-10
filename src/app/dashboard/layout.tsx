@@ -79,7 +79,6 @@ const adminNavGroups = [
       { href: '/dashboard/admin/inventory/orbit', label: 'Inventory Orbit', icon: Component, access: 'admin' },
       { href: '/dashboard/admin/broadcast', label: 'Broadcast Pesan', icon: Send, access: 'admin' },
       { href: '/dashboard/admin/reports/assurance-rekap', label: 'Rekap Assurance', icon: FileSpreadsheet, access: 'korlap' },
-      { href: '/dashboard/export/gangguan', label: 'Rekap Eviden Gangguan', icon: Files, access: 'korlap' },
     ]
   }
 ];
