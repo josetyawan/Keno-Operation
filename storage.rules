@@ -50,9 +50,7 @@ service firebase.storage {
     }
 
     match /pelanggan_photos/{userId}/{allPaths=**} {
-      // Simplified rule: Any signed-in user can write to their own folder.
-      // The corresponding Firestore write rule for the 'pelanggan' document provides the main security gate.
-      allow write: if isSignedIn() && isOwner(userId);
+      allow write: if isSignedIn();
     }
     
     match /gangguan_evidence/{userId}/{allPaths=**} {
