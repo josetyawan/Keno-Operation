@@ -79,6 +79,21 @@ const getProjectType = (segmen: string): ProjectType => {
     return 'Lainnya';
 };
 
+const getGeneralReportName = (segmen: string): string => {
+    const cleanedSegmen = segmen.toLowerCase();
+
+    if (cleanedSegmen.includes('bbm r2')) return 'BBM R2 Operasional';
+    if (cleanedSegmen.includes('bbm r4')) return 'BBM R4 Operasional';
+    if (cleanedSegmen.includes('jasa') || cleanedSegmen.includes('pengiriman')) return 'Jasa Ekspedisi (POS/JNE/J&T dll)';
+    if (cleanedSegmen.includes('konsumsi')) return 'Konsumsi';
+    if (cleanedSegmen.includes('material non stok')) return 'Pembelian Material Non Stok';
+    if (cleanedSegmen.includes('atk')) return 'Perincian Nota ATK';
+    if (cleanedSegmen.includes('pantry')) return 'ISI PANTRY';
+    
+    return segmen; // Fallback to the original segment name
+};
+
+
 const getStatusVariant = (status: Nota['status']): VariantProps<typeof badgeVariants>['variant'] => {
     switch (status) {
         case 'verified':
@@ -116,25 +131,15 @@ const konsumsiSegments = [
     'Konsumsi UT B2B IOAN', 'Konsumsi UT PROVISIONING',
     'Konsumsi Lembur B2B IOAN', 'Konsumsi Lembur PROVISIONING',
 ];
-const individualMaterialSegments = [
+const materialNonStokSegments = [
     'Pembelian Material Non stok B2B IOAN',
     'Pembelian Material Non stok PROVISIONING',
-    'Perincian Nota ATK',
-    'BBM Genset',
-    'MATERIAL SPPG',
-    'ISI PANTRY',
 ];
+const atkSegments = ['Perincian Nota ATK'];
+const pantrySegments = ['ISI PANTRY'];
+const bbmGensetSegments = ['BBM Genset'];
+const sppgSegments = ['MATERIAL SPPG'];
 
-const getKeteranganForSegmen = (segmen: string): string => {
-    if (segmen.startsWith('BBM R2')) return 'BBM R2 Operasional';
-    if (segmen.startsWith('BBM R4')) return 'BBM R4 Operasional';
-    if (jasaSegments.includes(segmen)) return 'Jasa Ekspedisi (POS/JNE/J&T dll)';
-    if (konsumsiSegments.includes(segmen)) return 'Konsumsi';
-    if (segmen === 'Perincian Nota ATK') return 'ATK';
-    if (segmen === 'ISI PANTRY') return 'Isi Pantry';
-    if (segmen.includes('Pembelian Material Non stok')) return 'Pembelian Material Non Stok';
-    return segmen; // Fallback to original segment name if no specific group
-};
 
 // --- Report Generation Logic ---
 
@@ -153,7 +158,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
     const idProjectForSummary = pids.find(p => p.projectType.toLowerCase() === projectType.toLowerCase())?.pid || (projectType === 'BBM GENSET' ? 'Ditagihkan ke Unit Lain' : '-');
 
     const groupedByKeterangan = notas.reduce((acc, nota) => {
-        const key = getKeteranganForSegmen(nota.segmen);
+        const key = getGeneralReportName(nota.segmen);
         if (!acc[key]) {
             acc[key] = { total: 0, firstNota: nota };
         }
@@ -361,7 +366,7 @@ const generateImprestFundCover = (notas: Nota[], serviceArea: string, projectTyp
 
 const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectType: ProjectType, pids: ProjectID[]): string => {
     const groupedByKeterangan = notas.reduce((acc, nota) => {
-        const key = getKeteranganForSegmen(nota.segmen);
+        const key = getGeneralReportName(nota.segmen);
         if (!acc[key]) {
             acc[key] = { items: [], total: 0 };
         }
@@ -1263,11 +1268,12 @@ export default function ExportPage() {
                 const jasaData = jasaNotas.map((nota, index) => ({
                      'No': index + 1,
                     'Tanggal': safeToDate(nota.tanggal) ? format(safeToDate(nota.tanggal)!, 'dd/MM/yyyy') : '-',
-                    'Nama Toko/Warung': nota.namaBarang || '-',
-                    'Keterangan': nota.keterangan || nota.namaBarang || '-',
+                    'Uraian': nota.namaBarang || '-',
                     'DPP': nota.nominal / 1.02,
                     'PPH 2%': nota.nominal - (nota.nominal / 1.02),
                     'Jumlah': nota.nominal,
+                    'Keterangan': nota.keterangan || '-',
+                    'Nama PIC': nota.namaPic,
                 }));
                  const wsJasa = XLSX.utils.json_to_sheet(jasaData);
                 XLSX.utils.book_append_sheet(wb, wsJasa, '4. Detail Jasa');
@@ -1280,9 +1286,10 @@ export default function ExportPage() {
                 const materialData = materialNotas.map((nota, index) => ({
                      'No': index + 1,
                     'Tanggal': safeToDate(nota.tanggal) ? format(safeToDate(nota.tanggal)!, 'dd/MM/yyyy') : '-',
-                    'Nama Toko/Warung': nota.namaBarang || '-',
+                    'Uraian': nota.namaBarang || '-',
                     'Keterangan': nota.keterangan || '-',
                     'Jumlah': nota.nominal,
+                    'Nama PIC': nota.namaPic,
                 }));
                 const wsMaterial = XLSX.utils.json_to_sheet(materialData);
                 XLSX.utils.book_append_sheet(wb, wsMaterial, '5. Detail Material');
@@ -1312,7 +1319,7 @@ export default function ExportPage() {
                     'No Plat Kendaraan': nota.noPlatKendaraan || '-',
                     'KM Awal': nota.kmAwal || '-',
                     'KM Akhir': nota.kmAkhir || '-',
-                    'Nama Toko/Warung': nota.namaBarang || '-',
+                    'Uraian': nota.namaBarang || '-',
                     'Keterangan': nota.keterangan || '-',
                     'Foto 1': fotoUrls[0] || '-',
                     'Foto 2': fotoUrls[1] || '-',
@@ -1376,7 +1383,7 @@ export default function ExportPage() {
                 const reportSA = selectedSA === 'all' ? 'SEMUA SA' : selectedSA;
                 const saTitlePart = reportSA === 'SEMUA SA' ? 'SEMUA SA' : `SA ${reportSA.replace('SA ', '')}`;
                 
-                // Landscape pages (Cover)
+                // --- Cover (Landscape) ---
                 if (orientation === 'landscape' || orientation === 'all') {
                     if (projectType !== 'BBM GENSET') {
                         const coverHtml = generateImprestFundCover(notasForProject, reportSA, projectType, pids || []);
@@ -1384,7 +1391,7 @@ export default function ExportPage() {
                     }
                 }
 
-                // Portrait pages (Details)
+                // --- Details (Portrait) ---
                 if (orientation === 'portrait' || orientation === 'all') {
                     const rekapHtml = generateRekapitulasiReport(notasForProject, reportSA, projectType, pids || []);
                     pages.push({ html: rekapHtml, orientation: 'portrait' });
@@ -1420,12 +1427,44 @@ export default function ExportPage() {
                          pages.push({ html: generateSimpleEvidenReport(konsumsiNotas, evidenTitle), orientation: 'portrait' });
                     }
                     
-                    const materialAndOtherNotas = notasForProject.filter(n => individualMaterialSegments.includes(n.segmen));
-                     if (materialAndOtherNotas.length > 0) {
-                        const title = `Perincian Nota Material & Lainnya<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        pages.push({ html: generateMaterialReport(materialAndOtherNotas, title), orientation: 'portrait' });
-                        const evidenTitle = `Eviden Nota Material & Lainnya<br/>Pekerjaan : Operasional ${saTitlePart}`;
-                        pages.push({ html: generateSimpleEvidenReport(materialAndOtherNotas, evidenTitle), orientation: 'portrait' });
+                    const materialNotas = notasForProject.filter(n => materialNonStokSegments.includes(n.segmen));
+                    if (materialNotas.length > 0) {
+                        const title = `Perincian Nota Material Non Stok<br/>Pekerjaan : Operasional ${saTitlePart}`;
+                        pages.push({ html: generateMaterialReport(materialNotas, title), orientation: 'portrait' });
+                        const evidenTitle = `Eviden Nota Material Non Stok<br/>Pekerjaan : Operasional ${saTitlePart}`;
+                        pages.push({ html: generateSimpleEvidenReport(materialNotas, evidenTitle), orientation: 'portrait' });
+                    }
+                    
+                    const atkNotas = notasForProject.filter(n => atkSegments.includes(n.segmen));
+                    if (atkNotas.length > 0) {
+                        const title = `Perincian Nota ATK<br/>Pekerjaan : Operasional ${saTitlePart}`;
+                        pages.push({ html: generateMaterialReport(atkNotas, title), orientation: 'portrait' });
+                        const evidenTitle = `Eviden Nota ATK<br/>Pekerjaan : Operasional ${saTitlePart}`;
+                        pages.push({ html: generateSimpleEvidenReport(atkNotas, evidenTitle), orientation: 'portrait' });
+                    }
+
+                    const pantryNotas = notasForProject.filter(n => pantrySegments.includes(n.segmen));
+                    if (pantryNotas.length > 0) {
+                        const title = `Perincian Nota Isi Pantry<br/>Pekerjaan : Operasional ${saTitlePart}`;
+                        pages.push({ html: generateMaterialReport(pantryNotas, title), orientation: 'portrait' });
+                        const evidenTitle = `Eviden Nota Isi Pantry<br/>Pekerjaan : Operasional ${saTitlePart}`;
+                        pages.push({ html: generateSimpleEvidenReport(pantryNotas, evidenTitle), orientation: 'portrait' });
+                    }
+
+                    const gensetNotas = notasForProject.filter(n => bbmGensetSegments.includes(n.segmen));
+                    if (gensetNotas.length > 0) {
+                        const title = `Perincian Nota BBM Genset<br/>Pekerjaan : Operasional ${saTitlePart}`;
+                        pages.push({ html: generateMaterialReport(gensetNotas, title), orientation: 'portrait' });
+                        const evidenTitle = `Eviden Nota BBM Genset<br/>Pekerjaan : Operasional ${saTitlePart}`;
+                        pages.push({ html: generateSimpleEvidenReport(gensetNotas, evidenTitle), orientation: 'portrait' });
+                    }
+
+                    const sppgNotas = notasForProject.filter(n => sppgSegments.includes(n.segmen));
+                    if (sppgNotas.length > 0) {
+                        const title = `Perincian Nota MATERIAL SPPG<br/>Pekerjaan : Operasional ${saTitlePart}`;
+                        pages.push({ html: generateMaterialReport(sppgNotas, title), orientation: 'portrait' });
+                        const evidenTitle = `Eviden Nota MATERIAL SPPG<br/>Pekerjaan : Operasional ${saTitlePart}`;
+                        pages.push({ html: generateSimpleEvidenReport(sppgNotas, evidenTitle), orientation: 'portrait' });
                     }
                 }
             }
