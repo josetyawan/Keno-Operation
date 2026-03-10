@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -277,29 +278,69 @@ function NewPelangganDialog({ isOpen, onOpenChange, onFinished }: { isOpen: bool
     );
 }
 
-function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished }: { pelanggan: Pelanggan, isOpen: boolean, onOpenChange: (open: boolean) => void, onFinished: (riwayat: RiwayatGangguan) => void }) {
+const jenisOrderOptions = [
+  "Aktivasi Cross Connect TDE", "Aktivasi/Migrasi/Dismantel DCS", "Aktivasi/Migrasi/Dismantel Digiserve", "Aktivasi/Migrasi/Dismantel Hypernet",
+  "Corrective Akses Tower CENTRATAMA", "Corrective Akses Tower Lintasarta", "Corrective Akses Tower UMT", "Corrective Cross Connect TDE",
+  "Corrective CSA", "Corrective DCS", "Corrective Digiserve", "Corrective Hypernet", "Corrective Mitratel", "Corrective MMP", "Corrective MyRep",
+  "Corrective NuTech", "Corrective SNT", "Corrective SPBU", "Corrective TBG", "Corrective Tower POLARIS", "Corrective Tower TIS",
+  "DISMANTLING FWA", "DISMANTLING ONT", "DISMANTLING PLC", "DISMANTLING STB", "DISMANTLING WIFI EXTENDER", "Dismantling DC Infracare",
+  "Dismantling NTE B2B", "EXPAND ODP", "Inventory SPBU", "IXSA FTM", "IXSA ODC", "IXSA OLT", "Lapsung (Laporan Langsung)",
+  "MO/DO Indibiz / Datin", "MO/DO Indihome", "PDA PSB Indihome", "PSB INDIBIZ", "PSB MyRep", "PSB OLO", "PSB Surge", "PSB WIFI",
+  "PT2 Simple", "Patroli Akses", "Preventif MMP", "Preventive Akses Tower CENTRATAMA", "Preventive Akses Tower Lintasarta",
+  "Preventive Akses Tower UMT", "Preventive Asianet", "Preventive CSA", "Preventive FIberisasi", "Preventive NuTech", "Preventive SPBU",
+  "Preventive TBG", "Preventive Tower POLARIS", "Preventive Tower TIS", "REPLACEMENT ONT Premium/Dual Band", "REPLACEMENT STB",
+  "Relokasi DCS", "Relokasi Digiserve", "Relokasi Hypernet", "Reseller", "SQM Reguler", "Tangible ODP HSI Indihome",
+  "Tangible ODP Tiket Datin", "Tiket Datin Kategori 1", "Tiket Datin Kategori 2", "Tiket Datin Kategori 3", "Tiket FFG DATIN",
+  "Tiket FFG HSI", "Tiket FFG Indihome", "Tiket FFG WIFI", "Tiket GAMAS", "Tiket HSI Indibiz", "Tiket NodeB CNQ (Preventive/Quality)",
+  "Tiket NodeB Critical", "Tiket NodeB Low", "Tiket NodeB Major", "Tiket NodeB Minor", "Tiket NodeB Premium",
+  "Tiket NodeB Premium Preventive", "Tiket OLO Datin Gamas", "Tiket OLO Datin Non Gamas", "Tiket OLO Datin Quality",
+  "Tiket OLO SL WDM", "Tiket OLO SL WDM Quality", "Tiket Pra SQM Gaul HSI", "Tiket Reguler", "Tiket SIP Trunk", "Tiket SQM Datin",
+  "Tiket SQM HSI", "Tiket WIFI ID", "Tiket Wifi Logic", "UNLOCK ODP", "Unspec DATIN", "Unspec HSI", "Unspec Reguler", "Unspec SITE/NODE-B",
+  "Unspec WIFI", "Validasi Data EBIS", "Validasi Data WIFI", "Validasi Tiang", "Valins FTM", "Valins ODC", "Valins Regular", "WFM"
+].sort();
+
+const typeOrderOptions: Record<string, string[]> = {
+    'Tiket Reguler': ['VVIP', 'Diamond', 'Platinum', 'Gold', 'NonHVC', 'HVC_Diamond', 'HVC_Gold', 'HVC_Platinum', 'Reguler'],
+    'SQM Reguler': ['Workhours', 'NonWorkhours'],
+    'Tiket GAMAS': ['DISTRIBUSI', 'FEEDER', 'ODC', 'ODP'],
+};
+
+
+function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, currentUserProfile }: { pelanggan: Pelanggan, isOpen: boolean, onOpenChange: (open: boolean) => void, onFinished: (riwayat: RiwayatGangguan) => void, currentUserProfile: UserProfile | null }) {
     const firestore = useFirestore();
     const { toast } = useToast();
     const [isSaving, setIsSaving] = useState(false);
     
     const [tanggalLapor, setTanggalLapor] = useState<Date | undefined>(new Date());
     const [noTiket, setNoTiket] = useState('');
-    const [teknisi, setTeknisi] = useState('');
+    const [jenisOrder, setJenisOrder] = useState('');
+    const [typeOrder, setTypeOrder] = useState('');
     const [keterangan, setKeterangan] = useState('');
-
+    
+    const showTypeOrder = useMemo(() => Object.keys(typeOrderOptions).includes(jenisOrder), [jenisOrder]);
+    
     useEffect(() => {
         if (!isOpen) {
             setTanggalLapor(new Date());
             setNoTiket('');
-            setTeknisi('');
+            setJenisOrder('');
+            setTypeOrder('');
             setKeterangan('');
         }
     }, [isOpen]);
 
+    useEffect(() => {
+        // Reset typeOrder when jenisOrder changes and its not applicable
+        if (!showTypeOrder) {
+            setTypeOrder('');
+        }
+    }, [jenisOrder, showTypeOrder]);
+
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!tanggalLapor) {
-            toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Harap isi tanggal laporan.' });
+        if (!tanggalLapor || !jenisOrder || !currentUserProfile) {
+            toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Harap isi Tanggal Lapor dan Jenis Order.' });
             return;
         }
         setIsSaving(true);
@@ -309,7 +350,10 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished }: { pel
                 noService: pelanggan.noService,
                 tanggalLapor: Timestamp.fromDate(tanggalLapor),
                 noTiket,
-                teknisi,
+                namaPetugas: currentUserProfile.displayName || currentUserProfile.email,
+                nik: currentUserProfile.nik || '',
+                jenisOrder: jenisOrder,
+                typeOrder: showTypeOrder ? typeOrder : undefined,
                 keterangan,
             };
             const docRef = await addDoc(collection(firestore, 'riwayat-gangguan'), newRiwayatData);
@@ -324,34 +368,66 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished }: { pel
     
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[500px]">
+            <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
                     <DialogTitle>Input Laporan Gangguan</DialogTitle>
                     <DialogDescription>Catat laporan gangguan baru untuk {pelanggan.namaPelanggan}.</DialogDescription>
                 </DialogHeader>
-                 <form onSubmit={handleSubmit} className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="riwayat-tanggal">Tanggal Lapor *</Label>
-                     <Popover>
-                        <PopoverTrigger asChild>
-                            <Button variant={'outline'} className={cn('w-full justify-start text-left font-normal', !tanggalLapor && 'text-muted-foreground')}>
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {tanggalLapor ? format(tanggalLapor, 'PPP', {locale: idLocale}) : <span>Pilih tanggal</span>}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                            <Calendar mode="single" selected={tanggalLapor} onSelect={setTanggalLapor} initialFocus />
-                        </PopoverContent>
-                    </Popover>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="riwayat-tiket">No. Tiket</Label>
-                    <Input id="riwayat-tiket" value={noTiket} onChange={(e) => setNoTiket(e.target.value)} placeholder="Contoh: INC123..." />
-                  </div>
-                   <div className="grid gap-2">
-                    <Label htmlFor="riwayat-teknisi">Teknisi</Label>
-                    <Input id="riwayat-teknisi" value={teknisi} onChange={(e) => setTeknisi(e.target.value)} placeholder="Nama teknisi yang menangani" />
-                  </div>
+                 <form onSubmit={handleSubmit} className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                            <Label>NIK Petugas</Label>
+                            <Input value={currentUserProfile?.nik || ''} disabled />
+                        </div>
+                         <div className="grid gap-2">
+                            <Label>Nama Petugas</Label>
+                            <Input value={currentUserProfile?.displayName || ''} disabled />
+                        </div>
+                    </div>
+                     <div className="grid gap-2">
+                        <Label>No. Service</Label>
+                        <Input value={pelanggan.noService} disabled />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                         <div className="grid gap-2">
+                            <Label htmlFor="riwayat-tanggal">Tanggal Lapor *</Label>
+                             <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button variant={'outline'} className={cn('w-full justify-start text-left font-normal', !tanggalLapor && 'text-muted-foreground')}>
+                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                        {tanggalLapor ? format(tanggalLapor, 'PPP', {locale: idLocale}) : <span>Pilih tanggal</span>}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0">
+                                    <Calendar mode="single" selected={tanggalLapor} onSelect={setTanggalLapor} initialFocus />
+                                </PopoverContent>
+                            </Popover>
+                          </div>
+                          <div className="grid gap-2">
+                            <Label htmlFor="riwayat-tiket">No. Tiket</Label>
+                            <Input id="riwayat-tiket" value={noTiket} onChange={(e) => setNoTiket(e.target.value)} placeholder="Contoh: INC123..." />
+                          </div>
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="jenis-order">Jenis Order *</Label>
+                        <Select value={jenisOrder} onValueChange={setJenisOrder} required>
+                            <SelectTrigger id="jenis-order"><SelectValue placeholder="Pilih Jenis Order..." /></SelectTrigger>
+                            <SelectContent>
+                                {jenisOrderOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    {showTypeOrder && (
+                         <div className="grid gap-2">
+                            <Label htmlFor="type-order">Type Order *</Label>
+                            <Select value={typeOrder} onValueChange={setTypeOrder} required>
+                                <SelectTrigger id="type-order"><SelectValue placeholder="Pilih Type Order..." /></SelectTrigger>
+                                <SelectContent>
+                                    {typeOrderOptions[jenisOrder].map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
                   <div className="grid gap-2">
                     <Label htmlFor="riwayat-keterangan">Keterangan</Label>
                     <Textarea id="riwayat-keterangan" value={keterangan} onChange={(e) => setKeterangan(e.target.value)} placeholder="Deskripsi gangguan dan penanganan..." />
@@ -746,7 +822,7 @@ export default function AdminPelangganPage() {
             const noServiceCol = findHeader(['no service', 'nomor service', 'no_service', 'service number']);
             const tanggalLaporCol = findHeader(['tanggal lapor', 'tanggal', 'date']);
             const noTiketCol = findHeader(['no tiket', 'nomor tiket', 'ticket_id', 'ticket number', 'tiket']);
-            const teknisiCol = findHeader(['teknisi', 'pic']);
+            const teknisiCol = findHeader(['teknisi', 'pic', 'nama petugas']);
             const keteranganCol = findHeader(['keterangan', 'deskripsi', 'description']);
 
             if (!noServiceCol || !tanggalLaporCol) {
@@ -781,11 +857,10 @@ export default function AdminPelangganPage() {
                     }
                 }
                 
-                const riwayatData: Omit<RiwayatGangguan, 'id'> = {
+                const riwayatData: Omit<RiwayatGangguan, 'id' | 'namaPetugas' | 'nik' | 'jenisOrder' > = {
                     noService: noService,
                     tanggalLapor: Timestamp.fromDate(tanggalLapor),
                     noTiket: noTiketCol && row[noTiketCol] ? row[noTiketCol].toString().trim() : '',
-                    teknisi: teknisiCol && row[teknisiCol] ? row[teknisiCol].toString().trim() : '',
                     keterangan: keteranganCol && row[keteranganCol] ? row[keteranganCol].toString().trim() : '',
                 };
 
@@ -1025,14 +1100,16 @@ export default function AdminPelangganPage() {
                                     <TableHeader><TableRow>
                                         <TableHead>Tanggal Lapor</TableHead>
                                         <TableHead>No. Tiket</TableHead>
-                                        <TableHead>Teknisi</TableHead>
+                                        <TableHead>Nama Petugas</TableHead>
+                                        <TableHead>Jenis Order</TableHead>
                                         <TableHead>Keterangan</TableHead>
                                     </TableRow></TableHeader>
                                     <TableBody>{riwayatGangguan.map((item) => (
                                         <TableRow key={item.id}>
                                             <TableCell className="whitespace-nowrap">{safeToDate(item.tanggalLapor) ? format(safeToDate(item.tanggalLapor)!, 'd MMMM yyyy', { locale: idLocale }) : '-'}</TableCell>
                                             <TableCell>{item.noTiket || '-'}</TableCell>
-                                            <TableCell>{item.teknisi || '-'}</TableCell>
+                                            <TableCell>{item.namaPetugas || '-'}</TableCell>
+                                            <TableCell>{item.jenisOrder || '-'}</TableCell>
                                             <TableCell>{item.keterangan || '-'}</TableCell>
                                         </TableRow>
                                     ))}</TableBody>
@@ -1061,14 +1138,14 @@ export default function AdminPelangganPage() {
             });
         }}
       />
-       {searchedPelanggan && (
+       {searchedPelanggan && currentUserProfile && (
         <NewRiwayatDialog
             pelanggan={searchedPelanggan}
             isOpen={isNewRiwayatDialogOpen}
             onOpenChange={setIsNewRiwayatDialogOpen}
+            currentUserProfile={currentUserProfile}
             onFinished={() => {
                 setIsNewRiwayatDialogOpen(false);
-                // Data will refresh automatically via useCollection
             }}
         />
        )}
@@ -1109,11 +1186,3 @@ export default function AdminPelangganPage() {
     </>
   );
 }
-
-    
-
-    
-
-    
-
-

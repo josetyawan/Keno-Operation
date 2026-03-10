@@ -235,10 +235,13 @@
         "noService": { "type": "string", "description": "The customer's service number." },
         "tanggalLapor": { "type": "string", "format": "date-time", "description": "The date the report was made." },
         "noTiket": { "type": "string", "description": "The incident ticket number (e.g., INC...)." },
-        "teknisi": { "type": "string", "description": "The name of the technician who handled the report." },
+        "namaPetugas": { "type": "string", "description": "The name of the technician who handled the report." },
+        "nik": { "type": "string", "description": "Technician's NIK." },
+        "jenisOrder": { "type": "string", "description": "The type of service order." },
+        "typeOrder": { "type": "string", "description": "The specific sub-type of the service order." },
         "keterangan": { "type": "string", "description": "A description of the issue and resolution." }
       },
-      "required": ["id", "noService", "tanggalLapor"]
+      "required": ["id", "noService", "tanggalLapor", "namaPetugas", "nik", "jenisOrder"]
     },
     "NetworkStats": {
       "title": "Network Statistics",

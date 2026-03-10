@@ -195,7 +195,10 @@ export type RiwayatGangguan = {
   noService: string;
   tanggalLapor: any; // Firestore Timestamp
   noTiket?: string;
-  teknisi?: string;
+  namaPetugas: string;
+  nik: string;
+  jenisOrder: string;
+  typeOrder?: string;
   keterangan?: string;
 };
 
