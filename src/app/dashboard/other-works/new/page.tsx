@@ -88,18 +88,25 @@ export default function NewOtherWorkPage() {
 
     setIsSaving(true);
     try {
-      const newWorkData: Omit<OtherWork, 'id'> = {
+      const newWorkData: Partial<OtherWork> = {
         userId: user.uid,
         userName: userProfile.displayName || user.email!,
         nik: userProfile.nik || '',
-        namaPekerjaan: namaPekerjaan.trim() || undefined,
         jenisOrder,
-        orderType: orderType || undefined,
         tanggalPengerjaan: new Date(tanggalPengerjaan),
         tanggalSelesai: tanggalSelesai ? new Date(tanggalSelesai) : new Date(),
-        keterangan: keterangan.trim() || undefined,
         createdAt: serverTimestamp(),
       };
+
+      if (namaPekerjaan.trim()) {
+        newWorkData.namaPekerjaan = namaPekerjaan.trim();
+      }
+      if (orderType) {
+        newWorkData.orderType = orderType;
+      }
+      if (keterangan.trim()) {
+        newWorkData.keterangan = keterangan.trim();
+      }
 
       await addDoc(collection(firestore, 'other-works'), newWorkData);
       
