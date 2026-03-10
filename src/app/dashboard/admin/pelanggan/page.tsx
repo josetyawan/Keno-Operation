@@ -900,6 +900,7 @@ export default function AdminPelangganPage() {
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeletingRiwayat, setIsDeletingRiwayat] = useState(false);
 
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
     useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
@@ -997,6 +998,20 @@ export default function AdminPelangganPage() {
         });
     } finally {
         setIsDeleting(false);
+    }
+};
+
+ const handleDeleteRiwayat = async (riwayatId: string) => {
+    if (!isAdminOrKorlap) return;
+    setIsDeletingRiwayat(true);
+    const docRef = doc(firestore, 'riwayat-gangguan', riwayatId);
+    try {
+        await deleteDoc(docRef);
+        toast({ title: 'Riwayat Laporan Dihapus' });
+    } catch (e: any) {
+        toast({ variant: 'destructive', title: 'Gagal Menghapus', description: e.message });
+    } finally {
+        setIsDeletingRiwayat(false);
     }
 };
 
@@ -1348,6 +1363,27 @@ export default function AdminPelangganPage() {
                                                 <Button asChild variant="outline" size="sm">
                                                     <Link href={`/dashboard/admin/pelanggan/riwayat/${item.id}`}>Detail</Link>
                                                 </Button>
+                                                {isAdminOrKorlap && (
+                                                    <AlertDialog>
+                                                        <AlertDialogTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="ml-2 text-destructive hover:text-destructive" disabled={isDeletingRiwayat}>
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle>Anda Yakin?</AlertDialogTitle>
+                                                                <AlertDialogDescription>Tindakan ini akan menghapus riwayat laporan ini secara permanen.</AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel>Batal</AlertDialogCancel>
+                                                                <AlertDialogAction onClick={() => handleDeleteRiwayat(item.id)} disabled={isDeletingRiwayat} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                                                                     {isDeletingRiwayat ? <Loader2 className="animate-spin" /> : 'Hapus'}
+                                                                </AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
+                                                )}
                                             </TableCell>
                                         </TableRow>
                                     ))}</TableBody>
@@ -1424,6 +1460,7 @@ export default function AdminPelangganPage() {
     </>
   );
 }
+
 
 
 

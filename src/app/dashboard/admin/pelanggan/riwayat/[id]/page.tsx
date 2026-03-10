@@ -1,9 +1,11 @@
 
+
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import { useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useDoc, useFirestore, useUser, useMemoFirebase, useStorage } from '@/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
+import { ref, deleteObject } from 'firebase/storage';
 import { format, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import {
@@ -15,12 +17,23 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Check, X, Image as ImageIcon, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Check, X, Image as ImageIcon, AlertTriangle, Trash2 } from 'lucide-react';
 import type { RiwayatGangguan, UserProfile, MaterialEvidence } from '@/lib/types';
 import { useMemo, useState } from 'react';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from '@/hooks/use-toast';
 
 const safeToDate = (timestamp: any): Date | null => {
   if (!timestamp) return null;
@@ -33,9 +46,11 @@ const safeToDate = (timestamp: any): Date | null => {
 interface PhotoViewerProps {
   url?: string | null;
   label: string;
+  onDelete?: () => void;
+  canDelete?: boolean;
 }
 
-function PhotoViewer({ url, label }: PhotoViewerProps) {
+function PhotoViewer({ url, label, onDelete, canDelete }: PhotoViewerProps) {
   const [isZoomed, setIsZoomed] = useState(false);
   if (!url) {
     return (
@@ -47,9 +62,30 @@ function PhotoViewer({ url, label }: PhotoViewerProps) {
 
   return (
     <>
-      <button onClick={() => setIsZoomed(true)} className="relative aspect-square w-full rounded-md overflow-hidden border cursor-zoom-in group">
-        <Image src={url} alt={label} fill className="object-cover transition-transform group-hover:scale-105" />
-      </button>
+      <div className="relative group">
+        <button onClick={() => setIsZoomed(true)} className="relative aspect-square w-full rounded-md overflow-hidden border cursor-zoom-in group">
+          <Image src={url} alt={label} fill className="object-cover transition-transform group-hover:scale-105" />
+        </button>
+        {canDelete && (
+           <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="icon" className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 z-10">
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Anda Yakin?</AlertDialogTitle>
+                <AlertDialogDescription>Tindakan ini akan menghapus foto eviden secara permanen dan tidak dapat dibatalkan.</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Batal</AlertDialogCancel>
+                <AlertDialogAction onClick={onDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Hapus</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
+      </div>
       {isZoomed && (
         <div
           className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4 cursor-zoom-out"
@@ -69,19 +105,60 @@ export default function RiwayatDetailPage() {
   const router = useRouter();
   const { user } = useUser();
   const firestore = useFirestore();
+  const storage = useStorage();
+  const { toast } = useToast();
+  const [isDeletingPhoto, setIsDeletingPhoto] = useState(false);
 
   const riwayatRef = useMemoFirebase(() => doc(firestore, 'riwayat-gangguan', id), [firestore, id]);
   const { data: riwayat, isLoading } = useDoc<RiwayatGangguan>(riwayatRef);
 
   const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
   const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
+  
+  const isOwner = user?.uid === riwayat?.userId;
+  const isAdminOrKorlap = userProfile?.role === 'admin' || userProfile?.role === 'korlap';
+  const canModify = isOwner || isAdminOrKorlap;
 
   const canView = useMemo(() => {
     if (!userProfile || !riwayat) return false;
     if (userProfile.role === 'admin' || userProfile.role === 'korlap') return true;
-    return riwayat.userId === user.uid;
+    return riwayat.userId === user?.uid;
   }, [userProfile, riwayat, user]);
   
+  const handleDeletePhoto = async (photoUrl: string) => {
+    if (!canModify || !riwayat) return;
+    setIsDeletingPhoto(true);
+
+    try {
+        // 1. Delete from Storage
+        const photoRef = ref(storage, photoUrl);
+        await deleteObject(photoRef);
+
+        // 2. Delete from Firestore
+        let updatedData: Partial<RiwayatGangguan>;
+        
+        if (riwayat.evidenSccUrl === photoUrl) {
+            updatedData = { evidenSccUrl: '' };
+        } else {
+            const newMaterials = riwayat.materials?.map(material => {
+                if (!material.evidences) return material;
+                return {
+                    ...material,
+                    evidences: material.evidences.filter(ev => ev.photoUrl !== photoUrl),
+                };
+            }) || [];
+            updatedData = { materials: newMaterials };
+        }
+        
+        await updateDoc(riwayatRef, updatedData);
+        toast({ title: "Foto Dihapus" });
+    } catch(error: any) {
+        toast({ variant: 'destructive', title: "Gagal menghapus foto", description: error.message });
+    } finally {
+        setIsDeletingPhoto(false);
+    }
+  };
+
   if (isLoading) {
     return (
         <div className="mx-auto grid max-w-4xl flex-1 auto-rows-max gap-6">
@@ -160,7 +237,12 @@ export default function RiwayatDetailPage() {
                     <div>
                         <p className="text-sm text-muted-foreground mb-2">Foto Eviden SCC</p>
                         <div className="max-w-xs">
-                          <PhotoViewer url={riwayat.evidenSccUrl} label="Eviden SCC" />
+                          <PhotoViewer 
+                            url={riwayat.evidenSccUrl} 
+                            label="Eviden SCC" 
+                            onDelete={() => handleDeletePhoto(riwayat.evidenSccUrl!)}
+                            canDelete={canModify}
+                          />
                         </div>
                     </div>
                 ) : (
@@ -192,7 +274,12 @@ export default function RiwayatDetailPage() {
                             {material.evidences.map((ev, photoIndex) => (
                                 <div key={photoIndex}>
                                     <p className="text-xs text-muted-foreground capitalize mb-1">{ev.evidenceName}</p>
-                                    <PhotoViewer url={ev.photoUrl} label={`${material.materialName} - ${ev.evidenceName}`} />
+                                    <PhotoViewer 
+                                        url={ev.photoUrl} 
+                                        label={`${material.materialName} - ${ev.evidenceName}`}
+                                        onDelete={() => handleDeletePhoto(ev.photoUrl)}
+                                        canDelete={canModify}
+                                    />
                                 </div>
                             ))}
                         </div>
@@ -210,3 +297,4 @@ export default function RiwayatDetailPage() {
     </div>
   );
 }
+

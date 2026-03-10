@@ -46,7 +46,7 @@ service firebase.storage {
     // --- WRITE RULES ---
     
     match /notas/{userId}/{allPaths=**} {
-      allow write: if isApproved() && isOwner(userId);
+      allow write: if isApproved() && (isOwner(userId) || isAdmin() || isKorlap());
     }
 
     match /pelanggan_photos/{userId}/{allPaths=**} {
