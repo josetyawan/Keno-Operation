@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home, Network, Search, BarChart3, Map, FolderGit2, Contact, CalendarClock, ClipboardCheck, CalendarOff, UserCircle, Briefcase, Settings, Building, Wrench, CalendarDays, MessageSquare, Upload, Component, Send, FileWarning } from 'lucide-react';
+import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home, Network, Search, BarChart3, Map, FolderGit2, Contact, CalendarClock, ClipboardCheck, CalendarOff, UserCircle, Briefcase, Settings, Building, Wrench, CalendarDays, MessageSquare, Upload, Component, Send, FileWarning, FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -51,6 +51,7 @@ const adminNavGroups = [
       { href: '/dashboard/hr/attendance/rekap', label: 'Rekap Absensi', icon: ClipboardCheck, access: 'korlap' },
       { href: '/dashboard/alker/rekap', label: 'Rekap Alker', icon: ClipboardCheck, access: 'korlap' },
       { href: '/dashboard/admin/hr/manual-rekap', label: 'Trigger Rekap Manual', icon: Bot, access: 'korlap' },
+      { href: '/dashboard/admin/reports/assurance-rekap', label: 'Rekap Assurance', icon: FileSpreadsheet, access: 'korlap' },
     ]
   },
   {
