@@ -176,7 +176,7 @@ function NewPelangganDialog({ isOpen, onOpenChange, onFinished }: { isOpen: bool
         try {
             let fotoCpUrl: string | undefined = undefined;
             if (fotoCp) {
-                const filePath = `pelanggan_photos/${user.uid}/${Date.now()}-${fotoCp.name}`;
+                const filePath = `notas/${user.uid}/pelanggan_photo_${Date.now()}-${fotoCp.name}`;
                 const storageRef = ref(storage, filePath);
                 await uploadBytes(storageRef, fotoCp);
                 fotoCpUrl = await getDownloadURL(storageRef);
@@ -1424,4 +1424,5 @@ export default function AdminPelangganPage() {
     </>
   );
 }
+
 
