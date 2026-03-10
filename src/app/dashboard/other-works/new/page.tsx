@@ -16,6 +16,7 @@ import type { OtherWork, UserProfile } from '@/lib/types';
 import { format } from 'date-fns';
 import { ToastAction } from '@/components/ui/toast';
 import Link from 'next/link';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const jenisOrderOptions = [
   "Validasi Data EBIS", "Validasi Data WIFI", "Dismantling DC Infracare",
@@ -55,7 +56,7 @@ export default function NewOtherWorkPage() {
   useEffect(() => {
     if (!isUserLoading && !isProfileLoading) {
         const isApproved = userProfile?.registrationStatus === 'approved';
-        const hasAccess = userProfile?.role === 'admin' || userProfile?.appAccess === 'allpro' || userProfile?.appAccess === 'all';
+        const hasAccess = userProfile?.role === 'admin' || userProfile?.role === 'korlap' || userProfile?.appAccess === 'allpro' || userProfile?.appAccess === 'all';
         if (!user || !isApproved || !hasAccess) {
             router.push('/dashboard');
         }
