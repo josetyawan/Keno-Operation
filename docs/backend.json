@@ -254,6 +254,10 @@
             "properties": {
               "materialName": { "type": "string" },
               "quantity": { "type": "number" },
+              "details": {
+                "type": "object",
+                "description": "Key-value pairs for material details like serial numbers."
+              },
               "evidences": {
                 "type": "array",
                 "items": {
@@ -261,12 +265,11 @@
                   "properties": {
                     "evidenceName": { "type": "string" },
                     "photoUrl": { "type": "string", "format": "uri" }
-                  },
-                  "required": ["evidenceName", "photoUrl"]
+                  }
                 }
               }
             },
-            "required": ["materialName", "evidences"]
+            "required": ["materialName"]
           }
         }
       },

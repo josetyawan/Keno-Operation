@@ -283,7 +283,7 @@ function NewPelangganDialog({ isOpen, onOpenChange, onFinished }: { isOpen: bool
 }
 
 const jenisOrderOptions = [
-  "Aktivasi Cross Connect TDE", "Aktivasi/Migrasi/Dismantel DCS", "Aktivasi/Migrasi/Dismantel Digiserve", "Aktivasi/Migrasi/Dismantel Hypernet", "Corrective Akses Tower CENTRATAMA", "Corrective Akses Tower Lintasarta", "Corrective Akses Tower UMT", "Corrective Cross Connect TDE", "Corrective CSA", "Corrective DCS", "Corrective Digiserve", "Corrective Hypernet", "Corrective MMP", "Corrective MyRep", "Corrective NuTech", "Corrective SNT", "Corrective SPBU", "Corrective TBG", "Corrective Tower POLARIS", "Corrective Tower TIS", "DISMANTLING FWA", "DISMANTLING ONT", "DISMANTLING PLC", "DISMANTLING STB", "DISMANTLING WIFI EXTENDER", "Dismantling DC Infracare", "Dismantling NTE B2B", "EXPAND ODP", "Inventory SPBU", "IXSA FTM", "IXSA ODC", "IXSA OLT", "Lapsung (Laporan Langsung)", "MO/DO Indibiz / Datin", "MO/DO Indihome", "PDA PSB Indihome", "PSB DATIN", "PSB INDIBIZ", "PSB OLO", "PSB MyRep", "PSB Surge", "PSB WIFI", "PT2 Simple", "Patroli Akses", "Preventif MMP", "Preventive Akses Tower CENTRATAMA", "Preventive Akses Tower Lintasarta", "Preventive Akses Tower UMT", "Preventive Asianet", "Preventive CSA", "Preventive FIberisasi", "Preventive NuTech", "Preventive SPBU", "Preventive TBG", "Preventive Tower POLARIS", "Preventive Tower TIS", "REPLACEMENT ONT Premium/Dual Band", "REPLACEMENT STB", "Relokasi DCS", "Relokasi Digiserve", "Relokasi Hypernet", "Reseller", "SQM Reguler", "Tangible ODP HSI Indihome", "Tangible ODP Tiket Datin Kategori 1", "Tiket Datin Kategori 2", "Tiket Datin Kategori 3", "Tiket FFG DATIN", "Tiket FFG HSI", "Tiket FFG WIFI", "Tiket FFG Indihome", "Tiket GAMAS", "Tiket HSI Indibiz", "Tiket NodeB CNQ (Preventive/Quality)", "Tiket NodeB Critical", "Tiket NodeB Low", "Tiket NodeB Major", "Tiket NodeB Minor", "Tiket NodeB Premium", "Tiket NodeB Premium Preventive", "Tiket OLO Datin Gamas", "Tiket OLO Datin Non Gamas", "Tiket OLO Datin Quality", "Tiket OLO SL WDM", "Tiket OLO SL WDM Quality", "Tiket Pra SQM Gaul HSI", "Tiket Reguler", "Tiket SIP Trunk", "Tiket SQM Datin", "Tiket SQM HSI", "Tiket WIFI ID", "Tiket Wifi Logic", "UNLOCK ODP", "Unspec DATIN", "Unspec HSI", "Unspec SITE/NODE-B", "Unspec WIFI", "Unspec Reguler", "Validasi Data EBIS", "Validasi Data WIFI", "Validasi Tiang", "Valins FTM", "Valins ODC", "Valins Regular", "WFM",
+  "Aktivasi Cross Connect TDE", "Aktivasi/Migrasi/Dismantel DCS", "Aktivasi/Migrasi/Dismantel Digiserve", "Aktivasi/Migrasi/Dismantel Hypernet", "Corrective Akses Tower CENTRATAMA", "Corrective Akses Tower Lintasarta", "Corrective Akses Tower UMT", "Corrective Cross Connect TDE", "Corrective CSA", "Corrective DCS", "Corrective Digiserve", "Corrective Hypernet", "Corrective MMP", "Corrective MyRep", "Corrective NuTech", "Corrective SNT", "Corrective SPBU", "Corrective TBG", "Corrective Tower POLARIS", "Corrective Tower TIS", "DISMANTLING FWA", "DISMANTLING ONT", "DISMANTLING PLC", "DISMANTLING STB", "DISMANTLING WIFI EXTENDER", "Dismantling DC Infracare", "Dismantling NTE B2B", "EXPAND ODP", "Inventory SPBU", "IXSA FTM", "IXSA ODC", "IXSA OLT", "Lapsung (Laporan Langsung)", "MO/DO Indibiz / Datin", "MO/DO Indihome", "PDA PSB Indihome", "PSB DATIN", "PSB INDIBIZ", "PSB OLO", "PSB MyRep", "PSB Surge", "PSB WIFI", "PT2 Simple", "Patroli Akses", "Preventif MMP", "Preventive Akses Tower CENTRATAMA", "Preventive Akses Tower Lintasarta", "Preventive Akses Tower UMT", "Preventive Asianet", "Preventive CSA", "Preventive FIberisasi", "Preventive NuTech", "Preventive SPBU", "Preventive TBG", "Preventive Tower POLARIS", "Preventive Tower TIS", "REPLACEMENT ONT Premium/Dual Band", "REPLACEMENT STB", "Relokasi DCS", "Relokasi Digiserve", "Relokasi Hypernet", "Reseller", "SQM Reguler", "Tangible ODP HSI Indihome", "Tangible ODP Tiket Datin Kategori 1", "Tiket Datin Kategori 2", "Tiket Datin Kategori 3", "Tiket FFG DATIN", "Tiket FFG HSI", "Tiket FFG WIFI", "Tiket FFG Indihome", "Tiket GAMAS", "Tiket HSI Indibiz", "Tiket NodeB CNQ (Preventive/Quality)", "Tiket NodeB Critical", "Tiket NodeB Low", "Tiket NodeB Major", "Tiket NodeB Minor", "Tiket NodeB Premium", "Tiket NodeB Premium Preventive", "Tiket OLO Datin Gamas", "Tiket OLO Datin Non Gamas", "Tiket OLO Datin Quality", "Tiket OLO SL WDM", "Tiket OLO SL WDM Quality", "Tiket Pra SQM Gaul HSI", "Tiket Reguler", "Tiket SIP Trunk", "Tiket SQM Datin", "Tiket SQM HSI", "Tiket WIFI ID", "Tiket Wifi Logic", "UNLOCK ODP", "Unspec DATIN", "Unspec HSI", "Unspec SITE/NODE-B", "Unspec WIFI", "Unspec Reguler", "Validasi Data EBIS", "Validasi Data WIFI", "Validasi Tiang", "Valins FTM", "Valins ODC", "Valins Regular", "WFM", "Corrective Mitratel",
 ].sort();
 
 
@@ -295,7 +295,7 @@ const typeOrderOptions: Record<string, string[]> = {
 
 const layananOptions = ["INTERNET", "VOICE", "USEETV", "WIFI MESH", "WIFI AP", "WIFI-LITE", "OLO", "METRO", "ASTINET", "VPNIP", "DATIN"];
 
-const materialEvidenMap: Record<string, { evidences: string[], quantity?: boolean, default?: number }> = {
+const materialEvidenMap: Record<string, { evidences?: string[], quantity?: boolean, default?: number, inputs?: string[] }> = {
   "DROPCORE BARU": { evidences: ["eviden marking awal", "eviden marking akhir", "eviden dc", "eviden progres"] },
   "DROPCORE REFURBISH": { evidences: ["eviden marking awal", "eviden marking akhir", "eviden dc", "eviden progres"] },
   "ROSET": { evidences: ["eviden foto roset baru", "eviden roset lama", "eviden progres", "eviden saat terpasang"] },
@@ -313,6 +313,11 @@ const materialEvidenMap: Record<string, { evidences: string[], quantity?: boolea
   "Protection Sleeve": { evidences: ["eviden foto sambung"] },
   "Splice on Connector": { evidences: ["eviden SOC baru", "eviden progres", "eviden saat terpasang"] },
   "Penarikan Kabel UTP (Mtr)": { evidences: ["eviden marking awal", "eviden marking akhir", "eviden dc", "eviden progres"], quantity: true },
+  "ONT": { inputs: ['SN ONT', 'Valins ID'] },
+  "STB": { inputs: ['STB ID'] },
+  "AP": { inputs: ['SN AP', 'MAC AP'] },
+  "PoE AP": { inputs: ['SN PoE'] },
+  "AP Mesh": { inputs: ['SN'] }
 };
 
 function DateTimePicker({ value, onChange, disabled = false }: { value?: Date, onChange: (date?: Date) => void, disabled?: boolean }) {
@@ -378,6 +383,7 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
     const [selectedMaterials, setSelectedMaterials] = useState<Record<string, boolean>>({});
     const [materialFiles, setMaterialFiles] = useState<Record<string, Record<string, File | null>>>({});
     const [materialQuantities, setMaterialQuantities] = useState<Record<string, number>>({});
+    const [materialDetails, setMaterialDetails] = useState<Record<string, Record<string, string>>>({});
     
     const showTypeOrder = useMemo(() => Object.keys(typeOrderOptions).includes(jenisOrder), [jenisOrder]);
     
@@ -394,6 +400,7 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
             setSelectedMaterials({});
             setMaterialFiles({});
             setMaterialQuantities({});
+            setMaterialDetails({});
         }
     }, [isOpen]);
 
@@ -410,9 +417,10 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
         if (!checked) {
             setMaterialFiles(prev => { const newState = { ...prev }; delete newState[materialName]; return newState; });
             setMaterialQuantities(prev => { const newState = { ...prev }; delete newState[materialName]; return newState; });
+            setMaterialDetails(prev => { const newState = { ...prev }; delete newState[materialName]; return newState; });
         } else {
              const materialConfig = materialEvidenMap[materialName];
-             if(materialConfig.quantity && materialConfig.default) {
+             if(materialConfig?.quantity && materialConfig.default) {
                  setMaterialQuantities(prev => ({...prev, [materialName]: materialConfig.default!}));
              }
         }
@@ -420,6 +428,16 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
     
     const handleFileChange = (materialName: string, evidenceName: string, file: File | null) => {
         setMaterialFiles(prev => ({ ...prev, [materialName]: { ...(prev[materialName] || {}), [evidenceName]: file } }));
+    };
+
+    const handleDetailChange = (materialName: string, detailKey: string, value: string) => {
+        setMaterialDetails(prev => ({
+            ...prev,
+            [materialName]: {
+                ...(prev[materialName] || {}),
+                [detailKey]: value,
+            },
+        }));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -433,6 +451,7 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
             const materialEvidencePromises = Object.entries(selectedMaterials)
                 .filter(([, isSelected]) => isSelected)
                 .map(async ([materialName]) => {
+                    const materialConfig = materialEvidenMap[materialName];
                     const evidenceFiles = materialFiles[materialName] || {};
                     const evidenceUploadPromises = Object.entries(evidenceFiles)
                         .filter(([, file]) => file)
@@ -448,11 +467,17 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
                     
                     const materialEntry: MaterialEvidence = {
                         materialName,
-                        evidences: uploadedEvidences,
                     };
-                    if (materialEvidenMap[materialName]?.quantity) {
+                    if (materialConfig?.quantity) {
                         materialEntry.quantity = materialQuantities[materialName] || 0;
                     }
+                    if (materialConfig?.inputs) {
+                        materialEntry.details = materialDetails[materialName] || {};
+                    }
+                    if (uploadedEvidences.length > 0) {
+                        materialEntry.evidences = uploadedEvidences;
+                    }
+
                     return materialEntry;
                 });
             
@@ -567,12 +592,23 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
                                         <div className="mt-4 pl-2 border-l-2 ml-2 space-y-4">
                                             {config.quantity && (
                                                 <div className="grid grid-cols-2 gap-4">
-                                                    <div className="grid gap-2"><Label htmlFor={`qty-${materialName}`}>Jumlah ({materialName.split('(')[1]}`</Label>
+                                                    <div className="grid gap-2"><Label htmlFor={`qty-${materialName}`}>Jumlah ({materialName.split('(')[1]}</Label>
                                                         <Input id={`qty-${materialName}`} type="number" value={materialQuantities[materialName] ?? ''} onChange={e => setMaterialQuantities(prev => ({...prev, [materialName]: Number(e.target.value)}))} />
                                                     </div>
                                                 </div>
                                             )}
-                                            {config.evidences.map(evidenName => (
+                                            {config.inputs && config.inputs.map(inputLabel => (
+                                                <div key={inputLabel} className="grid gap-2">
+                                                    <Label htmlFor={`detail-${materialName}-${inputLabel}`}>{inputLabel}</Label>
+                                                    <Input
+                                                        id={`detail-${materialName}-${inputLabel}`}
+                                                        placeholder={`${inputLabel}...`}
+                                                        value={materialDetails[materialName]?.[inputLabel] || ''}
+                                                        onChange={e => handleDetailChange(materialName, inputLabel, e.target.value)}
+                                                    />
+                                                </div>
+                                            ))}
+                                            {config.evidences && config.evidences.map(evidenName => (
                                                 <div key={evidenName} className="grid gap-2">
                                                     <Label htmlFor={`file-${materialName}-${evidenName}`} className="capitalize">{evidenName}</Label>
                                                     <Input id={`file-${materialName}-${evidenName}`} type="file" accept="image/*" onChange={(e) => handleFileChange(materialName, evidenName, e.target.files?.[0] || null)} />
@@ -1340,6 +1376,7 @@ export default function AdminPelangganPage() {
     </>
   );
 }
+
 
 
 

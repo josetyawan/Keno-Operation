@@ -192,10 +192,11 @@ export type Pelanggan = {
 export type MaterialEvidence = {
     materialName: string;
     quantity?: number;
-    evidences: {
+    evidences?: {
         evidenceName: string;
         photoUrl: string;
     }[];
+    details?: Record<string, string>;
 };
 
 export type RiwayatGangguan = {
