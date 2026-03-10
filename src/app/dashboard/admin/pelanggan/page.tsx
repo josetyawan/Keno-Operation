@@ -329,8 +329,8 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
     const [isSaving, setIsSaving] = useState(false);
     
     // Form state
-    const [tanggalOpen, setTanggalOpen] = useState<Date | undefined>(new Date());
-    const [tanggalClose, setTanggalClose] = useState<Date | undefined>();
+    const [tanggalOpen, setTanggalOpen] = useState('');
+    const [tanggalClose, setTanggalClose] = useState('');
     const [tanggalLapor] = useState<Date>(new Date());
     const [noTiket, setNoTiket] = useState('');
     const [jenisOrder, setJenisOrder] = useState('');
@@ -344,13 +344,34 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
     const [evidenScc, setEvidenScc] = useState<File | null>(null);
     const [dorongClose, setDorongClose] = useState(false);
 
-    
+    useEffect(() => {
+        const protectionSleeveQty = materialQuantities['Protection Sleeve'];
+        if (protectionSleeveQty && protectionSleeveQty > 0) {
+            // Auto-calculate and set Termovit quantity
+            setMaterialQuantities(prev => ({
+                ...prev,
+                'Termovit (cm)': protectionSleeveQty * 15,
+            }));
+            // Auto-select Termovit if Protection Sleeve is used and it's not already selected
+            if (!selectedMaterials['Termovit (cm)']) {
+                setSelectedMaterials(prev => ({
+                    ...prev,
+                    ['Termovit (cm)']: true,
+                }));
+            }
+        }
+    }, [materialQuantities['Protection Sleeve']]); // Dependency on the specific quantity
+
     const showTypeOrder = useMemo(() => Object.keys(typeOrderOptions).includes(jenisOrder), [jenisOrder]);
     
     useEffect(() => {
-        if (!isOpen) {
-            setTanggalOpen(new Date());
-            setTanggalClose(undefined);
+        if (isOpen) {
+            // Set default to current date and time when dialog opens
+            setTanggalOpen(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
+        } else {
+            // Reset all state when dialog closes
+            setTanggalOpen('');
+            setTanggalClose('');
             setNoTiket('');
             setJenisOrder('');
             setTypeOrder('');
@@ -514,11 +535,11 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                          <div className="grid gap-2">
                             <Label htmlFor="tanggal-open">Tanggal Open *</Label>
-                            <Input id="tanggal-open" type="datetime-local" value={tanggalOpen ? format(tanggalOpen, "yyyy-MM-dd'T'HH:mm") : ''} onChange={e => setTanggalOpen(new Date(e.target.value))} required />
+                            <Input id="tanggal-open" type="datetime-local" value={tanggalOpen} onChange={e => setTanggalOpen(e.target.value)} required />
                           </div>
                           <div className="grid gap-2">
                             <Label htmlFor="tanggal-close">Tanggal Close</Label>
-                            <Input id="tanggal-close" type="datetime-local" value={tanggalClose ? format(tanggalClose, "yyyy-MM-dd'T'HH:mm") : ''} onChange={e => setTanggalClose(new Date(e.target.value))} />
+                            <Input id="tanggal-close" type="datetime-local" value={tanggalClose} onChange={e => setTanggalClose(e.target.value)} />
                           </div>
                           <div className="grid gap-2">
                             <Label htmlFor="riwayat-tiket">No. Tiket</Label>
