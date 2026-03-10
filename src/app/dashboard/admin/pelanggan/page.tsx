@@ -65,6 +65,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 
 const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
@@ -888,7 +889,7 @@ export default function AdminPelangganPage() {
         const contextualError = new FirestorePermissionError({
             operation: 'delete',
             path: `pelanggan/${searchedPelanggan.id}`,
-        }, error);
+        });
         errorEmitter.emit('permission-error', contextualError);
         toast({
             variant: 'destructive',
@@ -1137,7 +1138,7 @@ export default function AdminPelangganPage() {
                                     <AlertDialogHeader>
                                         <AlertDialogTitle>Anda Yakin?</AlertDialogTitle>
                                         <AlertDialogDescription>
-                                            Tindakan ini akan menghapus pelanggan "{searchedPelanggan.namaPelanggan}" dan semua riwayat laporannya secara permanen. Ini tidak dapat dibatalkan.
+                                            Tindakan ini akan menghapus pelanggan "{searchedPelanggan.namaPelanggan}" dan semua riwayat laporannya secara permanen. This cannot be undone.
                                         </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
@@ -1191,7 +1192,7 @@ export default function AdminPelangganPage() {
                             <div className="flex flex-col md:col-span-3 border-t pt-4 mt-2">
                                 <dt className="text-muted-foreground">Terakhir Diubah</dt>
                                 <dd>
-                                    Oleh {searchedPelanggan.lastEditedBy} pada {format(safeToDate(searchedPelanggan.lastEditedDate)!, 'd MMM yyyy, HH:mm', { locale: idLocale })}
+                                    Oleh {searchedPelanggan.lastEditedBy} pada {format(safeToDate(seargedPelanggan.lastEditedDate)!, 'd MMM yyyy, HH:mm', { locale: idLocale })}
                                 </dd>
                             </div>
                          )}
@@ -1301,4 +1302,5 @@ export default function AdminPelangganPage() {
     </>
   );
 }
+
 
