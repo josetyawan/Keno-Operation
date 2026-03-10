@@ -195,7 +195,7 @@ function NewPelangganDialog({ isOpen, onOpenChange, onFinished }: { isOpen: bool
                 odpName: odpName.trim(),
                 odpPort: odpPort.trim(),
                 odpQRCodeUrl: odpQRCodeUrl.trim(),
-                fotoCpUrl,
+                // fotoCpUrl,
                 dateAdded: serverTimestamp(),
                 lastEditedBy: user.email,
                 lastEditedDate: serverTimestamp(),
@@ -978,6 +978,7 @@ export default function AdminPelangganPage() {
                     tanggalLapor: Timestamp.fromDate(tanggalLapor),
                     noTiket: noTiketCol && row[noTiketCol] ? row[noTiketCol].toString().trim() : '',
                     keterangan: keteranganCol && row[keteranganCol] ? row[keteranganCol].toString().trim() : '',
+                    jenisOrder: ''
                 };
 
                 const docRef = doc(collection(firestore, 'riwayat-gangguan'));
@@ -1192,7 +1193,7 @@ export default function AdminPelangganPage() {
                             <div className="flex flex-col md:col-span-3 border-t pt-4 mt-2">
                                 <dt className="text-muted-foreground">Terakhir Diubah</dt>
                                 <dd>
-                                    Oleh {searchedPelanggan.lastEditedBy} pada {format(safeToDate(seargedPelanggan.lastEditedDate)!, 'd MMM yyyy, HH:mm', { locale: idLocale })}
+                                    Oleh {searchedPelanggan.lastEditedBy} pada {format(safeToDate(searchedPelanggan.lastEditedDate)!, 'd MMM yyyy, HH:mm', { locale: idLocale })}
                                 </dd>
                             </div>
                          )}
@@ -1302,5 +1303,6 @@ export default function AdminPelangganPage() {
     </>
   );
 }
+
 
 
