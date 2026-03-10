@@ -49,7 +49,7 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { PlusCircle, MapPin, Loader2, Search, History, Phone, Pencil, Wrench, QrCode, FileSpreadsheet, AlertCircle, Info, Upload, Trash2, Bot, CalendarIcon, MessageSquare } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, useStorage, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, query, doc, serverTimestamp, where, getDocs, limit, orderBy, Timestamp, writeBatch, deleteDoc, addDoc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { UserProfile, Pelanggan, RiwayatGangguan, MaterialEvidence } from '@/lib/types';
@@ -283,7 +283,7 @@ function NewPelangganDialog({ isOpen, onOpenChange, onFinished }: { isOpen: bool
 }
 
 const jenisOrderOptions = [
-  "Aktivasi Cross Connect TDE", "Aktivasi/Migrasi/Dismantel DCS", "Aktivasi/Migrasi/Dismantel Digiserve", "Aktivasi/Migrasi/Dismantel Hypernet", "Corrective Akses Tower CENTRATAMA", "Corrective Akses Tower Lintasarta", "Corrective Akses Tower UMT", "Corrective Cross Connect TDE", "Corrective CSA", "Corrective DCS", "Corrective Digiserve", "Corrective Hypernet", "Corrective MMP", "Corrective MyRep", "Corrective NuTech", "Corrective SNT", "Corrective SPBU", "Corrective TBG", "Corrective Tower POLARIS", "Corrective Tower TIS", "DISMANTLING FWA", "DISMANTLING ONT", "DISMANTLING PLC", "DISMANTLING STB", "DISMANTLING WIFI EXTENDER", "Dismantling DC Infracare", "Dismantling NTE B2B", "EXPAND ODP", "Inventory SPBU", "IXSA FTM", "IXSA ODC", "IXSA OLT", "Lapsung (Laporan Langsung)", "MO/DO Indibiz / Datin", "MO/DO Indihome", "PDA PSB Indihome", "PSB DATIN", "PSB INDIBIZ", "PSB MyRep", "PSB OLO", "PSB Surge", "PSB WIFI", "PT2 Simple", "Patroli Akses", "Preventif MMP", "Preventive Akses Tower CENTRATAMA", "Preventive Akses Tower Lintasarta", "Preventive Akses Tower UMT", "Preventive Asianet", "Preventive CSA", "Preventive FIberisasi", "Preventive NuTech", "Preventive SPBU", "Preventive TBG", "Preventive Tower POLARIS", "Preventive Tower TIS", "REPLACEMENT ONT Premium/Dual Band", "REPLACEMENT STB", "Relokasi DCS", "Relokasi Digiserve", "Relokasi Hypernet", "Reseller", "SQM Reguler", "Tangible ODP HSI Indihome", "Tangible ODP Tiket Datin Kategori 1", "Tiket Datin Kategori 2", "Tiket Datin Kategori 3", "Tiket FFG DATIN", "Tiket FFG HSI", "Tiket FFG WIFI", "Tiket FFG Indihome", "Tiket GAMAS", "Tiket HSI Indibiz", "Tiket NodeB CNQ (Preventive/Quality)", "Tiket NodeB Critical", "Tiket NodeB Low", "Tiket NodeB Major", "Tiket NodeB Minor", "Tiket NodeB Premium", "Tiket NodeB Premium Preventive", "Tiket OLO Datin Gamas", "Tiket OLO Datin Non Gamas", "Tiket OLO Datin Quality", "Tiket OLO SL WDM", "Tiket OLO SL WDM Quality", "Tiket Pra SQM Gaul HSI", "Tiket Reguler", "Tiket SIP Trunk", "Tiket SQM Datin", "Tiket SQM HSI", "Tiket WIFI ID", "Tiket Wifi Logic", "UNLOCK ODP", "Unspec DATIN", "Unspec HSI", "Unspec Reguler", "Unspec SITE/NODE-B", "Unspec WIFI", "Validasi Data EBIS", "Validasi Data WIFI", "Validasi Tiang", "Valins FTM", "Valins ODC", "Valins Regular", "WFM",
+  "Aktivasi Cross Connect TDE", "Aktivasi/Migrasi/Dismantel DCS", "Aktivasi/Migrasi/Dismantel Digiserve", "Aktivasi/Migrasi/Dismantel Hypernet", "Corrective Akses Tower CENTRATAMA", "Corrective Akses Tower Lintasarta", "Corrective Akses Tower UMT", "Corrective Cross Connect TDE", "Corrective CSA", "Corrective DCS", "Corrective Digiserve", "Corrective Hypernet", "Corrective MMP", "Corrective MyRep", "Corrective NuTech", "Corrective SNT", "Corrective SPBU", "Corrective TBG", "Corrective Tower POLARIS", "Corrective Tower TIS", "DISMANTLING FWA", "DISMANTLING ONT", "DISMANTLING PLC", "DISMANTLING STB", "DISMANTLING WIFI EXTENDER", "Dismantling DC Infracare", "Dismantling NTE B2B", "EXPAND ODP", "Inventory SPBU", "IXSA FTM", "IXSA ODC", "IXSA OLT", "Lapsung (Laporan Langsung)", "MO/DO Indibiz / Datin", "MO/DO Indihome", "PDA PSB Indihome", "PSB DATIN", "PSB INDIBIZ", "PSB OLO", "PSB MyRep", "PSB Surge", "PSB WIFI", "PT2 Simple", "Patroli Akses", "Preventif MMP", "Preventive Akses Tower CENTRATAMA", "Preventive Akses Tower Lintasarta", "Preventive Akses Tower UMT", "Preventive Asianet", "Preventive CSA", "Preventive FIberisasi", "Preventive NuTech", "Preventive SPBU", "Preventive TBG", "Preventive Tower POLARIS", "Preventive Tower TIS", "REPLACEMENT ONT Premium/Dual Band", "REPLACEMENT STB", "Relokasi DCS", "Relokasi Digiserve", "Relokasi Hypernet", "Reseller", "SQM Reguler", "Tangible ODP HSI Indihome", "Tangible ODP Tiket Datin Kategori 1", "Tiket Datin Kategori 2", "Tiket Datin Kategori 3", "Tiket FFG DATIN", "Tiket FFG HSI", "Tiket FFG WIFI", "Tiket FFG Indihome", "Tiket GAMAS", "Tiket HSI Indibiz", "Tiket NodeB CNQ (Preventive/Quality)", "Tiket NodeB Critical", "Tiket NodeB Low", "Tiket NodeB Major", "Tiket NodeB Minor", "Tiket NodeB Premium", "Tiket NodeB Premium Preventive", "Tiket OLO Datin Gamas", "Tiket OLO Datin Non Gamas", "Tiket OLO Datin Quality", "Tiket OLO SL WDM", "Tiket OLO SL WDM Quality", "Tiket Pra SQM Gaul HSI", "Tiket Reguler", "Tiket SIP Trunk", "Tiket SQM Datin", "Tiket SQM HSI", "Tiket WIFI ID", "Tiket Wifi Logic", "UNLOCK ODP", "Unspec DATIN", "Unspec HSI", "Unspec SITE/NODE-B", "Unspec WIFI", "Unspec Reguler", "Validasi Data EBIS", "Validasi Data WIFI", "Validasi Tiang", "Valins FTM", "Valins ODC", "Valins Regular", "WFM",
 ].sort();
 
 
@@ -315,6 +315,49 @@ const materialEvidenMap: Record<string, { evidences: string[], quantity?: boolea
   "Penarikan Kabel UTP (Mtr)": { evidences: ["eviden marking awal", "eviden marking akhir", "eviden dc", "eviden progres"], quantity: true },
 };
 
+function DateTimePicker({ value, onChange, disabled = false }: { value?: Date, onChange: (date?: Date) => void, disabled?: boolean }) {
+    const datePart = value;
+    const timePart = value ? format(value, 'HH:mm') : '00:00';
+
+    const handleDateChange = (newDate?: Date) => {
+        if (!newDate) {
+            onChange(undefined);
+            return;
+        }
+        const [currentHours, currentMinutes] = timePart.split(':').map(Number);
+        newDate.setHours(isNaN(currentHours) ? 0 : currentHours, isNaN(currentMinutes) ? 0 : currentMinutes, 0, 0);
+        onChange(newDate);
+    };
+
+    const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const [newHours, newMinutes] = e.target.value.split(':').map(Number);
+        const newDate = value ? new Date(value.getTime()) : new Date();
+        if (isNaN(newHours) || isNaN(newMinutes)) return;
+        newDate.setHours(newHours, newMinutes, 0, 0);
+        onChange(newDate);
+    };
+
+    return (
+        <Popover>
+            <PopoverTrigger asChild>
+                <Button variant={'outline'} disabled={disabled} className={cn('w-full justify-start text-left font-normal', !datePart && 'text-muted-foreground')}>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {datePart ? format(datePart, 'dd MMM yyyy, HH:mm') : <span>Pilih tanggal & waktu</span>}
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+                <Calendar mode="single" selected={datePart} onSelect={handleDateChange} initialFocus />
+                 <div className="p-2 border-t border-border">
+                    <Input
+                        type="time"
+                        value={timePart}
+                        onChange={handleTimeChange}
+                    />
+                </div>
+            </PopoverContent>
+        </Popover>
+    );
+}
 
 function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, currentUserProfile }: { pelanggan: Pelanggan, isOpen: boolean, onOpenChange: (open: boolean) => void, onFinished: (riwayat: RiwayatGangguan) => void, currentUserProfile: UserProfile | null }) {
     const { user } = useUser();
@@ -460,17 +503,11 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                          <div className="grid gap-2">
                             <Label htmlFor="tanggal-open">Tanggal Open *</Label>
-                             <Popover>
-                                <PopoverTrigger asChild><Button variant={'outline'} className={cn('w-full justify-start', !tanggalOpen && 'text-muted-foreground')}><CalendarIcon className="mr-2 h-4 w-4" />{tanggalOpen ? format(tanggalOpen, 'dd MMM yyyy') : <span>Pilih tanggal</span>}</Button></PopoverTrigger>
-                                <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={tanggalOpen} onSelect={setTanggalOpen} initialFocus /></PopoverContent>
-                            </Popover>
+                            <DateTimePicker value={tanggalOpen} onChange={setTanggalOpen} />
                           </div>
                           <div className="grid gap-2">
                             <Label htmlFor="tanggal-close">Tanggal Close</Label>
-                             <Popover>
-                                <PopoverTrigger asChild><Button variant={'outline'} className={cn('w-full justify-start', !tanggalClose && 'text-muted-foreground')}><CalendarIcon className="mr-2 h-4 w-4" />{tanggalClose ? format(tanggalClose, 'dd MMM yyyy') : <span>Pilih tanggal</span>}</Button></PopoverTrigger>
-                                <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={tanggalClose} onSelect={setTanggalClose} initialFocus /></PopoverContent>
-                            </Popover>
+                             <DateTimePicker value={tanggalClose} onChange={setTanggalClose} />
                           </div>
                           <div className="grid gap-2">
                             <Label htmlFor="riwayat-tiket">No. Tiket</Label>
@@ -1223,7 +1260,7 @@ export default function AdminPelangganPage() {
                                     </TableRow></TableHeader>
                                     <TableBody>{riwayatGangguan.map((item) => (
                                         <TableRow key={item.id}>
-                                            <TableCell className="whitespace-nowrap">{safeToDate(item.tanggalLapor) ? format(safeToDate(item.tanggalLapor)!, 'd MMMM yyyy', { locale: idLocale }) : '-'}</TableCell>
+                                            <TableCell className="whitespace-nowrap">{safeToDate(item.tanggalLapor) ? format(safeToDate(item.tanggalLapor)!, 'd MMMM yyyy, HH:mm', { locale: idLocale }) : '-'}</TableCell>
                                             <TableCell>{item.noTiket || '-'}</TableCell>
                                             <TableCell>{item.namaPetugas || '-'}</TableCell>
                                             <TableCell>{item.jenisOrder || '-'}</TableCell>
@@ -1303,6 +1340,7 @@ export default function AdminPelangganPage() {
     </>
   );
 }
+
 
 
 
