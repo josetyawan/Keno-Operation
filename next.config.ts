@@ -54,10 +54,7 @@ const nextConfig: NextConfig = {
       }
     ],
   },
-  experimental: {
-    allowedDevOrigins: ["https://6000-firebase-studio-1769154144390.cluster-osvg2nzmmzhzqqjio6oojllbg4.cloudworkstations.dev"],
-    serverComponentsExternalPackages: ['firebase'],
-  }
+  serverComponentsExternalPackages: ['firebase'],
 };
 
 export default nextConfig;
