@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { triggerDailyRekapAction } from '@/app/actions/triggerDailyRekapAction';
+import { triggerB2cRekapAction } from '@/app/actions/triggerB2cRekapAction';
 import { Bot, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
@@ -65,6 +66,7 @@ function generateRekapString(userInfos: UserDailyInfo[], title: string, dateHead
 
 export default function ManualRekapPage() {
     const [isTriggering, setIsTriggering] = useState(false);
+    const [isB2cTriggering, setIsB2cTriggering] = useState(false);
     const { toast } = useToast();
     const router = useRouter();
     const { user, isUserLoading } = useUser();
@@ -208,6 +210,28 @@ export default function ManualRekapPage() {
         setIsTriggering(false);
     };
 
+    const handleB2cTrigger = async () => {
+        setIsB2cTriggering(true);
+        try {
+            const result = await triggerB2cRekapAction();
+            if (result.success) {
+                toast({
+                    title: 'Sukses',
+                    description: result.message,
+                });
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error: any) {
+            toast({
+                variant: 'destructive',
+                title: 'Gagal Mengirim Rekap B2C',
+                description: error.message || 'Terjadi kesalahan yang tidak diketahui.',
+            });
+        }
+        setIsB2cTriggering(false);
+    };
+
     if (isUserLoading || isProfileLoading) {
         return <div>Memuat...</div>;
     }
@@ -233,6 +257,28 @@ export default function ManualRekapPage() {
                     <Button onClick={handleTrigger} disabled={isTriggering || isDataLoading} className="w-full mt-6" size="lg">
                         {(isTriggering || isDataLoading) ? <Loader2 className="mr-2 animate-spin" /> : <Bot className="mr-2" />}
                         {(isTriggering) ? 'Mengirim...' : (isDataLoading ? 'Memuat Data...' : 'Kirim Rekap Hari Ini ke Telegram')}
+                    </Button>
+                </CardContent>
+             </Card>
+            
+             <Card>
+                <CardHeader>
+                    <CardTitle>Kirim Laporan Rekap B2C</CardTitle>
+                    <CardDescription>
+                        Gunakan tombol ini untuk mengirimkan rekap produktivitas teknisi B2C secara manual.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Alert>
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Perhatian</AlertTitle>
+                        <AlertDescription>
+                           Ini akan memicu laporan yang sama dengan yang dijadwalkan untuk dikirim otomatis setiap 2 jam.
+                        </AlertDescription>
+                    </Alert>
+                    <Button onClick={handleB2cTrigger} disabled={isB2cTriggering} className="w-full mt-6" size="lg">
+                        {isB2cTriggering ? <Loader2 className="mr-2 animate-spin" /> : <Bot className="mr-2" />}
+                        {isB2cTriggering ? 'Mengirim Rekap B2C...' : 'Kirim Rekap B2C Sekarang'}
                     </Button>
                 </CardContent>
              </Card>
