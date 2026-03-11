@@ -1,3 +1,4 @@
+
 'use server';
 
 import { initializeFirebase } from '@/firebase/init';
@@ -22,13 +23,14 @@ export async function triggerB2cRekapAction(): Promise<{success: boolean, messag
         
         const startOfToday = new Date(today.setHours(0, 0, 0, 0));
         const endOfToday = new Date(today.setHours(23, 59, 59, 999));
-        
-        const dateForScheduleQuery = new Date(startOfToday.getTime());
 
         // 1. Fetch all necessary data
         const [b2cUsers, schedules, riwayatList, otherWorks] = await Promise.all([
             fetchCollection<UserProfile>(firestore, 'users', [where('unit', '==', 'B2C'), where('registrationStatus', '==', 'approved')]),
-            fetchCollection<Schedule>(firestore, 'schedules', [where('date', '==', Timestamp.fromDate(dateForScheduleQuery))]),
+            fetchCollection<Schedule>(firestore, 'schedules', [
+                where('date', '>=', Timestamp.fromDate(startOfToday)),
+                where('date', '<=', Timestamp.fromDate(endOfToday))
+            ]),
             fetchCollection<RiwayatGangguan>(firestore, 'riwayat-gangguan', [
                 where('tanggalLapor', '>=', Timestamp.fromDate(startOfToday)),
                 where('tanggalLapor', '<=', Timestamp.fromDate(endOfToday))

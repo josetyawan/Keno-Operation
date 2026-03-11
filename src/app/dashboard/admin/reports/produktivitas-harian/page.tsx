@@ -50,7 +50,6 @@ export default function ProduktivitasHarianPage() {
             const today = new Date();
             const startOfToday = new Date(today.setHours(0, 0, 0, 0));
             const endOfToday = new Date(today.setHours(23, 59, 59, 999));
-            const dateForScheduleQuery = new Date(startOfToday.getTime());
 
             // Generic fetch function
             async function fetchCollection<T>(collectionName: string, constraints: any[] = []): Promise<T[]> {
@@ -63,7 +62,10 @@ export default function ProduktivitasHarianPage() {
             // 1. Fetch all necessary data in parallel
             const [unitUsers, schedules, riwayatList, otherWorks] = await Promise.all([
                 fetchCollection<UserProfile>('users', [where('unit', '==', selectedUnit), where('registrationStatus', '==', 'approved')]),
-                fetchCollection<Schedule>('schedules', [where('date', '==', Timestamp.fromDate(dateForScheduleQuery))]),
+                fetchCollection<Schedule>('schedules', [
+                    where('date', '>=', Timestamp.fromDate(startOfToday)),
+                    where('date', '<=', Timestamp.fromDate(endOfToday))
+                ]),
                 fetchCollection<RiwayatGangguan>('riwayat-gangguan', [
                     where('tanggalLapor', '>=', Timestamp.fromDate(startOfToday)),
                     where('tanggalLapor', '<=', Timestamp.fromDate(endOfToday))
@@ -202,4 +204,3 @@ export default function ProduktivitasHarianPage() {
         </div>
     );
 }
-
