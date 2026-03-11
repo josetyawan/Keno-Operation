@@ -42,7 +42,7 @@ import { cn } from '@/lib/utils';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-const units = ['Provisioning', 'B2B', 'B2C', 'MTC', 'ALL'];
+const units = ['ALL', 'B2C', 'B2B', 'MTC', 'Provisioning'];
 
 type DayStatusInfo = {
     status: string; // 'H', 'L', 'PDM', etc.
