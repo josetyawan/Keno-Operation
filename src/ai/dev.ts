@@ -9,3 +9,4 @@ import '@/ai/flows/send-attendance-notification.ts';
 import '@/ai/flows/send-daily-rekap-report.ts';
 import '@/ai/flows/send-gamas-report-notice.ts';
 import '@/ai/flows/send-gamas-designator-notice.ts';
+import '@/ai/flows/send-swap-approval-notice.ts';

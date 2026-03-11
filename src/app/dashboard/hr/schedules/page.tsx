@@ -25,6 +25,7 @@ import { id as idLocale } from 'date-fns/locale';
 import type { Schedule, UserProfile } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
+import { sendSwapApprovalNotice } from '@/ai/flows/send-swap-approval-notice';
 
 const safeToDate = (timestamp: any): Date | null => {
     if (!timestamp) return null;
@@ -39,7 +40,7 @@ type ValidShiftType = 'piket-demak' | 'siang-malam' | 'malam' | 'ijin' | 'cuti' 
 function ScheduleForm({ schedule, users, onFormSubmit }: { schedule?: Partial<Schedule> | null, users: UserProfile[], onFormSubmit: (data: Partial<Schedule>) => void }) {
     const [userId, setUserId] = useState('');
     const [date, setDate] = useState<Date | undefined>();
-    const [shiftType, setShiftType] = useState<ValidShiftType>('piket-demak');
+    const [shiftType, setShiftType] = useState<ValidShiftType>('h');
     const [notes, setNotes] = useState('');
 
     useEffect(() => {
@@ -50,13 +51,13 @@ function ScheduleForm({ schedule, users, onFormSubmit }: { schedule?: Partial<Sc
             if (schedule.shiftType && validTypes.includes(schedule.shiftType as any)) {
                 setShiftType(schedule.shiftType as ValidShiftType);
             } else {
-                setShiftType('piket-demak');
+                setShiftType('h');
             }
             setNotes(schedule.notes || '');
         } else {
             setUserId('');
             setDate(undefined);
-            setShiftType('piket-demak');
+            setShiftType('h');
             setNotes('');
         }
     }, [schedule]);
@@ -117,14 +118,14 @@ function ScheduleForm({ schedule, users, onFormSubmit }: { schedule?: Partial<Sc
                 <Select value={shiftType} onValueChange={(value) => setShiftType(value as any)}>
                     <SelectTrigger><SelectValue placeholder="Pilih jenis" /></SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="piket-demak">Piket Demak (PDM)</SelectItem>
-                        <SelectItem value="siang-malam">Piket Siang-Malam (S/MC)</SelectItem>
-                        <SelectItem value="malam">Piket Malam (M)</SelectItem>
                         <SelectItem value="h">Hadir (H)</SelectItem>
                         <SelectItem value="pu">Hadir - Area Utara (PU)</SelectItem>
                         <SelectItem value="pb">Hadir - Area Barat (PB)</SelectItem>
                         <SelectItem value="ptm">Hadir - Area Timur (PTM)</SelectItem>
                         <SelectItem value="pt/bd">Hadir - Demak FAC, FN, FM (PT/BD)</SelectItem>
+                        <SelectItem value="piket-demak">Piket Demak (PDM)</SelectItem>
+                        <SelectItem value="siang-malam">Piket Siang-Malam (S/MC)</SelectItem>
+                        <SelectItem value="malam">Piket Malam (M)</SelectItem>
                         <SelectItem value="weekend-duty">Jaga Akhir Pekan</SelectItem>
                         <SelectItem value="holiday-duty">Jaga Hari Libur</SelectItem>
                         <SelectItem value="ijin">Ijin (i)</SelectItem>
@@ -386,9 +387,15 @@ export default function AdminSchedulesPage() {
         const performWrite = async () => {
             if (swapSourceSchedule) {
                 const batch = writeBatch(firestore);
+                // Create new schedule for replacement
                 batch.set(scheduleDocRef, { ...data, id: scheduleId, createdAt: Timestamp.now() }, { merge: true });
+                // Update original requester's schedule to 'libur'
                 const originalRequestRef = doc(firestore, 'schedules', swapSourceSchedule.id);
-                batch.delete(originalRequestRef);
+                const replacementUser = activeUsers.find(u => u.id === data.userId);
+                batch.update(originalRequestRef, { 
+                    shiftType: 'libur-dijadwalkan',
+                    notes: `Tukar jaga disetujui, digantikan oleh ${replacementUser?.displayName || data.userEmail}`
+                });
                 return batch.commit();
             } else {
                 let docToDeleteRef: DocumentReference | null = null;
@@ -415,7 +422,17 @@ export default function AdminSchedulesPage() {
                 if (swapSourceSchedule) {
                     const replacementUser = activeUsers.find(u => u.id === data.userId);
                     toastTitle = 'Tukar Jaga Berhasil Disetujui';
-                    toastDescription = `Jadwal baru untuk ${replacementUser?.displayName} telah dibuat. Jadwal ${swapSourceSchedule.userName} telah dikosongkan.`;
+                    toastDescription = `Jadwal baru untuk ${replacementUser?.displayName} telah dibuat. Jadwal ${swapSourceSchedule.userName} telah diubah menjadi libur.`;
+                    
+                    // SEND NOTIFICATION
+                    sendSwapApprovalNotice({
+                        requesterName: swapSourceSchedule.userName || 'N/A',
+                        replacementName: replacementUser?.displayName || 'N/A',
+                        swapDate: format(scheduleDate, 'eeee, dd MMMM yyyy', { locale: idLocale }),
+                    }).catch(err => {
+                        console.error("Telegram notification for swap approval failed:", err);
+                    });
+
                 } else if (scheduleToEdit?.id) {
                     toastTitle = 'Jadwal Diperbarui';
                 }
@@ -530,18 +547,19 @@ export default function AdminSchedulesPage() {
                 }
             });
 
-            const shiftCodeMap: Record<string, ValidShiftType> = {
+             const shiftCodeMap: Record<string, ValidShiftType> = {
+                'pdm': 'piket-demak',
                 'smc': 'siang-malam', 's/mc': 'siang-malam', 'sm': 'siang-malam',
                 'm': 'malam',
-                'pdm': 'piket-demak',
-                'i': 'ijin', 'c': 'cuti',
+                'i': 'ijin',
+                'c': 'cuti',
                 'h': 'h',
                 'pu': 'pu',
                 'pb': 'pb',
                 'ptm': 'ptm',
                 'pt/bd': 'pt/bd',
-                'jaga': 'weekend-duty', 'weekend': 'weekend-duty', 'holiday': 'holiday-duty',
-                'l': 'l',
+                'l': 'libur-dijadwalkan',
+                'tj': 'tukar-jaga',
             };
             
             let processedRows = 0;
@@ -775,7 +793,7 @@ export default function AdminSchedulesPage() {
                                                             <AlertDialogHeader>
                                                                 <AlertDialogTitle>Setujui Tukar Jaga?</AlertDialogTitle>
                                                                 <AlertDialogDescription>
-                                                                    Formulir jadwal akan terbuka. Silakan pilih teknisi pengganti ("{scheduleToApprove?.swapTargetUserName || 'N/A'}") dan simpan jadwal baru. Request lama akan otomatis dihapus.
+                                                                    Formulir jadwal akan terbuka. Silakan pilih teknisi pengganti ("{scheduleToApprove?.swapTargetUserName || 'N/A'}") dan simpan jadwal baru. Request lama akan otomatis diubah menjadi libur.
                                                                 </AlertDialogDescription>
                                                             </AlertDialogHeader>
                                                             <AlertDialogFooter>
