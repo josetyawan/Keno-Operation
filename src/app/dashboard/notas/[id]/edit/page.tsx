@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useRouter, useParams } from 'next/navigation';
@@ -28,7 +29,8 @@ import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, CalendarIcon, Upload, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { useUser, useFirestore, useDoc, useMemoFirebase, useStorage } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useStorage } from '@/firebase/provider';
 import { doc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { Nota, UserProfile } from '@/lib/types';
@@ -505,3 +507,5 @@ export default function EditNotaPage() {
 
     return <EditNotaForm nota={nota} isAdmin={isAdmin} />;
 }
+
+    

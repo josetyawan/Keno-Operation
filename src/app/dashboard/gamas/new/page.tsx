@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -10,7 +11,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Loader2, Upload, X, FileWarning, PlusCircle, Trash2, Check } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
-import { useFirestore, useUser, useStorage, useDoc, useMemoFirebase } from '@/firebase';
+import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
+import { useStorage } from '@/firebase/provider';
 import { collection, serverTimestamp, doc, addDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { GamasReport, UserProfile, DesignatorEvidence } from '@/lib/types';
@@ -362,3 +364,5 @@ export default function NewGamasReportPage() {
     </div>
   );
 }
+
+    

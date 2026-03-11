@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -28,7 +29,8 @@ import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, CalendarIcon, Camera, Upload } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { useFirestore, useUser, useStorage, useDoc, useMemoFirebase } from '@/firebase';
+import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
+import { useStorage } from '@/firebase/provider';
 import { collection, serverTimestamp, doc, addDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { cn } from '@/lib/utils';
@@ -497,3 +499,5 @@ export default function NewNotaPage() {
     </div>
   );
 }
+
+    

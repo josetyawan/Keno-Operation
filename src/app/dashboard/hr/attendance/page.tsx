@@ -1,8 +1,10 @@
 
+
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { useUser, useFirestore, useCollection, useStorage, useMemoFirebase, useDoc } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { useStorage } from '@/firebase/provider';
 import { collection, query, where, Timestamp, limit, doc, setDoc, addDoc, orderBy } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -31,7 +33,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { sendAttendanceNotice } from '@/ai/flows/send-attendance-notification';
+import { sendAttendanceNotice } from '@/ai/flows/send-attendance-notice';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
@@ -793,3 +795,5 @@ export default function AttendancePage() {
         </div>
     );
 }
+
+    
