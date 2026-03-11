@@ -4,7 +4,7 @@ import { getFirestore, collection, getDocs, query, where, Timestamp } from 'fire
 import { format, isSameDay } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import type { UserProfile, Schedule, RiwayatGangguan, OtherWork } from '@/lib/types';
-import { sendProductivityRekap } from '@/ai/flows/send-productivity-rekap';
+import { sendProductivityRekap } from '@/ai/flows/send-b2c-rekap';
 
 export const dynamic = 'force-dynamic';
 
