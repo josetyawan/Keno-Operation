@@ -49,6 +49,7 @@ const adminNavGroups = [
       { href: '/dashboard/admin/hr/holidays', label: 'Manajemen Hari Libur', icon: CalendarOff, access: 'admin' },
       { href: '/dashboard/admin/hr/leave-rekap', label: 'Rekap Izin/Cuti', icon: CalendarOff, access: 'korlap' },
       { href: '/dashboard/admin/hr/performance', label: 'Impor Performa', icon: Upload, access: 'korlap' },
+      { href: '/dashboard/admin/reports/produktivitas-harian', label: 'Rekap Produktivitas', icon: BarChart3, access: 'korlap' },
       { href: '/dashboard/hr/work-schedule', label: 'Jadwal Kerja', icon: CalendarDays, access: 'korlap' },
       { href: '/dashboard/hr/attendance/rekap', label: 'Rekap Absensi', icon: ClipboardCheck, access: 'korlap' },
       { href: '/dashboard/alker/rekap', label: 'Rekap Alker', icon: ClipboardCheck, access: 'korlap' },
@@ -82,7 +83,6 @@ const adminNavGroups = [
       { href: '/dashboard/admin/gamas-approval', label: 'Persetujuan Gamas', icon: ClipboardCheck, access: 'korlap' },
       { href: '/dashboard/admin/inventory/orbit', label: 'Inventory Orbit', icon: Component, access: 'admin' },
       { href: '/dashboard/admin/broadcast', label: 'Broadcast Pesan', icon: Send, access: 'admin' },
-      { href: '/dashboard/admin/reports/assurance-rekap', label: 'Rekap Assurance', icon: FileSpreadsheet, access: 'korlap' },
     ]
   }
 ];
