@@ -6,7 +6,6 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import TelegramBot from 'node-telegram-bot-api';
 import { format } from 'date-fns';
 
 // Define Zod schemas for input and output
@@ -57,8 +56,6 @@ const sendTelegramReportFlow = ai.defineFlow(
     }
 
     try {
-      const bot = new TelegramBot(TELEGRAM_BOT_TOKEN);
-
       // Format the message content
       let message = `Rekap Harian - ${input.rekapDate}\n${"=".repeat(20)}\n\n`;
 
@@ -76,16 +73,30 @@ const sendTelegramReportFlow = ai.defineFlow(
       message += `\n\n${"=".repeat(20)}\nTotal: Rp ${input.grandTotal.toLocaleString('id-ID')}`;
 
       // Send the message
-      await bot.sendMessage(TELEGRAM_CHAT_ID, message);
+      const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: TELEGRAM_CHAT_ID,
+          text: message
+        }),
+      });
+
+      const responseData = await response.json();
+      
+      if (!responseData.ok) {
+        const errorDescription = responseData.description || 'Unknown error';
+        if (errorDescription.includes('chat not found')) {
+            return { success: false, error: `Gagal mengirim: Chat ID "${TELEGRAM_CHAT_ID}" tidak valid atau bot belum diizinkan. Mohon periksa kembali Chat ID Anda.`}
+        }
+        throw new Error(errorDescription);
+      }
 
       return { success: true };
     } catch (error: any) {
       console.error('Failed to send Telegram message:', error);
-      const errorMessage = error.response?.body?.description || error.message || 'Terjadi kesalahan saat mengirim pesan ke Telegram.';
-      // Provide a more specific error if the chat ID is invalid
-      if (errorMessage.includes('chat not found')) {
-          return { success: false, error: `Gagal mengirim: Chat ID "${TELEGRAM_CHAT_ID}" tidak valid atau bot belum diizinkan. Mohon periksa kembali Chat ID Anda.`}
-      }
+      const errorMessage = error.message || 'Terjadi kesalahan saat mengirim pesan ke Telegram.';
       return {
         success: false,
         error: errorMessage,

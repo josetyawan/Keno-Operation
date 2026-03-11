@@ -1,9 +1,7 @@
-
 'use server';
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import TelegramBot from 'node-telegram-bot-api';
 
 const TELEGRAM_BOT_TOKEN = '8043290500:AAGxBvwZvkyASJb3a_q8wEBiveyVE2NN9lY';
 const TELEGRAM_CHAT_ID = '-4190909912';
@@ -39,14 +37,26 @@ const sendDailyRekapReportFlow = ai.defineFlow(
       return { success: false, error: errorMsg };
     }
 
-    try {
-      const bot = new TelegramBot(TELEGRAM_BOT_TOKEN);
+    const apiUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/`;
 
+    const sendApiRequest = async (endpoint: string, payload: object) => {
+        const response = await fetch(apiUrl + endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const responseData = await response.json();
+        if (!responseData.ok) {
+            throw new Error(responseData.description || `Failed to call ${endpoint}`);
+        }
+        return responseData;
+    };
+
+
+    try {
       // Send the main text messages
       for (const message of input.rekapMessages) {
-        // Use pre-tags for monospaced font that respects spaces and newlines
-        await bot.sendMessage(TELEGRAM_CHAT_ID, `<pre>${message}</pre>`, { parse_mode: 'HTML' });
-        // Add a small delay between messages to avoid rate limiting
+        await sendApiRequest('sendMessage', { chat_id: TELEGRAM_CHAT_ID, text: `<pre>${message}</pre>`, parse_mode: 'HTML' });
         await new Promise(resolve => setTimeout(resolve, 500));
       }
       
@@ -58,15 +68,15 @@ const sendDailyRekapReportFlow = ai.defineFlow(
         }
         
         if (photoChunks.length > 0 && input.photoCaption) {
-            await bot.sendMessage(TELEGRAM_CHAT_ID, `*${input.photoCaption}*`, { parse_mode: 'Markdown' });
+            await sendApiRequest('sendMessage', { chat_id: TELEGRAM_CHAT_ID, text: `*${input.photoCaption}*`, parse_mode: 'Markdown' });
         }
 
         for (const chunk of photoChunks) {
             if (chunk.length > 1) {
                 const mediaGroup = chunk.map(photoUrl => ({ type: 'photo' as const, media: photoUrl }));
-                await bot.sendMediaGroup(TELEGRAM_CHAT_ID, mediaGroup);
+                await sendApiRequest('sendMediaGroup', { chat_id: TELEGRAM_CHAT_ID, media: mediaGroup });
             } else if (chunk.length === 1) {
-                await bot.sendPhoto(TELEGRAM_CHAT_ID, chunk[0]);
+                await sendApiRequest('sendPhoto', { chat_id: TELEGRAM_CHAT_ID, photo: chunk[0] });
             }
             await new Promise(resolve => setTimeout(resolve, 1000));
         }
@@ -75,7 +85,7 @@ const sendDailyRekapReportFlow = ai.defineFlow(
       return { success: true };
     } catch (error: any) {
       console.error('Failed to send daily rekap to Telegram:', error);
-      const errorMessage = error.response?.body?.description || error.message || 'Gagal mengirim rekap harian.';
+      const errorMessage = error.message || 'Gagal mengirim rekap harian.';
       return { success: false, error: errorMessage };
     }
   }

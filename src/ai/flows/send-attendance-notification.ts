@@ -1,9 +1,7 @@
-
 'use server';
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import TelegramBot from 'node-telegram-bot-api';
 
 const TELEGRAM_BOT_TOKEN = '8043290500:AAGxBvwZvkyASJb3a_q8wEBiveyVE2NN9lY';
 const TELEGRAM_CHAT_ID = '-4190909912';
@@ -42,8 +40,6 @@ const sendAttendanceNoticeFlow = ai.defineFlow(
     }
 
     try {
-      const bot = new TelegramBot(TELEGRAM_BOT_TOKEN);
-
       let caption = `*Absensi Baru: ${input.userName}*\n\n`;
       caption += `*Status:* ${input.status}\n`;
       if (input.reason) {
@@ -53,19 +49,41 @@ const sendAttendanceNoticeFlow = ai.defineFlow(
         caption += `*Lokasi:* [Lihat di Peta](https://www.google.com/maps/search/?api=1&query=${input.coordinates})\n`;
       }
 
+      const apiUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/`;
+      let response;
+
       if (input.photoUrl) {
-        await bot.sendPhoto(TELEGRAM_CHAT_ID, input.photoUrl, {
-          caption: caption,
-          parse_mode: 'Markdown',
+        response = await fetch(apiUrl + 'sendPhoto', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: TELEGRAM_CHAT_ID,
+            photo: input.photoUrl,
+            caption: caption,
+            parse_mode: 'Markdown',
+          }),
         });
       } else {
-        await bot.sendMessage(TELEGRAM_CHAT_ID, caption, { parse_mode: 'Markdown' });
+        response = await fetch(apiUrl + 'sendMessage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: TELEGRAM_CHAT_ID,
+            text: caption,
+            parse_mode: 'Markdown',
+          }),
+        });
+      }
+
+      const responseData = await response.json();
+      if (!responseData.ok) {
+        throw new Error(responseData.description || 'Gagal mengirim notifikasi.');
       }
 
       return { success: true };
     } catch (error: any) {
       console.error('Failed to send Telegram attendance notice:', error);
-      const errorMessage = error.response?.body?.description || error.message || 'Gagal mengirim notifikasi.';
+      const errorMessage = error.message || 'Gagal mengirim notifikasi.';
       return { success: false, error: errorMessage };
     }
   }

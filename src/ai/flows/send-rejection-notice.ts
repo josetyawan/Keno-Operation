@@ -1,4 +1,3 @@
-
 'use server';
 
 /**
@@ -7,7 +6,6 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import TelegramBot from 'node-telegram-bot-api';
 
 const TELEGRAM_BOT_TOKEN = '7858540741:AAHJS7OqRtGoj3YbgtN3JJ0HYTC99GQi3uQ';
 const TELEGRAM_CHAT_ID = '-4689716037';
@@ -45,8 +43,6 @@ const sendRejectionNoticeFlow = ai.defineFlow(
     }
 
     try {
-      const bot = new TelegramBot(TELEGRAM_BOT_TOKEN);
-
       // Format the message content
       let message = `*Laporan Ditolak* ❌\n`;
       message += `--------------------\n`;
@@ -56,12 +52,26 @@ const sendRejectionNoticeFlow = ai.defineFlow(
       message += `*Alasan:* ${input.reason}`;
 
       // Send the message with Markdown parsing
-      await bot.sendMessage(TELEGRAM_CHAT_ID, message, { parse_mode: 'Markdown' });
+      const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: TELEGRAM_CHAT_ID,
+          text: message,
+          parse_mode: 'Markdown',
+        }),
+      });
+      
+      const responseData = await response.json();
+      if (!responseData.ok) {
+        throw new Error(responseData.description || 'Gagal mengirim notifikasi.');
+      }
 
       return { success: true };
     } catch (error: any) {
       console.error('Failed to send Telegram rejection notice:', error);
-      const errorMessage = error.response?.body?.description || error.message || 'Terjadi kesalahan saat mengirim notifikasi penolakan.';
+      const errorMessage = error.message || 'Terjadi kesalahan saat mengirim notifikasi penolakan.';
       return { success: false, error: errorMessage };
     }
   }
