@@ -67,16 +67,11 @@ const sendProductivityRekapFlow = ai.defineFlow(
     };
 
     try {
-      // Send summary message
-      if (input.summaryMessage) {
-        await sendApiRequest(input.summaryMessage);
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
+      // Combine summary and detail messages into one, separated by newlines
+      const combinedMessage = `${input.summaryMessage}\n\n${input.detailMessage}`;
       
-      // Send detail message
-      if (input.detailMessage) {
-        await sendApiRequest(input.detailMessage);
-      }
+      // Send the single combined message
+      await sendApiRequest(combinedMessage);
 
       return { success: true };
     } catch (error: any) {

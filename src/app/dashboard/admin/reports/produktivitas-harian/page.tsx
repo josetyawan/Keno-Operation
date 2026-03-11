@@ -11,12 +11,13 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Calendar as CalendarIcon } from 'lucide-react';
+import { Loader2, Calendar as CalendarIcon, Send } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import type { DateRange } from 'react-day-picker';
+import { triggerB2cRekapAction } from '@/app/actions/triggerB2cRekapAction';
 
 const units = ['B2C', 'B2B', 'MTC', 'Provisioning'];
 
@@ -41,6 +42,7 @@ export default function ProduktivitasHarianPage() {
     const { toast } = useToast();
     const [selectedUnit, setSelectedUnit] = useState('B2C');
     const [isLoading, setIsLoading] = useState(false);
+    const [isSending, setIsSending] = useState(false);
     const [summaryData, setSummaryData] = useState<SummaryData[]>([]);
     const [detailData, setDetailData] = useState<DetailData[]>([]);
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
@@ -168,6 +170,58 @@ export default function ProduktivitasHarianPage() {
         return format(dateRange.from, 'dd MMMM yyyy', {locale: idLocale});
     }, [dateRange]);
 
+    const handleManualSend = async () => {
+        if ((summaryData.length === 0 && detailData.length === 0) || !selectedUnit) {
+            toast({
+                variant: "destructive",
+                title: "Tidak Ada Data",
+                description: "Tidak ada data produktivitas untuk dikirim.",
+            });
+            return;
+        }
+        setIsSending(true);
+        
+        const summaryMessage = `📆 REKAP TEKNISI ${selectedUnit.toUpperCase()} SEKTOR KUDUS (${dateHeader})\n\n` +
+                             'NAMA TEKNISI | PRODUKTIVITAS\n' +
+                             summaryData.map(item => `${item.name} | ${item.productivity}`).join('\n');
+        
+        let detailMessage = `📌 DETAIL PRODUKTIVITAS TEKNISI ${selectedUnit.toUpperCase()}\n`;
+        if (detailData.length === 0) {
+            detailMessage += '\nTidak ada produktivitas tercatat untuk periode ini.';
+        } else {
+            detailMessage += detailData.map(user => 
+                `\n${user.userName} ${user.telegramUsername}\n` +
+                'TIKET | SERVICE | SEGMEN\n' +
+                user.tickets.map(t => `${t.ticket || '-'} | ${t.service || '-'} | ${t.segment}`).join('\n')
+            ).join('');
+        }
+
+        try {
+            const result = await triggerB2cRekapAction({
+                unit: selectedUnit,
+                summaryMessage: summaryMessage,
+                detailMessage: detailMessage,
+            });
+
+            if (result.success) {
+                toast({
+                    title: "Sukses",
+                    description: result.message,
+                });
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error: any) {
+            toast({
+                variant: "destructive",
+                title: "Gagal Mengirim",
+                description: error.message || "Terjadi kesalahan saat mengirim laporan.",
+            });
+        } finally {
+            setIsSending(false);
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -227,6 +281,10 @@ export default function ProduktivitasHarianPage() {
                             </PopoverContent>
                         </Popover>
                     </div>
+                    <Button onClick={handleManualSend} disabled={isLoading || isSending} className="ml-auto">
+                        {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                        Kirim ke Telegram
+                    </Button>
                 </CardContent>
             </Card>
 
