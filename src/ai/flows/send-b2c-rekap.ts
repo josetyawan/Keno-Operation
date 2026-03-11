@@ -4,34 +4,44 @@ import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
 const TELEGRAM_BOT_TOKEN = '7909439830:AAFZj0k030AuqOprUki3uGt-oWhy5RNZ6t4';
-const TELEGRAM_CHAT_ID = '-1002355896218';
 
-const SendB2CRekapInputSchema = z.object({
+const CHAT_ID_MAP: Record<string, string> = {
+  'B2C': '-1001762864793',
+  'MTC': '-1001762864793',
+  'B2B': '-1002355896218',
+  'Provisioning': '-1003642678189',
+};
+
+
+const SendProductivityRekapInputSchema = z.object({
+  unit: z.string(),
   summaryMessage: z.string(),
   detailMessage: z.string(),
 });
 
-const SendB2CRekapOutputSchema = z.object({
+const SendProductivityRekapOutputSchema = z.object({
   success: z.boolean(),
   error: z.string().optional(),
 });
 
-export type SendB2CRekapInput = z.infer<typeof SendB2CRekapInputSchema>;
-export type SendB2CRekapOutput = z.infer<typeof SendB2CRekapOutputSchema>;
+export type SendProductivityRekapInput = z.infer<typeof SendProductivityRekapInputSchema>;
+export type SendProductivityRekapOutput = z.infer<typeof SendProductivityRekapOutputSchema>;
 
-export async function sendB2cRekap(input: SendB2CRekapInput): Promise<SendB2CRekapOutput> {
-  return sendB2cRekapFlow(input);
+export async function sendProductivityRekap(input: SendProductivityRekapInput): Promise<SendProductivityRekapOutput> {
+  return sendProductivityRekapFlow(input);
 }
 
-const sendB2cRekapFlow = ai.defineFlow(
+const sendProductivityRekapFlow = ai.defineFlow(
   {
-    name: 'sendB2cRekapFlow',
-    inputSchema: SendB2CRekapInputSchema,
-    outputSchema: SendB2CRekapOutputSchema,
+    name: 'sendProductivityRekapFlow',
+    inputSchema: SendProductivityRekapInputSchema,
+    outputSchema: SendProductivityRekapOutputSchema,
   },
   async (input) => {
-    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
-      const errorMsg = 'Telegram Bot Token or Chat ID for B2C Rekap is not configured.';
+    const chatId = CHAT_ID_MAP[input.unit];
+
+    if (!TELEGRAM_BOT_TOKEN || !chatId) {
+      const errorMsg = `Telegram Bot Token or Chat ID for unit ${input.unit} is not configured.`;
       console.error(errorMsg);
       return { success: false, error: errorMsg };
     }
@@ -43,7 +53,7 @@ const sendB2cRekapFlow = ai.defineFlow(
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          chat_id: TELEGRAM_CHAT_ID,
+          chat_id: chatId,
           text: `<pre>${text}</pre>`,
           parse_mode: 'HTML',
         }),
@@ -58,18 +68,20 @@ const sendB2cRekapFlow = ai.defineFlow(
 
     try {
       // Send summary message
-      await sendApiRequest(input.summaryMessage);
+      if (input.summaryMessage) {
+        await sendApiRequest(input.summaryMessage);
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
       
-      // Wait a bit before sending the detail to ensure order
-      await new Promise(resolve => setTimeout(resolve, 1000)); 
-
       // Send detail message
-      await sendApiRequest(input.detailMessage);
+      if (input.detailMessage) {
+        await sendApiRequest(input.detailMessage);
+      }
 
       return { success: true };
     } catch (error: any) {
-      console.error('Failed to send B2C rekap to Telegram:', error);
-      const errorMessage = error.message || 'Gagal mengirim rekap B2C.';
+      console.error(`Failed to send productivity rekap for ${input.unit} to Telegram:`, error);
+      const errorMessage = error.message || `Gagal mengirim rekap ${input.unit}.`;
       return { success: false, error: errorMessage };
     }
   }
