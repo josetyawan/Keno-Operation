@@ -105,7 +105,7 @@ service cloud.firestore {
     }
 
     match /pelanggan/{pelangganId} {
-      allow get, list: if hasAllProAccess() || isKorlap();
+      allow get, list: if hasAllProAccess();
       allow create: if isApproved() && isCreatingOwn('userId');
       allow update: if isKorlap() || (hasAllProAccess() && isUpdatingOwn('userId')) || isAdmin();
       allow delete: if isAdmin() || isKorlap();
@@ -114,7 +114,7 @@ service cloud.firestore {
     match /riwayat-gangguan/{riwayatId} {
       allow create: if isApproved() && isCreatingOwn('userId');
       allow get: if isApproved();
-      allow list: if isAdmin() || isKorlap();
+      allow list: if hasAllProAccess();
       allow update, delete: if isAdmin() || isKorlap();
     }
     
