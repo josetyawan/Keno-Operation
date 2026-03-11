@@ -235,11 +235,11 @@ export default function AdminCashbookPage() {
                         <p className="text-muted-foreground mt-1">Catat dan lacak semua pemasukan dan pengeluaran kas.</p>
                     </div>
                     <div className="flex gap-2">
-                        <Dialog open={isFormOutOpen} onOpenChange={setIsFormOutOpen}>
+                        <Dialog open={isFormOutOpen} onOpenChange={setIsFormOutOpen} modal={false}>
                             <DialogTrigger asChild><Button variant="destructive"><ArrowDownCircle className="mr-2"/>Tambah Pengeluaran</Button></DialogTrigger>
                             <DialogContent><DialogHeader><DialogTitle>Catat Pengeluaran Manual</DialogTitle></DialogHeader><TransactionForm type="out" onFormSubmit={handleCreateSubmit} isSaving={isSaving} userEmail={user?.email || ''} /></DialogContent>
                         </Dialog>
-                        <Dialog open={isFormInOpen} onOpenChange={setIsFormInOpen}>
+                        <Dialog open={isFormInOpen} onOpenChange={setIsFormInOpen} modal={false}>
                             <DialogTrigger asChild><Button><ArrowUpCircle className="mr-2"/>Tambah Pemasukan</Button></DialogTrigger>
                             <DialogContent><DialogHeader><DialogTitle>Catat Pemasukan Kas</DialogTitle></DialogHeader><TransactionForm type="in" onFormSubmit={handleCreateSubmit} isSaving={isSaving} userEmail={user?.email || ''} /></DialogContent>
                         </Dialog>
@@ -319,7 +319,7 @@ export default function AdminCashbookPage() {
             </div>
             
             {transactionToEdit && (
-                 <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+                 <Dialog open={isEditOpen} onOpenChange={setIsEditOpen} modal={false}>
                     <DialogContent>
                         <DialogHeader>
                             <DialogTitle>Edit Transaksi</DialogTitle>
