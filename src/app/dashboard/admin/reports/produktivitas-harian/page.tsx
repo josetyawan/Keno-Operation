@@ -1,26 +1,28 @@
-
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useUser, useFirestore } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { collection, getDocs, query, where, Timestamp } from 'firebase/firestore';
-import { format } from 'date-fns';
+import { format, isSameDay } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import type { UserProfile, Schedule, RiwayatGangguan, OtherWork } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Calendar as CalendarIcon } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import type { DateRange } from 'react-day-picker';
 
 const units = ['B2C', 'B2B', 'MTC', 'Provisioning'];
 
 type SummaryData = {
     name: string;
-    productivity: number | 'L';
+    productivity: number | 'L'; // Keep 'L' for single day view
 };
 
 type DetailData = {
@@ -41,15 +43,20 @@ export default function ProduktivitasHarianPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [summaryData, setSummaryData] = useState<SummaryData[]>([]);
     const [detailData, setDetailData] = useState<DetailData[]>([]);
+    const [dateRange, setDateRange] = useState<DateRange | undefined>({
+        from: new Date(),
+        to: new Date(),
+    });
 
     const fetchProductivityData = useCallback(async () => {
-        if (!selectedUnit) return;
+        if (!selectedUnit || !dateRange?.from) return;
         setIsLoading(true);
 
         try {
-            const today = new Date();
-            const startOfToday = new Date(today.setHours(0, 0, 0, 0));
-            const endOfToday = new Date(today.setHours(23, 59, 59, 999));
+            const startDate = new Date(dateRange.from.setHours(0, 0, 0, 0));
+            const endDate = new Date((dateRange.to || dateRange.from).setHours(23, 59, 59, 999));
+            
+            const isSingleDay = isSameDay(startDate, endDate);
 
             // Generic fetch function
             async function fetchCollection<T>(collectionName: string, constraints: any[] = []): Promise<T[]> {
@@ -59,40 +66,55 @@ export default function ProduktivitasHarianPage() {
                 return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
             }
             
-            // 1. Fetch all necessary data in parallel
-            const [unitUsers, schedules, riwayatList, otherWorks] = await Promise.all([
+            let schedules: Schedule[] = [];
+            if (isSingleDay) {
+                schedules = await fetchCollection<Schedule>('schedules', [
+                    where('date', '>=', Timestamp.fromDate(startDate)),
+                    where('date', '<=', Timestamp.fromDate(endDate))
+                ]);
+            }
+            
+            const [unitUsers, riwayatList, otherWorks] = await Promise.all([
                 fetchCollection<UserProfile>('users', [where('unit', '==', selectedUnit), where('registrationStatus', '==', 'approved')]),
-                fetchCollection<Schedule>('schedules', [
-                    where('date', '>=', Timestamp.fromDate(startOfToday)),
-                    where('date', '<=', Timestamp.fromDate(endOfToday))
-                ]),
                 fetchCollection<RiwayatGangguan>('riwayat-gangguan', [
-                    where('tanggalLapor', '>=', Timestamp.fromDate(startOfToday)),
-                    where('tanggalLapor', '<=', Timestamp.fromDate(endOfToday))
+                    where('tanggalLapor', '>=', Timestamp.fromDate(startDate)),
+                    where('tanggalLapor', '<=', Timestamp.fromDate(endDate))
                 ]),
                 fetchCollection<OtherWork>('other-works', [
-                    where('tanggalPengerjaan', '>=', Timestamp.fromDate(startOfToday)),
-                    where('tanggalPengerjaan', '<=', Timestamp.fromDate(endOfToday))
+                    where('tanggalPengerjaan', '>=', Timestamp.fromDate(startDate)),
+                    where('tanggalPengerjaan', '<=', Timestamp.fromDate(endDate))
                 ])
             ]);
 
             const scheduleMap = new Map(schedules.map(s => [s.userId, s.shiftType]));
             const productivityMap = new Map<string, number>();
 
-            // 2. Calculate productivity
+            // Calculate productivity, but only for users in the selected unit
             riwayatList.forEach(item => {
-                productivityMap.set(item.userId, (productivityMap.get(item.userId) || 0) + 1);
+                const user = unitUsers.find(u => u.id === item.userId);
+                if (user) {
+                    productivityMap.set(item.userId, (productivityMap.get(item.userId) || 0) + 1);
+                }
             });
             otherWorks.forEach(item => {
-                productivityMap.set(item.userId, (productivityMap.get(item.userId) || 0) + 1);
+                const user = unitUsers.find(u => u.id === item.userId);
+                if (user) {
+                    productivityMap.set(item.userId, (productivityMap.get(item.userId) || 0) + 1);
+                }
             });
 
-            // 3. Generate Summary Table
+            // Generate Summary Table
             const newSummaryData = unitUsers.map(user => {
-                const userSchedule = scheduleMap.get(user.id);
-                // Define what counts as 'Libur'
-                const isLibur = userSchedule === 'l' || userSchedule === 'libur-dijadwalkan' || userSchedule === 'cuti' || userSchedule === 'ijin';
-                const productivity = isLibur ? 'L' : (productivityMap.get(user.id) || 0);
+                let productivity: number | 'L' = productivityMap.get(user.id) || 0;
+                
+                if (isSingleDay) {
+                    const userSchedule = scheduleMap.get(user.id);
+                    const isLibur = userSchedule === 'l' || userSchedule === 'libur-dijadwalkan' || userSchedule === 'cuti' || userSchedule === 'ijin';
+                    if (isLibur) {
+                        productivity = 'L';
+                    }
+                }
+
                 return {
                     name: (user.displayName || user.email).toUpperCase(),
                     productivity: productivity
@@ -101,7 +123,7 @@ export default function ProduktivitasHarianPage() {
             
             setSummaryData(newSummaryData);
             
-            // 4. Generate Detail Section
+            // Generate Detail Section
             const productiveUsers = unitUsers.filter(user => (productivityMap.get(user.id) || 0) > 0);
             
             const newDetailData = productiveUsers.map(user => {
@@ -132,30 +154,73 @@ export default function ProduktivitasHarianPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [firestore, selectedUnit, toast]);
+    }, [firestore, selectedUnit, dateRange, toast]);
 
     useEffect(() => {
         fetchProductivityData();
     }, [fetchProductivityData]);
+    
+    const dateHeader = useMemo(() => {
+        if (!dateRange?.from) return 'Pilih tanggal';
+        if (dateRange.to) {
+            return `${format(dateRange.from, 'dd/MM/yyyy')} - ${format(dateRange.to, 'dd/MM/yyyy')}`;
+        }
+        return format(dateRange.from, 'dd MMMM yyyy', {locale: idLocale});
+    }, [dateRange]);
 
     return (
         <div className="space-y-6">
-            <h1 className="text-3xl font-bold tracking-tight">Rekap Produktivitas Harian</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Rekap Produktivitas Teknisi</h1>
             
             <Card>
                 <CardHeader>
-                    <CardTitle>Filter Unit</CardTitle>
-                    <CardDescription>Pilih unit untuk melihat rekap produktivitas hari ini.</CardDescription>
+                    <CardTitle>Filter Data</CardTitle>
+                    <CardDescription>Pilih unit dan rentang tanggal untuk melihat rekap produktivitas.</CardDescription>
                 </CardHeader>
-                <CardContent className="flex items-center gap-4">
-                     <div className="grid gap-2 w-full max-w-sm">
+                <CardContent className="flex flex-wrap items-end gap-4">
+                     <div className="grid gap-2">
                         <Label htmlFor="unit-select">Unit</Label>
                         <Select value={selectedUnit} onValueChange={setSelectedUnit}>
-                            <SelectTrigger id="unit-select"><SelectValue placeholder="Pilih Unit..." /></SelectTrigger>
+                            <SelectTrigger id="unit-select" className="w-[180px]"><SelectValue placeholder="Pilih Unit..." /></SelectTrigger>
                             <SelectContent>
                                 {units.map(unit => <SelectItem key={unit} value={unit}>{unit}</SelectItem>)}
                             </SelectContent>
                         </Select>
+                    </div>
+                     <div className="grid gap-2">
+                        <Label htmlFor="date-range-picker">Rentang Tanggal</Label>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    id="date-range-picker"
+                                    variant={"outline"}
+                                    className={cn("w-[300px] justify-start text-left font-normal", !dateRange && "text-muted-foreground")}
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {dateRange?.from ? (
+                                        dateRange.to ? (
+                                            <>
+                                                {format(dateRange.from, "dd LLL, yy", {locale: idLocale})} - {format(dateRange.to, "dd LLL, yy", {locale: idLocale})}
+                                            </>
+                                        ) : (
+                                            format(dateRange.from, "dd LLL, yy", {locale: idLocale})
+                                        )
+                                    ) : (
+                                        <span>Pilih rentang tanggal</span>
+                                    )}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                    initialFocus
+                                    mode="range"
+                                    defaultMonth={dateRange?.from}
+                                    selected={dateRange}
+                                    onSelect={setDateRange}
+                                    numberOfMonths={2}
+                                />
+                            </PopoverContent>
+                        </Popover>
                     </div>
                 </CardContent>
             </Card>
@@ -167,7 +232,7 @@ export default function ProduktivitasHarianPage() {
                     <Card className="lg:col-span-1">
                         <CardHeader>
                             <CardTitle>Ringkasan Produktivitas</CardTitle>
-                             <CardDescription>{selectedUnit} - {format(new Date(), 'dd MMMM yyyy', {locale: idLocale})}</CardDescription>
+                             <CardDescription>{selectedUnit} - {dateHeader}</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <pre className="text-sm bg-muted p-4 rounded-md overflow-x-auto">
@@ -192,7 +257,7 @@ export default function ProduktivitasHarianPage() {
                                             `TIKET | SERVICE | SEGMEN\n` +
                                             user.tickets.map(t => `${t.ticket} | ${t.service} | ${t.segment}`).join('\n')
                                         )).join('\n')
-                                        : 'Tidak ada produktivitas tercatat untuk unit ini hari ini.'
+                                        : 'Tidak ada produktivitas tercatat untuk unit ini pada rentang tanggal yang dipilih.'
                                     }
                                 </code>
                             </pre>
