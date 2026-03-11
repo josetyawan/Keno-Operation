@@ -113,13 +113,15 @@ service cloud.firestore {
 
     match /riwayat-gangguan/{riwayatId} {
       allow create: if isApproved() && isCreatingOwn('userId');
-      allow read: if isApproved();
+      allow get: if isApproved();
+      allow list: if isAdmin() || isKorlap();
       allow update, delete: if isAdmin() || isKorlap();
     }
     
     match /other-works/{workId} {
       allow create: if isApproved() && isCreatingOwn('userId');
-      allow read: if isApproved();
+      allow get: if isApproved();
+      allow list: if isAdmin() || isKorlap();
       allow update, delete: if isAdmin() || isKorlap();
     }
 
@@ -152,7 +154,7 @@ service cloud.firestore {
 
     match /schedules/{scheduleId} {
       allow get: if isOwner(resource.data.userId) || isAdmin() || isKorlap();
-      allow list: if isApproved();
+      allow list: if isAdmin() || isKorlap();
       allow create: if (isAdmin() || isKorlap()) || (isCreatingOwn('userId') && (request.resource.data.shiftType == 'ijin' || request.resource.data.shiftType == 'cuti' || request.resource.data.shiftType == 'tukar-jaga'));
       allow update: if isOwner(resource.data.userId) || isAdmin() || isKorlap();
       allow delete: if isAdmin() || isKorlap();
@@ -215,5 +217,3 @@ service cloud.firestore {
     }
   }
 }
-
-    
