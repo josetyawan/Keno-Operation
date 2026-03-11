@@ -156,22 +156,32 @@ export default function ManualRekapPage() {
             if (mtcUsers.length > 0) rekapMessages.push(generateRekapString(mtcUsers, 'ASSURANCE - MTC', formattedDateHeader));
             if (assuranceB2BUsers.length > 0) rekapMessages.push(generateRekapString(assuranceB2BUsers, 'ASSURANCE - B2B', formattedDateHeader));
             
-            let photosToSend: string[] = [];
-            const hasNightShift = allUserStatuses.some(u => u.status === 'Shift Malam');
-            const hasWeekendDuty = schedules.some(s => s.shiftType === 'weekend-duty');
-            const hasHolidayDuty = schedules.some(s => s.shiftType === 'holiday-duty');
-            const isJagaDay = isTodayWeekend || isTodayHoliday || hasNightShift;
-            
-            if (isJagaDay && attendances.length > 0) {
-                photosToSend = attendances.map(a => a.checkInPhotoUrl).filter((url): url is string => !!url);
-            }
+            // --- CORRECTED PHOTO LOGIC ---
+            const onDutyUserIds = new Set<string>();
+            schedules.forEach(s => {
+                if (
+                    (isTodayWeekend && s.shiftType === 'weekend-duty') ||
+                    (isTodayHoliday && s.shiftType === 'holiday-duty') ||
+                    s.shiftType === 'malam' ||
+                    s.shiftType === 'siang-malam'
+                ) {
+                    onDutyUserIds.add(s.userId);
+                }
+            });
+
+            const photosToSend = (attendances || [])
+                .filter(att => onDutyUserIds.has(att.userId))
+                .map(att => att.checkInPhotoUrl)
+                .filter((url): url is string => !!url);
+                
+            const isJagaDay = onDutyUserIds.size > 0;
+            // --- END OF CORRECTION ---
             
             if (rekapMessages.length === 0 && photosToSend.length === 0) {
                  toast({ title: 'Tidak Ada Data', description: 'Tidak ada data rekap untuk dikirim hari ini.' });
                  setIsTriggering(false);
                  return;
             }
-            // --- End of moved logic ---
             
             // Call the simplified server action
             const result = await triggerDailyRekapAction({
