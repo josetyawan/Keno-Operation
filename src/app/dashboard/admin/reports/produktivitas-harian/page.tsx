@@ -11,12 +11,13 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Calendar as CalendarIcon } from 'lucide-react';
+import { Loader2, Calendar as CalendarIcon, Bot } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import type { DateRange } from 'react-day-picker';
+import { triggerB2cRekapAction } from '@/app/actions/triggerB2cRekapAction';
 
 const units = ['B2C', 'B2B', 'MTC', 'Provisioning'];
 
@@ -41,6 +42,7 @@ export default function ProduktivitasHarianPage() {
     const { toast } = useToast();
     const [selectedUnit, setSelectedUnit] = useState('B2C');
     const [isLoading, setIsLoading] = useState(false);
+    const [isSending, setIsSending] = useState(false);
     const [summaryData, setSummaryData] = useState<SummaryData[]>([]);
     const [detailData, setDetailData] = useState<DetailData[]>([]);
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
@@ -168,9 +170,70 @@ export default function ProduktivitasHarianPage() {
         return format(dateRange.from, 'dd MMMM yyyy', {locale: idLocale});
     }, [dateRange]);
 
+    const handleSendToTelegram = async () => {
+        if (summaryData.length === 0 && detailData.length === 0) {
+            toast({
+                variant: "destructive",
+                title: "Tidak Ada Data",
+                description: "Tidak ada data produktivitas untuk dikirim.",
+            });
+            return;
+        }
+        setIsSending(true);
+    
+        try {
+            let summaryMessage = `📆 REKAP TEKNISI ${selectedUnit.toUpperCase()} SEKTOR KUDUS (${dateHeader})\n\n`;
+            summaryMessage += 'NAMA TEKNISI | PRODUKTIVITAS\n';
+            summaryData.forEach(item => {
+                summaryMessage += `${item.name} | ${item.productivity}\n`;
+            });
+    
+            let detailMessage = `📌 DETAIL PRODUKTIVITAS TEKNISI ${selectedUnit.toUpperCase()}\n`;
+            if (detailData.length === 0) {
+                detailMessage += '\nTidak ada produktivitas tercatat untuk periode ini.';
+            } else {
+                detailData.forEach(user => {
+                    detailMessage += `\n${user.userName} ${user.telegramUsername}\n`;
+                    detailMessage += 'TIKET | SERVICE | SEGMEN\n';
+                    user.tickets.forEach(t => {
+                        detailMessage += `${t.ticket || ''} | ${t.service || ''} | ${t.segment}\n`;
+                    });
+                });
+            }
+            
+            const result = await triggerB2cRekapAction({ summaryMessage, detailMessage });
+    
+            if (result.success) {
+                toast({
+                    title: "Sukses",
+                    description: "Laporan produktivitas berhasil dikirim ke Telegram.",
+                });
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error: any) {
+            toast({
+                variant: "destructive",
+                title: "Gagal Mengirim",
+                description: error.message,
+            });
+        } finally {
+            setIsSending(false);
+        }
+    };
+
     return (
         <div className="space-y-6">
-            <h1 className="text-3xl font-bold tracking-tight">Rekap Produktivitas Teknisi</h1>
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">Rekap Produktivitas Teknisi</h1>
+                    <p className="text-muted-foreground">Analisis produktivitas dan kirim laporan rekap.</p>
+                </div>
+                 <Button onClick={handleSendToTelegram} disabled={isLoading || isSending}>
+                    {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Bot className="mr-2 h-4 w-4" />}
+                    Kirim ke Telegram
+                </Button>
+            </div>
             
             <Card>
                 <CardHeader>
