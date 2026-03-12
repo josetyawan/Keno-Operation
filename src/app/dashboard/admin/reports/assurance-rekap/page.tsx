@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -19,8 +18,6 @@ import * as XLSX from 'xlsx';
 import { useRouter } from 'next/navigation';
 import { Label } from '@/components/ui/label';
 
-
-// Headers as specified by the user
 const excelHeaders = [
     "NO WITEL", "NO TIKET", "HASIL CEK WEB", "ACTUAL SOLUTION", "ACTUAL SOLUTION vs LAPANGAN", 
     "DESKRIPSI_CUST_CLOSE", "LAYANAN", "IS_GAMAS", "KET KATEGORI", "TANGGAL CLOSED", 
@@ -31,24 +28,20 @@ const excelHeaders = [
     "Penarikan Kabel UTP (Mtr)"
 ];
 
-// Mapping from header to material names in the database
 const materialHeaderMapping: { [key: string]: string[] } = {
-    "DROPWIRE": ["DROPCORE BARU", "DROPCORE REFURBISH"],
+    "DROPWIRE": ["DROPWIRE"], // This might need adjustment if it's a sum
     "DROPCORE BARU": ["DROPCORE BARU"],
     "DROPCORE REFURBISH": ["DROPCORE REFURBISH"],
     "ROSET": ["ROSET"],
     "PIGTAIL SC": ["PIGTAIL SC"],
     "PATCHCORE 15": ["PATCHCORE 15"],
     "PATCHCORE 2 MTR": ["PATCHCORE 2 MTR"],
-    "KELEBIHAN PATCHCORE 1 MTR": [], // This seems calculated, will handle separately
     "SPLITER 1:2": ["SPLITER 1:2"],
     "SPLITER 1:4": ["SPLITER 1:4"],
     "SPLITER 1:8": ["SPLITER 1:8"],
     "SPLITER 1:16": ["SPLITER 1:16"],
-    "Termovit (cm)": ["Termovit (cm)"],
     "Adapter SC": ["Adapter SC"],
     "RJ45": ["RJ45"],
-    "Protection Sleeve": ["Protection Sleeve"],
     "Splice on Connector": ["Splice on Connector"],
     "Penarikan Kabel UTP (Mtr)": ["Penarikan Kabel UTP (Mtr)"],
 };
@@ -113,12 +106,13 @@ export default function AssuranceRekapPage() {
                 row["LOKASI STO"] = riwayat.sto || '';
                 row["PUAS"] = ''; // Placeholder
 
-                // Material mapping
+                // Material mapping logic
                 const materialsUsed = new Map<string, number>();
                 riwayat.materials?.forEach(mat => {
                     materialsUsed.set(mat.materialName, (materialsUsed.get(mat.materialName) || 0) + (mat.quantity || 1));
                 });
                 
+                // Regular material mapping
                 for(const header in materialHeaderMapping) {
                     const materialNames = materialHeaderMapping[header];
                     let totalQuantity = 0;
@@ -130,7 +124,12 @@ export default function AssuranceRekapPage() {
                     row[header] = totalQuantity > 0 ? totalQuantity : '';
                 }
 
-                // Special case for 'KELEBIHAN PATCHCORE 1 MTR'
+                // Special logic for Protection Sleeve and Termovit
+                const protectionSleeveQty = materialsUsed.get("Protection Sleeve") || 0;
+                row["Protection Sleeve"] = protectionSleeveQty > 0 ? protectionSleeveQty : '';
+                row["Termovit (cm)"] = protectionSleeveQty > 0 ? protectionSleeveQty * 15 : '';
+
+                // Special logic for 'KELEBIHAN PATCHCORE 1 MTR'
                 const patchcore1MtrQty = materialsUsed.get("PATCHCORE 1 MTR") || 0;
                 row["KELEBIHAN PATCHCORE 1 MTR"] = patchcore1MtrQty > 1 ? patchcore1MtrQty - 1 : '';
 
@@ -154,6 +153,11 @@ export default function AssuranceRekapPage() {
         }
     };
 
+    const isPageLoading = isUserLoading || isProfileLoading;
+
+    if (isPageLoading) {
+        return <div>Memuat...</div>
+    }
 
     return (
         <div className="space-y-6">
@@ -204,4 +208,3 @@ export default function AssuranceRekapPage() {
         </div>
     );
 }
-
