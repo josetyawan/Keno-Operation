@@ -1,254 +1,174 @@
+
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useFirestore } from '@/firebase';
-import { collection, getDocs, query, where, Timestamp } from 'firebase/firestore';
-import { format, isSameDay } from 'date-fns';
-import { id as idLocale } from 'date-fns/locale';
-import type { UserProfile, Schedule, RiwayatGangguan, OtherWork } from '@/lib/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useMemo, useEffect } from 'react';
+import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
+import { collection, query, where, Timestamp, doc } from 'firebase/firestore';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
-import { Loader2, Calendar as CalendarIcon, Send } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import { useToast } from '@/hooks/use-toast';
+import { format, startOfDay, endOfDay } from 'date-fns';
+import { id as idLocale } from 'date-fns/locale';
+import type { RiwayatGangguan, UserProfile } from '@/lib/types';
+import { Calendar as CalendarIcon, Download, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { DateRange } from 'react-day-picker';
-import { triggerB2cRekapAction } from '@/app/actions/triggerB2cRekapAction';
+import * as XLSX from 'xlsx';
+import { useRouter } from 'next/navigation';
+import { Label } from '@/components/ui/label';
 
-const units = ['B2C', 'B2B', 'MTC', 'Provisioning'];
 
-type SummaryData = {
-    name: string;
-    productivity: number | 'L'; // Keep 'L' for single day view
-};
+// Headers as specified by the user
+const excelHeaders = [
+    "NO WITEL", "NO TIKET", "HASIL CEK WEB", "ACTUAL SOLUTION", "ACTUAL SOLUTION vs LAPANGAN", 
+    "DESKRIPSI_CUST_CLOSE", "LAYANAN", "IS_GAMAS", "KET KATEGORI", "TANGGAL CLOSED", 
+    "NO INTERNET", "LOKASI STO", "DROPWIRE", "DROPCORE BARU", "DROPCORE REFURBISH", 
+    "ROSET", "PIGTAIL SC", "PATCHCORE 15", "PATCHCORE 2 MTR", "KELEBIHAN PATCHCORE 1 MTR", 
+    "SPLITER 1:2", "SPLITER 1:4", "SPLITER 1:8", "SPLITER 1:16", "PUAS", 
+    "Termovit (cm)", "Adapter SC", "RJ45", "Protection Sleeve", "Splice on Connector", 
+    "Penarikan Kabel UTP (Mtr)"
+];
 
-type DetailData = {
-    userName: string;
-    telegramUsername: string;
-    tickets: {
-        id: string;
-        ticket: string;
-        service: string;
-        segment: string;
-    }[];
+// Mapping from header to material names in the database
+const materialHeaderMapping: { [key: string]: string[] } = {
+    "DROPWIRE": ["DROPCORE BARU", "DROPCORE REFURBISH"],
+    "DROPCORE BARU": ["DROPCORE BARU"],
+    "DROPCORE REFURBISH": ["DROPCORE REFURBISH"],
+    "ROSET": ["ROSET"],
+    "PIGTAIL SC": ["PIGTAIL SC"],
+    "PATCHCORE 15": ["PATCHCORE 15"],
+    "PATCHCORE 2 MTR": ["PATCHCORE 2 MTR"],
+    "KELEBIHAN PATCHCORE 1 MTR": [], // This seems calculated, will handle separately
+    "SPLITER 1:2": ["SPLITER 1:2"],
+    "SPLITER 1:4": ["SPLITER 1:4"],
+    "SPLITER 1:8": ["SPLITER 1:8"],
+    "SPLITER 1:16": ["SPLITER 1:16"],
+    "Termovit (cm)": ["Termovit (cm)"],
+    "Adapter SC": ["Adapter SC"],
+    "RJ45": ["RJ45"],
+    "Protection Sleeve": ["Protection Sleeve"],
+    "Splice on Connector": ["Splice on Connector"],
+    "Penarikan Kabel UTP (Mtr)": ["Penarikan Kabel UTP (Mtr)"],
 };
 
 export default function AssuranceRekapPage() {
     const firestore = useFirestore();
+    const router = useRouter();
     const { toast } = useToast();
-    const [selectedUnit, setSelectedUnit] = useState('B2C');
+    const { user, isUserLoading } = useUser();
+    const [dateRange, setDateRange] = useState<DateRange | undefined>();
     const [isLoading, setIsLoading] = useState(false);
-    const [isSending, setIsSending] = useState(false);
-    const [summaryData, setSummaryData] = useState<SummaryData[]>([]);
-    const [detailData, setDetailData] = useState<DetailData[]>([]);
-    const [dateRange, setDateRange] = useState<DateRange | undefined>({
-        from: new Date(),
-        to: new Date(),
-    });
 
-    const fetchProductivityData = useCallback(async () => {
-        if (!selectedUnit || !dateRange?.from) return;
+    const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
+        useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
+    );
+
+    useEffect(() => {
+        if (!isUserLoading && !isProfileLoading) {
+            if (!user || (currentUserProfile?.role !== 'admin' && currentUserProfile?.role !== 'korlap')) {
+                router.push('/dashboard');
+            }
+        }
+    }, [user, currentUserProfile, isUserLoading, isProfileLoading, router]);
+
+    const riwayatQuery = useMemoFirebase(() => {
+        if (!dateRange?.from || !dateRange.to) return null;
+        const start = startOfDay(dateRange.from);
+        const end = endOfDay(dateRange.to);
+        return query(
+            collection(firestore, 'riwayat-gangguan'),
+            where('tanggalLapor', '>=', Timestamp.fromDate(start)),
+            where('tanggalLapor', '<=', Timestamp.fromDate(end))
+        );
+    }, [firestore, dateRange]);
+
+    const { data: riwayatList, isLoading: isRiwayatLoading } = useCollection<RiwayatGangguan>(riwayatQuery);
+
+    const handleExport = () => {
+        if (!riwayatList || riwayatList.length === 0) {
+            toast({ variant: 'destructive', title: 'Tidak ada data untuk diekspor.' });
+            return;
+        }
+
         setIsLoading(true);
 
         try {
-            const startDate = new Date(dateRange.from.setHours(0, 0, 0, 0));
-            const endDate = new Date((dateRange.to || dateRange.from).setHours(23, 59, 59, 999));
-            
-            const isSingleDay = isSameDay(startDate, endDate);
-
-            // Generic fetch function
-            async function fetchCollection<T>(collectionName: string, constraints: any[] = []): Promise<T[]> {
-                const ref = collection(firestore, collectionName);
-                const q = query(ref, ...constraints);
-                const snapshot = await getDocs(q);
-                return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
-            }
-            
-            let schedules: Schedule[] = [];
-            if (isSingleDay) {
-                schedules = await fetchCollection<Schedule>('schedules', [
-                    where('date', '>=', Timestamp.fromDate(startDate)),
-                    where('date', '<=', Timestamp.fromDate(endDate))
-                ]);
-            }
-            
-            const [unitUsers, riwayatList, otherWorks] = await Promise.all([
-                fetchCollection<UserProfile>('users', [where('unit', '==', selectedUnit), where('registrationStatus', '==', 'approved')]),
-                fetchCollection<RiwayatGangguan>('riwayat-gangguan', [
-                    where('tanggalLapor', '>=', Timestamp.fromDate(startDate)),
-                    where('tanggalLapor', '<=', Timestamp.fromDate(endDate))
-                ]),
-                fetchCollection<OtherWork>('other-works', [
-                    where('tanggalPengerjaan', '>=', Timestamp.fromDate(startDate)),
-                    where('tanggalPengerjaan', '<=', Timestamp.fromDate(endDate))
-                ])
-            ]);
-
-            const scheduleMap = new Map(schedules.map(s => [s.userId, s.shiftType]));
-            const productivityMap = new Map<string, number>();
-
-            // Calculate productivity, but only for users in the selected unit
-            riwayatList.forEach(item => {
-                const user = unitUsers.find(u => u.id === item.userId);
-                if (user) {
-                    productivityMap.set(item.userId, (productivityMap.get(item.userId) || 0) + 1);
-                }
-            });
-            otherWorks.forEach(item => {
-                const user = unitUsers.find(u => u.id === item.userId);
-                if (user) {
-                    productivityMap.set(item.userId, (productivityMap.get(item.userId) || 0) + 1);
-                }
-            });
-
-            // Generate Summary Table
-            const newSummaryData = unitUsers.map(user => {
-                let productivity: number | 'L' = productivityMap.get(user.id) || 0;
+            const dataToExport = riwayatList.map(riwayat => {
+                const row: { [key: string]: any } = {};
                 
-                if (isSingleDay) {
-                    const userSchedule = scheduleMap.get(user.id);
-                    const isLibur = userSchedule === 'l' || userSchedule === 'libur-dijadwalkan' || userSchedule === 'cuti' || userSchedule === 'ijin';
-                    if (isLibur) {
-                        productivity = 'L';
-                    }
+                // Static and directly mapped fields
+                row["NO WITEL"] = "SEMARANG";
+                row["NO TIKET"] = riwayat.noTiket || '';
+                row["HASIL CEK WEB"] = ''; // Placeholder
+                row["ACTUAL SOLUTION"] = ''; // Placeholder
+                row["ACTUAL SOLUTION vs LAPANGAN"] = ''; // Placeholder
+                row["DESKRIPSI_CUST_CLOSE"] = riwayat.keterangan || '';
+                row["LAYANAN"] = Array.isArray(riwayat.layanan) ? riwayat.layanan.join(', ') : '';
+                row["IS_GAMAS"] = riwayat.jenisOrder === 'Tiket GAMAS' ? 'GAMAS' : 'NON GAMAS';
+                row["KET KATEGORI"] = ''; // Placeholder
+                row["TANGGAL CLOSED"] = riwayat.tanggalClose?.toDate ? format(riwayat.tanggalClose.toDate(), 'yyyy-MM-dd HH:mm:ss') : '';
+                row["NO INTERNET"] = riwayat.noService || '';
+                row["LOKASI STO"] = riwayat.sto || '';
+                row["PUAS"] = ''; // Placeholder
+
+                // Material mapping
+                const materialsUsed = new Map<string, number>();
+                riwayat.materials?.forEach(mat => {
+                    materialsUsed.set(mat.materialName, (materialsUsed.get(mat.materialName) || 0) + (mat.quantity || 1));
+                });
+                
+                for(const header in materialHeaderMapping) {
+                    const materialNames = materialHeaderMapping[header];
+                    let totalQuantity = 0;
+                    materialNames.forEach(name => {
+                        if(materialsUsed.has(name)) {
+                            totalQuantity += materialsUsed.get(name)!;
+                        }
+                    });
+                    row[header] = totalQuantity > 0 ? totalQuantity : '';
                 }
 
-                return {
-                    name: (user.displayName || user.email).toUpperCase(),
-                    productivity: productivity
-                };
-            }).sort((a,b) => a.name.localeCompare(b.name));
-            
-            setSummaryData(newSummaryData);
-            
-            // Generate Detail Section
-            const productiveUsers = unitUsers.filter(user => (productivityMap.get(user.id) || 0) > 0);
-            
-            const newDetailData = productiveUsers.map(user => {
-                const userRiwayat = riwayatList.filter(r => r.userId === user.id);
-                const userOtherWorks = otherWorks.filter(w => w.userId === user.id);
-                
-                const tickets = [
-                    ...userRiwayat.map(r => ({ id: r.id, ticket: r.noTiket || '', service: r.noService || '', segment: r.jenisOrder })),
-                    ...userOtherWorks.map(w => ({ id: w.id, ticket: w.namaPekerjaan || '', service: '', segment: w.jenisOrder }))
-                ];
+                // Special case for 'KELEBIHAN PATCHCORE 1 MTR'
+                const patchcore1MtrQty = materialsUsed.get("PATCHCORE 1 MTR") || 0;
+                row["KELEBIHAN PATCHCORE 1 MTR"] = patchcore1MtrQty > 1 ? patchcore1MtrQty - 1 : '';
 
-                return {
-                    userName: user.displayName || user.email,
-                    telegramUsername: user.telegramUsername ? `@${user.telegramUsername.replace('@', '')}` : '',
-                    tickets: tickets
-                };
+
+                return row;
             });
-
-            setDetailData(newDetailData);
+            
+            const worksheet = XLSX.utils.json_to_sheet(dataToExport, { header: excelHeaders });
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Rekap Assurance');
+            
+            const dateString = format(new Date(), 'yyyy-MM-dd');
+            XLSX.writeFile(workbook, `Rekap_Assurance_${dateString}.xlsx`);
+            
+            toast({ title: 'Ekspor Berhasil', description: `${riwayatList.length} baris data telah diekspor.` });
 
         } catch (error: any) {
-            console.error('Error fetching productivity data:', error);
-            toast({
-                variant: "destructive",
-                title: "Gagal Mengambil Data",
-                description: error.message,
-            });
+            toast({ variant: 'destructive', title: 'Gagal Mengekspor', description: error.message });
         } finally {
             setIsLoading(false);
         }
-    }, [firestore, selectedUnit, dateRange, toast]);
-
-    useEffect(() => {
-        fetchProductivityData();
-    }, [fetchProductivityData]);
-    
-    const dateHeader = useMemo(() => {
-        if (!dateRange?.from) return 'Pilih tanggal';
-        if (dateRange.to) {
-            return `${format(dateRange.from, 'dd/MM/yyyy')} - ${format(dateRange.to, 'dd/MM/yyyy')}`;
-        }
-        return format(dateRange.from, 'dd MMMM yyyy', {locale: idLocale});
-    }, [dateRange]);
-
-    const handleManualSend = async () => {
-        if ((summaryData.length === 0 && detailData.length === 0) || !selectedUnit) {
-            toast({
-                variant: "destructive",
-                title: "Tidak Ada Data",
-                description: "Tidak ada data produktivitas untuk dikirim.",
-            });
-            return;
-        }
-        setIsSending(true);
-        
-        const summaryMessage = `📆 REKAP TEKNISI ${selectedUnit.toUpperCase()} SEKTOR KUDUS (${dateHeader})\n\n` +
-                             'NAMA TEKNISI | PRODUKTIVITAS\n' +
-                             summaryData.map(item => `${item.name} | ${item.productivity}`).join('\n');
-        
-        let detailMessage = `📌 DETAIL PRODUKTIVITAS TEKNISI ${selectedUnit.toUpperCase()}\n`;
-        if (detailData.length === 0) {
-            detailMessage += '\nTidak ada produktivitas tercatat untuk periode ini.';
-        } else {
-            detailMessage += detailData.map(user => 
-                `\n${user.userName} ${user.telegramUsername}\n` +
-                'TIKET | SERVICE | SEGMEN\n' +
-                user.tickets.map(t => `${t.ticket || '-'} | ${t.service || '-'} | ${t.segment}`).join('\n')
-            ).join('');
-        }
-
-        try {
-            const result = await triggerB2cRekapAction({
-                unit: selectedUnit,
-                summaryMessage: summaryMessage,
-                detailMessage: detailMessage,
-            });
-
-            if (result.success) {
-                toast({
-                    title: "Sukses",
-                    description: result.message,
-                });
-            } else {
-                throw new Error(result.message);
-            }
-        } catch (error: any) {
-            toast({
-                variant: "destructive",
-                title: "Gagal Mengirim",
-                description: error.message || "Terjadi kesalahan saat mengirim laporan.",
-            });
-        } finally {
-            setIsSending(false);
-        }
     };
+
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Rekap Produktivitas Teknisi</h1>
-                    <p className="text-muted-foreground">Analisis produktivitas. Laporan otomatis dikirim setiap 2 jam.</p>
-                </div>
-            </div>
-            
-            <Card>
+            <h1 className="text-3xl font-bold tracking-tight">Rekap Assurance</h1>
+            <p className="text-muted-foreground">Buat file Excel rekapitulasi data gangguan untuk tim Assurance.</p>
+
+             <Card>
                 <CardHeader>
-                    <CardTitle>Filter Data</CardTitle>
-                    <CardDescription>Pilih unit dan rentang tanggal untuk melihat rekap produktivitas.</CardDescription>
+                    <CardTitle>Filter Laporan</CardTitle>
+                    <CardDescription>Pilih rentang tanggal laporan gangguan untuk diekspor.</CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-wrap items-end gap-4">
                      <div className="grid gap-2">
-                        <Label htmlFor="unit-select">Unit</Label>
-                        <Select value={selectedUnit} onValueChange={setSelectedUnit}>
-                            <SelectTrigger id="unit-select" className="w-[180px]"><SelectValue placeholder="Pilih Unit..." /></SelectTrigger>
-                            <SelectContent>
-                                {units.map(unit => <SelectItem key={unit} value={unit}>{unit}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                     <div className="grid gap-2">
-                        <Label htmlFor="date-range-picker">Rentang Tanggal</Label>
-                        <Popover>
+                        <Label>Rentang Tanggal Lapor</Label>
+                         <Popover>
                             <PopoverTrigger asChild>
                                 <Button
                                     id="date-range-picker"
@@ -258,77 +178,30 @@ export default function AssuranceRekapPage() {
                                     <CalendarIcon className="mr-2 h-4 w-4" />
                                     {dateRange?.from ? (
                                         dateRange.to ? (
-                                            <>
-                                                {format(dateRange.from, "dd LLL, yy", {locale: idLocale})} - {format(dateRange.to, "dd LLL, yy", {locale: idLocale})}
-                                            </>
-                                        ) : (
-                                            format(dateRange.from, "dd LLL, yy", {locale: idLocale})
-                                        )
-                                    ) : (
-                                        <span>Pilih rentang tanggal</span>
-                                    )}
+                                            <>{format(dateRange.from, "dd LLL, yy", {locale: idLocale})} - {format(dateRange.to, "dd LLL, yy", {locale: idLocale})}</>
+                                        ) : (format(dateRange.from, "dd LLL, yy", {locale: idLocale}))
+                                    ) : (<span>Pilih rentang tanggal</span>)}
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar
-                                    initialFocus
-                                    mode="range"
-                                    defaultMonth={dateRange?.from}
-                                    selected={dateRange}
-                                    onSelect={setDateRange}
-                                    numberOfMonths={2}
-                                />
+                                <Calendar initialFocus mode="range" defaultMonth={dateRange?.from} selected={dateRange} onSelect={setDateRange} numberOfMonths={2} />
                             </PopoverContent>
                         </Popover>
                     </div>
-                    <Button onClick={handleManualSend} disabled={isLoading || isSending} className="ml-auto">
-                        {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                        Kirim ke Telegram
+                    <Button onClick={handleExport} disabled={isLoading || isRiwayatLoading || !riwayatList || riwayatList.length === 0}>
+                        {(isLoading || isRiwayatLoading) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                        Generate & Download Excel
                     </Button>
                 </CardContent>
+                {riwayatList && (
+                    <CardFooter>
+                        <p className="text-sm text-muted-foreground">
+                            Ditemukan {riwayatList.length} laporan dalam rentang tanggal yang dipilih.
+                        </p>
+                    </CardFooter>
+                )}
             </Card>
-
-            {isLoading ? (
-                <div className="flex justify-center items-center p-8"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>
-            ) : (
-                <div className="grid lg:grid-cols-3 gap-6">
-                    <Card className="lg:col-span-1">
-                        <CardHeader>
-                            <CardTitle>Ringkasan Produktivitas</CardTitle>
-                             <CardDescription>{selectedUnit} - {dateHeader}</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <pre className="text-sm bg-muted p-4 rounded-md overflow-x-auto">
-                                <code className="font-mono">
-                                    {`NAMA TEKNISI | PRODUKTIVITAS\n`}
-                                    {summaryData.map(item => `${item.name} | ${item.productivity}\n`).join('')}
-                                </code>
-                            </pre>
-                        </CardContent>
-                    </Card>
-                    <Card className="lg:col-span-2">
-                        <CardHeader>
-                            <CardTitle>Detail Produktivitas</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                           <ScrollArea className="h-[60vh]">
-                             <pre className="text-sm bg-muted p-4 rounded-md">
-                                <code className="font-mono whitespace-pre-wrap">
-                                    {detailData.length > 0
-                                        ? detailData.map(user => (
-                                            `\n${user.userName} ${user.telegramUsername}\n` +
-                                            `TIKET | SERVICE | SEGMEN\n` +
-                                            user.tickets.map(t => `${t.ticket} | ${t.service} | ${t.segment}`).join('\n')
-                                        )).join('\n')
-                                        : 'Tidak ada produktivitas tercatat untuk unit ini pada rentang tanggal yang dipilih.'
-                                    }
-                                </code>
-                            </pre>
-                           </ScrollArea>
-                        </CardContent>
-                    </Card>
-                </div>
-            )}
         </div>
     );
 }
+
