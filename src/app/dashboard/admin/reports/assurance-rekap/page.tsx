@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
@@ -10,7 +11,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
-import type { RiwayatGangguan, UserProfile } from '@/lib/types';
+import type { RiwayatGangguan, UserProfile, MaterialEvidence } from '@/lib/types';
 import { Calendar as CalendarIcon, Download, Loader2, Files } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { DateRange } from 'react-day-picker';
@@ -69,11 +70,13 @@ function ReportPreview({
           <CardContent className="flex-grow overflow-auto bg-gray-200 p-4">
              <iframe id="print-iframe" srcDoc={`<html><head><style>
                 body { font-family: Arial, sans-serif; margin: 0; } 
-                .page-container { page-break-after: always; background: white; padding: 1.5cm; margin: 1rem auto; box-shadow: 0 0 0.5cm rgba(0,0,0,0.5); width: 210mm; min-height: 297mm; box-sizing: border-box; }
-                .image-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem; }
-                .image-container { text-align: center; }
-                .image-container img { max-width: 100%; height: auto; border: 1px solid #ddd; }
-                .image-container p { margin-top: 0.25rem; font-size: 10pt; font-weight: bold; }
+                .page-container { page-break-after: always; background: white; padding: 1cm; margin: 1rem auto; box-shadow: 0 0 0.5cm rgba(0,0,0,0.5); width: 210mm; min-height: 297mm; box-sizing: border-box; }
+                h2 { font-size: 16pt; font-weight: bold; }
+                table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 10pt; }
+                th, td { border: 1px solid black; padding: 5px; text-align: left; vertical-align: middle; }
+                thead { background-color: #FFFF00; font-weight: bold; }
+                img { max-width: 100%; max-height: 100%; object-fit: contain; }
+                td.image-cell { width: 150px; height: 150px; text-align: center; }
                 @media print { 
                     body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; } 
                     .page-container { margin: 0; box-shadow: none; border: none; }
@@ -177,9 +180,9 @@ export default function AssuranceRekapPage() {
                 row["KATEGORI"] = '';
                 row["TANGGAL CLOSED"] = riwayat.tanggalClose?.toDate ? format(riwayat.tanggalClose.toDate(), 'yyyy-MM-dd HH:mm:ss') : '';
                 row["NO INTERNET"] = riwayat.noService || '';
-                row["LOKASI"] = '';
+                row["LOKASI"] = ''; // Placeholder
                 row["STO"] = riwayat.sto || '';
-                row["PUAS"] = '';
+                row["PUAS"] = ''; // Placeholder
                 row["DROPWIRE"] = '';
                 
                 const materialsUsed = new Map<string, number>();
@@ -241,62 +244,92 @@ export default function AssuranceRekapPage() {
         
         toast({ title: 'Mempersiapkan pratinjau...', description: 'Mengumpulkan data dan gambar.' });
 
-        let htmlString = ``;
+        const evidenceCategories: { title: string; type: 'scc' | 'material' | 'progres'; materialKeyword?: string }[] = [
+            { title: 'EVIDENT SCC', type: 'scc' },
+            { title: 'EVIDENT PROGRES', type: 'progres' },
+            { title: 'EVIDENT DROPCORE BARU', type: 'material', materialKeyword: 'DROPCORE BARU' },
+            { title: 'EVIDENT DROPCORE REFURBISH', type: 'material', materialKeyword: 'DROPCORE REFURBISH' },
+            { title: 'EVIDENT ROSET', type: 'material', materialKeyword: 'ROSET' },
+            { title: 'EVIDENT PIGTAIL SC', type: 'material', materialKeyword: 'PIGTAIL SC' },
+            { title: 'EVIDENT PATCHCORE', type: 'material', materialKeyword: 'PATCHCORE' },
+            { title: 'EVIDENT SPLITER', type: 'material', materialKeyword: 'SPLITER' },
+            { title: 'EVIDENT ADAPTER SC', type: 'material', materialKeyword: 'ADAPTER SC' },
+            { title: 'EVIDENT RJ45', type: 'material', materialKeyword: 'RJ45' },
+            { title: 'EVIDENT PROTECTION SLEEVE', type: 'material', materialKeyword: 'PROTECTION SLEEVE' },
+            { title: 'EVIDENT SPLICE ON CONNECTOR', type: 'material', materialKeyword: 'SPLICE ON CONNECTOR' },
+        ];
+        
+        let allPagesHtml = '';
 
-        for (const riwayat of selectedRiwayat) {
-            const tanggalLapor = riwayat.tanggalLapor?.toDate ? format(riwayat.tanggalLapor.toDate(), 'dd MMMM yyyy, HH:mm', { locale: idLocale }) : 'N/A';
+        for (const category of evidenceCategories) {
+            let tableRowsHtml = '';
+            let hasContent = false;
+
+            for (const riwayat of selectedRiwayat) {
+                let photosForCategory: { url: string; keterangan: string }[] = [];
+
+                if (category.type === 'scc' && riwayat.evidenSccUrl) {
+                    photosForCategory.push({ url: riwayat.evidenSccUrl, keterangan: 'SCC DONE' });
+                } else if (riwayat.materials) {
+                    for (const material of riwayat.materials) {
+                        if (!material.evidences) continue;
+                        
+                        const materialNameUpper = material.materialName.toUpperCase();
+
+                        if (category.type === 'progres' && material.evidences.some(e => e.evidenceName.toLowerCase().includes('progres'))) {
+                             material.evidences.filter(e => e.evidenceName.toLowerCase().includes('progres')).forEach(p => {
+                                photosForCategory.push({ url: p.photoUrl, keterangan: material.materialName });
+                            });
+                        } else if (category.type === 'material' && materialNameUpper.includes(category.materialKeyword!)) {
+                            material.evidences.forEach(p => {
+                                photosForCategory.push({ url: p.photoUrl, keterangan: `${material.materialName} - ${p.evidenceName}` });
+                            });
+                        }
+                    }
+                }
+
+                if (photosForCategory.length > 0) {
+                    hasContent = true;
+                    photosForCategory.forEach(photo => {
+                        tableRowsHtml += `
+                            <tr>
+                                <td>${riwayat.noTiket || riwayat.noService}</td>
+                                <td class="image-cell">
+                                    <img src="${photo.url}" />
+                                </td>
+                                <td>${photo.keterangan}</td>
+                            </tr>
+                        `;
+                    });
+                }
+            }
             
-            let reportHtml = `
-                <div class="page-container">
-                    <h2 style="font-size: 14pt; font-weight: bold; border-bottom: 1px solid black; padding-bottom: 5px;">Laporan Eviden: ${riwayat.noTiket || riwayat.noService}</h2>
-                    <table style="width: 100%; font-size: 10pt; margin-top: 10px;">
-                        <tr><td style="width: 120px;"><strong>Teknisi</strong></td><td>: ${riwayat.namaPetugas}</td></tr>
-                        <tr><td><strong>Tanggal Lapor</strong></td><td>: ${tanggalLapor}</td></tr>
-                        <tr><td><strong>Jenis Order</strong></td><td>: ${riwayat.jenisOrder || '-'}</td></tr>
-                        <tr><td style="vertical-align: top;"><strong>Keterangan</strong></td><td style="vertical-align: top;">: ${riwayat.keterangan || '-'}</td></tr>
-                    </table>
-                    <hr style="margin: 15px 0;" />
-            `;
-
-            if (riwayat.evidenSccUrl) {
-                reportHtml += `
-                    <h3 style="font-size: 12pt; font-weight: bold; margin-top: 1em;">Eviden SCC</h3>
-                    <div class="image-grid">
-                        <div class="image-container">
-                             <img src="${riwayat.evidenSccUrl}" />
-                             <p>SCC</p>
-                        </div>
+            if (hasContent) {
+                allPagesHtml += `
+                    <div class="page-container">
+                        <h2>${category.title}</h2>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 20%;">NO TIKET</th>
+                                    <th style="width: 30%;">EVIDENT</th>
+                                    <th style="width: 50%;">KETERANGAN</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${tableRowsHtml}
+                            </tbody>
+                        </table>
                     </div>
                 `;
             }
-
-            if (riwayat.materials && riwayat.materials.length > 0) {
-                for (const material of riwayat.materials) {
-                    if (material.evidences && material.evidences.length > 0) {
-                         reportHtml += `<h3 style="font-size: 12pt; font-weight: bold; margin-top: 1em;">Material: ${material.materialName} (Jumlah: ${material.quantity || 1})</h3>`;
-                         
-                         reportHtml += '<div class="image-grid">';
-                         material.evidences.forEach((ev) => {
-                             reportHtml += `
-                                <div class="image-container">
-                                    <img src="${ev.photoUrl}" />
-                                    <p style="text-transform: capitalize;">${ev.evidenceName}</p>
-                                </div>
-                             `;
-                         });
-                         reportHtml += '</div>';
-                    }
-                }
-            }
-            reportHtml += `</div>`; // close page-container
-            htmlString += reportHtml;
         }
-
-        if (!htmlString.trim()) {
+        
+        if (!allPagesHtml.trim()) {
             toast({ variant: 'destructive', title: 'Tidak Ada Eviden', description: "Tidak ada foto eviden untuk diekspor dalam laporan yang dipilih." });
             setPreviewHtml(null);
         } else {
-             setPreviewHtml(htmlString);
+            setPreviewHtml(allPagesHtml);
         }
     };
     
