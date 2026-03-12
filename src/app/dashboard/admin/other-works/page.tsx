@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -161,16 +162,14 @@ export default function OtherWorksPage() {
         }
     }, [user, currentUserProfile, isUserLoading, isProfileLoading, router]);
 
-    const worksQuery = useMemoFirebase(() => query(collection(firestore, 'other-works'), orderBy('createdAt', 'desc')), [firestore]);
+    const worksQuery = useMemoFirebase(() => {
+        if (!currentUserProfile || (currentUserProfile.role !== 'admin' && currentUserProfile.role !== 'korlap')) {
+            return null;
+        }
+        return query(collection(firestore, 'other-works'), orderBy('createdAt', 'desc'));
+    }, [firestore, currentUserProfile]);
+
     const { data: allWorks, isLoading: areWorksLoading } = useCollection<OtherWork>(worksQuery);
-
-    const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
-    const { data: allUsers, isLoading: areUsersLoading } = useCollection<UserProfile>(usersQuery);
-
-    const userMap = useMemo(() => {
-        if (!allUsers) return new Map<string, UserProfile>();
-        return new Map(allUsers.map(u => [u.id, u]));
-    }, [allUsers]);
 
     const filteredWorks = useMemo(() => {
         if (!allWorks) return [];
@@ -255,7 +254,7 @@ export default function OtherWorksPage() {
         }
     };
 
-    const isLoading = areWorksLoading || areUsersLoading || isUserLoading || isProfileLoading;
+    const isLoading = areWorksLoading || isUserLoading || isProfileLoading;
 
     return (
         <>
@@ -400,3 +399,5 @@ export default function OtherWorksPage() {
         </>
     );
 }
+
+    

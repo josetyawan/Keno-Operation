@@ -107,13 +107,13 @@ service cloud.firestore {
     match /pelanggan/{pelangganId} {
       allow read: if isApproved();
       allow create: if isApproved() && isCreatingOwn('userId');
-      allow update: if isKorlap() || (hasAllProAccess() && isUpdatingOwn('userId')) || isAdmin();
+      allow update: if isApproved();
       allow delete: if isAdmin() || isKorlap();
     }
 
     match /riwayat-gangguan/{riwayatId} {
       allow create: if isApproved() && isCreatingOwn('userId');
-      allow get: if isAdmin() || isKorlap() || (isApproved() && resource.data.userId == request.auth.uid);
+      allow get: if isApproved();
       allow list: if isApproved();
       allow update, delete: if isAdmin() || isKorlap();
     }
@@ -121,6 +121,7 @@ service cloud.firestore {
     match /other-works/{workId} {
       allow create: if isApproved() && isCreatingOwn('userId');
       allow read: if isApproved();
+      allow list: if isAdmin() || isKorlap();
       allow update, delete: if isAdmin() || isKorlap();
     }
 
