@@ -47,7 +47,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { PlusCircle, MapPin, Loader2, Search, History, Phone, Pencil, Wrench, QrCode, FileSpreadsheet, AlertCircle, Info, Upload, Trash2, Bot, CalendarIcon, MessageSquare, AlertTriangle } from 'lucide-react';
+import { PlusCircle, MapPin, Loader2, Search, History, Phone, Pencil, Wrench, QrCode, FileSpreadsheet, AlertCircle, Info, Upload, Trash2, Bot, CalendarIcon, MessageSquare, AlertTriangle, Image as ImageIcon } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { useStorage } from '@/firebase/provider';
@@ -887,6 +887,88 @@ function UpdateAssetDialog({ pelanggan, isOpen, onOpenChange, onFinished, curren
     );
 }
 
+function UpdatePhotoDialog({ pelanggan, isOpen, onOpenChange, onFinished, currentUserEmail }: { pelanggan: Pelanggan, isOpen: boolean, onOpenChange: (open: boolean) => void, onFinished: (data: Partial<Pelanggan>) => void, currentUserEmail: string }) {
+    const firestore = useFirestore();
+    const storage = useStorage();
+    const { toast } = useToast();
+    const { user } = useUser();
+    const [newPhoto, setNewPhoto] = useState<File | null>(null);
+    const [preview, setPreview] = useState<string | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        if (isOpen) {
+            setNewPhoto(null);
+            setPreview(pelanggan.fotoCpUrl || null);
+        }
+    }, [isOpen, pelanggan.fotoCpUrl]);
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            setNewPhoto(file);
+            setPreview(URL.createObjectURL(file));
+        }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newPhoto || !user) {
+            toast({ variant: 'destructive', title: 'Foto baru diperlukan' });
+            return;
+        }
+        setIsSaving(true);
+        try {
+            const filePath = `notas/${user.uid}/pelanggan_photo_${Date.now()}-${newPhoto.name}`;
+            const storageRef = ref(storage, filePath);
+            await uploadBytes(storageRef, newPhoto);
+            const fotoCpUrl = await getDownloadURL(storageRef);
+
+            const updatedData: Partial<Pelanggan> = {
+                fotoCpUrl,
+                lastEditedBy: currentUserEmail,
+                lastEditedDate: serverTimestamp(),
+            };
+            const docRef = doc(firestore, 'pelanggan', pelanggan.id);
+            await updateDoc(docRef, updatedData);
+            
+            toast({ title: 'Foto Lokasi berhasil diperbarui' });
+            onFinished(updatedData);
+        } catch (error: any) {
+             toast({ variant: 'destructive', title: 'Gagal menyimpan foto', description: error.message });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    return (
+         <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Ubah Foto Lokasi</DialogTitle>
+                    <DialogDescription>Ganti foto lokasi untuk {pelanggan.namaPelanggan}.</DialogDescription>
+                </DialogHeader>
+                 <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="update-photo">Foto Lokasi Baru</Label>
+                         <div className="relative aspect-[4/3] w-full rounded-md overflow-hidden border bg-muted flex items-center justify-center">
+                            {preview ? (
+                                <Image src={preview} alt="Preview Foto" fill className="object-cover" />
+                            ) : (
+                                <span className="text-sm text-muted-foreground">Tidak ada foto</span>
+                            )}
+                        </div>
+                        <Input id="update-photo" type="file" onChange={handleFileChange} accept="image/*" required/>
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild><Button variant="secondary">Batal</Button></DialogClose>
+                        <Button type="submit" disabled={isSaving || !newPhoto}>{isSaving ? 'Menyimpan...' : 'Simpan Foto Baru'}</Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
 
 // --- MAIN PAGE COMPONENT ---
 
@@ -906,6 +988,7 @@ export default function AdminPelangganPage() {
   const [isAddContactDialogOpen, setIsAddContactDialogOpen] = useState(false);
   const [isUpdateLocationDialogOpen, setIsUpdateLocationDialogOpen] = useState(false);
   const [isUpdateAssetDialogOpen, setIsUpdateAssetDialogOpen] = useState(false);
+  const [isUpdatePhotoDialogOpen, setIsUpdatePhotoDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -1278,6 +1361,7 @@ export default function AdminPelangganPage() {
                         <Button variant="outline" size="sm" onClick={() => setIsAddContactDialogOpen(true)}><Phone className="mr-2 h-4 w-4"/>Tambah Kontak</Button>
                         <Button variant="outline" size="sm" onClick={() => setIsUpdateLocationDialogOpen(true)}><Pencil className="mr-2 h-4 w-4"/>Ubah Lokasi</Button>
                         <Button variant="outline" size="sm" onClick={() => setIsUpdateAssetDialogOpen(true)}><Wrench className="mr-2 h-4 w-4"/>Ubah Info Aset</Button>
+                        <Button variant="outline" size="sm" onClick={() => setIsUpdatePhotoDialogOpen(true)}><ImageIcon className="mr-2 h-4 w-4"/>Ubah Foto</Button>
                     </div>
                 </CardHeader>
                 <CardContent>
@@ -1461,6 +1545,16 @@ export default function AdminPelangganPage() {
                  onFinished={(updatedData) => {
                     setSearchedPelanggan(prev => prev ? { ...prev, ...updatedData } : null);
                     setIsUpdateAssetDialogOpen(false);
+                 }}
+                 currentUserEmail={currentUserProfile.email}
+            />
+            <UpdatePhotoDialog
+                 pelanggan={searchedPelanggan}
+                 isOpen={isUpdatePhotoDialogOpen}
+                 onOpenChange={setIsUpdatePhotoDialogOpen}
+                 onFinished={(updatedData) => {
+                    setSearchedPelanggan(prev => prev ? { ...prev, ...updatedData } : null);
+                    setIsUpdatePhotoDialogOpen(false);
                  }}
                  currentUserEmail={currentUserProfile.email}
             />
