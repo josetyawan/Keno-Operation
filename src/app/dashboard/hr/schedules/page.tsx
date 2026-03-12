@@ -300,7 +300,7 @@ export default function AdminSchedulesPage() {
             userEmail: '',
             date: scheduleToApprove.date,
             shiftType: 'piket-demak', // A sensible default for a replacement shift
-            notes: `Menggantikan ${scheduleToApprove.userName || scheduleToApprove.userEmail}. Alasan: ${scheduleToApprove.notes || 'Tidak ada'}`,
+            notes: `Menggantikan ${userMap.get(scheduleToApprove.userId) || scheduleToApprove.userEmail}. Alasan: ${scheduleToApprove.notes || 'Tidak ada'}`,
         });
 
         // Keep track of the original request so we can delete it after the form is submitted.
@@ -421,12 +421,14 @@ export default function AdminSchedulesPage() {
     
                 if (swapSourceSchedule) {
                     const replacementUser = activeUsers.find(u => u.id === data.userId);
+                    const requesterName = userMap.get(swapSourceSchedule.userId!) || swapSourceSchedule.userEmail;
+
                     toastTitle = 'Tukar Jaga Berhasil Disetujui';
-                    toastDescription = `Jadwal baru untuk ${replacementUser?.displayName} telah dibuat. Jadwal ${swapSourceSchedule.userName} telah diubah menjadi libur.`;
+                    toastDescription = `Jadwal baru untuk ${replacementUser?.displayName} telah dibuat. Jadwal ${requesterName} telah diubah menjadi libur.`;
                     
                     // SEND NOTIFICATION
                     sendSwapApprovalNotice({
-                        requesterName: swapSourceSchedule.userName || 'N/A',
+                        requesterName: requesterName || 'N/A',
                         replacementName: replacementUser?.displayName || 'N/A',
                         swapDate: format(scheduleDate, 'eeee, dd MMMM yyyy', { locale: idLocale }),
                     }).catch(err => {
@@ -877,8 +879,3 @@ export default function AdminSchedulesPage() {
         </>
     );
 }
-
-    
-
-    
-
