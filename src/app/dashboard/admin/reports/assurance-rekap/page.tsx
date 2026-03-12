@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
@@ -12,7 +11,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
-import type { RiwayatGangguan, UserProfile, MaterialEvidence } from '@/lib/types';
+import type { RiwayatGangguan, UserProfile, MaterialEvidence, Pelanggan } from '@/lib/types';
 import { Calendar as CalendarIcon, Download, Loader2, Files } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { DateRange } from 'react-day-picker';
@@ -77,7 +76,7 @@ function ReportPreview({
                 th, td { border: 1px solid black; padding: 5px; text-align: left; vertical-align: top; }
                 thead { background-color: #FFFF00; font-weight: bold; }
                 img { max-width: 100%; height: auto; object-fit: contain; }
-                td.image-cell ul { list-style-type: none; padding: 0; margin: 0; }
+                td.image-cell ul { list-style-type: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 4px; }
                 td.image-cell li { margin-bottom: 5px; }
                 td.keterangan-cell ul { list-style-position: inside; padding-left: 0; margin: 0; }
                 @media print { 
@@ -125,6 +124,18 @@ export default function AssuranceRekapPage() {
     }, [firestore, dateRange]);
 
     const { data: riwayatList, isLoading: isRiwayatLoading } = useCollection<RiwayatGangguan>(riwayatQuery);
+    
+    // Fetch all customers to get their addresses
+    const pelangganQuery = useMemoFirebase(() => {
+        return query(collection(firestore, 'pelanggan'));
+    }, [firestore]);
+    const { data: allPelanggan, isLoading: arePelangganLoading } = useCollection<Pelanggan>(pelangganQuery);
+
+    const pelangganMap = useMemo(() => {
+        if (!allPelanggan) return new Map<string, string>();
+        return new Map(allPelanggan.map(p => [p.noService, p.alamat || '']));
+    }, [allPelanggan]);
+
 
     const handleSelect = (id: string, checked: boolean) => {
         setSelectedIds(prev => checked ? [...prev, id] : prev.filter(i => i !== id));
@@ -183,9 +194,9 @@ export default function AssuranceRekapPage() {
                 row["KATEGORI"] = '';
                 row["TANGGAL CLOSED"] = riwayat.tanggalClose?.toDate ? format(riwayat.tanggalClose.toDate(), 'yyyy-MM-dd HH:mm:ss') : '';
                 row["NO INTERNET"] = riwayat.noService || '';
-                row["LOKASI"] = ''; // Placeholder
+                row["LOKASI"] = pelangganMap.get(riwayat.noService) || '';
                 row["STO"] = riwayat.sto || '';
-                row["PUAS"] = ''; // Placeholder
+                row["PUAS"] = '';
                 row["DROPWIRE"] = '';
                 
                 const materialsUsed = new Map<string, number>();
@@ -258,7 +269,6 @@ export default function AssuranceRekapPage() {
             { title: 'EVIDENT SPLITER', type: 'material', materialKeyword: 'SPLITER' },
             { title: 'EVIDENT ADAPTER SC', type: 'material', materialKeyword: 'ADAPTER SC' },
             { title: 'EVIDENT RJ45', type: 'material', materialKeyword: 'RJ45' },
-            { title: 'EVIDENT PROTECTION SLEEVE', type: 'material', materialKeyword: 'PROTECTION SLEEVE' },
             { title: 'EVIDENT SPLICE ON CONNECTOR', type: 'material', materialKeyword: 'SPLICE ON CONNECTOR' },
         ];
         
@@ -279,17 +289,24 @@ export default function AssuranceRekapPage() {
                 if (category.type === 'scc' && riwayat.evidenSccUrl) {
                     reportsByTicket[ticketKey].photos.push({ url: riwayat.evidenSccUrl, keterangan: 'SCC DONE' });
                 } else if (riwayat.materials) {
-                    for (const material of riwayat.materials) {
+                     for (const material of riwayat.materials) {
                         if (!material.evidences) continue;
-                        const materialNameUpper = material.materialName.toUpperCase();
-                        if (category.type === 'progres' && material.evidences.some(e => e.evidenceName.toLowerCase().includes('progres'))) {
-                            material.evidences.filter(e => e.evidenceName.toLowerCase().includes('progres')).forEach(p => {
-                                reportsByTicket[ticketKey].photos.push({ url: p.photoUrl, keterangan: material.materialName });
-                            });
-                        } else if (category.type === 'material' && materialNameUpper.includes(category.materialKeyword!)) {
+                        
+                        if (category.type === 'progres') {
                             material.evidences.forEach(p => {
-                                reportsByTicket[ticketKey].photos.push({ url: p.photoUrl, keterangan: `${material.materialName} - ${p.evidenceName}` });
+                                if (p.evidenceName.toLowerCase().includes('progres') || material.materialName.toUpperCase() === 'PROTECTION SLEEVE') {
+                                    reportsByTicket[ticketKey].photos.push({ url: p.photoUrl, keterangan: `${material.materialName} - ${p.evidenceName}` });
+                                }
                             });
+                        } else if (category.type === 'material') {
+                            if (material.materialName.toUpperCase().includes(category.materialKeyword!)) {
+                                material.evidences.forEach(p => {
+                                    // Exclude photos that are part of the 'progress' group
+                                    if (!p.evidenceName.toLowerCase().includes('progres')) {
+                                        reportsByTicket[ticketKey].photos.push({ url: p.photoUrl, keterangan: `${material.materialName} - ${p.evidenceName}` });
+                                    }
+                                });
+                            }
                         }
                     }
                 }
@@ -301,17 +318,15 @@ export default function AssuranceRekapPage() {
                     hasContent = true;
 
                     const imagesHtml = photos.map(p => 
-                        `<img src="${p.url}" style="width: 120px; height: auto; object-fit: contain; border: 1px solid #eee; margin: 2px;" />`
+                        `<li><img src="${p.url}" style="width: 120px; height: auto; object-fit: contain; border: 1px solid #eee; margin: 2px;" /></li>`
                     ).join('');
-
+                    
                     const keteranganHtml = `<ul>${photos.map(p => `<li>${p.keterangan}</li>`).join('')}</ul>`;
                     
-                    const evidentCellHtml = `<div style="display: flex; flex-wrap: wrap; align-items: flex-start;">${imagesHtml}</div>`;
-
                     tableRowsHtml += `
                         <tr>
                             <td>${ticketKey}</td>
-                            <td>${evidentCellHtml}</td>
+                            <td class="image-cell"><ul>${imagesHtml}</ul></td>
                             <td class="keterangan-cell">${keteranganHtml}</td>
                         </tr>
                     `;
@@ -347,8 +362,8 @@ export default function AssuranceRekapPage() {
         }
     };
     
-    const isPageLoading = isUserLoading || isProfileLoading;
-    if (isPageLoading) return <div>Memuat...</div>
+    const isLoading = isUserLoading || isProfileLoading || isRiwayatLoading || arePelangganLoading;
+    if (isLoading) return <div>Memuat...</div>
 
     return (
         <>
