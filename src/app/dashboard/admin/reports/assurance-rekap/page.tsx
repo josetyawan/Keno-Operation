@@ -11,12 +11,15 @@ import { useToast } from '@/hooks/use-toast';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import type { RiwayatGangguan, UserProfile } from '@/lib/types';
-import { Calendar as CalendarIcon, Download, Loader2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Download, Loader2, Files } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { DateRange } from 'react-day-picker';
 import * as XLSX from 'xlsx';
 import { useRouter } from 'next/navigation';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { generateDocxAction } from '@/app/dashboard/export/actions';
 
 const excelHeaders = [
     "NO WITEL", "NO TIKET", "HASIL CEK WEB", "ACTUAL SOLUTION", "ACTUAL SOLUTION vs LAPANGAN", 
@@ -52,7 +55,9 @@ export default function AssuranceRekapPage() {
     const { toast } = useToast();
     const { user, isUserLoading } = useUser();
     const [dateRange, setDateRange] = useState<DateRange | undefined>();
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoadingExcel, setIsLoadingExcel] = useState(false);
+    const [isGeneratingDocx, setIsGeneratingDocx] = useState(false);
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
     const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
         useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
@@ -79,40 +84,53 @@ export default function AssuranceRekapPage() {
 
     const { data: riwayatList, isLoading: isRiwayatLoading } = useCollection<RiwayatGangguan>(riwayatQuery);
 
+    const handleSelect = (id: string, checked: boolean) => {
+        setSelectedIds(prev => checked ? [...prev, id] : prev.filter(i => i !== id));
+    };
+
+    const handleSelectAll = (checked: boolean) => {
+        setSelectedIds(checked ? (riwayatList || []).map(r => r.id) : []);
+    };
+
+    useEffect(() => {
+        if (riwayatList) {
+            handleSelectAll(true);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [riwayatList]);
+
     const handleExport = () => {
-        if (!riwayatList || riwayatList.length === 0) {
-            toast({ variant: 'destructive', title: 'Tidak ada data untuk diekspor.' });
+        const reportsToExport = riwayatList?.filter(r => selectedIds.includes(r.id)) || [];
+        if (reportsToExport.length === 0) {
+            toast({ variant: 'destructive', title: 'Tidak ada data dipilih untuk diekspor.' });
             return;
         }
 
-        setIsLoading(true);
+        setIsLoadingExcel(true);
 
         try {
-            const dataToExport = riwayatList.map(riwayat => {
+            const dataToExport = reportsToExport.map(riwayat => {
                 const row: { [key: string]: any } = {};
                 
-                // Static and directly mapped fields
                 row["NO WITEL"] = "SEMARANG";
                 row["NO TIKET"] = riwayat.noTiket || '';
-                row["HASIL CEK WEB"] = ''; // Placeholder
-                row["ACTUAL SOLUTION"] = ''; // Placeholder
-                row["ACTUAL SOLUTION vs LAPANGAN"] = ''; // Placeholder
+                row["HASIL CEK WEB"] = ''; 
+                row["ACTUAL SOLUTION"] = '';
+                row["ACTUAL SOLUTION vs LAPANGAN"] = '';
                 row["DESKRIPSI_CUST_CLOSE"] = riwayat.keterangan || '';
                 row["LAYANAN"] = Array.isArray(riwayat.layanan) ? riwayat.layanan.join(', ') : '';
                 row["IS_GAMAS"] = riwayat.jenisOrder === 'Tiket GAMAS' ? 'GAMAS' : 'NON GAMAS';
-                row["KET KATEGORI"] = ''; // Placeholder
+                row["KET KATEGORI"] = '';
                 row["TANGGAL CLOSED"] = riwayat.tanggalClose?.toDate ? format(riwayat.tanggalClose.toDate(), 'yyyy-MM-dd HH:mm:ss') : '';
                 row["NO INTERNET"] = riwayat.noService || '';
                 row["LOKASI STO"] = riwayat.sto || '';
-                row["PUAS"] = ''; // Placeholder
+                row["PUAS"] = '';
 
-                // Material mapping logic
                 const materialsUsed = new Map<string, number>();
                 riwayat.materials?.forEach(mat => {
                     materialsUsed.set(mat.materialName, (materialsUsed.get(mat.materialName) || 0) + (mat.quantity || 1));
                 });
                 
-                // Regular material mapping
                 for(const header in materialHeaderMapping) {
                     const materialNames = materialHeaderMapping[header];
                     let totalQuantity = 0;
@@ -124,12 +142,10 @@ export default function AssuranceRekapPage() {
                     row[header] = totalQuantity > 0 ? totalQuantity : '';
                 }
 
-                // Special logic for Protection Sleeve and Termovit
                 const protectionSleeveQty = materialsUsed.get("Protection Sleeve") || 0;
                 row["Protection Sleeve"] = protectionSleeveQty > 0 ? protectionSleeveQty : '';
                 row["Termovit (cm)"] = protectionSleeveQty > 0 ? protectionSleeveQty * 15 : '';
 
-                // Special logic for 'KELEBIHAN PATCHCORE 1 MTR'
                 const patchcore1MtrQty = materialsUsed.get("PATCHCORE 1 MTR") || 0;
                 row["KELEBIHAN PATCHCORE 1 MTR"] = patchcore1MtrQty > 1 ? patchcore1MtrQty - 1 : '';
 
@@ -144,12 +160,94 @@ export default function AssuranceRekapPage() {
             const dateString = format(new Date(), 'yyyy-MM-dd');
             XLSX.writeFile(workbook, `Rekap_Assurance_${dateString}.xlsx`);
             
-            toast({ title: 'Ekspor Berhasil', description: `${riwayatList.length} baris data telah diekspor.` });
+            toast({ title: 'Ekspor Berhasil', description: `${reportsToExport.length} baris data telah diekspor.` });
 
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Gagal Mengekspor', description: error.message });
         } finally {
-            setIsLoading(false);
+            setIsLoadingExcel(false);
+        }
+    };
+    
+    const handleGenerateDocx = async () => {
+        if (selectedIds.length === 0) {
+            toast({ variant: 'destructive', title: 'Tidak ada laporan dipilih.' });
+            return;
+        }
+        setIsGeneratingDocx(true);
+        toast({ title: 'Mempersiapkan dokumen...', description: 'Mengumpulkan data dan gambar, ini mungkin memakan waktu.' });
+
+        try {
+            const selectedRiwayat = riwayatList?.filter(r => selectedIds.includes(r.id)) || [];
+
+            let htmlString = ``;
+
+            for (const riwayat of selectedRiwayat) {
+                const tanggalLapor = riwayat.tanggalLapor?.toDate ? format(riwayat.tanggalLapor.toDate(), 'dd MMMM yyyy', { locale: idLocale }) : 'N/A';
+                htmlString += `
+                    <div style="page-break-after: always;">
+                        <h2>Laporan Eviden: ${riwayat.noTiket || riwayat.noService}</h2>
+                        <p><strong>Teknisi:</strong> ${riwayat.namaPetugas}</p>
+                        <p><strong>Tanggal Lapor:</strong> ${tanggalLapor}</p>
+                        <hr />
+                `;
+
+                if (riwayat.evidenSccUrl) {
+                    htmlString += `
+                        <h3>Eviden SCC</h3>
+                        <img src="${riwayat.evidenSccUrl}" width="300" />
+                        <br />
+                    `;
+                }
+
+                if (riwayat.materials && riwayat.materials.length > 0) {
+                    for (const material of riwayat.materials) {
+                        if (material.evidences && material.evidences.length > 0) {
+                             htmlString += `<h3>Material: ${material.materialName} (Jumlah: ${material.quantity || 1})</h3>`;
+                             htmlString += '<table style="border-collapse: collapse; width: 100%;">';
+                             let cells = '';
+                             material.evidences.forEach((ev, index) => {
+                                 if (index % 2 === 0) cells += '<tr>';
+                                 cells += `
+                                    <td style="padding: 5px; border: 1px solid #ddd; text-align: center;">
+                                        <p style="font-size: 10px; margin: 0; font-weight: bold;">${ev.evidenceName}</p>
+                                        <img src="${ev.photoUrl}" width="250" />
+                                    </td>
+                                 `;
+                                 if (index % 2 !== 0 || index === material.evidences!.length - 1) {
+                                     if(index % 2 === 0 && index === material.evidences!.length - 1) {
+                                         cells += '<td></td>';
+                                     }
+                                     cells += '</tr>';
+                                 }
+                             });
+                             htmlString += cells + '</table><br />';
+                        }
+                    }
+                }
+                htmlString += `</div>`;
+            }
+
+            if (!htmlString.trim()) {
+                throw new Error("Tidak ada data eviden untuk diekspor.");
+            }
+
+            const base64 = await generateDocxAction(htmlString, { orientation: 'portrait' });
+            
+            const link = document.createElement('a');
+            link.href = `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${base64}`;
+            const dateString = format(new Date(), 'yyyy-MM-dd');
+            link.download = `Rekap_Eviden_Gangguan_${dateString}.docx`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            toast({ title: 'Ekspor DOCX Berhasil', description: 'File dokumen telah diunduh.' });
+
+        } catch (error: any) {
+             toast({ variant: 'destructive', title: 'Gagal Membuat Dokumen', description: error.message });
+        } finally {
+            setIsGeneratingDocx(false);
         }
     };
 
@@ -161,15 +259,15 @@ export default function AssuranceRekapPage() {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-3xl font-bold tracking-tight">Rekap Assurance</h1>
-            <p className="text-muted-foreground">Buat file Excel rekapitulasi data gangguan untuk tim Assurance.</p>
+            <h1 className="text-3xl font-bold tracking-tight">Rekap Assurance & Eviden</h1>
+            <p className="text-muted-foreground">Buat file Excel rekapitulasi data gangguan untuk tim Assurance atau dokumen Word untuk eviden.</p>
 
              <Card>
                 <CardHeader>
                     <CardTitle>Filter Laporan</CardTitle>
                     <CardDescription>Pilih rentang tanggal laporan gangguan untuk diekspor.</CardDescription>
                 </CardHeader>
-                <CardContent className="flex flex-wrap items-end gap-4">
+                <CardContent>
                      <div className="grid gap-2">
                         <Label>Rentang Tanggal Lapor</Label>
                          <Popover>
@@ -192,19 +290,84 @@ export default function AssuranceRekapPage() {
                             </PopoverContent>
                         </Popover>
                     </div>
-                    <Button onClick={handleExport} disabled={isLoading || isRiwayatLoading || !riwayatList || riwayatList.length === 0}>
-                        {(isLoading || isRiwayatLoading) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                        Generate & Download Excel
-                    </Button>
                 </CardContent>
-                {riwayatList && (
-                    <CardFooter>
-                        <p className="text-sm text-muted-foreground">
-                            Ditemukan {riwayatList.length} laporan dalam rentang tanggal yang dipilih.
-                        </p>
-                    </CardFooter>
-                )}
+            </Card>
+
+             <Card>
+                <CardHeader>
+                    <CardTitle>Daftar Laporan</CardTitle>
+                    {riwayatList && (
+                        <CardDescription>
+                            Ditemukan {riwayatList.length} laporan. {selectedIds.length} laporan dipilih.
+                        </CardDescription>
+                    )}
+                </CardHeader>
+                <CardContent>
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="w-12">
+                                        <Checkbox
+                                            checked={(riwayatList?.length ?? 0) > 0 && selectedIds.length === riwayatList?.length}
+                                            onCheckedChange={(checked) => handleSelectAll(!!checked)}
+                                            aria-label="Pilih semua"
+                                        />
+                                    </TableHead>
+                                    <TableHead>No Tiket</TableHead>
+                                    <TableHead>No Service</TableHead>
+                                    <TableHead>Petugas</TableHead>
+                                    <TableHead>Jenis Order</TableHead>
+                                    <TableHead>Tanggal Lapor</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {isRiwayatLoading ? (
+                                    <TableRow>
+                                        <TableCell colSpan={6} className="text-center h-24">Memuat data...</TableCell>
+                                    </TableRow>
+                                ) : riwayatList && riwayatList.length > 0 ? (
+                                    riwayatList.map(item => (
+                                        <TableRow key={item.id}>
+                                            <TableCell>
+                                                <Checkbox
+                                                    checked={selectedIds.includes(item.id)}
+                                                    onCheckedChange={(checked) => handleSelect(item.id, !!checked)}
+                                                    aria-label={`Pilih laporan ${item.noTiket}`}
+                                                />
+                                            </TableCell>
+                                            <TableCell>{item.noTiket}</TableCell>
+                                            <TableCell>{item.noService}</TableCell>
+                                            <TableCell>{item.namaPetugas}</TableCell>
+                                            <TableCell>{item.jenisOrder}</TableCell>
+                                            <TableCell>{format(item.tanggalLapor.toDate(), 'dd MMM yyyy')}</TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                     <TableRow>
+                                        <TableCell colSpan={6} className="text-center h-24">
+                                            {dateRange ? 'Tidak ada data untuk rentang tanggal yang dipilih.' : 'Pilih rentang tanggal untuk menampilkan data.'}
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+                <CardFooter>
+                    <div className="flex gap-2">
+                        <Button onClick={handleExport} disabled={isLoadingExcel || isRiwayatLoading || selectedIds.length === 0}>
+                            {(isLoadingExcel) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                            Export Excel
+                        </Button>
+                         <Button onClick={handleGenerateDocx} disabled={isGeneratingDocx || isRiwayatLoading || selectedIds.length === 0} variant="secondary">
+                            {(isGeneratingDocx) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Files className="mr-2 h-4 w-4" />}
+                            Export Eviden (DOCX)
+                        </Button>
+                    </div>
+                </CardFooter>
             </Card>
         </div>
     );
 }
+    

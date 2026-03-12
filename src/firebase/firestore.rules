@@ -105,7 +105,7 @@ service cloud.firestore {
     }
 
     match /pelanggan/{pelangganId} {
-      allow get, list: if hasAllProAccess() || isKorlap();
+      allow read: if hasAllProAccess() || isKorlap();
       allow create: if isApproved() && isCreatingOwn('userId');
       allow update: if isKorlap() || (hasAllProAccess() && isUpdatingOwn('userId')) || isAdmin();
       allow delete: if isAdmin() || isKorlap();
@@ -113,7 +113,7 @@ service cloud.firestore {
 
     match /riwayat-gangguan/{riwayatId} {
       allow create: if isApproved() && isCreatingOwn('userId');
-      allow read: if isApproved();
+      allow read: if hasAllProAccess();
       allow update, delete: if isAdmin() || isKorlap();
     }
     
@@ -151,8 +151,7 @@ service cloud.firestore {
     }
 
     match /schedules/{scheduleId} {
-      allow get: if isOwner(resource.data.userId) || isAdmin() || isKorlap();
-      allow list: if isApproved();
+      allow read: if isApproved();
       allow create: if (isAdmin() || isKorlap()) || (isCreatingOwn('userId') && (request.resource.data.shiftType == 'ijin' || request.resource.data.shiftType == 'cuti' || request.resource.data.shiftType == 'tukar-jaga'));
       allow update: if isOwner(resource.data.userId) || isAdmin() || isKorlap();
       allow delete: if isAdmin() || isKorlap();
@@ -177,6 +176,11 @@ service cloud.firestore {
       allow create: if isApproved() && isCreatingOwn('userId');
     }
 
+    match /cashbook/{transactionId} {
+      allow read: if isApproved();
+      allow write: if isAdmin();
+    }
+
     match /chats/{chatId} {
       // A user can read a chat document if they are a participant.
       allow get: if isSignedIn() && 'participants' in resource.data && request.auth.uid in resource.data.participants;
@@ -194,7 +198,7 @@ service cloud.firestore {
         // `get` (read one doc) and `write` can use get() to check parent document's participants list.
         allow get, write: if isSignedIn() &&
                              exists(/databases/$(database)/documents/chats/$(chatId)) &&
-                             request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+                             request.auth.uid in get(/databases/(default)/documents/chats/$(chatId)).data.participants;
                              
         // `list` (queries) cannot use `get()` or `exists()`. 
         // We rely on the `chatId` itself, which is a composite of the two participant UIDs.
@@ -210,5 +214,3 @@ service cloud.firestore {
     }
   }
 }
-
-  
