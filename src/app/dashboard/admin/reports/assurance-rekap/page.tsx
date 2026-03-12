@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
@@ -74,7 +73,7 @@ function ReportPreview({
                 .image-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem; }
                 .image-container { text-align: center; }
                 .image-container img { max-width: 100%; height: auto; border: 1px solid #ddd; }
-                .image-container p { margin-top: 0; font-size: 10pt; font-weight: bold; }
+                .image-container p { margin-top: 0.25rem; font-size: 10pt; font-weight: bold; }
                 @media print { 
                     body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; } 
                     .page-container { margin: 0; box-shadow: none; border: none; }
@@ -197,7 +196,7 @@ export default function AssuranceRekapPage() {
                 row["PATCHCORE 15"] = getMaterialQty("PATCHCORE 15");
                 row["PATCHCORE 2 MTR"] = getMaterialQty("PATCHCORE 2 MTR");
 
-                const patchcore1MtrQty = materialsUsed.get("PATCHCORE 1 MTR") || 0;
+                const patchcore1MtrQty = (materialsUsed.get("PATCHCORE 1 MTR") || 0) as number;
                 row["KELEBIHAN"] = patchcore1MtrQty > 1 ? patchcore1MtrQty - 1 : '';
                 row["PATCHCORE 1 MTR"] = patchcore1MtrQty > 0 ? patchcore1MtrQty : '';
                 
@@ -206,7 +205,7 @@ export default function AssuranceRekapPage() {
                 row["SPLITER 1:8"] = getMaterialQty("SPLITER 1:8");
                 row["SPLITER 1:16"] = getMaterialQty("SPLITER 1:16");
 
-                const protectionSleeveQty = materialsUsed.get("PROTECTION SLEEVE") || 0;
+                const protectionSleeveQty = (materialsUsed.get("PROTECTION SLEEVE") || 0) as number;
                 row["Termovit (cm)"] = protectionSleeveQty > 0 ? protectionSleeveQty * 15 : '';
                 row["Adapter SC"] = getMaterialQty("ADAPTER SC");
                 row["RJ45"] = getMaterialQty("RJ45");
@@ -234,60 +233,63 @@ export default function AssuranceRekapPage() {
     };
     
     const handleGeneratePreview = () => {
-        if (selectedIds.length === 0) {
+        const selectedRiwayat = riwayatList?.filter(r => selectedIds.includes(r.id)) || [];
+        if (selectedRiwayat.length === 0) {
             toast({ variant: 'destructive', title: 'Tidak ada laporan dipilih.' });
             return;
         }
         
         toast({ title: 'Mempersiapkan pratinjau...', description: 'Mengumpulkan data dan gambar.' });
 
-        const selectedRiwayat = riwayatList?.filter(r => selectedIds.includes(r.id)) || [];
         let htmlString = ``;
 
         for (const riwayat of selectedRiwayat) {
             const tanggalLapor = riwayat.tanggalLapor?.toDate ? format(riwayat.tanggalLapor.toDate(), 'dd MMMM yyyy, HH:mm', { locale: idLocale }) : 'N/A';
             
-            htmlString += `
+            let reportHtml = `
                 <div class="page-container">
-                    <h2 style="font-size: 14pt; font-weight: bold;">Laporan Eviden Gangguan: ${riwayat.noTiket || riwayat.noService}</h2>
-                    <p><strong>Teknisi:</strong> ${riwayat.namaPetugas}</p>
-                    <p><strong>Tanggal Lapor:</strong> ${tanggalLapor}</p>
-                    <p><strong>Jenis Order:</strong> ${riwayat.jenisOrder || '-'}</p>
-                    <p><strong>Keterangan:</strong> ${riwayat.keterangan || '-'}</p>
-                    <hr />
+                    <h2 style="font-size: 14pt; font-weight: bold; border-bottom: 1px solid black; padding-bottom: 5px;">Laporan Eviden: ${riwayat.noTiket || riwayat.noService}</h2>
+                    <table style="width: 100%; font-size: 10pt; margin-top: 10px;">
+                        <tr><td style="width: 120px;"><strong>Teknisi</strong></td><td>: ${riwayat.namaPetugas}</td></tr>
+                        <tr><td><strong>Tanggal Lapor</strong></td><td>: ${tanggalLapor}</td></tr>
+                        <tr><td><strong>Jenis Order</strong></td><td>: ${riwayat.jenisOrder || '-'}</td></tr>
+                        <tr><td style="vertical-align: top;"><strong>Keterangan</strong></td><td style="vertical-align: top;">: ${riwayat.keterangan || '-'}</td></tr>
+                    </table>
+                    <hr style="margin: 15px 0;" />
             `;
 
             if (riwayat.evidenSccUrl) {
-                htmlString += `
+                reportHtml += `
                     <h3 style="font-size: 12pt; font-weight: bold; margin-top: 1em;">Eviden SCC</h3>
                     <div class="image-grid">
                         <div class="image-container">
                              <img src="${riwayat.evidenSccUrl}" />
+                             <p>SCC</p>
                         </div>
                     </div>
-                    <br />
                 `;
             }
 
             if (riwayat.materials && riwayat.materials.length > 0) {
                 for (const material of riwayat.materials) {
                     if (material.evidences && material.evidences.length > 0) {
-                         htmlString += `<h3 style="font-size: 12pt; font-weight: bold; margin-top: 1em;">Material: ${material.materialName} (Jumlah: ${material.quantity || 1})</h3>`;
+                         reportHtml += `<h3 style="font-size: 12pt; font-weight: bold; margin-top: 1em;">Material: ${material.materialName} (Jumlah: ${material.quantity || 1})</h3>`;
                          
-                         htmlString += '<div class="image-grid">';
+                         reportHtml += '<div class="image-grid">';
                          material.evidences.forEach((ev) => {
-                             htmlString += `
+                             reportHtml += `
                                 <div class="image-container">
-                                    <p style="text-transform: capitalize;">${ev.evidenceName}</p>
                                     <img src="${ev.photoUrl}" />
+                                    <p style="text-transform: capitalize;">${ev.evidenceName}</p>
                                 </div>
                              `;
                          });
-                         htmlString += '</div><br />';
+                         reportHtml += '</div>';
                     }
                 }
             }
-            htmlString += `</div>`;
+            reportHtml += `</div>`; // close page-container
+            htmlString += reportHtml;
         }
 
         if (!htmlString.trim()) {
