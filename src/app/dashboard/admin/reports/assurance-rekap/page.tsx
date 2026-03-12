@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, query, where, Timestamp, doc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -31,24 +32,6 @@ const excelHeaders = [
     "Penarikan Kabel UTP (Mtr)"
 ];
 
-const materialHeaderMapping: { [key: string]: string[] } = {
-    "DROPWIRE": ["DROPWIRE"], // This might need adjustment if it's a sum
-    "DROPCORE BARU": ["DROPCORE BARU"],
-    "DROPCORE REFURBISH": ["DROPCORE REFURBISH"],
-    "ROSET": ["ROSET"],
-    "PIGTAIL SC": ["PIGTAIL SC"],
-    "PATCHCORE 15": ["PATCHCORE 15"],
-    "PATCHCORE 2 MTR": ["PATCHCORE 2 MTR"],
-    "SPLITER 1:2": ["SPLITER 1:2"],
-    "SPLITER 1:4": ["SPLITER 1:4"],
-    "SPLITER 1:8": ["SPLITER 1:8"],
-    "SPLITER 1:16": ["SPLITER 1:16"],
-    "Adapter SC": ["Adapter SC"],
-    "RJ45": ["RJ45"],
-    "Splice on Connector": ["Splice on Connector"],
-    "Penarikan Kabel UTP (Mtr)": ["Penarikan Kabel UTP (Mtr)"],
-};
-
 export default function AssuranceRekapPage() {
     const firestore = useFirestore();
     const router = useRouter();
@@ -72,9 +55,9 @@ export default function AssuranceRekapPage() {
     }, [user, currentUserProfile, isUserLoading, isProfileLoading, router]);
 
     const riwayatQuery = useMemoFirebase(() => {
-        if (!dateRange?.from || !dateRange.to) return null;
+        if (!dateRange?.from) return null;
         const start = startOfDay(dateRange.from);
-        const end = endOfDay(dateRange.to);
+        const end = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
         return query(
             collection(firestore, 'riwayat-gangguan'),
             where('tanggalLapor', '>=', Timestamp.fromDate(start)),
@@ -88,16 +71,15 @@ export default function AssuranceRekapPage() {
         setSelectedIds(prev => checked ? [...prev, id] : prev.filter(i => i !== id));
     };
 
-    const handleSelectAll = (checked: boolean) => {
+    const handleSelectAll = useCallback((checked: boolean) => {
         setSelectedIds(checked ? (riwayatList || []).map(r => r.id) : []);
-    };
+    }, [riwayatList]);
 
     useEffect(() => {
         if (riwayatList) {
             handleSelectAll(true);
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [riwayatList]);
+    }, [riwayatList, handleSelectAll]);
 
     const handleExport = () => {
         const reportsToExport = riwayatList?.filter(r => selectedIds.includes(r.id)) || [];
@@ -115,8 +97,6 @@ export default function AssuranceRekapPage() {
                 row["NO WITEL"] = "SEMARANG";
                 row["NO TIKET"] = riwayat.noTiket || '';
                 row["HASIL CEK WEB"] = ''; 
-                row["ACTUAL SOLUTION"] = '';
-                row["ACTUAL SOLUTION vs LAPANGAN"] = '';
                 row["DESKRIPSI_CUST_CLOSE"] = riwayat.keterangan || '';
                 row["LAYANAN"] = Array.isArray(riwayat.layanan) ? riwayat.layanan.join(', ') : '';
                 row["IS_GAMAS"] = riwayat.jenisOrder === 'Tiket GAMAS' ? 'GAMAS' : 'NON GAMAS';
@@ -126,24 +106,39 @@ export default function AssuranceRekapPage() {
                 row["LOKASI STO"] = riwayat.sto || '';
                 row["PUAS"] = '';
 
+                const keteranganLower = (riwayat.keterangan || '').toLowerCase();
+                let actualSolution = '';
+                if (/(dropcore|dc|gdc|sambul|sambung ulang|smuff|protective slevee|ikr)/.test(keteranganLower)) {
+                    actualSolution = 'DROPCORE';
+                } else if (/(odp|spliter|sc|pathcore|pigtail)/.test(keteranganLower)) {
+                    actualSolution = 'ODP';
+                }
+                row["ACTUAL SOLUTION"] = actualSolution;
+
+                let actualSolutionVsLapangan = '';
+                if (actualSolution === 'DROPCORE') {
+                    actualSolutionVsLapangan = 'Sambung DC';
+                } else if (actualSolution === 'ODP') {
+                    const odpMaterials = riwayat.materials
+                        ?.map(m => m.materialName)
+                        .filter(name => /spliter|adapter sc|splice on connector|patchcore/i.test(name));
+                    actualSolutionVsLapangan = odpMaterials && odpMaterials.length > 0 ? odpMaterials.join(', ') : 'Perbaikan ODP';
+                }
+                row["ACTUAL SOLUTION vs LAPANGAN"] = actualSolutionVsLapangan;
+
                 const materialsUsed = new Map<string, number>();
-                riwayat.materials?.forEach(mat => {
+                (riwayat.materials || []).forEach(mat => {
                     materialsUsed.set(mat.materialName, (materialsUsed.get(mat.materialName) || 0) + (mat.quantity || 1));
                 });
                 
-                for(const header in materialHeaderMapping) {
-                    const materialNames = materialHeaderMapping[header];
-                    let totalQuantity = 0;
-                    materialNames.forEach(name => {
-                        if(materialsUsed.has(name)) {
-                            totalQuantity += materialsUsed.get(name)!;
-                        }
-                    });
-                    row[header] = totalQuantity > 0 ? totalQuantity : '';
-                }
-
+                excelHeaders.forEach(header => {
+                    if (row[header] === undefined) {
+                         const materialQty = materialsUsed.get(header);
+                         row[header] = materialQty || '';
+                    }
+                });
+                
                 const protectionSleeveQty = materialsUsed.get("Protection Sleeve") || 0;
-                row["Protection Sleeve"] = protectionSleeveQty > 0 ? protectionSleeveQty : '';
                 row["Termovit (cm)"] = protectionSleeveQty > 0 ? protectionSleeveQty * 15 : '';
 
                 const patchcore1MtrQty = materialsUsed.get("PATCHCORE 1 MTR") || 0;
@@ -183,19 +178,22 @@ export default function AssuranceRekapPage() {
             let htmlString = ``;
 
             for (const riwayat of selectedRiwayat) {
-                const tanggalLapor = riwayat.tanggalLapor?.toDate ? format(riwayat.tanggalLapor.toDate(), 'dd MMMM yyyy', { locale: idLocale }) : 'N/A';
+                const tanggalLapor = riwayat.tanggalLapor?.toDate ? format(riwayat.tanggalLapor.toDate(), 'dd MMMM yyyy, HH:mm', { locale: idLocale }) : 'N/A';
+                
                 htmlString += `
-                    <div style="page-break-after: always;">
-                        <h2>Laporan Eviden: ${riwayat.noTiket || riwayat.noService}</h2>
+                    <div style="page-break-after: always; font-family: Arial, sans-serif; font-size: 11pt;">
+                        <h2 style="font-size: 14pt; font-weight: bold;">Laporan Eviden Gangguan: ${riwayat.noTiket || riwayat.noService}</h2>
                         <p><strong>Teknisi:</strong> ${riwayat.namaPetugas}</p>
                         <p><strong>Tanggal Lapor:</strong> ${tanggalLapor}</p>
+                        <p><strong>Jenis Order:</strong> ${riwayat.jenisOrder || '-'}</p>
+                        <p><strong>Keterangan:</strong> ${riwayat.keterangan || '-'}</p>
                         <hr />
                 `;
 
                 if (riwayat.evidenSccUrl) {
                     htmlString += `
-                        <h3>Eviden SCC</h3>
-                        <img src="${riwayat.evidenSccUrl}" width="300" />
+                        <h3 style="font-size: 12pt; font-weight: bold; margin-top: 1em;">Eviden SCC</h3>
+                        <img src="${riwayat.evidenSccUrl}" style="max-width: 400px; height: auto; border: 1px solid #ccc; margin-top: 0.5em;" />
                         <br />
                     `;
                 }
@@ -203,15 +201,16 @@ export default function AssuranceRekapPage() {
                 if (riwayat.materials && riwayat.materials.length > 0) {
                     for (const material of riwayat.materials) {
                         if (material.evidences && material.evidences.length > 0) {
-                             htmlString += `<h3>Material: ${material.materialName} (Jumlah: ${material.quantity || 1})</h3>`;
-                             htmlString += '<table style="border-collapse: collapse; width: 100%;">';
+                             htmlString += `<h3 style="font-size: 12pt; font-weight: bold; margin-top: 1em;">Material: ${material.materialName} (Jumlah: ${material.quantity || 1})</h3>`;
+                             
+                             htmlString += '<table style="border-collapse: collapse; width: 100%; margin-top: 0.5em;">';
                              let cells = '';
                              material.evidences.forEach((ev, index) => {
                                  if (index % 2 === 0) cells += '<tr>';
                                  cells += `
-                                    <td style="padding: 5px; border: 1px solid #ddd; text-align: center;">
-                                        <p style="font-size: 10px; margin: 0; font-weight: bold;">${ev.evidenceName}</p>
-                                        <img src="${ev.photoUrl}" width="250" />
+                                    <td style="padding: 5px; border: 1px solid #ddd; text-align: center; width: 50%;">
+                                        <p style="font-size: 10pt; margin: 0 0 5px 0; font-weight: bold; text-transform: capitalize;">${ev.evidenceName}</p>
+                                        <img src="${ev.photoUrl}" style="max-width: 100%; height: auto; display: block; margin: 0 auto;" />
                                     </td>
                                  `;
                                  if (index % 2 !== 0 || index === material.evidences!.length - 1) {
@@ -221,7 +220,7 @@ export default function AssuranceRekapPage() {
                                      cells += '</tr>';
                                  }
                              });
-                             htmlString += cells + '</table><br />';
+                             htmlString += `<tbody>${cells}</tbody></table><br />`;
                         }
                     }
                 }
@@ -229,7 +228,7 @@ export default function AssuranceRekapPage() {
             }
 
             if (!htmlString.trim()) {
-                throw new Error("Tidak ada data eviden untuk diekspor.");
+                throw new Error("Tidak ada data eviden untuk diekspor dalam laporan yang dipilih.");
             }
 
             const base64 = await generateDocxAction(htmlString, { orientation: 'portrait' });
@@ -370,4 +369,4 @@ export default function AssuranceRekapPage() {
         </div>
     );
 }
-    
+
