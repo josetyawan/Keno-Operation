@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
@@ -73,10 +74,12 @@ function ReportPreview({
                 .page-container { page-break-after: always; background: white; padding: 1cm; margin: 1rem auto; box-shadow: 0 0 0.5cm rgba(0,0,0,0.5); width: 210mm; min-height: 297mm; box-sizing: border-box; }
                 h2 { font-size: 16pt; font-weight: bold; }
                 table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 10pt; }
-                th, td { border: 1px solid black; padding: 5px; text-align: left; vertical-align: middle; }
+                th, td { border: 1px solid black; padding: 5px; text-align: left; vertical-align: top; }
                 thead { background-color: #FFFF00; font-weight: bold; }
-                img { max-width: 100%; max-height: 100%; object-fit: contain; }
-                td.image-cell { width: 150px; height: 150px; text-align: center; }
+                img { max-width: 100%; height: auto; object-fit: contain; }
+                td.image-cell ul { list-style-type: none; padding: 0; margin: 0; }
+                td.image-cell li { margin-bottom: 5px; }
+                td.keterangan-cell ul { list-style-position: inside; padding-left: 0; margin: 0; }
                 @media print { 
                     body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; } 
                     .page-container { margin: 0; box-shadow: none; border: none; }
@@ -265,42 +268,53 @@ export default function AssuranceRekapPage() {
             let tableRowsHtml = '';
             let hasContent = false;
 
+            const reportsByTicket: Record<string, { photos: { url: string; keterangan: string }[] }> = {};
+
             for (const riwayat of selectedRiwayat) {
-                let photosForCategory: { url: string; keterangan: string }[] = [];
+                const ticketKey = riwayat.noTiket || riwayat.noService;
+                if (!reportsByTicket[ticketKey]) {
+                    reportsByTicket[ticketKey] = { photos: [] };
+                }
 
                 if (category.type === 'scc' && riwayat.evidenSccUrl) {
-                    photosForCategory.push({ url: riwayat.evidenSccUrl, keterangan: 'SCC DONE' });
+                    reportsByTicket[ticketKey].photos.push({ url: riwayat.evidenSccUrl, keterangan: 'SCC DONE' });
                 } else if (riwayat.materials) {
                     for (const material of riwayat.materials) {
                         if (!material.evidences) continue;
-                        
                         const materialNameUpper = material.materialName.toUpperCase();
-
                         if (category.type === 'progres' && material.evidences.some(e => e.evidenceName.toLowerCase().includes('progres'))) {
-                             material.evidences.filter(e => e.evidenceName.toLowerCase().includes('progres')).forEach(p => {
-                                photosForCategory.push({ url: p.photoUrl, keterangan: material.materialName });
+                            material.evidences.filter(e => e.evidenceName.toLowerCase().includes('progres')).forEach(p => {
+                                reportsByTicket[ticketKey].photos.push({ url: p.photoUrl, keterangan: material.materialName });
                             });
                         } else if (category.type === 'material' && materialNameUpper.includes(category.materialKeyword!)) {
                             material.evidences.forEach(p => {
-                                photosForCategory.push({ url: p.photoUrl, keterangan: `${material.materialName} - ${p.evidenceName}` });
+                                reportsByTicket[ticketKey].photos.push({ url: p.photoUrl, keterangan: `${material.materialName} - ${p.evidenceName}` });
                             });
                         }
                     }
                 }
+            }
 
-                if (photosForCategory.length > 0) {
+            for (const ticketKey in reportsByTicket) {
+                const { photos } = reportsByTicket[ticketKey];
+                if (photos.length > 0) {
                     hasContent = true;
-                    photosForCategory.forEach(photo => {
-                        tableRowsHtml += `
-                            <tr>
-                                <td>${riwayat.noTiket || riwayat.noService}</td>
-                                <td class="image-cell">
-                                    <img src="${photo.url}" />
-                                </td>
-                                <td>${photo.keterangan}</td>
-                            </tr>
-                        `;
-                    });
+
+                    const imagesHtml = photos.map(p => 
+                        `<img src="${p.url}" style="width: 120px; height: auto; object-fit: contain; border: 1px solid #eee; margin: 2px;" />`
+                    ).join('');
+
+                    const keteranganHtml = `<ul>${photos.map(p => `<li>${p.keterangan}</li>`).join('')}</ul>`;
+                    
+                    const evidentCellHtml = `<div style="display: flex; flex-wrap: wrap; align-items: flex-start;">${imagesHtml}</div>`;
+
+                    tableRowsHtml += `
+                        <tr>
+                            <td>${ticketKey}</td>
+                            <td>${evidentCellHtml}</td>
+                            <td class="keterangan-cell">${keteranganHtml}</td>
+                        </tr>
+                    `;
                 }
             }
             
@@ -312,8 +326,8 @@ export default function AssuranceRekapPage() {
                             <thead>
                                 <tr>
                                     <th style="width: 20%;">NO TIKET</th>
-                                    <th style="width: 30%;">EVIDENT</th>
-                                    <th style="width: 50%;">KETERANGAN</th>
+                                    <th style="width: 50%;">EVIDENT</th>
+                                    <th style="width: 30%;">KETERANGAN</th>
                                 </tr>
                             </thead>
                             <tbody>
