@@ -104,27 +104,24 @@ export async function GET(request: NextRequest) {
                     telegramUsername: user.telegramUsername ? `@${user.telegramUsername.replace('@', '')}` : '',
                     tickets: tickets
                 };
-            });
+            }).sort((a, b) => a.userName.localeCompare(b.userName));
 
             // Generate Messages
             const dateHeader = format(today, 'dd/MM/yyyy');
             let summaryMessage = `📆 REKAP TEKNISI ${unit.toUpperCase()} SEKTOR KUDUS (${dateHeader})\n\n`;
             summaryMessage += 'NAMA TEKNISI | PRODUKTIVITAS\n';
-            summaryData.forEach(item => {
-                summaryMessage += `${item.name} | ${item.productivity}\n`;
-            });
+            summaryMessage += summaryData.map(item => `${item.name} | ${item.productivity}`).join('\n');
     
-            let detailMessage = `📌 DETAIL PRODUKTIVITAS TEKNISI ${unit.toUpperCase()}\n`;
+            let detailMessage = `📌 DETAIL PRODUKTIVITAS TEKNISI ${unit.toUpperCase()}`;
             if (detailData.length === 0) {
-                detailMessage += '\nTidak ada produktivitas tercatat untuk hari ini.';
+                detailMessage += '\n\nTidak ada produktivitas tercatat untuk hari ini.';
             } else {
-                detailData.forEach(user => {
-                    detailMessage += `\n${user.userName} ${user.telegramUsername}\n`;
-                    detailMessage += 'TIKET | SERVICE | SEGMEN\n';
-                    user.tickets.forEach(t => {
-                        detailMessage += `${t.ticket || ''} | ${t.service || ''} | ${t.segment}\n`;
-                    });
-                });
+                detailMessage += detailData.map(user => {
+                    const userBlock = `\n\n${user.userName} ${user.telegramUsername}\n` +
+                                    'TIKET | SERVICE | SEGMEN\n' +
+                                    user.tickets.map(t => `${t.ticket || ''} | ${t.service || ''} | ${t.segment}`).join('\n');
+                    return userBlock;
+                }).join('');
             }
 
             // Send to Telegram
