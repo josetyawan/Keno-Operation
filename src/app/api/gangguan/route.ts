@@ -73,12 +73,3 @@ export async function GET(request: NextRequest) {
         );
     }
 }
-
-// The POST function is deprecated but we keep the file structure for clarity.
-export async function POST(request: Request) {
-    return NextResponse.json(
-        { success: false, error: 'This API endpoint is for GET requests to check ticket status.' },
-        { status: 405 } // 405 Method Not Allowed
-    );
-}
-
