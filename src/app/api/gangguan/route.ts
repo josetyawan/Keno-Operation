@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
       q = query(
         ref,
         where('noTiket','==',noTiket),
-        orderBy('tanggalLapor','desc'),
+        // orderBy('tanggalLapor','desc'), // Temporarily removed to prevent index error
         limit(1)
       )
 
@@ -42,7 +42,8 @@ export async function GET(request: NextRequest) {
       q = query(
         ref,
         where('noService','==',noService),
-        orderBy('tanggalLapor','desc'),
+        // Temporarily removed to prevent index error. This may not return the absolute latest record if duplicates exist.
+        // orderBy('tanggalLapor','desc'), 
         limit(1)
       )
 
