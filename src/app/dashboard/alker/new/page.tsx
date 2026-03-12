@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Loader2, Upload, X, Wrench } from 'lucide-react';
+import { ArrowLeft, Loader2, Upload, X, Wrench, PlusCircle, Trash2 } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { useStorage } from '@/firebase/provider';
@@ -43,14 +43,17 @@ const toolList = [
 
 const toolsWithTwoPhotos = ["Splicer", "Optical Power Meter", "Optical Fiber Ranger"];
 
+type ToolFormData = Omit<AlkerTool, 'photoUrl1' | 'photoUrl2'> & { 
+  photo1?: FileList; 
+  photo2?: FileList;
+  photoUrl1?: string;
+  photoUrl2?: string;
+};
+
 type FormValues = {
   crewUserId: string;
-  tools: (Omit<AlkerTool, 'photoUrl1' | 'photoUrl2'> & { 
-    photo1?: FileList; 
-    photo2?: FileList;
-    photoUrl1?: string;
-    photoUrl2?: string;
-  })[];
+  tools: ToolFormData[];
+  otherTools: ToolFormData[];
 };
 
 export default function NewAlkerPage() {
@@ -92,7 +95,6 @@ export default function NewAlkerPage() {
   const canListUsers = useMemo(() => currentUserProfile?.role === 'admin' || currentUserProfile?.role === 'korlap', [currentUserProfile]);
 
   const usersQuery = useMemoFirebase(() => {
-      // Only fetch all users if the current user has permission
       if (!canListUsers) return null;
       return query(collection(firestore, 'users'), orderBy('displayName'));
   }, [firestore, canListUsers]);
@@ -100,13 +102,11 @@ export default function NewAlkerPage() {
   const { data: allUsers, isLoading: isCollectionLoading } = useCollection<UserProfile>(usersQuery);
 
   useEffect(() => {
-    // If user cannot list others, the user list is empty.
     if (!canListUsers && !isProfileLoading) {
         setUsers([]);
         setAreUsersLoading(false);
         return;
     }
-    // If user can list others, wait for the collection to load.
     if (allUsers) {
       const approvedUsers = allUsers.filter(u => u.registrationStatus === 'approved');
       setUsers(approvedUsers);
@@ -144,15 +144,21 @@ export default function NewAlkerPage() {
         photoUrl1: '',
         photoUrl2: ''
       })),
+      otherTools: [],
     },
   });
 
   const { fields } = useFieldArray({ control, name: "tools" });
+  const { fields: otherFields, append: appendOther, remove: removeOther } = useFieldArray({ control, name: "otherTools" });
+  
   const watchedTools = watch("tools");
+  const watchedOtherTools = watch("otherTools");
 
   useEffect(() => {
     if (existingChecklist) {
-      const mergedTools = toolList.map(toolName => {
+      const predefinedToolNames = new Set(toolList);
+      
+      const predefinedToolsData: ToolFormData[] = toolList.map(toolName => {
         const existingTool = existingChecklist.tools.find(t => t.toolName === toolName);
         return {
           toolName: toolName,
@@ -164,9 +170,14 @@ export default function NewAlkerPage() {
         };
       });
 
+      const otherToolsData: ToolFormData[] = existingChecklist.tools
+        .filter(t => !predefinedToolNames.has(t.toolName))
+        .map(t => ({...t, photo1: undefined, photo2: undefined}));
+
       reset({
         crewUserId: existingChecklist.crewUserId || '',
-        tools: mergedTools,
+        tools: predefinedToolsData,
+        otherTools: otherToolsData,
       });
     }
   }, [existingChecklist, reset]);
@@ -223,8 +234,6 @@ export default function NewAlkerPage() {
     }
 
     try {
-      const toolDataWithUrls: AlkerTool[] = [];
-
       const uploadPhoto = async (file: File) => {
           const compressedFile = await compressImage(file);
           const filePath = `notas/${user.uid}/alker-${Date.now()}-${file.name}`;
@@ -233,33 +242,38 @@ export default function NewAlkerPage() {
           return getDownloadURL(storageRef);
       };
 
-      for (let i = 0; i < data.tools.length; i++) {
-        const tool = data.tools[i];
-        
-        let finalPhotoUrl1 = tool.photoUrl1 || '';
-        let finalPhotoUrl2 = tool.photoUrl2 || '';
+      const processTool = async (tool: ToolFormData): Promise<AlkerTool> => {
+          let url1 = tool.photoUrl1 || '';
+          let url2 = tool.photoUrl2 || '';
 
-        // If a new file is uploaded, it replaces the existing URL
-        if (tool.photo1 && tool.photo1.length > 0) {
-          finalPhotoUrl1 = await uploadPhoto(tool.photo1[0]);
-        }
-        if (tool.photo2 && tool.photo2.length > 0) {
-          finalPhotoUrl2 = await uploadPhoto(tool.photo2[0]);
-        }
-        
-        const toolEntry: AlkerTool = {
-          toolName: tool.toolName,
-          condition: tool.condition,
-          serialNumber: tool.serialNumber || '',
-          brand: tool.brand || '',
-        };
+          if (tool.photo1 && tool.photo1.length > 0) {
+              url1 = await uploadPhoto(tool.photo1[0]);
+          }
+          if (tool.photo2 && tool.photo2.length > 0) {
+              url2 = await uploadPhoto(tool.photo2[0]);
+          }
 
-        if (finalPhotoUrl1) toolEntry.photoUrl1 = finalPhotoUrl1;
-        if (finalPhotoUrl2) toolEntry.photoUrl2 = finalPhotoUrl2;
-        
-        toolDataWithUrls.push(toolEntry);
+          const entry: AlkerTool = {
+              toolName: tool.toolName,
+              condition: tool.condition,
+              serialNumber: tool.serialNumber || '',
+              brand: tool.brand || '',
+          };
+          if (url1) entry.photoUrl1 = url1;
+          if (url2) entry.photoUrl2 = url2;
+          return entry;
+      };
+
+      const allToolsFromForm = [...data.tools, ...data.otherTools];
+      const toolProcessingPromises: Promise<AlkerTool>[] = [];
+      
+      for (const tool of allToolsFromForm) {
+          if (tool.toolName.trim() === '') continue; // Skip empty custom tools
+          toolProcessingPromises.push(processTool(tool));
       }
 
+      const finalTools = await Promise.all(toolProcessingPromises);
+      
       const selectedCrew = users?.find(u => u.id === data.crewUserId);
       
       const checklistDocRef = doc(firestore, 'tool-checklists', user.uid);
@@ -274,7 +288,7 @@ export default function NewAlkerPage() {
         crewUserId: data.crewUserId,
         crewUserName: selectedCrew?.displayName || '',
         dateSubmitted: serverTimestamp(),
-        tools: toolDataWithUrls,
+        tools: finalTools,
       };
 
       await setDoc(checklistDocRef, checklistData, { merge: true });
@@ -367,7 +381,7 @@ export default function NewAlkerPage() {
 
             <Card>
                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Wrench /> Daftar Alat Kerja</CardTitle>
+                    <CardTitle className="flex items-center gap-2"><Wrench /> Daftar Alat Kerja Standar</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <Accordion type="single" collapsible className="w-full">
@@ -442,6 +456,85 @@ export default function NewAlkerPage() {
                     </Accordion>
                 </CardContent>
             </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">Daftar Alat Lain-lain</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {otherFields.map((field, index) => {
+                        const watchedPhoto1 = watch(`otherTools.${index}.photo1`);
+                        const watchedPhoto2 = watch(`otherTools.${index}.photo2`);
+                        const photo1Preview = watchedPhoto1?.[0] ? URL.createObjectURL(watchedPhoto1[0]) : watchedOtherTools[index]?.photoUrl1;
+                        const photo2Preview = watchedPhoto2?.[0] ? URL.createObjectURL(watchedPhoto2[0]) : watchedOtherTools[index]?.photoUrl2;
+                        
+                        return (
+                            <Card key={field.id} className="p-4 relative bg-muted/20">
+                                <Button type="button" variant="destructive" size="icon" className="absolute -top-3 -right-3 h-7 w-7 rounded-full z-10" onClick={() => removeOther(index)}>
+                                    <Trash2 className="h-4 w-4"/>
+                                </Button>
+                                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                    <div className="grid gap-2 md:col-span-2">
+                                        <Label htmlFor={`otherToolName-${index}`}>Nama Alat *</Label>
+                                        <Input id={`otherToolName-${index}`} {...register(`otherTools.${index}.toolName`, { required: true })} placeholder="Contoh: Tang Ampere" />
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label>Kondisi</Label>
+                                        <Controller
+                                            name={`otherTools.${index}.condition`}
+                                            control={control}
+                                            render={({ field }) => (
+                                                <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex gap-4">
+                                                    <div className="flex items-center space-x-2"><RadioGroupItem value="baik" id={`otherBaik-${index}`} /><Label htmlFor={`otherBaik-${index}`}>Baik</Label></div>
+                                                    <div className="flex items-center space-x-2"><RadioGroupItem value="rusak" id={`otherRusak-${index}`} /><Label htmlFor={`otherRusak-${index}`}>Rusak</Label></div>
+                                                </RadioGroup>
+                                            )}
+                                        />
+                                    </div>
+                                     <div className="grid gap-2">
+                                        <Label htmlFor={`otherBrand-${index}`}>Merek / Tipe</Label>
+                                        <Input id={`otherBrand-${index}`} {...register(`otherTools.${index}.brand`)} placeholder="Contoh: Kyoritsu" />
+                                    </div>
+                                     <div className="grid gap-2 md:col-span-2">
+                                        <Label htmlFor={`otherSN-${index}`}>Serial Number (SN)</Label>
+                                        <Input id={`otherSN-${index}`} {...register(`otherTools.${index}.serialNumber`)} placeholder="Masukkan SN..." />
+                                    </div>
+                                    <div className="grid gap-4 grid-cols-2 md:col-span-2">
+                                        <div className="grid gap-2">
+                                            <Label htmlFor={`otherPhoto1-${index}`}>Foto 1</Label>
+                                            {photo1Preview && (
+                                                <div className="relative group aspect-square w-full">
+                                                  <Image src={photo1Preview} alt="Preview" fill className="object-cover rounded-md" />
+                                                  <Button type="button" variant="destructive" size="icon" className="absolute -top-2 -right-2 h-6 w-6 rounded-full z-10" onClick={() => { setValue(`otherTools.${index}.photo1`, undefined); setValue(`otherTools.${index}.photoUrl1`, ''); }}>
+                                                    <X className="h-4 w-4" />
+                                                  </Button>
+                                                </div>
+                                            )}
+                                            <Input id={`otherPhoto1-${index}`} type="file" accept="image/*" {...register(`otherTools.${index}.photo1`)} />
+                                        </div>
+                                        <div className="grid gap-2">
+                                            <Label htmlFor={`otherPhoto2-${index}`}>Foto 2</Label>
+                                            {photo2Preview && (
+                                                <div className="relative group aspect-square w-full">
+                                                  <Image src={photo2Preview} alt="Preview SN" fill className="object-cover rounded-md" />
+                                                  <Button type="button" variant="destructive" size="icon" className="absolute -top-2 -right-2 h-6 w-6 rounded-full z-10" onClick={() => { setValue(`otherTools.${index}.photo2`, undefined); setValue(`otherTools.${index}.photoUrl2`, ''); }}>
+                                                    <X className="h-4 w-4" />
+                                                  </Button>
+                                                </div>
+                                            )}
+                                            <Input id={`otherPhoto2-${index}`} type="file" accept="image/*" {...register(`otherTools.${index}.photo2`)} />
+                                        </div>
+                                    </div>
+                                </div>
+                            </Card>
+                        );
+                    })}
+                    <Button type="button" variant="outline" className="w-full mt-4" onClick={() => appendOther({ toolName: '', condition: 'baik', serialNumber: '', brand: '', photoUrl1: '', photoUrl2: '' })}>
+                        <PlusCircle className="mr-2 h-4 w-4" /> Tambah Alat Lain-lain
+                    </Button>
+                </CardContent>
+            </Card>
+
         </div>
 
         <div className="flex items-center justify-end gap-2 mt-4 md:hidden">
@@ -454,5 +547,3 @@ export default function NewAlkerPage() {
     </div>
   );
 }
-
-    
