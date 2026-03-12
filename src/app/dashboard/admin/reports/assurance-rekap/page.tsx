@@ -20,17 +20,71 @@ import { useRouter } from 'next/navigation';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { generateDocxAction } from '@/app/dashboard/export/actions';
+import Image from 'next/image';
 
 const excelHeaders = [
-    "NO WITEL", "NO TIKET", "HASIL CEK WEB", "ACTUAL SOLUTION", "ACTUAL SOLUTION vs LAPANGAN", 
-    "DESKRIPSI_CUST_CLOSE", "LAYANAN", "IS_GAMAS", "KET KATEGORI", "TANGGAL CLOSED", 
-    "NO INTERNET", "LOKASI STO", "DROPWIRE", "DROPCORE BARU", "DROPCORE REFURBISH", 
-    "ROSET", "PIGTAIL SC", "PATCHCORE 15", "PATCHCORE 2 MTR", "KELEBIHAN PATCHCORE 1 MTR", 
-    "SPLITER 1:2", "SPLITER 1:4", "SPLITER 1:8", "SPLITER 1:16", "PUAS", 
-    "Termovit (cm)", "Adapter SC", "RJ45", "Protection Sleeve", "Splice on Connector", 
+    "NO", "WITEL", "NO TIKET", "HASIL CEK WEB", "ACTUAL SOLUTION", "ACTUAL SOLUTION vs LAPANGAN",
+    "DESKRIPSI_CUST_CLOSE", "LAYANAN", "IS_GAMAS", "KET", "KATEGORI", "TANGGAL CLOSED",
+    "NO INTERNET", "LOKASI", "STO", "DROPWIRE", "DROPCORE BARU", "DROPCORE REFURBISH",
+    "ROSET", "PIGTAIL SC", "PATCHCORE 15", "PATCHCORE 2 MTR", "KELEBIHAN", "PATCHCORE 1 MTR",
+    "SPLITER 1:2", "SPLITER 1:4", "SPLITER 1:8", "SPLITER 1:16", "PUAS",
+    "Termovit (cm)", "Adapter SC", "RJ45", "Protection Sleeve", "Splice on Connector",
     "Penarikan Kabel UTP (Mtr)"
 ];
+
+function ReportPreview({
+    htmlContent,
+    onClose,
+  }: {
+    htmlContent: string;
+    onClose: () => void;
+  }) {
+    useEffect(() => {
+      const handlePrint = () => {
+        const iframe = document.getElementById('print-iframe') as HTMLIFrameElement;
+        const iframeWindow = iframe?.contentWindow;
+        if (iframeWindow) {
+          iframeWindow.focus();
+          iframeWindow.print();
+        }
+      };
+  
+      const printButton = document.getElementById('do-print-button');
+      printButton?.addEventListener('click', handlePrint);
+  
+      return () => {
+        printButton?.removeEventListener('click', handlePrint);
+      };
+    }, []);
+  
+    return (
+      <div id="print-section-container" className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4">
+        <Card className="w-full max-w-7xl h-[90vh] flex flex-col">
+          <CardHeader className="print-hidden flex-row items-center justify-between flex-wrap gap-2">
+            <CardTitle>Pratinjau Laporan Eviden</CardTitle>
+            <div className="flex gap-2 flex-wrap justify-end">
+              <Button variant="outline" onClick={onClose}>Tutup</Button>
+              <Button id="do-print-button"><Files className="mr-2" /> Cetak / Simpan PDF</Button>
+            </div>
+          </CardHeader>
+          <CardContent className="flex-grow overflow-auto bg-gray-200 p-4">
+             <iframe id="print-iframe" srcDoc={`<html><head><style>
+                body { font-family: Arial, sans-serif; margin: 0; } 
+                .page-container { page-break-after: always; background: white; padding: 1.5cm; margin: 1rem auto; box-shadow: 0 0 0.5cm rgba(0,0,0,0.5); width: 210mm; min-height: 297mm; box-sizing: border-box; }
+                .image-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem; }
+                .image-container { text-align: center; }
+                .image-container img { max-width: 100%; height: auto; border: 1px solid #ddd; }
+                .image-container p { margin-top: 0; font-size: 10pt; font-weight: bold; }
+                @media print { 
+                    body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; } 
+                    .page-container { margin: 0; box-shadow: none; border: none; }
+                }
+             </style></head><body>${htmlContent}</body></html>`} style={{ width: '100%', height: '100%', border: 'none' }} />
+          </CardContent>
+        </Card>
+      </div>
+    );
+}
 
 export default function AssuranceRekapPage() {
     const firestore = useFirestore();
@@ -39,7 +93,7 @@ export default function AssuranceRekapPage() {
     const { user, isUserLoading } = useUser();
     const [dateRange, setDateRange] = useState<DateRange | undefined>();
     const [isLoadingExcel, setIsLoadingExcel] = useState(false);
-    const [isGeneratingDocx, setIsGeneratingDocx] = useState(false);
+    const [previewHtml, setPreviewHtml] = useState<string | null>(null);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
     const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
@@ -81,7 +135,7 @@ export default function AssuranceRekapPage() {
         }
     }, [riwayatList, handleSelectAll]);
 
-    const handleExport = () => {
+    const handleExportExcel = () => {
         const reportsToExport = riwayatList?.filter(r => selectedIds.includes(r.id)) || [];
         if (reportsToExport.length === 0) {
             toast({ variant: 'destructive', title: 'Tidak ada data dipilih untuk diekspor.' });
@@ -91,21 +145,14 @@ export default function AssuranceRekapPage() {
         setIsLoadingExcel(true);
 
         try {
-            const dataToExport = reportsToExport.map(riwayat => {
+            const dataToExport = reportsToExport.map((riwayat, index) => {
                 const row: { [key: string]: any } = {};
                 
-                row["NO WITEL"] = "SEMARANG";
+                row["NO"] = index + 1;
+                row["WITEL"] = "SEMARANG";
                 row["NO TIKET"] = riwayat.noTiket || '';
-                row["HASIL CEK WEB"] = ''; 
-                row["DESKRIPSI_CUST_CLOSE"] = riwayat.keterangan || '';
-                row["LAYANAN"] = Array.isArray(riwayat.layanan) ? riwayat.layanan.join(', ') : '';
-                row["IS_GAMAS"] = riwayat.jenisOrder === 'Tiket GAMAS' ? 'GAMAS' : 'NON GAMAS';
-                row["KET KATEGORI"] = '';
-                row["TANGGAL CLOSED"] = riwayat.tanggalClose?.toDate ? format(riwayat.tanggalClose.toDate(), 'yyyy-MM-dd HH:mm:ss') : '';
-                row["NO INTERNET"] = riwayat.noService || '';
-                row["LOKASI STO"] = riwayat.sto || '';
-                row["PUAS"] = '';
-
+                row["HASIL CEK WEB"] = '';
+                
                 const keteranganLower = (riwayat.keterangan || '').toLowerCase();
                 let actualSolution = '';
                 if (/(dropcore|dc|gdc|sambul|sambung ulang|smuff|protective slevee|ikr)/.test(keteranganLower)) {
@@ -114,36 +161,58 @@ export default function AssuranceRekapPage() {
                     actualSolution = 'ODP';
                 }
                 row["ACTUAL SOLUTION"] = actualSolution;
-
+                
                 let actualSolutionVsLapangan = '';
                 if (actualSolution === 'DROPCORE') {
                     actualSolutionVsLapangan = 'Sambung DC';
                 } else if (actualSolution === 'ODP') {
-                    const odpMaterials = riwayat.materials
-                        ?.map(m => m.materialName)
-                        .filter(name => /spliter|adapter sc|splice on connector|patchcore/i.test(name));
+                    const odpMaterials = riwayat.materials?.map(m => m.materialName).filter(name => /spliter|adapter sc|splice on connector|patchcore/i.test(name));
                     actualSolutionVsLapangan = odpMaterials && odpMaterials.length > 0 ? odpMaterials.join(', ') : 'Perbaikan ODP';
                 }
                 row["ACTUAL SOLUTION vs LAPANGAN"] = actualSolutionVsLapangan;
 
+                row["DESKRIPSI_CUST_CLOSE"] = riwayat.keterangan || '';
+                row["LAYANAN"] = Array.isArray(riwayat.layanan) ? riwayat.layanan.join(', ') : '';
+                row["IS_GAMAS"] = riwayat.jenisOrder === 'Tiket GAMAS' ? 'GAMAS' : 'NON GAMAS';
+                row["KET"] = '';
+                row["KATEGORI"] = '';
+                row["TANGGAL CLOSED"] = riwayat.tanggalClose?.toDate ? format(riwayat.tanggalClose.toDate(), 'yyyy-MM-dd HH:mm:ss') : '';
+                row["NO INTERNET"] = riwayat.noService || '';
+                row["LOKASI"] = '';
+                row["STO"] = riwayat.sto || '';
+                row["PUAS"] = '';
+                row["DROPWIRE"] = '';
+                
                 const materialsUsed = new Map<string, number>();
                 (riwayat.materials || []).forEach(mat => {
-                    materialsUsed.set(mat.materialName, (materialsUsed.get(mat.materialName) || 0) + (mat.quantity || 1));
+                    materialsUsed.set(mat.materialName.toUpperCase().trim(), (materialsUsed.get(mat.materialName.toUpperCase().trim()) || 0) + (mat.quantity || 1));
                 });
                 
-                excelHeaders.forEach(header => {
-                    if (row[header] === undefined) {
-                         const materialQty = materialsUsed.get(header);
-                         row[header] = materialQty || '';
-                    }
-                });
+                const getMaterialQty = (name: string) => materialsUsed.get(name.toUpperCase().trim()) || '';
                 
-                const protectionSleeveQty = materialsUsed.get("Protection Sleeve") || 0;
-                row["Termovit (cm)"] = protectionSleeveQty > 0 ? protectionSleeveQty * 15 : '';
+                row["DROPCORE BARU"] = getMaterialQty("DROPCORE BARU");
+                row["DROPCORE REFURBISH"] = getMaterialQty("DROPCORE REFURBISH");
+                row["ROSET"] = getMaterialQty("ROSET");
+                row["PIGTAIL SC"] = getMaterialQty("PIGTAIL SC");
+                row["PATCHCORE 15"] = getMaterialQty("PATCHCORE 15");
+                row["PATCHCORE 2 MTR"] = getMaterialQty("PATCHCORE 2 MTR");
 
                 const patchcore1MtrQty = materialsUsed.get("PATCHCORE 1 MTR") || 0;
-                row["KELEBIHAN PATCHCORE 1 MTR"] = patchcore1MtrQty > 1 ? patchcore1MtrQty - 1 : '';
+                row["KELEBIHAN"] = patchcore1MtrQty > 1 ? patchcore1MtrQty - 1 : '';
+                row["PATCHCORE 1 MTR"] = patchcore1MtrQty > 0 ? patchcore1MtrQty : '';
+                
+                row["SPLITER 1:2"] = getMaterialQty("SPLITER 1:2");
+                row["SPLITER 1:4"] = getMaterialQty("SPLITER 1:4");
+                row["SPLITER 1:8"] = getMaterialQty("SPLITER 1:8");
+                row["SPLITER 1:16"] = getMaterialQty("SPLITER 1:16");
 
+                const protectionSleeveQty = materialsUsed.get("PROTECTION SLEEVE") || 0;
+                row["Termovit (cm)"] = protectionSleeveQty > 0 ? protectionSleeveQty * 15 : '';
+                row["Adapter SC"] = getMaterialQty("ADAPTER SC");
+                row["RJ45"] = getMaterialQty("RJ45");
+                row["Protection Sleeve"] = getMaterialQty("PROTECTION SLEEVE");
+                row["Splice on Connector"] = getMaterialQty("SPLICE ON CONNECTOR");
+                row["Penarikan Kabel UTP (Mtr)"] = getMaterialQty("PENARIKAN KABEL UTP (MTR)");
 
                 return row;
             });
@@ -164,124 +233,90 @@ export default function AssuranceRekapPage() {
         }
     };
     
-    const handleGenerateDocx = async () => {
+    const handleGeneratePreview = () => {
         if (selectedIds.length === 0) {
             toast({ variant: 'destructive', title: 'Tidak ada laporan dipilih.' });
             return;
         }
-        setIsGeneratingDocx(true);
-        toast({ title: 'Mempersiapkan dokumen...', description: 'Mengumpulkan data dan gambar, ini mungkin memakan waktu.' });
+        
+        toast({ title: 'Mempersiapkan pratinjau...', description: 'Mengumpulkan data dan gambar.' });
 
-        try {
-            const selectedRiwayat = riwayatList?.filter(r => selectedIds.includes(r.id)) || [];
+        const selectedRiwayat = riwayatList?.filter(r => selectedIds.includes(r.id)) || [];
+        let htmlString = ``;
 
-            let htmlString = ``;
+        for (const riwayat of selectedRiwayat) {
+            const tanggalLapor = riwayat.tanggalLapor?.toDate ? format(riwayat.tanggalLapor.toDate(), 'dd MMMM yyyy, HH:mm', { locale: idLocale }) : 'N/A';
+            
+            htmlString += `
+                <div class="page-container">
+                    <h2 style="font-size: 14pt; font-weight: bold;">Laporan Eviden Gangguan: ${riwayat.noTiket || riwayat.noService}</h2>
+                    <p><strong>Teknisi:</strong> ${riwayat.namaPetugas}</p>
+                    <p><strong>Tanggal Lapor:</strong> ${tanggalLapor}</p>
+                    <p><strong>Jenis Order:</strong> ${riwayat.jenisOrder || '-'}</p>
+                    <p><strong>Keterangan:</strong> ${riwayat.keterangan || '-'}</p>
+                    <hr />
+            `;
 
-            for (const riwayat of selectedRiwayat) {
-                const tanggalLapor = riwayat.tanggalLapor?.toDate ? format(riwayat.tanggalLapor.toDate(), 'dd MMMM yyyy, HH:mm', { locale: idLocale }) : 'N/A';
-                
+            if (riwayat.evidenSccUrl) {
                 htmlString += `
-                    <div style="page-break-after: always; font-family: Arial, sans-serif; font-size: 11pt;">
-                        <h2 style="font-size: 14pt; font-weight: bold;">Laporan Eviden Gangguan: ${riwayat.noTiket || riwayat.noService}</h2>
-                        <p><strong>Teknisi:</strong> ${riwayat.namaPetugas}</p>
-                        <p><strong>Tanggal Lapor:</strong> ${tanggalLapor}</p>
-                        <p><strong>Jenis Order:</strong> ${riwayat.jenisOrder || '-'}</p>
-                        <p><strong>Keterangan:</strong> ${riwayat.keterangan || '-'}</p>
-                        <hr />
+                    <h3 style="font-size: 12pt; font-weight: bold; margin-top: 1em;">Eviden SCC</h3>
+                    <div class="image-grid">
+                        <div class="image-container">
+                             <img src="${riwayat.evidenSccUrl}" />
+                        </div>
+                    </div>
+                    <br />
                 `;
+            }
 
-                if (riwayat.evidenSccUrl) {
-                    htmlString += `
-                        <h3 style="font-size: 12pt; font-weight: bold; margin-top: 1em;">Eviden SCC</h3>
-                        <img src="${riwayat.evidenSccUrl}" style="max-width: 400px; height: auto; border: 1px solid #ccc; margin-top: 0.5em;" />
-                        <br />
-                    `;
-                }
-
-                if (riwayat.materials && riwayat.materials.length > 0) {
-                    for (const material of riwayat.materials) {
-                        if (material.evidences && material.evidences.length > 0) {
-                             htmlString += `<h3 style="font-size: 12pt; font-weight: bold; margin-top: 1em;">Material: ${material.materialName} (Jumlah: ${material.quantity || 1})</h3>`;
-                             
-                             htmlString += '<table style="border-collapse: collapse; width: 100%; margin-top: 0.5em;">';
-                             let cells = '';
-                             material.evidences.forEach((ev, index) => {
-                                 if (index % 2 === 0) cells += '<tr>';
-                                 cells += `
-                                    <td style="padding: 5px; border: 1px solid #ddd; text-align: center; width: 50%;">
-                                        <p style="font-size: 10pt; margin: 0 0 5px 0; font-weight: bold; text-transform: capitalize;">${ev.evidenceName}</p>
-                                        <img src="${ev.photoUrl}" style="max-width: 100%; height: auto; display: block; margin: 0 auto;" />
-                                    </td>
-                                 `;
-                                 if (index % 2 !== 0 || index === material.evidences!.length - 1) {
-                                     if(index % 2 === 0 && index === material.evidences!.length - 1) {
-                                         cells += '<td></td>';
-                                     }
-                                     cells += '</tr>';
-                                 }
-                             });
-                             htmlString += `<tbody>${cells}</tbody></table><br />`;
-                        }
+            if (riwayat.materials && riwayat.materials.length > 0) {
+                for (const material of riwayat.materials) {
+                    if (material.evidences && material.evidences.length > 0) {
+                         htmlString += `<h3 style="font-size: 12pt; font-weight: bold; margin-top: 1em;">Material: ${material.materialName} (Jumlah: ${material.quantity || 1})</h3>`;
+                         
+                         htmlString += '<div class="image-grid">';
+                         material.evidences.forEach((ev) => {
+                             htmlString += `
+                                <div class="image-container">
+                                    <p style="text-transform: capitalize;">${ev.evidenceName}</p>
+                                    <img src="${ev.photoUrl}" />
+                                </div>
+                             `;
+                         });
+                         htmlString += '</div><br />';
                     }
                 }
-                htmlString += `</div>`;
             }
+            htmlString += `</div>`;
+        }
 
-            if (!htmlString.trim()) {
-                throw new Error("Tidak ada data eviden untuk diekspor dalam laporan yang dipilih.");
-            }
-
-            const base64 = await generateDocxAction(htmlString, { orientation: 'portrait' });
-            
-            const link = document.createElement('a');
-            link.href = `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${base64}`;
-            const dateString = format(new Date(), 'yyyy-MM-dd');
-            link.download = `Rekap_Eviden_Gangguan_${dateString}.docx`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-
-            toast({ title: 'Ekspor DOCX Berhasil', description: 'File dokumen telah diunduh.' });
-
-        } catch (error: any) {
-             toast({ variant: 'destructive', title: 'Gagal Membuat Dokumen', description: error.message });
-        } finally {
-            setIsGeneratingDocx(false);
+        if (!htmlString.trim()) {
+            toast({ variant: 'destructive', title: 'Tidak Ada Eviden', description: "Tidak ada foto eviden untuk diekspor dalam laporan yang dipilih." });
+            setPreviewHtml(null);
+        } else {
+             setPreviewHtml(htmlString);
         }
     };
-
+    
     const isPageLoading = isUserLoading || isProfileLoading;
-
-    if (isPageLoading) {
-        return <div>Memuat...</div>
-    }
+    if (isPageLoading) return <div>Memuat...</div>
 
     return (
+        <>
         <div className="space-y-6">
             <h1 className="text-3xl font-bold tracking-tight">Rekap Assurance & Eviden</h1>
-            <p className="text-muted-foreground">Buat file Excel rekapitulasi data gangguan untuk tim Assurance atau dokumen Word untuk eviden.</p>
+            <p className="text-muted-foreground">Buat file Excel rekapitulasi data gangguan atau pratinjau dokumen untuk eviden.</p>
 
              <Card>
-                <CardHeader>
-                    <CardTitle>Filter Laporan</CardTitle>
-                    <CardDescription>Pilih rentang tanggal laporan gangguan untuk diekspor.</CardDescription>
-                </CardHeader>
+                <CardHeader><CardTitle>Filter Laporan</CardTitle><CardDescription>Pilih rentang tanggal laporan gangguan untuk diekspor.</CardDescription></CardHeader>
                 <CardContent>
                      <div className="grid gap-2">
                         <Label>Rentang Tanggal Lapor</Label>
                          <Popover>
                             <PopoverTrigger asChild>
-                                <Button
-                                    id="date-range-picker"
-                                    variant={"outline"}
-                                    className={cn("w-[300px] justify-start text-left font-normal", !dateRange && "text-muted-foreground")}
-                                >
+                                <Button id="date-range-picker" variant={"outline"} className={cn("w-[300px] justify-start text-left font-normal", !dateRange && "text-muted-foreground")}>
                                     <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {dateRange?.from ? (
-                                        dateRange.to ? (
-                                            <>{format(dateRange.from, "dd LLL, yy", {locale: idLocale})} - {format(dateRange.to, "dd LLL, yy", {locale: idLocale})}</>
-                                        ) : (format(dateRange.from, "dd LLL, yy", {locale: idLocale}))
-                                    ) : (<span>Pilih rentang tanggal</span>)}
+                                    {dateRange?.from ? (dateRange.to ? (<>{format(dateRange.from, "dd LLL, yy", {locale: idLocale})} - {format(dateRange.to, "dd LLL, yy", {locale: idLocale})}</>) : (format(dateRange.from, "dd LLL, yy", {locale: idLocale}))) : (<span>Pilih rentang tanggal</span>)}
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="start">
@@ -295,24 +330,14 @@ export default function AssuranceRekapPage() {
              <Card>
                 <CardHeader>
                     <CardTitle>Daftar Laporan</CardTitle>
-                    {riwayatList && (
-                        <CardDescription>
-                            Ditemukan {riwayatList.length} laporan. {selectedIds.length} laporan dipilih.
-                        </CardDescription>
-                    )}
+                    {riwayatList && (<CardDescription>Ditemukan {riwayatList.length} laporan. {selectedIds.length} laporan dipilih.</CardDescription>)}
                 </CardHeader>
                 <CardContent>
                     <div className="overflow-x-auto">
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead className="w-12">
-                                        <Checkbox
-                                            checked={(riwayatList?.length ?? 0) > 0 && selectedIds.length === riwayatList?.length}
-                                            onCheckedChange={(checked) => handleSelectAll(!!checked)}
-                                            aria-label="Pilih semua"
-                                        />
-                                    </TableHead>
+                                    <TableHead className="w-12"><Checkbox checked={(riwayatList?.length ?? 0) > 0 && selectedIds.length === riwayatList?.length} onCheckedChange={(checked) => handleSelectAll(!!checked)} aria-label="Pilih semua" /></TableHead>
                                     <TableHead>No Tiket</TableHead>
                                     <TableHead>No Service</TableHead>
                                     <TableHead>Petugas</TableHead>
@@ -322,19 +347,11 @@ export default function AssuranceRekapPage() {
                             </TableHeader>
                             <TableBody>
                                 {isRiwayatLoading ? (
-                                    <TableRow>
-                                        <TableCell colSpan={6} className="text-center h-24">Memuat data...</TableCell>
-                                    </TableRow>
+                                    <TableRow><TableCell colSpan={6} className="text-center h-24">Memuat data...</TableCell></TableRow>
                                 ) : riwayatList && riwayatList.length > 0 ? (
                                     riwayatList.map(item => (
-                                        <TableRow key={item.id}>
-                                            <TableCell>
-                                                <Checkbox
-                                                    checked={selectedIds.includes(item.id)}
-                                                    onCheckedChange={(checked) => handleSelect(item.id, !!checked)}
-                                                    aria-label={`Pilih laporan ${item.noTiket}`}
-                                                />
-                                            </TableCell>
+                                        <TableRow key={item.id} data-state={selectedIds.includes(item.id) && "selected"}>
+                                            <TableCell><Checkbox checked={selectedIds.includes(item.id)} onCheckedChange={(checked) => handleSelect(item.id, !!checked)} aria-label={`Pilih laporan ${item.noTiket}`} /></TableCell>
                                             <TableCell>{item.noTiket}</TableCell>
                                             <TableCell>{item.noService}</TableCell>
                                             <TableCell>{item.namaPetugas}</TableCell>
@@ -343,11 +360,7 @@ export default function AssuranceRekapPage() {
                                         </TableRow>
                                     ))
                                 ) : (
-                                     <TableRow>
-                                        <TableCell colSpan={6} className="text-center h-24">
-                                            {dateRange ? 'Tidak ada data untuk rentang tanggal yang dipilih.' : 'Pilih rentang tanggal untuk menampilkan data.'}
-                                        </TableCell>
-                                    </TableRow>
+                                     <TableRow><TableCell colSpan={6} className="text-center h-24">{dateRange ? 'Tidak ada data untuk rentang tanggal yang dipilih.' : 'Pilih rentang tanggal untuk menampilkan data.'}</TableCell></TableRow>
                                 )}
                             </TableBody>
                         </Table>
@@ -355,18 +368,21 @@ export default function AssuranceRekapPage() {
                 </CardContent>
                 <CardFooter>
                     <div className="flex gap-2">
-                        <Button onClick={handleExport} disabled={isLoadingExcel || isRiwayatLoading || selectedIds.length === 0}>
+                        <Button onClick={handleExportExcel} disabled={isLoadingExcel || isRiwayatLoading || selectedIds.length === 0}>
                             {(isLoadingExcel) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                             Export Excel
                         </Button>
-                         <Button onClick={handleGenerateDocx} disabled={isGeneratingDocx || isRiwayatLoading || selectedIds.length === 0} variant="secondary">
-                            {(isGeneratingDocx) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Files className="mr-2 h-4 w-4" />}
-                            Export Eviden (DOCX)
+                         <Button onClick={handleGeneratePreview} disabled={isRiwayatLoading || selectedIds.length === 0} variant="secondary">
+                            <Files className="mr-2 h-4 w-4" />
+                            Pratinjau Eviden
                         </Button>
                     </div>
                 </CardFooter>
             </Card>
         </div>
+        {previewHtml && (
+            <ReportPreview htmlContent={previewHtml} onClose={() => setPreviewHtml(null)} />
+        )}
+        </>
     );
 }
-
