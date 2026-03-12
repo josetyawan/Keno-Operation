@@ -1004,8 +1004,7 @@ export default function AdminPelangganPage() {
   useEffect(() => {
     if (!isUserLoading && !isProfileLoading) {
       const isApproved = currentUserProfile?.registrationStatus === 'approved';
-      const hasAccess = currentUserProfile?.role === 'admin' || currentUserProfile?.role === 'korlap' || currentUserProfile?.appAccess === 'allpro' || currentUserProfile?.appAccess === 'all';
-      if (!user || !isApproved || !hasAccess) {
+      if (!user || !isApproved) {
         router.push('/dashboard');
       }
     }
