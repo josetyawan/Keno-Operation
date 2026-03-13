@@ -46,7 +46,8 @@ function ScheduleForm({ schedule, users, onFormSubmit }: { schedule?: Partial<Sc
     useEffect(() => {
         if (schedule) {
             setUserId(schedule.userId || '');
-            setDate(schedule.date ? safeToDate(schedule.date) : undefined);
+            const newDate = schedule.date ? safeToDate(schedule.date) : undefined;
+            setDate(newDate === null ? undefined : newDate);
             const validTypes: ValidShiftType[] = ['piket-demak', 'siang-malam', 'malam', 'ijin', 'cuti', 'weekend-duty', 'holiday-duty', 'tukar-jaga', 'libur-dijadwalkan', 'h', 'pu', 'pb', 'ptm', 'pt/bd', 'l'];
             if (schedule.shiftType && validTypes.includes(schedule.shiftType as any)) {
                 setShiftType(schedule.shiftType as ValidShiftType);
@@ -106,7 +107,7 @@ function ScheduleForm({ schedule, users, onFormSubmit }: { schedule?: Partial<Sc
                             selected={date} 
                             onSelect={setDate} 
                             initialFocus 
-                            captionLayout="dropdown-buttons"
+                            captionLayout="dropdown"
                             fromYear={new Date().getFullYear() -1}
                             toYear={new Date().getFullYear() + 1}
                         />
