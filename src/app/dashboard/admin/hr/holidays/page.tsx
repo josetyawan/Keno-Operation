@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -67,7 +66,7 @@ function HolidayForm({ holiday, onFormSubmit }: { holiday?: Holiday | null, onFo
                             selected={date} 
                             onSelect={setDate} 
                             initialFocus 
-                            captionLayout="dropdown-buttons"
+                            captionLayout="dropdown"
                             fromYear={new Date().getFullYear() - 5}
                             toYear={new Date().getFullYear() + 5}
                         />

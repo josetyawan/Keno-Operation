@@ -322,7 +322,7 @@ export default function NewNotaPage() {
                         selected={tanggal}
                         onSelect={setTanggal}
                         initialFocus
-                        captionLayout="dropdown-buttons"
+                        captionLayout="dropdown"
                         fromYear={new Date().getFullYear() - 5}
                         toYear={new Date().getFullYear()}
                       />
@@ -500,4 +500,3 @@ export default function NewNotaPage() {
   );
 }
 
-    

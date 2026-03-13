@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -25,6 +24,7 @@ import { id as idLocale } from 'date-fns/locale';
 import type { Schedule, UserProfile } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
+import { sendSwapApprovalNotice } from '@/ai/flows/send-swap-approval-notice';
 
 const safeToDate = (timestamp: any): Date | null => {
     if (!timestamp) return null;
@@ -105,7 +105,7 @@ function ScheduleForm({ schedule, users, onFormSubmit }: { schedule?: Partial<Sc
                             selected={date} 
                             onSelect={setDate} 
                             initialFocus 
-                            captionLayout="dropdown-buttons"
+                            captionLayout="dropdown"
                             fromYear={new Date().getFullYear() -1}
                             toYear={new Date().getFullYear() + 1}
                         />
@@ -299,7 +299,7 @@ export default function AdminSchedulesPage() {
             userEmail: '',
             date: scheduleToApprove.date,
             shiftType: 'piket-demak', // A sensible default for a replacement shift
-            notes: `Menggantikan ${scheduleToApprove.userName || scheduleToApprove.userEmail}. Alasan: ${scheduleToApprove.notes || 'Tidak ada'}`,
+            notes: `Menggantikan ${userMap.get(scheduleToApprove.userId) || scheduleToApprove.userEmail}. Alasan: ${scheduleToApprove.notes || 'Tidak ada'}`,
         });
 
         // Keep track of the original request so we can delete it after the form is submitted.
@@ -420,8 +420,20 @@ export default function AdminSchedulesPage() {
     
                 if (swapSourceSchedule) {
                     const replacementUser = activeUsers.find(u => u.id === data.userId);
+                    const requesterName = userMap.get(swapSourceSchedule.userId!) || swapSourceSchedule.userEmail;
+
                     toastTitle = 'Tukar Jaga Berhasil Disetujui';
-                    toastDescription = `Jadwal baru untuk ${replacementUser?.displayName} telah dibuat. Jadwal ${swapSourceSchedule.userName} telah diubah menjadi libur.`;
+                    toastDescription = `Jadwal baru untuk ${replacementUser?.displayName} telah dibuat. Jadwal ${requesterName} telah diubah menjadi libur.`;
+                    
+                    // SEND NOTIFICATION
+                    sendSwapApprovalNotice({
+                        requesterName: requesterName || 'N/A',
+                        replacementName: replacementUser?.displayName || 'N/A',
+                        swapDate: format(scheduleDate, 'eeee, dd MMMM yyyy', { locale: idLocale }),
+                    }).catch(err => {
+                        console.error("Telegram notification for swap approval failed:", err);
+                    });
+
                 } else if (scheduleToEdit?.id) {
                     toastTitle = 'Jadwal Diperbarui';
                 }
@@ -866,7 +878,3 @@ export default function AdminSchedulesPage() {
         </>
     );
 }
-
-    
-
-    

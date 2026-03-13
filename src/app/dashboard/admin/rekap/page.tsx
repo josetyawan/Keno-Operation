@@ -449,7 +449,7 @@ export default function RekapPage() {
                 let userSubtotal = 0;
                 const userName = (user?.displayName || 'Unknown').replace(/\s/g, '');
                 const paymentNumber = user?.paymentInfo || (user as any)?.phone || 'No-Pembayaran';
-        
+    
                 userNotas.forEach(nota => {
                     telegramRekapData.push({
                         phone: paymentNumber, name: userName, segmen: nota.segmen,
@@ -577,7 +577,7 @@ export default function RekapPage() {
                                 selected={verificationDateRange}
                                 onSelect={setVerificationDateRange}
                                 numberOfMonths={2}
-                                captionLayout="dropdown-buttons"
+                                captionLayout="dropdown"
                                 fromYear={new Date().getFullYear() - 5}
                                 toYear={new Date().getFullYear()}
                             />
@@ -704,5 +704,3 @@ export default function RekapPage() {
     );
 }
 
-
-    

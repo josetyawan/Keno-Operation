@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useRouter, useParams } from 'next/navigation';
@@ -317,7 +318,7 @@ function EditNotaForm({ nota, isAdmin }: { nota: Nota, isAdmin: boolean }) {
                                         selected={tanggal} 
                                         onSelect={setTanggal} 
                                         initialFocus 
-                                        captionLayout="dropdown-buttons"
+                                        captionLayout="dropdown"
                                         fromYear={new Date().getFullYear() - 5}
                                         toYear={new Date().getFullYear()}
                                     />
@@ -508,4 +509,3 @@ export default function EditNotaPage() {
     return <EditNotaForm nota={nota} isAdmin={isAdmin} />;
 }
 
-    
