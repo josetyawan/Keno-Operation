@@ -109,8 +109,8 @@ function CheckInUI({
     todayAttendance: Attendance | null;
     isCheckingIn: boolean;
     hasCameraPermission: boolean;
-    videoRef: React.RefObject<HTMLVideoElement>;
-    canvasRef: React.RefObject<HTMLCanvasElement>;
+    videoRef: React.RefObject<any>;
+    canvasRef: React.RefObject<any>;
     handleCheckIn: () => void;
 }) {
     const [currentTime, setCurrentTime] = useState(new Date());
@@ -795,3 +795,4 @@ export default function AttendancePage() {
         </div>
     );
 }
+
