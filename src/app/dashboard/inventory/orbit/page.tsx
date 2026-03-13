@@ -98,7 +98,7 @@ export default function ViewOrbitInventoryPage() {
               updateData = {
                   status: 'borrowed',
                   borrowedByUserId: user.uid,
-                  borrowedByName: userProfile.displayName || user.email,
+                  borrowedByName: userProfile.displayName || user.email || '',
                   borrowedDate: Timestamp.now(),
                   loanHistory: newHistory
               };
