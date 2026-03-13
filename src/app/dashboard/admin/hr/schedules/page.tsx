@@ -46,7 +46,7 @@ function ScheduleForm({ schedule, users, onFormSubmit }: { schedule?: Partial<Sc
     useEffect(() => {
         if (schedule) {
             setUserId(schedule.userId || '');
-            const newDate = safeToDate(schedule.date);
+            const newDate = schedule.date ? safeToDate(schedule.date) : undefined;
             setDate(newDate === null ? undefined : newDate);
             const validTypes: ValidShiftType[] = ['piket-demak', 'siang-malam', 'malam', 'ijin', 'cuti', 'weekend-duty', 'holiday-duty', 'tukar-jaga', 'libur-dijadwalkan', 'h', 'pu', 'pb', 'ptm', 'pt/bd', 'l'];
             if (schedule.shiftType && validTypes.includes(schedule.shiftType as any)) {
@@ -123,7 +123,7 @@ function ScheduleForm({ schedule, users, onFormSubmit }: { schedule?: Partial<Sc
                         <SelectItem value="pu">Hadir - Area Utara (PU)</SelectItem>
                         <SelectItem value="pb">Hadir - Area Barat (PB)</SelectItem>
                         <SelectItem value="ptm">Hadir - Area Timur (PTM)</SelectItem>
-                        <SelectItem value="pt/bd">Hadir - Demak (PT/BD)</SelectItem>
+                        <SelectItem value="pt/bd">Hadir - Demak FAC, FN, FM (PT/BD)</SelectItem>
                         <SelectItem value="piket-demak">Piket Demak (PDM)</SelectItem>
                         <SelectItem value="siang-malam">Piket Siang-Malam (S/MC)</SelectItem>
                         <SelectItem value="malam">Piket Malam (M)</SelectItem>
