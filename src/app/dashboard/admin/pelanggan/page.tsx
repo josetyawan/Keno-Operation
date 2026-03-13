@@ -1175,12 +1175,13 @@ export default function AdminPelangganPage() {
                     }
                 }
                 
-                const riwayatData: Omit<RiwayatGangguan, 'id' | 'jenisOrder'> = {
+                const riwayatData: Omit<RiwayatGangguan, 'id'> = {
                     noService: noService,
                     userId: userIdCol && row[userIdCol] ? row[userIdCol].toString().trim() : 'system-import',
                     nik: nikCol && row[nikCol] ? row[nikCol].toString().trim() : '',
                     namaPetugas: teknisiCol && row[teknisiCol] ? row[teknisiCol].toString().trim() : 'System Import',
                     tanggalLapor: Timestamp.fromDate(tanggalLapor),
+                    tanggalOpen: Timestamp.fromDate(tanggalLapor),
                     noTiket: noTiketCol && row[noTiketCol] ? row[noTiketCol].toString().trim() : '',
                     keterangan: keteranganCol && row[keteranganCol] ? row[keteranganCol].toString().trim() : '',
                     jenisOrder: ''
@@ -1567,3 +1568,4 @@ export default function AdminPelangganPage() {
     
 
     
+
