@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -564,7 +565,7 @@ export default function AdminAssetsPage() {
                                 coordinates: `${latValue}, ${longValue}`,
                                 tenantSiteId: tenantId,
                                 siteName,
-                                mitratelSiteId: row[mitratelSiteIdCol]?.toString().trim() || '-',
+                                mitratelSiteId: mitratelSiteIdCol ? (row[mitratelSiteIdCol]?.toString().trim() || '-') : '-',
                             };
                             
                             const existingAsset = existingAssetsMap.get(tenantId);
