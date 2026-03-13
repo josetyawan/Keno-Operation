@@ -276,7 +276,7 @@ export type Schedule = {
     userId: string;
     userEmail: string;
     date: any; // Firestore Timestamp
-    shiftType: 'piket-demak' | 'siang-malam' | 'malam' | 'ijin' | 'cuti' | 'weekend-duty' | 'holiday-duty' | 'tukar-jaga' | 'libur-dijadwalkan' | 'h' | 'pu' | 'pb' | 'ptm' | 'pt/bd';
+    shiftType: 'piket-demak' | 'siang-malam' | 'malam' | 'ijin' | 'cuti' | 'weekend-duty' | 'holiday-duty' | 'tukar-jaga' | 'libur-dijadwalkan' | 'h' | 'pu' | 'pb' | 'ptm' | 'pt/bd' | 'l';
     notes?: string;
     evidenceUrl?: string;
     createdAt: any; // Firestore Timestamp
