@@ -65,7 +65,7 @@ export default function AlkerDetailPage() {
   const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
 
   const canView = useMemo(() => {
-    if (!userProfile || !checklist) return false;
+    if (!userProfile || !checklist || !user) return false;
     if (userProfile.role === 'admin' || userProfile.role === 'korlap') return true;
     return checklist.userId === user.uid;
   }, [userProfile, checklist, user]);
