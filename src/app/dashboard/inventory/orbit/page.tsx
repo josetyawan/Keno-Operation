@@ -86,7 +86,7 @@ export default function ViewOrbitInventoryPage() {
           const historyEvent: LoanEvent = {
               status: action === 'borrow' ? 'borrowed' : 'returned',
               userId: user.uid,
-              userName: userProfile.displayName || user.email!,
+              userName: userProfile.displayName || user.email || '',
               date: Timestamp.now(),
           };
 

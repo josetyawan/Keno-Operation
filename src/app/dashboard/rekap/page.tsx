@@ -32,10 +32,10 @@ import {
 } from "@/components/ui/alert-dialog"
 import { ArrowLeft, Calendar as CalendarIcon, Loader2, Bot, Wallet, CheckCircle } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
-import { collection, query, where, Timestamp, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, Timestamp, doc, updateDoc, addDoc } from 'firebase/firestore';
 import { format, startOfDay, endOfDay, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
-import type { Nota, UserProfile } from '@/lib/types';
+import type { Nota, UserProfile, CashTransaction } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -46,6 +46,7 @@ import type { DateRange } from 'react-day-picker';
 import { useRouter } from 'next/navigation';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 type RekapDataItem = {
     phone: string;
@@ -79,6 +80,7 @@ export default function RekapPage() {
     const [isPaying, setIsPaying] = useState(false);
     const [isMarkingAsPaid, setIsMarkingAsPaid] = useState(false);
     const [isManualPayDialogOpen, setIsManualPayDialogOpen] = useState(false);
+    const [paymentType, setPaymentType] = useState<'rembes' | 'kasbon'>('rembes');
 
     // --- Role-based access control ---
     const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
@@ -234,6 +236,14 @@ export default function RekapPage() {
             toast({ variant: 'destructive', title: 'Tidak ada data untuk ditandai lunas', description: 'Pilih setidaknya satu laporan untuk ditandai lunas.' });
             return;
         }
+        if (!user?.email) {
+            toast({ variant: 'destructive', title: 'Error', description: 'User tidak ditemukan.' });
+            return;
+        }
+        if (!users || !notas) {
+            toast({ variant: 'destructive', title: 'Data Belum Siap', description: 'Tidak dapat memproses karena data pengguna atau nota belum termuat. Coba lagi sesaat.' });
+            return;
+        }
         setIsMarkingAsPaid(true);
     
         try {
@@ -241,10 +251,24 @@ export default function RekapPage() {
     
             for (const notaId of selectedNotaIds) {
                 const notaDocRef = doc(firestore, 'notas', notaId);
-                updateDoc(notaDocRef, {
+                await updateDoc(notaDocRef, {
                     status: 'paid',
                     tanggalPembayaran: paymentDate
                 });
+            }
+
+            // If payment is kasbon, create a transaction in cashbook
+            if (paymentType === 'kasbon') {
+                const cashTransaction: Omit<CashTransaction, 'id'> = {
+                    type: 'out',
+                    amount: selectedTotal,
+                    date: Timestamp.fromDate(paymentDate),
+                    description: `Pembayaran ${selectedNotaIds.length} nota via kasbon`,
+                    notaIds: selectedNotaIds,
+                    createdBy: user.email,
+                    createdAt: Timestamp.now()
+                };
+                await addDoc(collection(firestore, 'cashbook'), cashTransaction);
             }
     
             const selectedNotas = notas.filter(n => selectedNotaIds.includes(n.id));
@@ -316,6 +340,10 @@ export default function RekapPage() {
     const handleLinkAjaPayment = async () => {
         if (selectedNotaIds.length === 0 || selectedTotal <= 0) {
             toast({ variant: 'destructive', title: 'Tidak ada data pembayaran', description: 'Pilih laporan dengan total lebih dari nol.' });
+            return;
+        }
+         if (!users || !notas) {
+            toast({ variant: 'destructive', title: 'Data Pengguna Belum Siap', description: 'Tidak dapat memproses karena data pengguna atau nota belum termuat. Coba lagi sesaat.' });
             return;
         }
         setIsPaying(true);
@@ -406,6 +434,10 @@ export default function RekapPage() {
     const handleSendToTelegram = async () => {
         if (selectedNotaIds.length === 0) {
             toast({ variant: 'destructive', title: 'Tidak ada data', description: 'Pilih setidaknya satu laporan untuk dikirim.' });
+            return;
+        }
+         if (!users || !notas) {
+            toast({ variant: 'destructive', title: 'Data Pengguna Belum Siap', description: 'Tidak dapat memproses karena data pengguna atau nota belum termuat. Coba lagi sesaat.' });
             return;
         }
         setIsSending(true);
@@ -557,7 +589,7 @@ export default function RekapPage() {
                                 selected={verificationDateRange}
                                 onSelect={setVerificationDateRange}
                                 numberOfMonths={2}
-                                captionLayout="dropdown-buttons"
+                                captionLayout="dropdown"
                                 fromYear={new Date().getFullYear() - 5}
                                 toYear={new Date().getFullYear()}
                             />
@@ -647,9 +679,21 @@ export default function RekapPage() {
                                     <AlertDialogHeader>
                                         <AlertDialogTitle>Konfirmasi Pembayaran Manual</AlertDialogTitle>
                                         <AlertDialogDescription>
-                                            Anda akan menandai {selectedNotaIds.length} laporan dengan total Rp {selectedTotal.toLocaleString('id-ID')} sebagai "LUNAS". Notifikasi akan dikirim ke Telegram. Tindakan ini tidak dapat dibatalkan.
+                                            Pilih metode pembayaran. "Rembes" hanya mengubah status. "Kasbon" akan mengurangi saldo kas.
                                         </AlertDialogDescription>
                                     </AlertDialogHeader>
+                                     <div className="py-4">
+                                        <RadioGroup defaultValue="rembes" onValueChange={(value: 'rembes' | 'kasbon') => setPaymentType(value)}>
+                                            <div className="flex items-center space-x-2">
+                                                <RadioGroupItem value="rembes" id="r1" />
+                                                <Label htmlFor="r1">Rembes (Penggantian Biasa)</Label>
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                                <RadioGroupItem value="kasbon" id="r2" />
+                                                <Label htmlFor="r2">Kasbon (Potong dari Kas)</Label>
+                                            </div>
+                                        </RadioGroup>
+                                    </div>
                                     <AlertDialogFooter>
                                         <AlertDialogCancel>Batal</AlertDialogCancel>
                                         <AlertDialogAction onClick={handleManualPayment} disabled={isMarkingAsPaid}>
@@ -671,4 +715,5 @@ export default function RekapPage() {
         </div>
     );
 }
+
 
