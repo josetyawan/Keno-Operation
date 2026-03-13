@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -180,13 +181,13 @@ export default function AlkerRekapPage() {
             headerInfo = [
                 { A: 'KERTAS KERJA PEMERIKSAAN (KKP)' },
                 { A: 'PEMENUHAN ALKER SARKER' },
-                {},
+                { A: '' },
                 { A: 'PAKET PEKERJAAN', B: ': PEKERJAAN PASANG SAMBUNGAN BARU (PSB)' },
                 { A: 'WITEL', B: ': SEMARANG' },
                 { A: 'WILAYAH OPERASI', B: `: ${selectedSA}` },
                 { A: 'PERIODE JANGKA WAKTU PELAKSANAAN PEKERJAAN', B: `: ${bulanPekerjaan.toUpperCase()}` },
                 { A: 'JML TEKNISI', B: `: ${teknisiCountForExport}` },
-                {},
+                { A: '' },
             ];
         } else { // Assurance template for B2B, B2C, MTC, etc.
              headerInfo = [
@@ -194,7 +195,7 @@ export default function AlkerRekapPage() {
                 { A: 'REG / WITEL / SEKTOR', B: `: 3 / SEMARANG / ${selectedSA}` },
                 { A: 'BULAN PEKERJAAN', B: `: ${bulanPekerjaan.toUpperCase()}` },
                 { A: 'JUMLAH TEKNISI', B: `: ${teknisiCountForExport}` },
-                {},
+                { A: '' },
             ];
         }
 
