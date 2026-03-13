@@ -84,7 +84,7 @@ export default function ViewOrbitInventoryPage() {
           const existingHistory = docSnap.exists() ? docSnap.data().loanHistory || [] : [];
           
           const historyEvent: LoanEvent = {
-              status: action,
+              status: action === 'borrow' ? 'borrowed' : 'returned',
               userId: user.uid,
               userName: userProfile.displayName || user.email!,
               date: Timestamp.now(),
