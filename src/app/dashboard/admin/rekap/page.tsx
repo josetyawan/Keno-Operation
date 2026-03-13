@@ -240,6 +240,10 @@ export default function RekapPage() {
             toast({ variant: 'destructive', title: 'Error', description: 'User tidak ditemukan.' });
             return;
         }
+        if (!users) {
+            toast({ variant: 'destructive', title: 'Data Pengguna Belum Siap', description: 'Tidak dapat memproses karena data pengguna belum termuat. Coba lagi sesaat.' });
+            return;
+        }
         setIsMarkingAsPaid(true);
     
         try {
@@ -338,6 +342,10 @@ export default function RekapPage() {
             toast({ variant: 'destructive', title: 'Tidak ada data pembayaran', description: 'Pilih laporan dengan total lebih dari nol.' });
             return;
         }
+         if (!users) {
+            toast({ variant: 'destructive', title: 'Data Pengguna Belum Siap', description: 'Tidak dapat memproses karena data pengguna belum termuat. Coba lagi sesaat.' });
+            return;
+        }
         setIsPaying(true);
         try {
             const uniqueInvoiceId = `REKAP-${format(new Date(), 'yyyyMMdd-HHmmss')}`;
@@ -426,6 +434,10 @@ export default function RekapPage() {
     const handleSendToTelegram = async () => {
         if (selectedNotaIds.length === 0) {
             toast({ variant: 'destructive', title: 'Tidak ada data', description: 'Pilih setidaknya satu laporan untuk dikirim.' });
+            return;
+        }
+         if (!users) {
+            toast({ variant: 'destructive', title: 'Data Pengguna Belum Siap', description: 'Tidak dapat memproses karena data pengguna belum termuat. Coba lagi sesaat.' });
             return;
         }
         setIsSending(true);
