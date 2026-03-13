@@ -1,3 +1,4 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 import { initializeFirebase } from '@/firebase/init';
 import { getFirestore, collection, getDocs, query, where, Timestamp } from 'firebase/firestore';
@@ -41,16 +42,16 @@ export async function GET(request: NextRequest) {
         const endDate = new Date(today.setHours(23, 59, 59, 999));
         
         const [allUsers, allSchedules, allRiwayat, allOtherWorks] = await Promise.all([
-            fetchCollection<UserProfile>('users', [where('registrationStatus', '==', 'approved')]),
-            fetchCollection<Schedule>('schedules', [
+            fetchCollection<UserProfile>(firestore, 'users', [where('registrationStatus', '==', 'approved')]),
+            fetchCollection<Schedule>(firestore, 'schedules', [
                 where('date', '>=', Timestamp.fromDate(startDate)),
                 where('date', '<=', Timestamp.fromDate(endDate))
             ]),
-            fetchCollection<RiwayatGangguan>('riwayat-gangguan', [
+            fetchCollection<RiwayatGangguan>(firestore, 'riwayat-gangguan', [
                 where('tanggalLapor', '>=', Timestamp.fromDate(startDate)),
                 where('tanggalLapor', '<=', Timestamp.fromDate(endDate))
             ]),
-            fetchCollection<OtherWork>('other-works', [
+            fetchCollection<OtherWork>(firestore, 'other-works', [
                 where('tanggalPengerjaan', '>=', Timestamp.fromDate(startDate)),
                 where('tanggalPengerjaan', '<=', Timestamp.fromDate(endDate))
             ])
