@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -8,6 +9,8 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  CardDescription,
+  CardFooter,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -1493,7 +1496,7 @@ export default function ExportPage() {
                                                 selected={dateRange}
                                                 onSelect={setDateRange}
                                                 numberOfMonths={2}
-                                                captionLayout="dropdown-buttons"
+                                                captionLayout="dropdown"
                                                 fromYear={new Date().getFullYear() - 5}
                                                 toYear={new Date().getFullYear()}
                                             />
@@ -1534,7 +1537,7 @@ export default function ExportPage() {
                                                 selected={verifiedDateRange}
                                                 onSelect={setVerifiedDateRange}
                                                 numberOfMonths={2}
-                                                captionLayout="dropdown-buttons"
+                                                captionLayout="dropdown"
                                                 fromYear={new Date().getFullYear() - 5}
                                                 toYear={new Date().getFullYear()}
                                             />
@@ -1595,7 +1598,7 @@ export default function ExportPage() {
                                     <AlertDialogHeader>
                                     <AlertDialogTitle>Anda benar-benar yakin?</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                        Tindakan ini akan menghapus ${selectedNotaIds.length} laporan yang dipilih secara permanen. Tindakan ini tidak dapat dibatalkan.
+                                        Tindakan ini akan menghapus ${'${selectedNotaIds.length}'} laporan yang dipilih secara permanen. Tindakan ini tidak dapat dibatalkan.
                                     </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
@@ -1605,7 +1608,7 @@ export default function ExportPage() {
                                         disabled={isDeleting}
                                         className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                                     >
-                                        {isDeleting ? 'Menghapus...' : `Ya, Hapus (${selectedNotaIds.length})`}
+                                        {isDeleting ? 'Menghapus...' : `Ya, Hapus (${'${selectedNotaIds.length}'})`}
                                     </AlertDialogAction>
                                     </AlertDialogFooter>
                                 </AlertDialogContent>
@@ -1682,4 +1685,3 @@ export default function ExportPage() {
         </>
     );
 }
-
