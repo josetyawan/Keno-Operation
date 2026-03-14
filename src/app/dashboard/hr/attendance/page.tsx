@@ -617,7 +617,7 @@ export default function AttendancePage() {
         );
     }, [user, firestore]);
     
-    const { data: allUserAttendances, isLoading: isAttendanceLoading } = useCollection<Attendance>(allUserAttendances);
+    const { data: allUserAttendances, isLoading: isAttendanceLoading } = useCollection<Attendance>(attendanceQuery);
 
     const clientSideTodayAttendance = useMemo(() => {
         if (!allUserAttendances || !today) return null;
