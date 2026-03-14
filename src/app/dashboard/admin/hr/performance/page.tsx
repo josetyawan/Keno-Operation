@@ -1,23 +1,33 @@
-
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { collection, query, doc, setDoc, Timestamp, orderBy, getDocs, writeBatch, type DocumentReference } from 'firebase/firestore';
-import type { UserProfile, Performance } from '@/lib/types';
+import { collection, query, doc, setDoc, Timestamp, orderBy, getDocs, writeBatch, type DocumentReference, where } from 'firebase/firestore'; // Added where
+import type { UserProfile, Performance, RiwayatGangguan, OtherWork } from '@/lib/types';
+import { productivityWeights } from '@/lib/bobot-produktivitas'; // Import weights
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, Loader2, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
+import { Upload, Loader2, ChevronLeft, ChevronRight, RefreshCw, BarChart } from 'lucide-react'; // Added BarChart icon
 import { Progress } from '@/components/ui/progress';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth } from 'date-fns'; // Added date-fns helpers
 import { id as idLocale } from 'date-fns/locale';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
+// Helper to safely parse bobot which might be a string with a comma
+const parseBobot = (bobot: number | string | undefined): number => {
+    if (typeof bobot === 'number') return bobot;
+    if (typeof bobot === 'string') {
+        const parsed = parseFloat(bobot.replace(',', '.'));
+        return isNaN(parsed) ? 0 : parsed;
+    }
+    return 0;
+};
 
 export default function AdminPerformancePage() {
     const { user, isUserLoading } = useUser();
@@ -25,6 +35,7 @@ export default function AdminPerformancePage() {
     const router = useRouter();
     const { toast } = useToast();
     
+    // ... existing state ...
     const [isImporting, setIsImporting] = useState(false);
     const [importProgress, setImportProgress] = useState(0);
     const [isSyncing, setIsSyncing] = useState(false);
@@ -32,7 +43,12 @@ export default function AdminPerformancePage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 10;
+    
+    // --- New state for manual productivity ---
+    const [manualPeriod, setManualPeriod] = useState<string | undefined>();
+    const [manualSearchQuery, setManualSearchQuery] = useState('');
 
+    // --- Data fetching ---
     const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
         useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
     );
@@ -43,6 +59,11 @@ export default function AdminPerformancePage() {
     const performanceQuery = useMemoFirebase(() => query(collection(firestore, 'performance'), orderBy('date', 'desc')), [firestore]);
     const { data: performanceRecords, isLoading: areRecordsLoading } = useCollection<Performance>(performanceQuery);
     
+    // --- New data fetching for manual calculation ---
+    const { data: riwayatList, isLoading: isRiwayatLoading } = useCollection<RiwayatGangguan>(query(collection(firestore, 'riwayat-gangguan')));
+    const { data: otherWorksList, isLoading: isOtherWorksLoading } = useCollection<OtherWork>(query(collection(firestore, 'other-works')));
+
+    // ... existing memos ...
     const userMapByNik = useMemo(() => {
         if (!allUsers) return new Map<string, UserProfile>();
         const map = new Map<string, UserProfile>();
@@ -71,6 +92,92 @@ export default function AdminPerformancePage() {
 
     const totalPages = Math.ceil(filteredRecords.length / ITEMS_PER_PAGE);
 
+    // --- New memos for manual calculation ---
+    const availableManualPeriods = useMemo(() => {
+        const periods = new Set<string>();
+        const addPeriod = (item: { tanggalPengerjaan?: any, tanggalLapor?: any }) => {
+            const date = item.tanggalPengerjaan?.toDate() || item.tanggalLapor?.toDate();
+            if (date) {
+                periods.add(format(date, 'yyyy-MM'));
+            }
+        };
+        riwayatList?.forEach(addPeriod);
+        otherWorksList?.forEach(addPeriod);
+        return Array.from(periods).sort().reverse();
+    }, [riwayatList, otherWorksList]);
+    
+    useEffect(() => {
+        if (availableManualPeriods.length > 0 && !manualPeriod) {
+            setManualPeriod(availableManualPeriods[0]);
+        }
+    }, [availableManualPeriods, manualPeriod]);
+
+    const manualPerformanceData = useMemo(() => {
+        if (!manualPeriod || !riwayatList || !otherWorksList || !allUsers) return [];
+
+        const [year, month] = manualPeriod.split('-').map(Number);
+        const startDate = startOfMonth(new Date(year, month - 1));
+        const endDate = endOfMonth(startDate);
+        const JAM_KERJA_SEBULAN = 8 * 22; // 8 jam/hari, 22 hari/bulan
+
+        const workItems = [
+            ...riwayatList.map(item => ({...item, date: item.tanggalLapor?.toDate()})),
+            ...otherWorksList.map(item => ({...item, date: item.tanggalPengerjaan?.toDate()}))
+        ];
+
+        const filteredWork = workItems.filter(item => {
+            if (!item.date) return false;
+            return item.date >= startDate && item.date <= endDate;
+        });
+        
+        const bobotByUser = new Map<string, number>();
+
+        filteredWork.forEach(item => {
+            const userId = item.userId;
+            let bobot = 0;
+            
+            // Flatten all weights into one array for easier searching
+            const allWeights = Object.values(productivityWeights).flat();
+
+            const weightItem = allWeights.find(w => {
+                const isJenisMatch = w.jenis_order_name === item.jenisOrder;
+                const isOrderTypeMatch = !w.order_type || w.order_type === item.typeOrder;
+                return isJenisMatch && isOrderTypeMatch;
+            });
+
+            if (weightItem) {
+                bobot = parseBobot(weightItem.bobot);
+            }
+            
+            bobotByUser.set(userId, (bobotByUser.get(userId) || 0) + bobot);
+        });
+
+        const performanceData = Array.from(bobotByUser.entries()).map(([userId, totalBobot]) => {
+            const user = allUsers.find(u => u.id === userId);
+            const productivity = (totalBobot / JAM_KERJA_SEBULAN) * 100;
+            return {
+                userId,
+                userName: user?.displayName || 'Unknown',
+                nik: user?.nik || '-',
+                totalBobot,
+                productivity,
+            };
+        });
+
+        return performanceData.sort((a,b) => b.productivity - a.productivity);
+
+    }, [manualPeriod, riwayatList, otherWorksList, allUsers]);
+
+    const filteredManualPerformance = useMemo(() => {
+        if (!manualSearchQuery) return manualPerformanceData;
+        const lowerQuery = manualSearchQuery.toLowerCase();
+        return manualPerformanceData.filter(p => 
+            p.userName.toLowerCase().includes(lowerQuery) ||
+            p.nik.toLowerCase().includes(lowerQuery)
+        );
+    }, [manualPerformanceData, manualSearchQuery]);
+
+    // ... existing handlers (handleFileImport, handleSyncUserIds) ...
     const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) {
@@ -287,7 +394,8 @@ export default function AdminPerformancePage() {
         }
     };
 
-    const isLoading = isUserLoading || isProfileLoading || areUsersLoading || areRecordsLoading;
+
+    const isLoading = isUserLoading || isProfileLoading || areUsersLoading || areRecordsLoading || isRiwayatLoading || isOtherWorksLoading;
 
     if (isLoading && !performanceRecords) {
         return (
@@ -339,8 +447,8 @@ export default function AdminPerformancePage() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Data Performa Saat Ini</CardTitle>
-                    <CardDescription>Menampilkan semua data performa yang ada di database.</CardDescription>
+                    <CardTitle>Data Performa (HO)</CardTitle>
+                    <CardDescription>Menampilkan semua data performa dari HO yang ada di database.</CardDescription>
                     <div className="pt-4">
                         <Input 
                             placeholder="Cari berdasarkan NIK atau Nama..."
@@ -450,6 +558,73 @@ export default function AdminPerformancePage() {
                         </Button>
                     </div>
                 </CardFooter>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><BarChart/> Performa Produktivitas (Manual)</CardTitle>
+                    <CardDescription>Performa dihitung berdasarkan bobot pekerjaan yang diselesaikan. Asumsi: 8 jam kerja/hari, 22 hari kerja/bulan.</CardDescription>
+                    <div className="grid md:grid-cols-2 gap-4 pt-4">
+                        <div className="grid gap-2">
+                             <Label htmlFor="manual-period">Pilih Periode</Label>
+                            <Select value={manualPeriod} onValueChange={setManualPeriod}>
+                                <SelectTrigger id="manual-period" className="w-[280px]">
+                                    <SelectValue placeholder="Pilih periode..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {availableManualPeriods.map(period => (
+                                        <SelectItem key={period} value={period}>
+                                            {format(new Date(Number(period.split('-')[0]), Number(period.split('-')[1]) - 1), 'MMMM yyyy', { locale: idLocale })}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="grid gap-2">
+                             <Label htmlFor="manual-search">Cari Teknisi</Label>
+                            <Input
+                                id="manual-search"
+                                placeholder="Cari nama atau NIK..."
+                                value={manualSearchQuery}
+                                onChange={e => setManualSearchQuery(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Nama Teknisi</TableHead>
+                                <TableHead>NIK</TableHead>
+                                <TableHead className="text-right">Total Bobot</TableHead>
+                                <TableHead className="text-right">Produktivitas (%)</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {isLoading ? (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="text-center h-24">Memuat data...</TableCell>
+                                </TableRow>
+                            ) : filteredManualPerformance.length > 0 ? (
+                                filteredManualPerformance.map(p => (
+                                    <TableRow key={p.userId}>
+                                        <TableCell className="font-medium">{p.userName}</TableCell>
+                                        <TableCell>{p.nik}</TableCell>
+                                        <TableCell className="text-right">{p.totalBobot.toFixed(2)}</TableCell>
+                                        <TableCell className="text-right font-bold">{p.productivity.toFixed(2)}%</TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="h-24 text-center">
+                                        Tidak ada data produktivitas untuk periode ini.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </CardContent>
             </Card>
         </div>
     );
