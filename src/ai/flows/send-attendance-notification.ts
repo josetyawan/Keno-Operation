@@ -11,7 +11,7 @@ const attendanceNoticeSchema = z.object({
   coordinates: z.string().optional(),
 });
 
-export type AttendanceNoticeInput = z.infer<typeof attendanceNoticeSchema>;
+type AttendanceNoticeInput = z.infer<typeof attendanceNoticeSchema>;
 
 export async function sendAttendanceNotice(input: AttendanceNoticeInput): Promise<string> {
     return sendAttendanceNoticeFlow(input);
