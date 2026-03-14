@@ -18,7 +18,7 @@ export async function triggerDailyRekapAction(payload: RekapPayload): Promise<{s
              return { success: true, message: 'Tidak ada data rekap untuk dikirim hari ini.' };
         }
         
-        await sendDailyRekapReport();
+        await sendDailyRekapReport(payload);
 
 return {
   success: true,
