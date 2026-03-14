@@ -47,7 +47,7 @@ export default function ProvisioningDashboardPage() {
   const findHeader = (headers: string[], aliases: string[]): string | undefined => {
     const lowerAliases = aliases.map(a => a.toLowerCase().trim());
     for (const header of headers) {
-        if (lowerAliases.includes(header.toLowerCase().trim())) {
+        if (header && lowerAliases.includes(header.toLowerCase().trim())) {
             return header;
         }
     }
@@ -118,8 +118,8 @@ export default function ProvisioningDashboardPage() {
         const headerMapping = {
           workorder: findHeader(headers, ['workorder']),
           scOrder: findHeader(headers, ['sc order no/track', 'id/csrm no']),
-          serviceNo: findHeader(headers, ['service no.']),
-          crmOrder: findHeader(headers, ['crm, order type']),
+          serviceNo: findHeader(headers, ['service no.', 'service no']),
+          crmOrder: findHeader(headers, ['crm, order type', 'crm order type']),
           status: findHeader(headers, ['status']),
           customerName: findHeader(headers, ['customer name']),
           contactNumber: findHeader(headers, ['contact number']),
@@ -143,19 +143,20 @@ export default function ProvisioningDashboardPage() {
             let finalScOrder = scOrderValue;
 
             if (scOrderValue) {
-                const aoMatch = scOrderValue.match(/(AOk[a-zA-Z0-9]+)/);
-                const moMatch = scOrderValue.match(/(MOk[a-zA-Z0-9]+)/);
+                // Regex to find AO, AOi, AOk, AOs, MO, MOi, MOk, MOs etc. followed by alphanumeric characters.
+                const aoMoMatch = scOrderValue.match(/(A|M)O[a-z]?[a-zA-Z0-9]+/);
 
-                if (aoMatch && aoMatch[0]) {
-                    finalScOrder = aoMatch[0];
-                } else if (moMatch && moMatch[0]) {
-                    finalScOrder = moMatch[0];
+                if (aoMoMatch && aoMoMatch[0]) {
+                    finalScOrder = aoMoMatch[0];
                 } else if (scOrderValue.startsWith('SC')) {
+                    // Take the part before the first underscore, or the whole string if no underscore.
                     finalScOrder = scOrderValue.split('_')[0];
                 }
+                // else, finalScOrder remains the original scOrderValue for cases like "1-452..." or "MYIA-..."
             } else {
                 finalScOrder = '-';
             }
+
 
             const formatDateValue = (dateValue: any) => {
               if (!dateValue) return '-';
