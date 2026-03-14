@@ -9,8 +9,15 @@ const gamasReportNoticeSchema = z.object({
   status: z.string(),
   rejectionReason: z.string().optional(),
 });
+export type GamasReportNoticeInput = z.infer<typeof gamasReportNoticeSchema>;
 
-export const sendGamasReportNotice = ai.defineFlow(
+export async function sendGamasReportNotice(
+  input: GamasReportNoticeInput
+): Promise<string> {
+  return sendGamasReportNoticeFlow(input);
+}
+
+const sendGamasReportNoticeFlow = ai.defineFlow(
   {
     name: 'sendGamasReportNotice',
     inputSchema: gamasReportNoticeSchema,

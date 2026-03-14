@@ -3,15 +3,26 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
-export const sendProductivityRekap = ai.defineFlow(
+export const sendProductivityRekapInputSchema = z.object({
+  unit: z.string(),
+  totalSales: z.number(),
+  totalVisit: z.number(),
+  date: z.string(),
+});
+export type SendProductivityRekapInput = z.infer<
+  typeof sendProductivityRekapInputSchema
+>;
+
+export async function sendProductivityRekap(
+  input: SendProductivityRekapInput
+): Promise<string> {
+  return sendProductivityRekapFlow(input);
+}
+
+const sendProductivityRekapFlow = ai.defineFlow(
   {
     name: 'sendProductivityRekap',
-    inputSchema: z.object({
-      unit: z.string(),
-      totalSales: z.number(),
-      totalVisit: z.number(),
-      date: z.string(),
-    }),
+    inputSchema: sendProductivityRekapInputSchema,
     outputSchema: z.string(),
   },
   async (input) => {

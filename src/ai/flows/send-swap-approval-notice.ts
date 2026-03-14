@@ -8,8 +8,15 @@ const swapApprovalNoticeSchema = z.object({
   replacementName: z.string(),
   swapDate: z.string(),
 });
+export type SwapApprovalNoticeInput = z.infer<typeof swapApprovalNoticeSchema>;
 
-export const sendSwapApprovalNotice = ai.defineFlow(
+export async function sendSwapApprovalNotice(
+  input: SwapApprovalNoticeInput
+): Promise<string> {
+  return sendSwapApprovalNoticeFlow(input);
+}
+
+const sendSwapApprovalNoticeFlow = ai.defineFlow(
   {
     name: 'sendSwapApprovalNotice',
     inputSchema: swapApprovalNoticeSchema,

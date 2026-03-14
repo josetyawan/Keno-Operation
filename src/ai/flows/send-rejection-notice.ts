@@ -9,8 +9,15 @@ const rejectionNoticeSchema = z.object({
   segment: z.string(),
   reason: z.string(),
 });
+export type RejectionNoticeInput = z.infer<typeof rejectionNoticeSchema>;
 
-export const sendRejectionNotice = ai.defineFlow(
+export async function sendRejectionNotice(
+  input: RejectionNoticeInput
+): Promise<string> {
+  return sendRejectionNoticeFlow(input);
+}
+
+const sendRejectionNoticeFlow = ai.defineFlow(
   {
     name: 'sendRejectionNotice',
     inputSchema: rejectionNoticeSchema,
@@ -34,7 +41,7 @@ Pesan harus menginstruksikan PIC untuk memeriksa detail penolakan di aplikasi, m
       model: 'googleai/gemini-2.0-flash',
       prompt,
     });
-    
+
     // In a real implementation, this would be sent to a Telegram tool.
     return res.text;
   }

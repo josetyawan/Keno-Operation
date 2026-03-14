@@ -8,8 +8,15 @@ const dailyRekapInputSchema = z.object({
   photos: z.array(z.string()),
   photoCaption: z.string().optional(),
 });
+export type DailyRekapInput = z.infer<typeof dailyRekapInputSchema>;
 
-export const sendDailyRekapReport = ai.defineFlow(
+export async function sendDailyRekapReport(
+  input: DailyRekapInput
+): Promise<string> {
+  return sendDailyRekapReportFlow(input);
+}
+
+const sendDailyRekapReportFlow = ai.defineFlow(
   {
     name: 'sendDailyRekapReport',
     inputSchema: dailyRekapInputSchema,
@@ -24,9 +31,9 @@ export const sendDailyRekapReport = ai.defineFlow(
     if (input.photos.length > 0) {
       photoMessage = `\n\n*${input.photoCaption || 'Lampiran Foto:'}*`;
     }
-    
+
     const finalReport = combinedMessage + photoMessage;
-    
+
     // In a real implementation, this would likely call a tool. e.g.:
     // await tools.sendToTelegram({ text: finalReport, photos: input.photos });
     // For now, returning the formatted text is a safe operation that fixes the type error.
