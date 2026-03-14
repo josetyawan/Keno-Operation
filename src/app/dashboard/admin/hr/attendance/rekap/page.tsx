@@ -29,7 +29,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
-import { toJpeg } from 'html-to-image';
 
 
 export default function AttendanceRekapPage() {
@@ -83,7 +82,7 @@ export default function AttendanceRekapPage() {
         }
         
         if(chunks.length > 1) {
-             toast({variant: 'destructive', title: 'Terlalu Banyak Pengguna', description: `Hanya nama untuk 30 dari ${'${userIds.length}'} pengguna pertama yang dapat ditampilkan.`})
+             toast({variant: 'destructive', title: 'Terlalu Banyak Pengguna', description: `Hanya nama untuk 30 dari ${userIds.length} pengguna pertama yang dapat ditampilkan.`})
         }
         
         return query(collection(firestore, 'users'), where('id', 'in', chunks[0]));
@@ -97,57 +96,100 @@ export default function AttendanceRekapPage() {
     }, [users]);
     
     const handleDownloadJpg = async () => {
-        const printableArea = document.getElementById('printable-area');
-        if (!printableArea) {
+        const recordsToDownload = attendances?.filter(att => att.checkInPhotoUrl);
+        if (!recordsToDownload || recordsToDownload.length === 0) {
             toast({
                 variant: 'destructive',
-                title: 'Elemen tidak ditemukan',
-                description: 'Tidak dapat menemukan area untuk diunduh.',
+                title: 'Tidak ada gambar',
+                description: 'Tidak ada foto absensi untuk diunduh pada tanggal yang dipilih.',
             });
             return;
         }
 
-        const filter = (node: HTMLElement) => {
-            return !node.classList?.contains('no-print');
-        };
-
         toast({
             title: 'Mempersiapkan unduhan...',
-            description: 'Memuat semua gambar sebelum membuat kolase.',
-        });
-
-        const images = Array.from(printableArea.getElementsByTagName('img'));
-        const imageLoadPromises = images.map(img => {
-            if (img.complete && img.naturalHeight !== 0) {
-                return Promise.resolve();
-            }
-            return new Promise<void>((resolve) => {
-                img.onload = () => resolve();
-                img.onerror = () => {
-                    console.warn(`Could not load image for download: ${'${img.src}'}`);
-                    resolve(); 
-                };
-            });
+            description: `Memuat ${recordsToDownload.length} gambar untuk membuat kolase. Ini mungkin butuh waktu.`,
         });
 
         try {
-            await Promise.all(imageLoadPromises);
+            const columns = 4;
+            const imageWidth = 300;
+            const imageHeight = 300;
+            const textHeight = 50;
+            const padding = 20;
+
+            const cellWidth = imageWidth + padding;
+            const cellHeight = imageHeight + textHeight + padding;
+
+            const canvasWidth = (cellWidth * columns) + padding;
+            const numRows = Math.ceil(recordsToDownload.length / columns);
+            const canvasHeight = (cellHeight * numRows) + padding;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+            const ctx = canvas.getContext('2d');
+
+            if (!ctx) {
+                throw new Error('Gagal membuat konteks canvas.');
+            }
+
+            // Fill background
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+            const loadImage = (src: string): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => resolve(img);
+                img.onerror = (err) => {
+                    console.error('Gagal memuat gambar:', src, err);
+                    // Resolve with a placeholder or reject
+                    reject(new Error(`Gagal memuat gambar: ${src}`));
+                };
+                img.src = src;
+            });
+
+            const drawPromises = recordsToDownload.map(async (att, index) => {
+                const col = index % columns;
+                const row = Math.floor(index / columns);
+                const x = padding + col * cellWidth;
+                const y = padding + row * cellHeight;
+
+                try {
+                    const img = await loadImage(att.checkInPhotoUrl);
+                    ctx.drawImage(img, x, y, imageWidth, imageHeight);
+                } catch (error) {
+                    // Draw a placeholder for failed images
+                    ctx.fillStyle = '#e0e0e0';
+                    ctx.fillRect(x, y, imageWidth, imageHeight);
+                    ctx.fillStyle = '#888888';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Gambar gagal dimuat', x + imageWidth / 2, y + imageHeight / 2);
+                }
+
+                ctx.fillStyle = '#000000';
+                ctx.font = 'bold 14px Arial';
+                ctx.textAlign = 'left';
+                const userName = userMap.get(att.userId) || 'Unknown User';
+                ctx.fillText(userName, x, y + imageHeight + 20);
+
+                ctx.font = '12px Arial';
+                const time = format(att.checkInTime.toDate(), 'HH:mm:ss', { locale: idLocale });
+                ctx.fillText(time, x, y + imageHeight + 38);
+            });
+
+            await Promise.all(drawPromises);
             
             toast({
-                title: 'Membuat kolase...',
-                description: 'Semua gambar telah dimuat, proses pembuatan file JPG dimulai.',
+                title: 'Membuat file...',
+                description: 'Kolase gambar sedang dibuat.',
             });
-            
-            const dataUrl = await toJpeg(printableArea, { 
-                quality: 0.95,
-                backgroundColor: '#ffffff',
-                pixelRatio: 1,
-                cacheBust: true,
-                filter,
-             });
+
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.90);
             const link = document.createElement('a');
             const dateString = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : 'rekap';
-            link.download = `rekap-absensi-${'${dateString}'}.jpg`;
+            link.download = `rekap-absensi-${dateString}.jpg`;
             link.href = dataUrl;
             link.click();
             link.remove();
@@ -160,6 +202,7 @@ export default function AttendanceRekapPage() {
             });
         }
     };
+
 
     const handleDeleteAll = async () => {
         if (!attendances || attendances.length === 0) {
@@ -176,7 +219,7 @@ export default function AttendanceRekapPage() {
             await batch.commit();
             toast({
                 title: "Semua Absensi Dihapus",
-                description: `${'${attendances.length}'} data absensi untuk tanggal ini telah berhasil dihapus.`,
+                description: `${attendances.length} data absensi untuk tanggal ini telah berhasil dihapus.`,
             });
             setIsDeleteAllDialogOpen(false);
         } catch (error: any) {
