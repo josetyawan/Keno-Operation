@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -136,7 +137,6 @@ export default function AdminPerformancePage() {
             const userId = item.userId;
             let bobot = 0;
             
-            // Flatten all weights into one array for easier searching
             const allWeights = Object.values(productivityWeights).flat();
 
             const weightItem = allWeights.find(w => {
@@ -152,13 +152,15 @@ export default function AdminPerformancePage() {
             bobotByUser.set(userId, (bobotByUser.get(userId) || 0) + bobot);
         });
 
-        const performanceData = Array.from(bobotByUser.entries()).map(([userId, totalBobot]) => {
-            const user = allUsers.find(u => u.id === userId);
+        const activeTeknisi = allUsers.filter(u => u.role === 'teknisi' && u.registrationStatus === 'approved');
+
+        const performanceData = activeTeknisi.map(user => {
+            const totalBobot = bobotByUser.get(user.id) || 0;
             const productivity = (totalBobot / JAM_KERJA_SEBULAN) * 100;
             return {
-                userId,
-                userName: user?.displayName || 'Unknown',
-                nik: user?.nik || '-',
+                userId: user.id,
+                userName: user.displayName || 'Unknown',
+                nik: user.nik || '-',
                 totalBobot,
                 productivity,
             };
