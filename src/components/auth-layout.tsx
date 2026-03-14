@@ -1,3 +1,5 @@
+'use client';
+
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Logo } from '@/components/logo';
