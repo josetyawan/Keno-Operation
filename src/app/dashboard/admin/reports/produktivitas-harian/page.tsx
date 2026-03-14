@@ -171,7 +171,7 @@ export default function ProduktivitasHarianPage() {
     }, [dateRange]);
 
     const handleManualSend = async () => {
-        if ((summaryData.length === 0 && detailData.length === 0) || !selectedUnit) {
+        if (summaryData.length === 0 && detailData.length === 0) {
             toast({
                 variant: "destructive",
                 title: "Tidak Ada Data",
@@ -180,25 +180,20 @@ export default function ProduktivitasHarianPage() {
             return;
         }
         setIsSending(true);
-        
-        const summaryMessage = `📆 REKAP TEKNISI ${selectedUnit.toUpperCase()} SEKTOR KUDUS (${dateHeader})\n\n` +
-                             'NAMA TEKNISI | PRODUKTIVITAS\n' +
-                             summaryData.map(item => `${item.name} | ${item.productivity}`).join('\n');
-        
-        const detailMessage = `📌 DETAIL PRODUKTIVITAS TEKNISI ${selectedUnit.toUpperCase()}\n\n` +
-            (detailData.length > 0
-                ? detailData.map(user => 
-                    `${user.userName} ${user.telegramUsername}\n` +
-                    'TIKET | SERVICE | SEGMEN\n' +
-                    user.tickets.map(t => `${t.ticket || '-'} | ${t.service || '-'} | ${t.segment}`).join('\n')
-                ).join('\n\n')
-                : 'Tidak ada produktivitas tercatat untuk periode ini.');
+
+        const totalProductivity = summaryData.reduce((acc, item) => {
+            if (typeof item.productivity === 'number') {
+                return acc + item.productivity;
+            }
+            return acc;
+        }, 0);
+        const productiveUserCount = detailData.length;
 
         try {
             const result = await triggerB2cRekapAction({
                 unit: selectedUnit,
-                summaryMessage: summaryMessage,
-                detailMessage: detailMessage,
+                totalSales: totalProductivity,
+                totalVisit: productiveUserCount,
             });
 
             if (result.success) {

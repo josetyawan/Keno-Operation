@@ -1,3 +1,4 @@
-'use server';
-
-// AI functionality is temporarily disabled to resolve build issues.
+export async function sendDailyRekapReport() {
+    console.log('Daily rekap AI disabled');
+    return true;
+  }
