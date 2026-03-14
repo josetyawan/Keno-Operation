@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -130,12 +129,29 @@ export default function WorkCategoryRekapPage() {
             const isRiwayat = 'noService' in item;
             const createDate = isRiwayat ? (item as RiwayatGangguan).tanggalOpen : (item as OtherWork).tanggalPengerjaan;
             const closeDate = isRiwayat ? (item as RiwayatGangguan).tanggalClose : (item as OtherWork).tanggalSelesai;
+            
+            // Revised logic for WO Number and Chief
+            let woNumber = '';
+            const category = getWorkCategory(item);
+            const jenisOrderLower = item.jenisOrder.toLowerCase();
+
+            if (category && category.toUpperCase().includes('PROVISIONING')) {
+                if (!isRiwayat) {
+                    woNumber = (item as OtherWork).namaPekerjaan || '';
+                }
+            } else if (jenisOrderLower.includes('spbu')) {
+                if (isRiwayat) {
+                    woNumber = (item as RiwayatGangguan).noService || '';
+                }
+            }
+            
+            const chief = item.nik || '';
 
             return {
                 'Service Number': isRiwayat ? (item as RiwayatGangguan).noService : '-',
-                'WO Number': !isRiwayat ? (item as OtherWork).namaPekerjaan || '' : '',
+                'WO Number': woNumber,
                 'Ticket Id': (item as RiwayatGangguan).noTiket || '',
-                'Chief': '',
+                'Chief': chief,
                 'GAUL': '',
                 'Guarantee Status': 0,
                 'Jenis Order': item.jenisOrder,
