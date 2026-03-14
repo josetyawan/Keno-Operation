@@ -498,6 +498,28 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "userId", "userName", "jenisOrder", "tanggalPengerjaan", "createdAt"]
+    },
+    "ProvisioningRecord": {
+      "title": "Provisioning Record",
+      "type": "object",
+      "description": "Represents a single provisioning record imported from Excel.",
+      "properties": {
+        "id": { "type": "string" },
+        "workorder": { "type": "string" },
+        "scOrder": { "type": "string" },
+        "serviceNo": { "type": "string" },
+        "crmOrder": { "type": "string" },
+        "status": { "type": "string" },
+        "customerName": { "type": "string" },
+        "contactNumber": { "type": "string" },
+        "address": { "type": "string" },
+        "dateCreated": { "type": "string" },
+        "bookingDate": { "type": "string" },
+        "productName": { "type": "string" },
+        "productType": { "type": "string" },
+        "workzone": { "type": "string" }
+      },
+      "required": ["id", "workorder", "scOrder", "serviceNo"]
     }
   },
   "auth": { "providers": ["password", "anonymous"] },
@@ -523,7 +545,8 @@
       { "path": "/performance/{performanceId}", "definition": { "entityName": "Performance", "schema": { "$ref": "#/backend/entities/Performance" }, "description": "Stores monthly performance data for technicians.", "params": [{ "name": "performanceId", "description": "The unique ID for the performance record." }] } },
       { "path": "/orbit-inventory/{inventoryId}", "definition": { "entityName": "OrbitInventory", "schema": { "$ref": "#/backend/entities/OrbitInventory" }, "description": "Stores inventory of Orbit and Mikrotik devices, including loan status.", "params": [{ "name": "inventoryId", "description": "The unique ID for the inventory item." }] } },
       { "path": "/other-works/{workId}", "definition": { "entityName": "OtherWork", "schema": { "$ref": "#/backend/entities/OtherWork" }, "description": "Stores work orders not tied to a specific customer service number.", "params": [{ "name": "workId", "description": "The unique identifier for the work order." }] } },
-      { "path": "/cashbook/{transactionId}", "definition": { "entityName": "CashTransaction", "schema": { "$ref": "#/backend/entities/CashTransaction" }, "description": "Stores all cash-in and cash-out transactions for accounting." } }
+      { "path": "/cashbook/{transactionId}", "definition": { "entityName": "CashTransaction", "schema": { "$ref": "#/backend/entities/CashTransaction" }, "description": "Stores all cash-in and cash-out transactions for accounting." } },
+      { "path": "/provisioning-records/{recordId}", "definition": { "entityName": "ProvisioningRecord", "schema": { "$ref": "#/backend/entities/ProvisioningRecord" }, "description": "Stores provisioning records imported from Excel." } }
     ],
     "reasoning": "The data is structured with a top-level `users` collection for profiles and a top-level `notas` collection for all user-generated notes. This flat structure for `notas` simplifies querying, allowing all users to view all notes easily, which aligns with the application's requirements. Security is enforced within the rules: while reads are permissive, writes (create, update, delete) are strictly controlled. A user can only create a nota with their own `userId`, and can only update or delete notas they own. Admins are granted special privileges to update any nota for verification purposes. A `network-assets` collection is added for managing network equipment, with admin-only write access. This design is efficient and secure for the specified use case."
   }
@@ -532,5 +555,7 @@
 
 
   
+
+    
 
     

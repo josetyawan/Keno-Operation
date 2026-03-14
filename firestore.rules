@@ -213,5 +213,12 @@ service cloud.firestore {
        allow list: if isApproved();
        allow write: if isAdmin() || isKorlap();
     }
+
+    match /provisioning-records/{recordId} {
+      allow read: if isAdmin() || isKorlap();
+      allow write: if isAdmin() || isKorlap();
+    }
   }
 }
+
+    
