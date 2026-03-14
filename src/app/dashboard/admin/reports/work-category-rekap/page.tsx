@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -6,6 +7,7 @@ import { collection, query, where, Timestamp } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, FileSpreadsheet } from 'lucide-react';
@@ -130,7 +132,6 @@ export default function WorkCategoryRekapPage() {
             const createDate = isRiwayat ? (item as RiwayatGangguan).tanggalOpen : (item as OtherWork).tanggalPengerjaan;
             const closeDate = isRiwayat ? (item as RiwayatGangguan).tanggalClose : (item as OtherWork).tanggalSelesai;
             
-            // Revised logic for WO Number and Chief
             let woNumber = '';
             const category = getWorkCategory(item);
             const jenisOrderLower = item.jenisOrder.toLowerCase();
@@ -152,8 +153,8 @@ export default function WorkCategoryRekapPage() {
                 'WO Number': woNumber,
                 'Ticket Id': (item as RiwayatGangguan).noTiket || '',
                 'Chief': chief,
-                'GAUL': '',
-                'Guarantee Status': 0,
+                'GAUL': 0,
+                'Guarantee Status': '',
                 'Jenis Order': item.jenisOrder,
                 'Order Type': (item as RiwayatGangguan).typeOrder || (item as OtherWork).orderType || '',
                 'Create Date(YYYY-MM-DD HH:MM:SS)': createDate?.toDate ? format(createDate.toDate(), 'yyyy-MM-dd HH:mm:ss') : '-',
