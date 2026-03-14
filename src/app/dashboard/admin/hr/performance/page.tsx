@@ -43,11 +43,12 @@ export default function AdminPerformancePage() {
 
     const [searchQuery, setSearchQuery] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
-    const ITEMS_PER_PAGE = 10;
+    const ITEMS_PER_PAGE = 5;
     
     // --- New state for manual productivity ---
     const [manualPeriod, setManualPeriod] = useState<string | undefined>();
     const [manualSearchQuery, setManualSearchQuery] = useState('');
+    const [manualCurrentPage, setManualCurrentPage] = useState(1);
 
     // --- Data fetching ---
     const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
@@ -60,9 +61,33 @@ export default function AdminPerformancePage() {
     const performanceQuery = useMemoFirebase(() => query(collection(firestore, 'performance'), orderBy('date', 'desc')), [firestore]);
     const { data: performanceRecords, isLoading: areRecordsLoading } = useCollection<Performance>(performanceQuery);
     
-    // --- New data fetching for manual calculation ---
-    const { data: riwayatList, isLoading: isRiwayatLoading } = useCollection<RiwayatGangguan>(query(collection(firestore, 'riwayat-gangguan')));
-    const { data: otherWorksList, isLoading: isOtherWorksLoading } = useCollection<OtherWork>(query(collection(firestore, 'other-works')));
+    // --- Efficient data fetching for manual calculation ---
+    const manualPeriodDateRange = useMemo(() => {
+        if (!manualPeriod) return null;
+        const [year, month] = manualPeriod.split('-').map(Number);
+        const startDate = startOfMonth(new Date(year, month - 1));
+        const endDate = endOfMonth(startDate);
+        return { startDate, endDate };
+    }, [manualPeriod]);
+
+    const riwayatQuery = useMemoFirebase(() => (
+        manualPeriodDateRange ? query(
+            collection(firestore, 'riwayat-gangguan'),
+            where('tanggalLapor', '>=', Timestamp.fromDate(manualPeriodDateRange.startDate)),
+            where('tanggalLapor', '<=', Timestamp.fromDate(manualPeriodDateRange.endDate))
+        ) : null
+    ), [firestore, manualPeriodDateRange]);
+
+    const otherWorksQuery = useMemoFirebase(() => (
+         manualPeriodDateRange ? query(
+            collection(firestore, 'other-works'),
+            where('tanggalPengerjaan', '>=', Timestamp.fromDate(manualPeriodDateRange.startDate)),
+            where('tanggalPengerjaan', '<=', Timestamp.fromDate(manualPeriodDateRange.endDate))
+        ) : null
+    ), [firestore, manualPeriodDateRange]);
+
+    const { data: riwayatList, isLoading: isRiwayatLoading } = useCollection<RiwayatGangguan>(riwayatQuery);
+    const { data: otherWorksList, isLoading: isOtherWorksLoading } = useCollection<OtherWork>(otherWorksQuery);
 
     // ... existing memos ...
     const userMapByNik = useMemo(() => {
@@ -95,17 +120,14 @@ export default function AdminPerformancePage() {
 
     // --- New memos for manual calculation ---
     const availableManualPeriods = useMemo(() => {
-        const periods = new Set<string>();
-        const addPeriod = (item: { tanggalPengerjaan?: any, tanggalLapor?: any }) => {
-            const date = item.tanggalPengerjaan?.toDate() || item.tanggalLapor?.toDate();
-            if (date) {
-                periods.add(format(date, 'yyyy-MM'));
-            }
-        };
-        riwayatList?.forEach(addPeriod);
-        otherWorksList?.forEach(addPeriod);
-        return Array.from(periods).sort().reverse();
-    }, [riwayatList, otherWorksList]);
+        const periods: string[] = [];
+        const now = new Date();
+        for (let i = 0; i < 12; i++) {
+            const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            periods.push(format(date, 'yyyy-MM'));
+        }
+        return periods;
+    }, []);
     
     useEffect(() => {
         if (availableManualPeriods.length > 0 && !manualPeriod) {
@@ -114,26 +136,18 @@ export default function AdminPerformancePage() {
     }, [availableManualPeriods, manualPeriod]);
 
     const manualPerformanceData = useMemo(() => {
-        if (!manualPeriod || !riwayatList || !otherWorksList || !allUsers) return [];
+        if (!manualPeriod || !allUsers) return [];
 
-        const [year, month] = manualPeriod.split('-').map(Number);
-        const startDate = startOfMonth(new Date(year, month - 1));
-        const endDate = endOfMonth(startDate);
         const JAM_KERJA_SEBULAN = 8 * 22; // 8 jam/hari, 22 hari/bulan
 
         const workItems = [
-            ...riwayatList.map(item => ({...item, date: item.tanggalLapor?.toDate()})),
-            ...otherWorksList.map(item => ({...item, date: item.tanggalPengerjaan?.toDate()}))
+            ...(riwayatList || []).map(item => ({...item, date: item.tanggalLapor?.toDate()})),
+            ...(otherWorksList || []).map(item => ({...item, date: item.tanggalPengerjaan?.toDate()}))
         ];
-
-        const filteredWork = workItems.filter(item => {
-            if (!item.date) return false;
-            return item.date >= startDate && item.date <= endDate;
-        });
         
         const bobotByUser = new Map<string, number>();
 
-        filteredWork.forEach(item => {
+        workItems.forEach(item => {
             const userId = item.userId;
             let bobot = 0;
             
@@ -178,6 +192,15 @@ export default function AdminPerformancePage() {
             p.nik.toLowerCase().includes(lowerQuery)
         );
     }, [manualPerformanceData, manualSearchQuery]);
+
+    const totalManualPages = Math.ceil(filteredManualPerformance.length / ITEMS_PER_PAGE);
+
+    const paginatedManualPerformance = useMemo(() => {
+        const startIndex = (manualCurrentPage - 1) * ITEMS_PER_PAGE;
+        const endIndex = startIndex + ITEMS_PER_PAGE;
+        return filteredManualPerformance.slice(startIndex, endIndex);
+    }, [filteredManualPerformance, manualCurrentPage]);
+
 
     // ... existing handlers (handleFileImport, handleSyncUserIds) ...
     const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -397,9 +420,10 @@ export default function AdminPerformancePage() {
     };
 
 
-    const isLoading = isUserLoading || isProfileLoading || areUsersLoading || areRecordsLoading || isRiwayatLoading || isOtherWorksLoading;
+    const isLoadingInitial = isUserLoading || isProfileLoading || areUsersLoading || areRecordsLoading;
+    const isLoadingManual = isRiwayatLoading || isOtherWorksLoading;
 
-    if (isLoading && !performanceRecords) {
+    if (isLoadingInitial && !performanceRecords) {
         return (
              <div className="space-y-6">
                 <Skeleton className="h-8 w-64" />
@@ -477,7 +501,7 @@ export default function AdminPerformancePage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {isLoading ? (
+                                {isLoadingInitial ? (
                                     Array.from({length: 5}).map((_, i) => (
                                         <TableRow key={i}>
                                             <TableCell colSpan={9}><Skeleton className="h-5 w-full"/></TableCell>
@@ -604,12 +628,14 @@ export default function AdminPerformancePage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {isLoading ? (
-                                <TableRow>
-                                    <TableCell colSpan={4} className="text-center h-24">Memuat data...</TableCell>
-                                </TableRow>
-                            ) : filteredManualPerformance.length > 0 ? (
-                                filteredManualPerformance.map(p => (
+                            {isLoadingManual ? (
+                                Array.from({length: 5}).map((_, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell colSpan={4}><Skeleton className="h-5 w-full"/></TableCell>
+                                    </TableRow>
+                                ))
+                            ) : paginatedManualPerformance.length > 0 ? (
+                                paginatedManualPerformance.map(p => (
                                     <TableRow key={p.userId}>
                                         <TableCell className="font-medium">{p.userName}</TableCell>
                                         <TableCell>{p.nik}</TableCell>
@@ -627,6 +653,31 @@ export default function AdminPerformancePage() {
                         </TableBody>
                     </Table>
                 </CardContent>
+                <CardFooter>
+                    <div className="text-xs text-muted-foreground">
+                        Halaman <strong>{totalManualPages > 0 ? manualCurrentPage : 0}</strong> dari <strong>{totalManualPages}</strong>
+                    </div>
+                    <div className="flex items-center gap-2 ml-auto">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setManualCurrentPage(prev => Math.max(prev - 1, 1))}
+                            disabled={manualCurrentPage === 1 || totalManualPages === 0}
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                            Sebelumnya
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setManualCurrentPage(prev => Math.min(prev + 1, totalManualPages))}
+                            disabled={manualCurrentPage === totalManualPages || totalManualPages === 0}
+                        >
+                            Berikutnya
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </CardFooter>
             </Card>
         </div>
     );
