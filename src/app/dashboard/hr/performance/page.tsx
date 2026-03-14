@@ -77,36 +77,44 @@ export default function UserPerformancePage() {
     }, [selectedPeriod]);
 
     const riwayatQuery = useMemoFirebase(() => {
-        if (!user?.uid || !selectedDateRange) return null;
+        if (!user?.uid) return null;
         return query(
             collection(firestore, 'riwayat-gangguan'),
-            where('userId', '==', user.uid),
-            where('tanggalLapor', '>=', Timestamp.fromDate(selectedDateRange.startDate)),
-            where('tanggalLapor', '<=', Timestamp.fromDate(selectedDateRange.endDate))
+            where('userId', '==', user.uid)
         );
-    }, [firestore, user?.uid, selectedDateRange]);
+    }, [firestore, user?.uid]);
 
     const otherWorksQuery = useMemoFirebase(() => {
-        if (!user?.uid || !selectedDateRange) return null;
+        if (!user?.uid) return null;
         return query(
             collection(firestore, 'other-works'),
-            where('userId', '==', user.uid),
-            where('tanggalPengerjaan', '>=', Timestamp.fromDate(selectedDateRange.startDate)),
-            where('tanggalPengerjaan', '<=', Timestamp.fromDate(selectedDateRange.endDate))
+            where('userId', '==', user.uid)
         );
-    }, [firestore, user?.uid, selectedDateRange]);
+    }, [firestore, user?.uid]);
 
     const { data: riwayatList, isLoading: isRiwayatLoading } = useCollection<RiwayatGangguan>(riwayatQuery);
     const { data: otherWorksList, isLoading: isOtherWorksLoading } = useCollection<OtherWork>(otherWorksQuery);
 
     const manualPerformanceData = useMemo(() => {
-        if (isRiwayatLoading || isOtherWorksLoading || !riwayatList || !otherWorksList) return null;
+        if (isRiwayatLoading || isOtherWorksLoading || !riwayatList || !otherWorksList || !selectedDateRange) return null;
+
+        const { startDate, endDate } = selectedDateRange;
+
+        const filteredRiwayat = riwayatList.filter(item => {
+            const itemDate = item.tanggalLapor?.toDate();
+            return itemDate && itemDate >= startDate && itemDate <= endDate;
+        });
+
+        const filteredOtherWorks = otherWorksList.filter(item => {
+            const itemDate = item.tanggalPengerjaan?.toDate();
+            return itemDate && itemDate >= startDate && itemDate <= endDate;
+        });
 
         const JAM_KERJA_SEBULAN = 8 * 22;
 
         const workItems = [
-            ...riwayatList.map(item => ({...item, date: item.tanggalLapor?.toDate()})),
-            ...otherWorksList.map(item => ({...item, date: item.tanggalPengerjaan?.toDate()}))
+            ...filteredRiwayat.map(item => ({...item, date: item.tanggalLapor?.toDate()})),
+            ...filteredOtherWorks.map(item => ({...item, date: item.tanggalPengerjaan?.toDate()}))
         ];
 
         let totalBobot = 0;
@@ -132,7 +140,7 @@ export default function UserPerformancePage() {
             totalBobot,
             productivity,
         };
-    }, [riwayatList, otherWorksList, isRiwayatLoading, isOtherWorksLoading]);
+    }, [riwayatList, otherWorksList, isRiwayatLoading, isOtherWorksLoading, selectedDateRange]);
     
     // --- End of New Logic ---
 
