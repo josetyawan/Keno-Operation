@@ -567,6 +567,7 @@ export default function AttendancePage() {
     const { toast } = useToast();
     const router = useRouter();
 
+    const [today, setToday] = useState<Date | null>(null);
     const [todaySchedule, setTodaySchedule] = useState<Schedule | null>(null);
     const [todayAttendance, setTodayAttendance] = useState<Attendance | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -593,15 +594,16 @@ export default function AttendancePage() {
 
     const { data: allUsers, isLoading: areUsersLoading } = useCollection<UserProfile>(usersQuery);
 
-    const today = useMemo(() => getStartOfDay(), []);
+    useEffect(() => {
+        setToday(getStartOfDay());
+    }, []);
     
     const scheduleQuery = useMemoFirebase(() => {
-        if (!user) return null;
-        const startOfToday = today;
+        if (!user || !today) return null;
         return query(
             collection(firestore, 'schedules'),
             where('userId', '==', user.uid),
-            where('date', '==', Timestamp.fromDate(startOfToday))
+            where('date', '==', Timestamp.fromDate(today))
         );
     }, [user, firestore, today]);
 
@@ -615,10 +617,10 @@ export default function AttendancePage() {
         );
     }, [user, firestore]);
     
-    const { data: allUserAttendances, isLoading: isAttendanceLoading } = useCollection<Attendance>(attendanceQuery);
+    const { data: allUserAttendances, isLoading: isAttendanceLoading } = useCollection<Attendance>(allUserAttendances);
 
     const clientSideTodayAttendance = useMemo(() => {
-        if (!allUserAttendances) return null;
+        if (!allUserAttendances || !today) return null;
         const startOfToday = today;
         const endOfToday = add(startOfToday, { days: 1 });
         return allUserAttendances.find(att => {
@@ -629,7 +631,7 @@ export default function AttendancePage() {
     }, [allUserAttendances, today]);
     
     useEffect(() => {
-        if (isUserLoading || isProfileLoading || isScheduleLoading || isAttendanceLoading || (canListUsers && areUsersLoading)) {
+        if (!today || isUserLoading || isProfileLoading || isScheduleLoading || isAttendanceLoading || (canListUsers && areUsersLoading)) {
             setIsLoading(true);
             return;
         }
@@ -640,7 +642,7 @@ export default function AttendancePage() {
         setIsLoading(false);
     }, [
         schedules, clientSideTodayAttendance, isUserLoading, isProfileLoading, 
-        isScheduleLoading, isAttendanceLoading, canListUsers, areUsersLoading
+        isScheduleLoading, isAttendanceLoading, canListUsers, areUsersLoading, today
     ]);
     
     // --- Camera Logic for Main Check-in ---
@@ -676,7 +678,7 @@ export default function AttendancePage() {
     
 
     const handleCheckIn = async () => {
-        if (!todaySchedule || !videoRef.current || !canvasRef.current || !user || !userProfile) return;
+        if (!todaySchedule || !videoRef.current || !canvasRef.current || !user || !userProfile || !today) return;
         
         setIsCheckingIn(true);
         try {
@@ -749,7 +751,23 @@ export default function AttendancePage() {
         }
     };
     
-    const pageIsLoading = isUserLoading || isLoading;
+    if (isLoading || !today) {
+      return (
+        <div className="space-y-6">
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-4 w-96" />
+            <Card>
+                <CardHeader>
+                    <Skeleton className="h-6 w-48" />
+                    <Skeleton className="h-4 w-72" />
+                </CardHeader>
+                <CardContent>
+                    <Skeleton className="h-40 w-full" />
+                </CardContent>
+            </Card>
+        </div>
+      );
+    }
     
     return (
         <div>
@@ -764,7 +782,7 @@ export default function AttendancePage() {
                 </CardHeader>
                 <CardContent>
                     <CheckInUI 
-                        isLoading={pageIsLoading}
+                        isLoading={isLoading}
                         todaySchedule={todaySchedule}
                         todayAttendance={todayAttendance}
                         isCheckingIn={isCheckingIn}

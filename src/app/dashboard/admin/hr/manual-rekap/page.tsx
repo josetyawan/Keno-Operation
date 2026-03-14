@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -15,6 +16,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { format, isWeekend } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type DailyStatus = 'Hadir' | 'Izin' | 'Cuti' | 'Libur' | 'Shift Malam';
 
@@ -70,27 +72,52 @@ export default function ManualRekapPage() {
     const { user, isUserLoading } = useUser();
     const firestore = useFirestore();
 
+    const [today, setToday] = useState<Date | null>(null);
+
+    useEffect(() => {
+        // Set the date only on the client-side
+        setToday(new Date());
+    }, []);
+
     const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
         useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
     );
     
     // --- Data fetching moved to client ---
-    const today = useMemo(() => new Date(), []);
-    const startOfToday = useMemo(() => new Date(today.setHours(0, 0, 0, 0)), [today]);
-    const endOfToday = useMemo(() => new Date(today.setHours(23, 59, 59, 999)), [today]);
-    const dateForScheduleQuery = useMemo(() => new Date(startOfToday.getTime()), [startOfToday]);
+    const startOfToday = useMemo(() => {
+        if (!today) return null;
+        const d = new Date(today);
+        d.setHours(0,0,0,0);
+        return d;
+    }, [today]);
 
+    const endOfToday = useMemo(() => {
+        if (!today) return null;
+        const d = new Date(today);
+        d.setHours(23,59,59,999);
+        return d;
+    }, [today]);
+    
     const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users'), where('registrationStatus', '==', 'approved')), [firestore]);
-    const schedulesQuery = useMemoFirebase(() => query(collection(firestore, 'schedules'), where('date', '==', Timestamp.fromDate(dateForScheduleQuery))), [firestore, dateForScheduleQuery]);
-    const attendancesQuery = useMemoFirebase(() => query(collection(firestore, 'attendances'), where('checkInTime', '>=', Timestamp.fromDate(startOfToday)), where('checkInTime', '<=', Timestamp.fromDate(endOfToday))), [firestore, startOfToday, endOfToday]);
-    const holidaysQuery = useMemoFirebase(() => query(collection(firestore, 'holidays'), where('date', '==', Timestamp.fromDate(dateForScheduleQuery))), [firestore, dateForScheduleQuery]);
+    const schedulesQuery = useMemoFirebase(() => {
+        if (!startOfToday) return null;
+        return query(collection(firestore, 'schedules'), where('date', '==', Timestamp.fromDate(startOfToday)))
+    }, [firestore, startOfToday]);
+    const attendancesQuery = useMemoFirebase(() => {
+        if (!startOfToday || !endOfToday) return null;
+        return query(collection(firestore, 'attendances'), where('checkInTime', '>=', Timestamp.fromDate(startOfToday)), where('checkInTime', '<=', Timestamp.fromDate(endOfToday)))
+    }, [firestore, startOfToday, endOfToday]);
+    const holidaysQuery = useMemoFirebase(() => {
+        if (!startOfToday) return null;
+        return query(collection(firestore, 'holidays'), where('date', '==', Timestamp.fromDate(startOfToday)))
+    }, [firestore, startOfToday]);
 
     const { data: users, isLoading: areUsersLoading } = useCollection<UserProfile>(usersQuery);
     const { data: schedules, isLoading: areSchedulesLoading } = useCollection<Schedule>(schedulesQuery);
     const { data: attendances, isLoading: areAttendancesLoading } = useCollection<Attendance>(attendancesQuery);
     const { data: holidays, isLoading: areHolidaysLoading } = useCollection<Holiday>(holidaysQuery);
     
-    const isDataLoading = areUsersLoading || areSchedulesLoading || areAttendancesLoading || areHolidaysLoading;
+    const isDataLoading = areUsersLoading || areSchedulesLoading || areAttendancesLoading || areHolidaysLoading || !today;
 
     useEffect(() => {
         if (!isUserLoading && !isProfileLoading) {
@@ -103,7 +130,7 @@ export default function ManualRekapPage() {
 
     const handleTrigger = async () => {
         setIsTriggering(true);
-        if (!users || !schedules || !attendances || !holidays) {
+        if (!users || !schedules || !attendances || !holidays || !today) {
             toast({ variant: 'destructive', title: 'Data Belum Siap', description: 'Data yang diperlukan untuk rekap belum termuat sepenuhnya.' });
             setIsTriggering(false);
             return;
@@ -208,8 +235,22 @@ export default function ManualRekapPage() {
         setIsTriggering(false);
     };
 
-    if (isUserLoading || isProfileLoading) {
-        return <div>Memuat...</div>;
+    if (isUserLoading || isProfileLoading || !today) {
+        return (
+             <div className="mx-auto grid w-full max-w-2xl flex-1 auto-rows-max gap-6">
+                <Skeleton className="h-8 w-64" />
+                <Card>
+                    <CardHeader>
+                        <Skeleton className="h-6 w-72" />
+                        <Skeleton className="h-4 w-96 mt-1" />
+                    </CardHeader>
+                    <CardContent>
+                        <Skeleton className="h-24 w-full" />
+                        <Skeleton className="h-10 w-full mt-6" />
+                    </CardContent>
+                </Card>
+            </div>
+        );
     }
 
     return (
