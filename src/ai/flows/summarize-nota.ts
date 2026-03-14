@@ -1,3 +1,38 @@
 'use server';
 
-// AI functionality is temporarily disabled to resolve build issues.
+import { ai } from '@/ai/genkit';
+import { z } from 'zod';
+
+const summarizeInputSchema = z.object({
+  notaContent: z.string(),
+});
+
+const summarizeOutputSchema = z.object({
+  summary: z.string().describe('A concise summary of the provided nota content.'),
+});
+
+export const summarizeNota = ai.defineFlow(
+  {
+    name: 'summarizeNota',
+    inputSchema: summarizeInputSchema,
+    outputSchema: summarizeOutputSchema,
+  },
+  async (input) => {
+    
+    const summaryPrompt = ai.definePrompt({
+        name: "summaryPrompt",
+        input: { schema: summarizeInputSchema },
+        output: { schema: summarizeOutputSchema },
+        prompt: `Summarize the following nota details into a short, easy-to-read paragraph. Extract the key information like who, what, when, and how much.
+
+Nota Details:
+---
+${input.notaContent}
+---
+`,
+    });
+
+    const { output } = await summaryPrompt(input);
+    return output!;
+  }
+);
