@@ -87,7 +87,8 @@ const getGeneralReportName = (segmen: string): string => {
 
     if (cleanedSegmen.includes('bbm r2')) return 'BBM R2 Operasional';
     if (cleanedSegmen.includes('bbm r4')) return 'BBM R4 Operasional';
-    if (cleanedSegmen.includes('jasa') || cleanedSegmen.includes('pengiriman')) return 'Jasa Ekspedisi (POS/JNE/J&T dll)';
+    if (cleanedSegmen.includes('pengiriman')) return 'Jasa Ekspedisi (POS/JNE/J&T dll)';
+    if (cleanedSegmen.includes('jasa')) return 'Perincian Jasa Lain-lain';
     if (cleanedSegmen.includes('konsumsi')) return 'Perincian Nota Konsumsi';
     if (cleanedSegmen.includes('material non stok')) return 'Perincian Nota Material Non Stok';
     if (cleanedSegmen.includes('atk')) return 'Perincian Nota ATK';
@@ -376,7 +377,7 @@ const generateRekapitulasiReport = (notas: Nota[], serviceArea: string, projectT
         let dpp = totalJumlahForSegmen;
         let pph = 0;
 
-        const isGroupJasa = keterangan === 'Jasa Ekspedisi (POS/JNE/J&T dll)';
+        const isGroupJasa = keterangan === 'Perincian Jasa Lain-lain' || keterangan === 'Jasa Ekspedisi (POS/JNE/J&T dll)';
 
         if (isGroupJasa) {
             dpp = totalJumlahForSegmen / 1.02; // Reverse calculation from service charge
