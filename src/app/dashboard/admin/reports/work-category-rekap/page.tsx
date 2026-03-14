@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, FileSpreadsheet } from 'lucide-react';
-import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { format, startOfMonth, endOfMonth, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import type { RiwayatGangguan, OtherWork } from '@/lib/types';
 import { productivityWeights } from '@/lib/bobot-produktivitas';
@@ -126,27 +126,34 @@ export default function WorkCategoryRekapPage() {
 
         setIsLoading(true);
 
-        const dataToExport = filteredData.map((item, index) => {
+        const dataToExport = filteredData.map((item) => {
             const isRiwayat = 'noService' in item;
+            const createDate = isRiwayat ? (item as RiwayatGangguan).tanggalOpen : (item as OtherWork).tanggalPengerjaan;
+            const closeDate = isRiwayat ? (item as RiwayatGangguan).tanggalClose : (item as OtherWork).tanggalSelesai;
+
             return {
-                'No': index + 1,
-                'Kategori': getWorkCategory(item) || 'Tidak Terkategori',
+                'Service Number': isRiwayat ? (item as RiwayatGangguan).noService : '-',
+                'WO Number': !isRiwayat ? (item as OtherWork).namaPekerjaan || '' : '',
+                'Ticket Id': (item as RiwayatGangguan).noTiket || '',
+                'Chief': '',
+                'GAUL': '',
+                'Guarantee Status': 0,
                 'Jenis Order': item.jenisOrder,
-                'Order Type': (item as RiwayatGangguan).typeOrder || (item as OtherWork).orderType || '-',
-                'No Tiket/Pekerjaan': (item as RiwayatGangguan).noTiket || (item as OtherWork).namaPekerjaan || '-',
-                'No Service': isRiwayat ? item.noService : '-',
-                'Nama Petugas': item.namaPetugas,
-                'Tanggal Lapor/Kerja': format((isRiwayat ? item.tanggalLapor : item.tanggalPengerjaan).toDate(), 'dd-MM-yyyy HH:mm'),
-                'Keterangan': item.keterangan || '-',
+                'Order Type': (item as RiwayatGangguan).typeOrder || (item as OtherWork).orderType || '',
+                'Create Date(YYYY-MM-DD HH:MM:SS)': createDate?.toDate ? format(createDate.toDate(), 'yyyy-MM-dd HH:mm:ss') : '-',
+                'Closed Date(YYYY-MM-DD HH:MM:SS)': closeDate?.toDate ? format(closeDate.toDate(), 'yyyy-MM-dd HH:mm:ss') : '-',
+                'AREA': 'JAWA BALI',
+                'BRANCH': 'BRANCH SEMARANG',
+                'SERVICE AREA': 'SERVICE AREA KUDUS'
             };
         });
 
         const worksheet = XLSX.utils.json_to_sheet(dataToExport);
         const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'Rekap Kategori');
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Rekap Kategori PBS');
 
         const monthLabel = monthOptions.find(m => m.value === selectedMonth)?.label || selectedMonth;
-        XLSX.writeFile(workbook, `Rekap Kategori - ${selectedCategory} - ${monthLabel}.xlsx`);
+        XLSX.writeFile(workbook, `Rekap_PBS_${selectedCategory}_-_${monthLabel}.xlsx`);
 
         setIsLoading(false);
     };
