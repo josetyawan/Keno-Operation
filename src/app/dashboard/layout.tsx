@@ -1,7 +1,8 @@
+
 'use client';
 
 import Link from 'next/link';
-import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home, Network, Search, BarChart3, Map, FolderGit2, Contact, CalendarClock, ClipboardCheck, CalendarOff, UserCircle, Briefcase, Settings, Building, Wrench, CalendarDays, MessageSquare, Upload, Component, Send, FileWarning, FileSpreadsheet, Files, BookOpen } from 'lucide-react';
+import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home, Network, Search, BarChart3, Map, FolderGit2, Contact, CalendarClock, ClipboardCheck, CalendarOff, UserCircle, Briefcase, Settings, Building, Wrench, CalendarDays, MessageSquare, Upload, Component, Send, FileWarning, FileSpreadsheet, Files, BookOpen, Weight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -48,6 +49,7 @@ const adminNavGroups = [
       { href: '/dashboard/admin/hr/holidays', label: 'Manajemen Hari Libur', icon: CalendarOff, access: 'admin' },
       { href: '/dashboard/admin/hr/leave-rekap', label: 'Rekap Izin/Cuti', icon: CalendarOff, access: 'korlap' },
       { href: '/dashboard/admin/hr/performance', label: 'Impor Performa', icon: Upload, access: 'korlap' },
+      { href: '/dashboard/admin/hr/bobot', label: 'Manajemen Bobot', icon: Weight, access: 'korlap' },
       { href: '/dashboard/hr/work-schedule', label: 'Jadwal Kerja', icon: CalendarDays, access: 'korlap' },
       { href: '/dashboard/hr/attendance/rekap', label: 'Rekap Absensi', icon: ClipboardCheck, access: 'korlap' },
       { href: '/dashboard/alker/rekap', label: 'Rekap Alker', icon: ClipboardCheck, access: 'korlap' },

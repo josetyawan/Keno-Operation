@@ -1,5 +1,4 @@
 
-
 import { Timestamp } from 'firebase/firestore';
 
 export type Nota = {
@@ -231,6 +230,7 @@ export type RiwayatGangguan = {
   materials?: MaterialEvidence[];
   evidenSccUrl?: string;
   dorongClose?: boolean;
+  bobot?: number; // bobot produktivitas
 };
 
 export type OtherWork = {
@@ -358,7 +358,3 @@ export type Performance = {
   totalPerformance: string;
   date: any; // Timestamp
 };
-
-  
-
-    
