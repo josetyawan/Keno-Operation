@@ -2,8 +2,9 @@
 'use client';
 
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, where, doc } from 'firebase/firestore'; // Make sure doc is imported
-import type { UserProfile, Performance } from '@/lib/types';
+import { collection, query, where, doc, Timestamp } from 'firebase/firestore';
+import type { UserProfile, Performance, RiwayatGangguan, OtherWork } from '@/lib/types';
+import { productivityWeights } from '@/lib/bobot-produktivitas';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -11,9 +12,20 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { BarChart3, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, useMemo, useEffect } from 'react';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+// Helper to safely parse bobot which might be a string with a comma
+const parseBobot = (bobot: number | string | undefined): number => {
+    if (typeof bobot === 'number') return bobot;
+    if (typeof bobot === 'string') {
+        const parsed = parseFloat(bobot.replace(',', '.'));
+        return isNaN(parsed) ? 0 : parsed;
+    }
+    return 0;
+};
+
 
 export default function UserPerformancePage() {
     const { user, isUserLoading } = useUser();
@@ -23,8 +35,6 @@ export default function UserPerformancePage() {
     const [selectedPeriod, setSelectedPeriod] = useState<string | undefined>();
     
     const performanceQuery = useMemoFirebase(() => {
-        // Querying by userId is more robust as it's guaranteed to exist for an authenticated user.
-        // The admin has a tool to sync older records that might only have a NIK.
         if (!user?.uid) return null;
         return query(collection(firestore, 'performance'), where('userId', '==', user.uid));
     }, [firestore, user?.uid]);
@@ -57,7 +67,76 @@ export default function UserPerformancePage() {
         return sortedPerformanceRecords.find(p => `${p.tahun}-${String(p.bulan).padStart(2, '0')}` === selectedPeriod);
     }, [sortedPerformanceRecords, selectedPeriod]);
 
-    const isLoading = isUserLoading || isPerformanceLoading;
+    // --- Logic for Manual Performance ---
+    const selectedDateRange = useMemo(() => {
+        if (!selectedPeriod) return null;
+        const [year, month] = selectedPeriod.split('-').map(Number);
+        const startDate = startOfMonth(new Date(year, month - 1));
+        const endDate = endOfMonth(startDate);
+        return { startDate, endDate };
+    }, [selectedPeriod]);
+
+    const riwayatQuery = useMemoFirebase(() => {
+        if (!user?.uid || !selectedDateRange) return null;
+        return query(
+            collection(firestore, 'riwayat-gangguan'),
+            where('userId', '==', user.uid),
+            where('tanggalLapor', '>=', Timestamp.fromDate(selectedDateRange.startDate)),
+            where('tanggalLapor', '<=', Timestamp.fromDate(selectedDateRange.endDate))
+        );
+    }, [firestore, user?.uid, selectedDateRange]);
+
+    const otherWorksQuery = useMemoFirebase(() => {
+        if (!user?.uid || !selectedDateRange) return null;
+        return query(
+            collection(firestore, 'other-works'),
+            where('userId', '==', user.uid),
+            where('tanggalPengerjaan', '>=', Timestamp.fromDate(selectedDateRange.startDate)),
+            where('tanggalPengerjaan', '<=', Timestamp.fromDate(selectedDateRange.endDate))
+        );
+    }, [firestore, user?.uid, selectedDateRange]);
+
+    const { data: riwayatList, isLoading: isRiwayatLoading } = useCollection<RiwayatGangguan>(riwayatQuery);
+    const { data: otherWorksList, isLoading: isOtherWorksLoading } = useCollection<OtherWork>(otherWorksQuery);
+
+    const manualPerformanceData = useMemo(() => {
+        if (isRiwayatLoading || isOtherWorksLoading || !riwayatList || !otherWorksList) return null;
+
+        const JAM_KERJA_SEBULAN = 8 * 22;
+
+        const workItems = [
+            ...riwayatList.map(item => ({...item, date: item.tanggalLapor?.toDate()})),
+            ...otherWorksList.map(item => ({...item, date: item.tanggalPengerjaan?.toDate()}))
+        ];
+
+        let totalBobot = 0;
+        const allWeights = Object.values(productivityWeights).flat();
+
+        workItems.forEach(item => {
+            let bobot = 0;
+            const weightItem = allWeights.find(w => {
+                const isJenisMatch = w.jenis_order_name === item.jenisOrder;
+                const itemOrderType = (item as any).typeOrder;
+                const isOrderTypeMatch = !w.order_type || w.order_type === itemOrderType;
+                return isJenisMatch && isOrderTypeMatch;
+            });
+
+            if (weightItem) {
+                bobot = parseBobot(weightItem.bobot);
+            }
+            totalBobot += bobot;
+        });
+
+        const productivity = (totalBobot / JAM_KERJA_SEBULAN) * 100;
+        return {
+            totalBobot,
+            productivity,
+        };
+    }, [riwayatList, otherWorksList, isRiwayatLoading, isOtherWorksLoading]);
+    
+    // --- End of New Logic ---
+
+    const isLoading = isUserLoading || isPerformanceLoading || isRiwayatLoading || isOtherWorksLoading;
 
     const formatAsPercent = (value: string) => {
         if (typeof value !== 'string' || !value.trim()) return '-';
@@ -67,7 +146,7 @@ export default function UserPerformancePage() {
         return `${(num * 100).toFixed(2)}%`;
     };
 
-    if (isLoading) {
+    if (isUserLoading || isPerformanceLoading) {
         return (
             <div className="space-y-6">
                 <Skeleton className="h-8 w-64" />
@@ -120,7 +199,7 @@ export default function UserPerformancePage() {
                     <div className="grid gap-6">
                         <Card className="bg-primary text-primary-foreground text-center">
                              <CardHeader>
-                                <CardDescription className="text-primary-foreground/80">Total Performa - {format(displayedRecord.date.toDate(), 'MMMM yyyy', {locale: idLocale})}</CardDescription>
+                                <CardDescription className="text-primary-foreground/80">Total Performa (HO) - {format(displayedRecord.date.toDate(), 'MMMM yyyy', {locale: idLocale})}</CardDescription>
                                 <CardTitle className="text-6xl font-bold tracking-tighter">
                                     {formatAsPercent(displayedRecord.totalPerformance)}
                                 </CardTitle>
@@ -128,7 +207,7 @@ export default function UserPerformancePage() {
                         </Card>
                         <Card>
                             <CardHeader>
-                                <CardTitle>Rincian Nilai</CardTitle>
+                                <CardTitle>Rincian Nilai (HO)</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <Table>
@@ -159,6 +238,36 @@ export default function UserPerformancePage() {
                         </Card>
                     </div>
                 )}
+                
+                {/* Manual Performance Card */}
+                 {isLoading ? (
+                    <Card>
+                        <CardHeader><Skeleton className="h-6 w-1/2" /></CardHeader>
+                        <CardContent><Skeleton className="h-20 w-full" /></CardContent>
+                    </Card>
+                ) : displayedRecord && manualPerformanceData !== null ? (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Performa Produktivitas (Manual)</CardTitle>
+                            <CardDescription>Performa dihitung berdasarkan bobot pekerjaan yang diselesaikan pada periode yang sama.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableBody>
+                                    <TableRow>
+                                        <TableCell className="font-medium">Total Bobot</TableCell>
+                                        <TableCell className="text-right">{manualPerformanceData.totalBobot.toFixed(2)}</TableCell>
+                                    </TableRow>
+                                    <TableRow>
+                                        <TableCell className="font-medium">Produktivitas</TableCell>
+                                        <TableCell className="text-right font-bold">{manualPerformanceData.productivity.toFixed(2)}%</TableCell>
+                                    </TableRow>
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                ) : null}
+
                 </>
             ) : (
                 <Card>
