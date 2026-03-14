@@ -112,8 +112,8 @@ export default function UserPerformancePage() {
         const JAM_KERJA_SEBULAN = 8 * 22;
 
         const workItems = [
-            ...filteredRiwayat.map(item => ({...item, date: item.tanggalLapor?.toDate()})),
-            ...filteredOtherWorks.map(item => ({...item, date: item.tanggalPengerjaan?.toDate()}))
+            ...filteredRiwayat,
+            ...filteredOtherWorks
         ];
 
         let totalBobot = 0;
@@ -121,7 +121,7 @@ export default function UserPerformancePage() {
 
         workItems.forEach(item => {
             let bobot = 0;
-            const itemOrderType = (item as any).typeOrder || (item as any).orderType; // FIX: Check both properties
+            const itemOrderType = (item as RiwayatGangguan).typeOrder || (item as OtherWork).orderType;
 
             const weightItem = allWeights.find(w => {
                 const isJenisMatch = w.jenis_order_name === item.jenisOrder;
@@ -170,7 +170,7 @@ export default function UserPerformancePage() {
     return (
         <div className="space-y-6">
             <div className="flex items-center gap-4">
-                <Button onClick={() => router.push('/dashboard/hr/performance/goodbye')} variant="outline" size="icon" className="h-8 w-8">
+                <Button onClick={() => router.push('/dashboard')} variant="outline" size="icon" className="h-8 w-8">
                     <ArrowLeft className="h-4 w-4" />
                 </Button>
                 <div>

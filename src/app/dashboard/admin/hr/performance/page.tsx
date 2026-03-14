@@ -135,13 +135,13 @@ export default function AdminPerformancePage() {
     }, [availableManualPeriods, manualPeriod]);
 
     const manualPerformanceData = useMemo(() => {
-        if (!manualPeriod || !allUsers) return [];
+        if (!manualPeriod || !allUsers || !riwayatList || !otherWorksList) return [];
 
         const JAM_KERJA_SEBULAN = 8 * 22; // 8 jam/hari, 22 hari/bulan
 
         const workItems = [
-            ...(riwayatList || []).map(item => ({...item, date: item.tanggalLapor?.toDate()})),
-            ...(otherWorksList || []).map(item => ({...item, date: item.tanggalPengerjaan?.toDate()}))
+            ...riwayatList,
+            ...otherWorksList
         ];
         
         const bobotByUser = new Map<string, number>();
@@ -151,7 +151,7 @@ export default function AdminPerformancePage() {
             let bobot = 0;
             
             const allWeights = Object.values(productivityWeights).flat();
-            const itemOrderType = (item as any).typeOrder || (item as any).orderType; // FIX: Check both properties
+            const itemOrderType = (item as RiwayatGangguan).typeOrder || (item as OtherWork).orderType;
 
             const weightItem = allWeights.find(w => {
                 const isJenisMatch = w.jenis_order_name === item.jenisOrder;
