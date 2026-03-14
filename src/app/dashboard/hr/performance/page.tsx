@@ -49,32 +49,7 @@ export default function UserPerformancePage() {
         });
     }, [performanceRecords]);
     
-    const availablePeriods = useMemo(() => {
-        if (!sortedPerformanceRecords) return [];
-        const periods = sortedPerformanceRecords.map(p => `${p.tahun}-${String(p.bulan).padStart(2, '0')}`);
-        return [...new Set(periods)]; // Unique periods
-    }, [sortedPerformanceRecords]);
-    
-    useEffect(() => {
-        if (availablePeriods.length > 0 && !selectedPeriod) {
-            setSelectedPeriod(availablePeriods[0]);
-        }
-    }, [availablePeriods, selectedPeriod]);
-
-    const displayedRecord = useMemo(() => {
-        if (!selectedPeriod || !sortedPerformanceRecords) return null;
-        return sortedPerformanceRecords.find(p => `${p.tahun}-${String(p.bulan).padStart(2, '0')}` === selectedPeriod);
-    }, [sortedPerformanceRecords, selectedPeriod]);
-
     // --- Logic for Manual Performance ---
-    const selectedDateRange = useMemo(() => {
-        if (!selectedPeriod) return null;
-        const [year, month] = selectedPeriod.split('-').map(Number);
-        const startDate = startOfMonth(new Date(year, month - 1));
-        const endDate = endOfMonth(startDate);
-        return { startDate, endDate };
-    }, [selectedPeriod]);
-
     const riwayatQuery = useMemoFirebase(() => {
         if (!user?.uid) return null;
         return query(
@@ -93,6 +68,59 @@ export default function UserPerformancePage() {
 
     const { data: riwayatList, isLoading: isRiwayatLoading } = useCollection<RiwayatGangguan>(riwayatQuery);
     const { data: otherWorksList, isLoading: isOtherWorksLoading } = useCollection<OtherWork>(otherWorksQuery);
+
+    const availablePeriods = useMemo(() => {
+        const periods = new Set<string>();
+        
+        // Add periods from HO performance records
+        if (sortedPerformanceRecords) {
+            sortedPerformanceRecords.forEach(p => {
+                periods.add(`${p.tahun}-${String(p.bulan).padStart(2, '0')}`);
+            });
+        }
+        
+        // Add periods from riwayatList
+        if (riwayatList) {
+            riwayatList.forEach(item => {
+                const itemDate = item.tanggalLapor?.toDate();
+                if (itemDate) {
+                    periods.add(format(itemDate, 'yyyy-MM'));
+                }
+            });
+        }
+        
+        // Add periods from otherWorksList
+        if (otherWorksList) {
+            otherWorksList.forEach(item => {
+                const itemDate = item.tanggalPengerjaan?.toDate();
+                if (itemDate) {
+                    periods.add(format(itemDate, 'yyyy-MM'));
+                }
+            });
+        }
+        
+        return Array.from(periods).sort().reverse();
+    }, [sortedPerformanceRecords, riwayatList, otherWorksList]);
+    
+    useEffect(() => {
+        if (availablePeriods.length > 0 && !selectedPeriod) {
+            setSelectedPeriod(availablePeriods[0]);
+        }
+    }, [availablePeriods, selectedPeriod]);
+
+    const displayedRecord = useMemo(() => {
+        if (!selectedPeriod || !sortedPerformanceRecords) return null;
+        return sortedPerformanceRecords.find(p => `${p.tahun}-${String(p.bulan).padStart(2, '0')}` === selectedPeriod);
+    }, [sortedPerformanceRecords, selectedPeriod]);
+
+
+    const selectedDateRange = useMemo(() => {
+        if (!selectedPeriod) return null;
+        const [year, month] = selectedPeriod.split('-').map(Number);
+        const startDate = startOfMonth(new Date(year, month - 1));
+        const endDate = endOfMonth(startDate);
+        return { startDate, endDate };
+    }, [selectedPeriod]);
 
     const manualPerformanceData = useMemo(() => {
         if (isRiwayatLoading || isOtherWorksLoading || !riwayatList || !otherWorksList || !selectedDateRange) return null;
@@ -179,7 +207,7 @@ export default function UserPerformancePage() {
                 </div>
             </div>
 
-            {sortedPerformanceRecords && sortedPerformanceRecords.length > 0 ? (
+            {(availablePeriods && availablePeriods.length > 0) ? (
                 <>
                 <Card>
                     <CardHeader>
@@ -202,79 +230,80 @@ export default function UserPerformancePage() {
                         </Select>
                     </CardHeader>
                 </Card>
-
-                {displayedRecord && (
-                    <div className="grid gap-6">
-                        <Card className="bg-primary text-primary-foreground text-center">
-                             <CardHeader>
-                                <CardDescription className="text-primary-foreground/80">Total Performa (HO) - {format(displayedRecord.date.toDate(), 'MMMM yyyy', {locale: idLocale})}</CardDescription>
-                                <CardTitle className="text-6xl font-bold tracking-tighter">
-                                    {formatAsPercent(displayedRecord.totalPerformance)}
-                                </CardTitle>
-                            </CardHeader>
+                
+                <div className="grid md:grid-cols-2 gap-6">
+                    {displayedRecord ? (
+                        <div className="space-y-6">
+                            <Card className="bg-primary text-primary-foreground text-center">
+                                <CardHeader>
+                                    <CardDescription className="text-primary-foreground/80">Total Performa (HO) - {format(displayedRecord.date.toDate(), 'MMMM yyyy', {locale: idLocale})}</CardDescription>
+                                    <CardTitle className="text-6xl font-bold tracking-tighter">
+                                        {formatAsPercent(displayedRecord.totalPerformance)}
+                                    </CardTitle>
+                                </CardHeader>
+                            </Card>
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Rincian Nilai (HO)</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <Table>
+                                        <TableBody>
+                                            <TableRow>
+                                                <TableCell className="font-medium">Nilai Kualitas</TableCell>
+                                                <TableCell className="text-right">{displayedRecord.nilaiKualitas}</TableCell>
+                                            </TableRow>
+                                            <TableRow>
+                                                <TableCell className="font-medium">Nilai Kontribusi</TableCell>
+                                                <TableCell className="text-right">{displayedRecord.nilaiKontribusi}</TableCell>
+                                            </TableRow>
+                                            <TableRow>
+                                                <TableCell className="font-medium">Nilai Kedisiplinan</TableCell>
+                                                <TableCell className="text-right">{displayedRecord.nilaiKedisiplinan}</TableCell>
+                                            </TableRow>
+                                            <TableRow>
+                                                <TableCell className="font-medium">Performansi Unit</TableCell>
+                                                <TableCell className="text-right">{formatAsPercent(displayedRecord.performance1)}</TableCell>
+                                            </TableRow>
+                                            <TableRow>
+                                                <TableCell className="font-medium">Performansi Individu</TableCell>
+                                                <TableCell className="text-right">{formatAsPercent(displayedRecord.performance2)}</TableCell>
+                                            </TableRow>
+                                        </TableBody>
+                                    </Table>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    ) : <Card><CardContent className="py-10 text-center text-muted-foreground">Tidak ada data performa resmi dari HO untuk periode ini.</CardContent></Card>}
+                    
+                    {isLoading ? (
+                        <Card>
+                            <CardHeader><Skeleton className="h-6 w-1/2" /></CardHeader>
+                            <CardContent><Skeleton className="h-20 w-full" /></CardContent>
                         </Card>
+                    ) : manualPerformanceData !== null ? (
                         <Card>
                             <CardHeader>
-                                <CardTitle>Rincian Nilai (HO)</CardTitle>
+                                <CardTitle>Performa Produktivitas (Manual)</CardTitle>
+                                <CardDescription>Dihitung dari laporan yang Anda input di aplikasi pada periode yang dipilih.</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <Table>
                                     <TableBody>
                                         <TableRow>
-                                            <TableCell className="font-medium">Nilai Kualitas</TableCell>
-                                            <TableCell className="text-right">{displayedRecord.nilaiKualitas}</TableCell>
+                                            <TableCell className="font-medium">Total Bobot</TableCell>
+                                            <TableCell className="text-right">{manualPerformanceData.totalBobot.toFixed(2)}</TableCell>
                                         </TableRow>
                                         <TableRow>
-                                            <TableCell className="font-medium">Nilai Kontribusi</TableCell>
-                                            <TableCell className="text-right">{displayedRecord.nilaiKontribusi}</TableCell>
-                                        </TableRow>
-                                        <TableRow>
-                                            <TableCell className="font-medium">Nilai Kedisiplinan</TableCell>
-                                            <TableCell className="text-right">{displayedRecord.nilaiKedisiplinan}</TableCell>
-                                        </TableRow>
-                                        <TableRow>
-                                            <TableCell className="font-medium">Performansi Unit</TableCell>
-                                            <TableCell className="text-right">{formatAsPercent(displayedRecord.performance1)}</TableCell>
-                                        </TableRow>
-                                        <TableRow>
-                                            <TableCell className="font-medium">Performansi Individu</TableCell>
-                                            <TableCell className="text-right">{formatAsPercent(displayedRecord.performance2)}</TableCell>
+                                            <TableCell className="font-medium">Produktivitas</TableCell>
+                                            <TableCell className="text-right font-bold">{manualPerformanceData.productivity.toFixed(2)}%</TableCell>
                                         </TableRow>
                                     </TableBody>
                                 </Table>
                             </CardContent>
                         </Card>
-                    </div>
-                )}
-                
-                {/* Manual Performance Card */}
-                 {isLoading ? (
-                    <Card>
-                        <CardHeader><Skeleton className="h-6 w-1/2" /></CardHeader>
-                        <CardContent><Skeleton className="h-20 w-full" /></CardContent>
-                    </Card>
-                ) : displayedRecord && manualPerformanceData !== null ? (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Performa Produktivitas (Manual)</CardTitle>
-                            <CardDescription>Performa dihitung berdasarkan bobot pekerjaan yang diselesaikan pada periode yang sama.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <Table>
-                                <TableBody>
-                                    <TableRow>
-                                        <TableCell className="font-medium">Total Bobot</TableCell>
-                                        <TableCell className="text-right">{manualPerformanceData.totalBobot.toFixed(2)}</TableCell>
-                                    </TableRow>
-                                    <TableRow>
-                                        <TableCell className="font-medium">Produktivitas</TableCell>
-                                        <TableCell className="text-right font-bold">{manualPerformanceData.productivity.toFixed(2)}%</TableCell>
-                                    </TableRow>
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-                ) : null}
+                    ) : <Card><CardContent className="py-10 text-center text-muted-foreground">Tidak ada pekerjaan yang tercatat untuk periode ini.</CardContent></Card>}
+                </div>
 
                 </>
             ) : (
