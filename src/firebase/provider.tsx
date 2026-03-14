@@ -6,7 +6,7 @@ import type { FirebaseApp } from 'firebase/app';
 import type { Auth, User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
 import type { Firestore } from 'firebase/firestore';
-import type { Storage } from 'firebase/storage';
+import type { FirebaseStorage } from 'firebase/storage';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 
@@ -15,7 +15,7 @@ interface FirebaseContextState {
   firebaseApp: FirebaseApp;
   auth: Auth;
   firestore: Firestore;
-  storage: Storage;
+  storage: FirebaseStorage;
   user: User | null;
   isUserLoading: boolean;
 }
@@ -24,7 +24,7 @@ export const FirebaseContext = createContext<FirebaseContextState | undefined>(u
 
 // --- Provider Component ---
 export function FirebaseProvider({ children }: { children: ReactNode }) {
-  const [services, setServices] = useState<{ firebaseApp: FirebaseApp; auth: Auth; firestore: Firestore; storage: Storage } | null>(null);
+  const [services, setServices] = useState<{ firebaseApp: FirebaseApp; auth: Auth; firestore: Firestore; storage: FirebaseStorage; } | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [isUserLoading, setIsUserLoading] = useState(true);
 
@@ -87,7 +87,7 @@ function useFirebaseContext() {
 export const useFirebaseApp = (): FirebaseApp => useFirebaseContext().firebaseApp;
 export const useAuth = (): Auth => useFirebaseContext().auth;
 export const useFirestore = (): Firestore => useFirebaseContext().firestore;
-export const useStorage = (): Storage => useFirebaseContext().storage;
+export const useStorage = (): FirebaseStorage => useFirebaseContext().storage;
 export const useUser = () => {
   const { user, isUserLoading } = useFirebaseContext();
   return { user, isUserLoading, userError: null };
