@@ -82,6 +82,7 @@ const adminNavGroups = [
       { href: '/dashboard/admin/pelanggan', label: 'Data Pelanggan', icon: Contact, access: 'korlap' },
       { href: '/dashboard/admin/other-works', label: 'Pekerjaan Lain-lain', icon: Briefcase, access: 'korlap' },
       { href: '/dashboard/admin/gamas-approval', label: 'Persetujuan Gamas', icon: ClipboardCheck, access: 'korlap' },
+      { href: '/dashboard/admin/provisioning', label: 'Dashboard Provisioning', icon: FileSpreadsheet, access: 'korlap' },
       { href: '/dashboard/admin/reports/assurance-rekap', label: 'Rekap Assurance', icon: FileSpreadsheet, access: 'korlap' },
       { href: '/dashboard/admin/reports/work-category-rekap', label: 'Rekap Kategori Kerja', icon: FileSpreadsheet, access: 'korlap' },
       { href: '/dashboard/admin/inventory/orbit', label: 'Inventory Orbit', icon: Component, access: 'admin' },
