@@ -13,6 +13,6 @@ cron:
   - schedule: '0 8 * * *'
     uri: '/api/cron/daily-schedule'
     timeZone: 'Asia/Jakarta'
-  - schedule: '0 12,17 * * *'
+  - schedule: '0 8,10,12,14,16,17 * * *'
     uri: '/api/cron/b2c-rekap'
     timeZone: 'Asia/Jakarta'

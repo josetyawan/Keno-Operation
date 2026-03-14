@@ -75,7 +75,6 @@ export default function AttendanceRekapPage() {
         if (!attendances || attendances.length === 0) return null;
         const userIds = [...new Set(attendances.map(a => a.userId))];
         
-        // Firestore 'in' query is limited to 30 items. If more, we need to chunk the queries.
         if (userIds.length === 0) return null;
 
         const chunks: string[][] = [];
@@ -83,8 +82,6 @@ export default function AttendanceRekapPage() {
             chunks.push(userIds.slice(i, i + 30));
         }
         
-        // This component doesn't combine results from multiple queries, so we'll just query the first chunk.
-        // For a fully scalable solution, a backend function or more complex client-side logic would be needed.
         if(chunks.length > 1) {
              toast({variant: 'destructive', title: 'Terlalu Banyak Pengguna', description: `Hanya nama untuk 30 dari ${userIds.length} pengguna pertama yang dapat ditampilkan.`})
         }
@@ -115,17 +112,13 @@ export default function AttendanceRekapPage() {
             description: 'Memuat semua gambar sebelum membuat kolase.',
         });
 
-        // Get all images within the printable area
         const images = Array.from(printableArea.getElementsByTagName('img'));
         const imageLoadPromises = images.map(img => {
-            // If the image is already loaded and has valid dimensions, resolve immediately.
             if (img.complete && img.naturalHeight !== 0) {
                 return Promise.resolve();
             }
-            // Otherwise, wait for it to load or fail.
             return new Promise<void>((resolve) => {
                 img.onload = () => resolve();
-                // On error, we still resolve so that one broken image doesn't prevent the download.
                 img.onerror = () => {
                     console.warn(`Could not load image for download: ${img.src}`);
                     resolve(); 
@@ -140,11 +133,20 @@ export default function AttendanceRekapPage() {
                 title: 'Membuat kolase...',
                 description: 'Semua gambar telah dimuat, proses pembuatan file JPG dimulai.',
             });
+            
+            const filter = (node: HTMLElement): boolean => {
+              if (node instanceof HTMLLinkElement && node.href.includes('fonts.googleapis.com')) {
+                return false;
+              }
+              return true;
+            };
 
             const dataUrl = await toJpeg(printableArea, { 
                 quality: 0.95,
                 backgroundColor: '#ffffff',
                 pixelRatio: 2,
+                cacheBust: true,
+                filter,
              });
             const link = document.createElement('a');
             const dateString = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : 'rekap';
