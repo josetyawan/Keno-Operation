@@ -92,7 +92,10 @@ export default function NewAlkerPage() {
   const { data: existingChecklist, isLoading: isChecklistLoading } = useDoc<AlkerChecklist>(checklistDocRef);
 
 
-  const canListUsers = useMemo(() => currentUserProfile?.role === 'admin' || currentUserProfile?.role === 'korlap', [currentUserProfile]);
+  const canListUsers = useMemo(() => {
+    if (!currentUserProfile) return false;
+    return ['admin', 'korlap', 'teknisi'].includes(currentUserProfile.role);
+  }, [currentUserProfile]);
 
   const usersQuery = useMemoFirebase(() => {
       if (!canListUsers) return null;
@@ -356,10 +359,10 @@ export default function NewAlkerPage() {
                                 <Select 
                                     onValueChange={(value) => field.onChange(value === 'none' ? '' : value)} 
                                     value={field.value || 'none'}
-                                    disabled={!canListUsers}
+                                    disabled={!canListUsers && !areUsersLoading}
                                 >
                                     <SelectTrigger>
-                                        <SelectValue placeholder={canListUsers ? "Pilih rekan kerja..." : "Hanya Admin/Korlap"} />
+                                        <SelectValue placeholder={canListUsers ? "Pilih rekan kerja..." : (areUsersLoading ? "Memuat..." : "Tidak ada data")} />
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="none">Tidak Ada</SelectItem>
