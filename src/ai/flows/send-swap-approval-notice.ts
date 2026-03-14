@@ -8,10 +8,9 @@ const swapApprovalNoticeSchema = z.object({
   replacementName: z.string(),
   swapDate: z.string(),
 });
-type SwapApprovalNoticeInput = z.infer<typeof swapApprovalNoticeSchema>;
 
 export async function sendSwapApprovalNotice(
-  input: SwapApprovalNoticeInput
+  input: z.infer<typeof swapApprovalNoticeSchema>
 ): Promise<string> {
   return sendSwapApprovalNoticeFlow(input);
 }

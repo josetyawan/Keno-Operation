@@ -9,12 +9,9 @@ const sendProductivityRekapInputSchema = z.object({
   totalVisit: z.number(),
   date: z.string(),
 });
-type SendProductivityRekapInput = z.infer<
-  typeof sendProductivityRekapInputSchema
->;
 
 export async function sendProductivityRekap(
-  input: SendProductivityRekapInput
+  input: z.infer<typeof sendProductivityRekapInputSchema>
 ): Promise<string> {
   return sendProductivityRekapFlow(input);
 }

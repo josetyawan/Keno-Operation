@@ -9,12 +9,9 @@ const gamasDesignatorNoticeSchema = z.object({
   designator: z.string(),
   rejectionReason: z.string(),
 });
-type GamasDesignatorNoticeInput = z.infer<
-  typeof gamasDesignatorNoticeSchema
->;
 
 export async function sendGamasDesignatorNotice(
-  input: GamasDesignatorNoticeInput
+  input: z.infer<typeof gamasDesignatorNoticeSchema>
 ): Promise<string> {
   return sendGamasDesignatorNoticeFlow(input);
 }

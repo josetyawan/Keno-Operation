@@ -8,18 +8,16 @@ const linkAjaInputSchema = z.object({
   description: z.string(),
   invoiceId: z.string(),
 });
-type LinkAjaInput = z.infer<typeof linkAjaInputSchema>;
 
 const linkAjaOutputSchema = z.object({
   success: z.boolean(),
   redirectUrl: z.string().optional(),
   message: z.string().optional(),
 });
-type LinkAjaOutput = z.infer<typeof linkAjaOutputSchema>;
 
 export async function sendLinkAjaPayment(
-  input: LinkAjaInput
-): Promise<LinkAjaOutput> {
+  input: z.infer<typeof linkAjaInputSchema>
+): Promise<z.infer<typeof linkAjaOutputSchema>> {
   return sendLinkAjaPaymentFlow(input);
 }
 

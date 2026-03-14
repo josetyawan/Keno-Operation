@@ -18,9 +18,8 @@ const sendPaidNoticeInputSchema = z.object({
   grandTotal: z.number(),
   paidDate: z.string(),
 });
-type SendPaidNoticeInput = z.infer<typeof sendPaidNoticeInputSchema>;
 
-export async function sendPaidNotice(input: SendPaidNoticeInput): Promise<string> {
+export async function sendPaidNotice(input: z.infer<typeof sendPaidNoticeInputSchema>): Promise<string> {
   return sendPaidNoticeFlow(input);
 }
 
