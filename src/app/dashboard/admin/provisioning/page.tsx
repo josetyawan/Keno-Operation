@@ -138,19 +138,20 @@ export default function ProvisioningDashboardPage() {
         
         for (let i = 0; i < jsonData.length; i++) {
             const row = jsonData[i];
+            
             const scOrderValue = row[headerMapping.scOrder!]?.toString() || '';
             let finalScOrder = scOrderValue;
 
             if (scOrderValue) {
-                const aoIndex = scOrderValue.indexOf('AOk');
-                const moIndex = scOrderValue.indexOf('MOk');
-    
-                if (aoIndex !== -1) {
-                    finalScOrder = scOrderValue.substring(aoIndex).split('_')[0] || '';
-                } else if (moIndex !== -1) {
-                    finalScOrder = scOrderValue.substring(moIndex).split('_')[0] || '';
+                const aoMatch = scOrderValue.match(/(AOk[a-zA-Z0-9]+)/);
+                const moMatch = scOrderValue.match(/(MOk[a-zA-Z0-9]+)/);
+
+                if (aoMatch && aoMatch[0]) {
+                    finalScOrder = aoMatch[0];
+                } else if (moMatch && moMatch[0]) {
+                    finalScOrder = moMatch[0];
                 } else if (scOrderValue.startsWith('SC')) {
-                    finalScOrder = scOrderValue.split('_')[0] || '';
+                    finalScOrder = scOrderValue.split('_')[0];
                 }
             } else {
                 finalScOrder = '-';
@@ -345,5 +346,3 @@ export default function ProvisioningDashboardPage() {
     </div>
   );
 }
-
-    
