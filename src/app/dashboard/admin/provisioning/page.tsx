@@ -88,11 +88,30 @@ export default function ProvisioningDashboardPage() {
         };
         
         const processedData = jsonData.map((row): ProvisioningRecord => {
-          const scOrderValue = row[headerMapping.scOrder!] || '';
+          const scOrderValue = row[headerMapping.scOrder!]?.toString() || '';
           let finalScOrder = scOrderValue;
-          if (scOrderValue && scOrderValue.includes('AO')) {
-            finalScOrder = scOrderValue.split('_').find((part: string) => part.startsWith('AO')) || scOrderValue;
-          }
+
+            if (scOrderValue) {
+                const aoIndex = scOrderValue.indexOf('AOk');
+                const moIndex = scOrderValue.indexOf('MOk');
+
+                let targetIndex = -1;
+                if (aoIndex !== -1) {
+                    targetIndex = aoIndex;
+                } else if (moIndex !== -1) {
+                    targetIndex = moIndex;
+                }
+
+                if (targetIndex !== -1) {
+                    const fromTarget = scOrderValue.substring(targetIndex);
+                    finalScOrder = fromTarget.split('_')[0] || '';
+                } else if (scOrderValue.startsWith('SC')) {
+                    finalScOrder = scOrderValue.split('_')[0] || '';
+                }
+            } else {
+                finalScOrder = '-';
+            }
+
 
           const formatDateValue = (dateValue: any) => {
               if (!dateValue) return '-';
