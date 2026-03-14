@@ -9,7 +9,7 @@ const rejectionNoticeSchema = z.object({
   segment: z.string(),
   reason: z.string(),
 });
-export type RejectionNoticeInput = z.infer<typeof rejectionNoticeSchema>;
+type RejectionNoticeInput = z.infer<typeof rejectionNoticeSchema>;
 
 export async function sendRejectionNotice(
   input: RejectionNoticeInput

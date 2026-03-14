@@ -9,7 +9,7 @@ const gamasDesignatorNoticeSchema = z.object({
   designator: z.string(),
   rejectionReason: z.string(),
 });
-export type GamasDesignatorNoticeInput = z.infer<
+type GamasDesignatorNoticeInput = z.infer<
   typeof gamasDesignatorNoticeSchema
 >;
 

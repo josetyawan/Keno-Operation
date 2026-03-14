@@ -3,13 +3,13 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
-export const sendProductivityRekapInputSchema = z.object({
+const sendProductivityRekapInputSchema = z.object({
   unit: z.string(),
   totalSales: z.number(),
   totalVisit: z.number(),
   date: z.string(),
 });
-export type SendProductivityRekapInput = z.infer<
+type SendProductivityRekapInput = z.infer<
   typeof sendProductivityRekapInputSchema
 >;
 

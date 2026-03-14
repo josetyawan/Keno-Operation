@@ -8,7 +8,7 @@ const dailyRekapInputSchema = z.object({
   photos: z.array(z.string()),
   photoCaption: z.string().optional(),
 });
-export type DailyRekapInput = z.infer<typeof dailyRekapInputSchema>;
+type DailyRekapInput = z.infer<typeof dailyRekapInputSchema>;
 
 export async function sendDailyRekapReport(
   input: DailyRekapInput

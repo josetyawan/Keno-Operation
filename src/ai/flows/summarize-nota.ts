@@ -6,12 +6,12 @@ import { z } from 'zod';
 const summarizeInputSchema = z.object({
   notaContent: z.string(),
 });
-export type SummarizeNotaInput = z.infer<typeof summarizeInputSchema>;
+type SummarizeNotaInput = z.infer<typeof summarizeInputSchema>;
 
 const summarizeOutputSchema = z.object({
   summary: z.string().describe('A concise summary of the provided nota content.'),
 });
-export type SummarizeNotaOutput = z.infer<typeof summarizeOutputSchema>;
+type SummarizeNotaOutput = z.infer<typeof summarizeOutputSchema>;
 
 export async function summarizeNota(
   input: SummarizeNotaInput

@@ -9,7 +9,7 @@ const gamasReportNoticeSchema = z.object({
   status: z.string(),
   rejectionReason: z.string().optional(),
 });
-export type GamasReportNoticeInput = z.infer<typeof gamasReportNoticeSchema>;
+type GamasReportNoticeInput = z.infer<typeof gamasReportNoticeSchema>;
 
 export async function sendGamasReportNotice(
   input: GamasReportNoticeInput
