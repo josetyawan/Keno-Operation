@@ -29,6 +29,7 @@ type ProvisioningRecord = {
 };
 
 const ITEMS_PER_PAGE = 10;
+const LOCAL_STORAGE_KEY = 'provisioningData';
 
 export default function ProvisioningDashboardPage() {
   const { toast } = useToast();
@@ -38,6 +39,26 @@ export default function ProvisioningDashboardPage() {
   const [isImporting, setIsImporting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isDataInitialized, setIsDataInitialized] = useState(false);
+
+  // Load data from localStorage on initial mount
+  useEffect(() => {
+    try {
+      const storedData = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (storedData) {
+        const parsedData = JSON.parse(storedData);
+        if (Array.isArray(parsedData)) {
+          setData(parsedData);
+          const uniqueWorkzones = [...new Set(parsedData.map((item: ProvisioningRecord) => item.workzone))].sort();
+          setWorkzones(uniqueWorkzones);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load data from localStorage:", error);
+      localStorage.removeItem(LOCAL_STORAGE_KEY);
+    }
+    setIsDataInitialized(true);
+  }, []);
 
   const findHeader = (headers: string[], aliases: string[]): string | undefined => {
     const lowerAliases = aliases.map(a => a.toLowerCase().trim());
@@ -88,23 +109,17 @@ export default function ProvisioningDashboardPage() {
         };
         
         const processedData = jsonData.map((row): ProvisioningRecord => {
-          const scOrderValue = row[headerMapping.scOrder!]?.toString() || '';
-          let finalScOrder = scOrderValue;
+            const scOrderValue = row[headerMapping.scOrder!]?.toString() || '';
+            let finalScOrder = scOrderValue;
 
             if (scOrderValue) {
                 const aoIndex = scOrderValue.indexOf('AOk');
                 const moIndex = scOrderValue.indexOf('MOk');
-
-                let targetIndex = -1;
+    
                 if (aoIndex !== -1) {
-                    targetIndex = aoIndex;
+                    finalScOrder = scOrderValue.substring(aoIndex).split('_')[0] || '';
                 } else if (moIndex !== -1) {
-                    targetIndex = moIndex;
-                }
-
-                if (targetIndex !== -1) {
-                    const fromTarget = scOrderValue.substring(targetIndex);
-                    finalScOrder = fromTarget.split('_')[0] || '';
+                    finalScOrder = scOrderValue.substring(moIndex).split('_')[0] || '';
                 } else if (scOrderValue.startsWith('SC')) {
                     finalScOrder = scOrderValue.split('_')[0] || '';
                 }
@@ -137,6 +152,7 @@ export default function ProvisioningDashboardPage() {
         });
 
         setData(processedData);
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(processedData)); // Save to localStorage
         
         const uniqueWorkzones = [...new Set(processedData.map(item => item.workzone))].sort();
         setWorkzones(uniqueWorkzones);
@@ -176,6 +192,14 @@ export default function ProvisioningDashboardPage() {
   }, [filteredData, currentPage]);
   
   const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
+  
+  if (!isDataInitialized) {
+      return (
+          <div className="flex items-center justify-center h-full">
+              <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+      );
+  }
 
   return (
     <div className="space-y-6">
