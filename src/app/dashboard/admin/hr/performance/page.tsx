@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -152,10 +151,11 @@ export default function AdminPerformancePage() {
             let bobot = 0;
             
             const allWeights = Object.values(productivityWeights).flat();
+            const itemOrderType = (item as any).typeOrder || (item as any).orderType; // FIX: Check both properties
 
             const weightItem = allWeights.find(w => {
                 const isJenisMatch = w.jenis_order_name === item.jenisOrder;
-                const isOrderTypeMatch = !w.order_type || w.order_type === item.typeOrder;
+                const isOrderTypeMatch = !w.order_type || w.order_type === itemOrderType;
                 return isJenisMatch && isOrderTypeMatch;
             });
 

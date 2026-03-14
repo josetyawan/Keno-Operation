@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
@@ -122,9 +121,10 @@ export default function UserPerformancePage() {
 
         workItems.forEach(item => {
             let bobot = 0;
+            const itemOrderType = (item as any).typeOrder || (item as any).orderType; // FIX: Check both properties
+
             const weightItem = allWeights.find(w => {
                 const isJenisMatch = w.jenis_order_name === item.jenisOrder;
-                const itemOrderType = (item as any).typeOrder;
                 const isOrderTypeMatch = !w.order_type || w.order_type === itemOrderType;
                 return isJenisMatch && isOrderTypeMatch;
             });
