@@ -83,7 +83,7 @@ export default function AttendanceRekapPage() {
         }
         
         if(chunks.length > 1) {
-             toast({variant: 'destructive', title: 'Terlalu Banyak Pengguna', description: `Hanya nama untuk 30 dari ${userIds.length} pengguna pertama yang dapat ditampilkan.`})
+             toast({variant: 'destructive', title: 'Terlalu Banyak Pengguna', description: `Hanya nama untuk 30 dari ${'${userIds.length}'} pengguna pertama yang dapat ditampilkan.`})
         }
         
         return query(collection(firestore, 'users'), where('id', 'in', chunks[0]));
@@ -120,7 +120,7 @@ export default function AttendanceRekapPage() {
             return new Promise<void>((resolve) => {
                 img.onload = () => resolve();
                 img.onerror = () => {
-                    console.warn(`Could not load image for download: ${img.src}`);
+                    console.warn(`Could not load image for download: ${'${img.src}'}`);
                     resolve(); 
                 };
             });
@@ -179,7 +179,7 @@ export default function AttendanceRekapPage() {
             await batch.commit();
             toast({
                 title: "Semua Absensi Dihapus",
-                description: `${attendances.length} data absensi untuk tanggal ini telah berhasil dihapus.`,
+                description: `${'${attendances.length}'} data absensi untuk tanggal ini telah berhasil dihapus.`,
             });
             setIsDeleteAllDialogOpen(false);
         } catch (error: any) {
@@ -283,7 +283,7 @@ export default function AttendanceRekapPage() {
                         {attendances.map(att => (
                             <Card key={att.id} className="overflow-hidden break-inside-avoid group relative">
                                 <div className="relative aspect-square w-full">
-                                    <Image src={att.checkInPhotoUrl} alt={`Foto absen ${userMap.get(att.userId)}`} fill className="object-cover" />
+                                    <Image src={att.checkInPhotoUrl} alt={`Foto absen ${userMap.get(att.userId)}`} fill className="object-cover" unoptimized />
                                 </div>
                                 <CardContent className="p-3 text-sm">
                                     <p className="font-semibold truncate">{userMap.get(att.userId) || 'Memuat...'}</p>
