@@ -21,7 +21,6 @@ const attendancePrompt = ai.definePrompt(
     name: 'attendanceNoticePrompt',
     model: 'googleai/gemini-1.5-flash',
     input: { schema: attendanceNoticeSchema },
-    output: { schema: z.string() },
     prompt: `
 Buat notifikasi absensi untuk dikirim ke grup Telegram.
 Gunakan format yang ringkas dan informatif.
@@ -64,6 +63,6 @@ const sendAttendanceNoticeFlow = ai.defineFlow(
         statusEmoji: statusEmoji,
     });
     
-    return output!;
+    return output?.text || '';
   }
 );

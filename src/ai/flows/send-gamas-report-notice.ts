@@ -21,7 +21,6 @@ const gamasReportPrompt = ai.definePrompt({
     name: 'gamasReportNoticePrompt',
     model: 'googleai/gemini-1.5-flash',
     input: { schema: gamasReportNoticeSchema },
-    output: { schema: z.string() },
     prompt: `
 Buatkan notifikasi singkat untuk laporan Gamas yang baru saja ditinjau.
 Tujuan: Menginformasikan teknisi tentang status laporannya.
@@ -46,6 +45,6 @@ const sendGamasReportNoticeFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await gamasReportPrompt(input);
-    return output!;
+    return output?.text || '';
   }
 );

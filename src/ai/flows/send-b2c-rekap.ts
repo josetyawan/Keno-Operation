@@ -22,7 +22,6 @@ const b2cRekapPrompt = ai.definePrompt(
         name: 'b2cRekapPrompt',
         model: 'googleai/gemini-1.5-flash',
         input: { schema: sendProductivityRekapInputSchema },
-        output: { schema: z.string() },
         prompt: `
 Buatkan laporan rekap produktivitas harian profesional.
 
@@ -48,6 +47,6 @@ const sendProductivityRekapFlow = ai.defineFlow(
         ...input,
     });
 
-    return output!;
+    return output?.text || '';
   }
 );

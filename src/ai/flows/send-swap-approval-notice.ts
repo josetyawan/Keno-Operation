@@ -20,7 +20,6 @@ const swapApprovalPrompt = ai.definePrompt({
     name: 'swapApprovalNoticePrompt',
     model: 'googleai/gemini-1.5-flash',
     input: { schema: swapApprovalNoticeSchema },
-    output: { schema: z.string() },
     prompt: `
 Buatkan notifikasi singkat untuk persetujuan tukar jadwal jaga.
 Tujuan: Menginformasikan kedua teknisi bahwa pertukaran telah disetujui.
@@ -43,6 +42,6 @@ const sendSwapApprovalNoticeFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await swapApprovalPrompt(input);
-    return output!;
+    return output?.text || '';
   }
 );

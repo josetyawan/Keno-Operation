@@ -21,7 +21,6 @@ const gamasDesignatorPrompt = ai.definePrompt({
     name: 'gamasDesignatorNoticePrompt',
     model: 'googleai/gemini-1.5-flash',
     input: { schema: gamasDesignatorNoticeSchema },
-    output: { schema: z.string() },
     prompt: `
 Buatkan notifikasi singkat untuk penolakan salah satu eviden designator pada laporan Gamas.
 Tujuan: Menginformasikan teknisi tentang penolakan spesifik agar bisa diperbaiki.
@@ -46,6 +45,6 @@ const sendGamasDesignatorNoticeFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await gamasDesignatorPrompt(input);
-    return output!;
+    return output?.text || '';
   }
 );

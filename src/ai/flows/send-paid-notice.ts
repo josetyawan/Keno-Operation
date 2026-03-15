@@ -31,8 +31,8 @@ const paidNoticePrompt = ai.definePrompt({
         rekapString: z.string(),
         grandTotal: z.number(),
         paidDate: z.string(),
+        grandTotalFormatted: z.string(),
     }) },
-    output: { schema: z.string() },
     prompt: `
 Buat notifikasi pembayaran LUNAS untuk dikirim ke grup Telegram.
 Gunakan format yang rapi dan informatif, dengan emoji yang sesuai (misal: ✅💸).
@@ -72,6 +72,6 @@ const sendPaidNoticeFlow = ai.defineFlow(
         grandTotalFormatted: grandTotal.toLocaleString('id-ID'),
     });
     
-    return output!;
+    return output?.text || '';
   }
 );

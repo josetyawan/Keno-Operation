@@ -21,7 +21,6 @@ const rejectionNoticePrompt = ai.definePrompt({
     name: 'rejectionNoticePrompt',
     model: 'googleai/gemini-1.5-flash',
     input: { schema: rejectionNoticeSchema },
-    output: { schema: z.string() },
     prompt: `
 Buatkan notifikasi penolakan laporan nota untuk dikirim ke Telegram.
 Gunakan format yang jelas, singkat, dan profesional. Gunakan emoji yang sesuai (misal: ❌).
@@ -45,6 +44,6 @@ const sendRejectionNoticeFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await rejectionNoticePrompt(input);
-    return output!;
+    return output?.text || '';
   }
 );

@@ -25,7 +25,6 @@ const dailyRekapPrompt = ai.definePrompt({
         photoCount: z.number(),
         photoCaption: z.string().optional(),
     }) },
-    output: { schema: z.string() },
     prompt: `
 Anda adalah asisten yang bertugas membuat laporan rekap harian untuk dikirim ke grup Telegram.
 Format laporan harus profesional, ringkas, dan mudah dibaca.
@@ -60,6 +59,6 @@ const sendDailyRekapReportFlow = ai.defineFlow(
         photoCaption: input.photoCaption || 'Lampiran Foto',
     });
     
-    return output!;
+    return output?.text || '';
   }
 );

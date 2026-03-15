@@ -44,7 +44,6 @@ const telegramReportPrompt = ai.definePrompt({
         grandTotalFormatted: z.string(),
         rekapDate: z.string(),
     }) },
-    output: { schema: z.string() },
     prompt: `
 Buat laporan rekap pembayaran untuk dikirim ke Telegram.
 Gunakan format yang rapi dan mudah dibaca.
@@ -81,6 +80,6 @@ const sendTelegramReportFlow = ai.defineFlow(
         rekapDate
     });
     
-    return output!;
+    return output?.text || '';
   }
 );

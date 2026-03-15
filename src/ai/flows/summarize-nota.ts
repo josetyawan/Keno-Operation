@@ -22,8 +22,9 @@ const summaryPrompt = ai.definePrompt({
   name: 'summaryPrompt',
   model: 'googleai/gemini-1.5-flash',
   input: { schema: summarizeInputSchema },
-  output: { schema: summarizeOutputSchema },
   prompt: `Summarize the following nota details into a short, easy-to-read paragraph. Extract the key information like who, what, when, and how much.
+
+Return the result as a valid JSON object with a single key "summary". For example: {"summary": "Your summary here."}
 
 Nota Details:
 ---
@@ -42,6 +43,21 @@ const summarizeNotaFlow = ai.defineFlow(
     const { output } = await summaryPrompt({
       ...input,
     });
-    return output!;
+    
+    try {
+        // The output is a string, so we need to parse it.
+        // It might be wrapped in ```json ... ```, so we need to clean that.
+        let jsonString = output?.text || '{}';
+        const jsonMatch = jsonString.match(/```json\n([\s\S]*?)\n```/);
+        if (jsonMatch && jsonMatch[1]) {
+            jsonString = jsonMatch[1];
+        }
+        const parsed = JSON.parse(jsonString);
+        return summarizeOutputSchema.parse(parsed); // Validate with Zod
+    } catch (e) {
+        console.error("Failed to parse AI summary output as JSON:", e, "Raw output:", output?.text);
+        // Fallback in case of parsing error
+        return { summary: "AI could not generate a valid summary." };
+    }
   }
 );
