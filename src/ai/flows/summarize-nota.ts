@@ -41,7 +41,7 @@ const summarizeNotaFlow = ai.defineFlow(
     const { output } = await summaryPrompt({
       ...input,
       // @ts-ignore - specifying model for a prompt is not yet in the SDK
-      model: 'gemini-pro',
+      model: 'gemini-1.5-flash',
     });
     return output!;
   }

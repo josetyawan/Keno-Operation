@@ -39,7 +39,7 @@ Buat pesan yang jelas dan to-the-point.
 `;
 
     const res = await ai.generate({
-      model: 'gemini-pro',
+      model: 'gemini-1.5-flash',
       prompt,
     });
 
