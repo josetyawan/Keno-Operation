@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -13,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, Loader2, PackageOpen, Truck, MapPin, PackageCheck, Phone, AlertTriangle, Send, Camera, Upload } from 'lucide-react';
 import type { ProvisioningRecord } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
 import Link from 'next/link';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
@@ -113,8 +112,8 @@ export default function OrderDetailPage() {
   
   const handleKendalaSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-     if (!user) {
-        toast({ variant: 'destructive', title: 'Error Autentikasi', description: 'Sesi pengguna tidak ditemukan. Silakan login ulang.' });
+     if (!user || !order) {
+        toast({ variant: 'destructive', title: 'Error Autentikasi', description: 'Sesi pengguna atau data order tidak ditemukan. Silakan login ulang.' });
         return;
     }
     if (!kendalaReason.trim() || !kendalaFiles || kendalaFiles.length < 2 || kendalaFiles.length > 10) {
@@ -124,7 +123,7 @@ export default function OrderDetailPage() {
     setIsUpdating(true);
     try {
         const uploadPromises = Array.from(kendalaFiles).map(async file => {
-            const filePath = `evidences/${user.uid}/kendala_${Date.now()}-${file.name}`;
+            const filePath = `evidences/${order.id}/kendala_${Date.now()}-${file.name}`;
             const storageRef = ref(storage, filePath);
             await uploadBytes(storageRef, file);
             return getDownloadURL(storageRef);
@@ -149,8 +148,8 @@ export default function OrderDetailPage() {
   
   const handleProgressSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) {
-        toast({ variant: 'destructive', title: 'Error Autentikasi', description: 'Sesi pengguna tidak ditemukan. Silakan login ulang.' });
+    if (!user || !order) {
+        toast({ variant: 'destructive', title: 'Error Autentikasi', description: 'Sesi pengguna atau data order tidak ditemukan. Silakan login ulang.' });
         return;
     }
     if (!housePhoto) {
@@ -159,7 +158,7 @@ export default function OrderDetailPage() {
     }
     setIsUpdating(true);
     try {
-        const filePath = `evidences/${user.uid}/rumah_${Date.now()}-${housePhoto.name}`;
+        const filePath = `evidences/${order.id}/rumah_${Date.now()}-${housePhoto.name}`;
         const storageRef = ref(storage, filePath);
         await uploadBytes(storageRef, housePhoto);
         const photoUrl = await getDownloadURL(storageRef);

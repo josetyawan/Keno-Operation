@@ -70,8 +70,8 @@ service firebase.storage {
     }
     
     // Consolidated rule for all provisioning-related evidence
-    match /evidences/{userId}/{allPaths=**} {
-      allow write: if isApproved() && (isOwner(userId) || isAdmin() || isKorlap());
+    match /evidences/{orderId}/{allPaths=**} {
+      allow write: if isSignedIn() && (get(/databases/(default)/documents/provisioning-records/$(orderId)).data.assignedTo_userId == request.auth.uid || isAdmin() || isKorlap());
     }
   }
 }
