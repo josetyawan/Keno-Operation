@@ -4,7 +4,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { useStorage } from '@/firebase/provider';
-import { doc, updateDoc, serverTimestamp, addDoc, collection, setDoc } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, addDoc, collection, setDoc, Timestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -265,8 +265,8 @@ export default function OrderDetailPage() {
 
     const handleKendalaSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!user || !order) {
-            toast({ variant: 'destructive', title: 'Error Autentikasi', description: 'Sesi pengguna atau data order tidak ditemukan. Silakan login ulang.' });
+        if (!user) {
+            toast({ variant: 'destructive', title: 'Error Autentikasi', description: 'Sesi pengguna tidak ditemukan. Silakan login ulang.' });
             return;
         }
         if (!kendalaReason.trim() || !kendalaFiles || kendalaFiles.length < 2 || kendalaFiles.length > 10) {
@@ -301,8 +301,8 @@ export default function OrderDetailPage() {
   
     const handleProgressSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!user || !order) {
-            toast({ variant: 'destructive', title: 'Error Autentikasi', description: 'Sesi pengguna atau data order tidak ditemukan. Silakan login ulang.' });
+        if (!user) {
+            toast({ variant: 'destructive', title: 'Error Autentikasi', description: 'Sesi pengguna tidak ditemukan. Silakan login ulang.' });
             return;
         }
         if (!housePhoto) {
