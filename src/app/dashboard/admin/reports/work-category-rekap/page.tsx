@@ -152,7 +152,7 @@ export default function WorkCategoryRekapPage() {
                 const record = item as ProvisioningRecord;
                 createDate = record.assignedAt;
                 closeDate = record.completedAt;
-                chief = record.assignedTo_userId || ''; // Assuming NIK is not available, using userId as fallback
+                chief = record.assignedTo_userName || '';
                 jenisOrder = record.crmOrder;
                 orderType = record.description || '';
                 woNumber = record.workorder;
@@ -292,5 +292,3 @@ export default function WorkCategoryRekapPage() {
         </div>
     );
 }
-
-    

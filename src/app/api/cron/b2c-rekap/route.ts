@@ -4,7 +4,7 @@ import { initializeFirebase } from '@/firebase/init';
 import { getFirestore, collection, getDocs, query, where, Timestamp } from 'firebase/firestore';
 import { format, isSameDay } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
-import type { UserProfile, Schedule, RiwayatGangguan, OtherWork } from '@/lib/types';
+import type { UserProfile, Schedule, RiwayatGangguan, OtherWork, ProvisioningRecord } from '@/lib/types';
 import { sendProductivityRekap } from '@/ai/flows/send-b2c-rekap';
 
 export const dynamic = 'force-dynamic';
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
         const startDate = new Date(today.setHours(0, 0, 0, 0));
         const endDate = new Date(today.setHours(23, 59, 59, 999));
         
-        const [allUsers, allSchedules, allRiwayat, allOtherWorks] = await Promise.all([
+        const [allUsers, allSchedules, allRiwayat, allOtherWorks, allProvisioning] = await Promise.all([
             fetchCollection<UserProfile>(firestore, 'users', [where('registrationStatus', '==', 'approved')]),
             fetchCollection<Schedule>(firestore, 'schedules', [
                 where('date', '>=', Timestamp.fromDate(startDate)),
@@ -38,6 +38,10 @@ export async function GET(request: NextRequest) {
             fetchCollection<OtherWork>(firestore, 'other-works', [
                 where('tanggalPengerjaan', '>=', Timestamp.fromDate(startDate)),
                 where('tanggalPengerjaan', '<=', Timestamp.fromDate(endDate))
+            ]),
+            fetchCollection<ProvisioningRecord>(firestore, 'provisioning-records', [
+                where('completedAt', '>=', Timestamp.fromDate(startDate)),
+                where('completedAt', '<=', Timestamp.fromDate(endDate))
             ])
         ]);
 
@@ -56,6 +60,11 @@ export async function GET(request: NextRequest) {
             allOtherWorks.forEach(item => {
                 if (userIdsInUnit.has(item.userId)) {
                     productivityMap.set(item.userId, (productivityMap.get(item.userId) || 0) + 1);
+                }
+            });
+            allProvisioning.forEach(item => {
+                if (item.assignedTo_userId && userIdsInUnit.has(item.assignedTo_userId)) {
+                    productivityMap.set(item.assignedTo_userId, (productivityMap.get(item.assignedTo_userId) || 0) + 1);
                 }
             });
             

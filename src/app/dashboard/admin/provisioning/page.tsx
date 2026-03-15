@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -616,7 +617,7 @@ export default function ProvisioningDashboardPage() {
     }
     
     return {
-        unassignedOrders: filteredOrders.filter(o => o.provisioningStatus === 'unassigned' || !o.provisioningStatus),
+        unassignedOrders: filteredOrders.filter(o => !o.provisioningStatus || o.provisioningStatus === 'unassigned'),
         inProgressOrders: filteredOrders.filter(o => ['assigned', 'picked_up', 'departed', 'arrived', 'wip_odp_done'].includes(o.provisioningStatus || '')),
         completedOrders: filteredOrders.filter(o => o.provisioningStatus === 'completed'),
     };
@@ -625,7 +626,7 @@ export default function ProvisioningDashboardPage() {
   const pivotData = useMemo(() => {
     const pivot: any = {};
 
-    (data || []).forEach(item => {
+    (data || []).filter(item => item.provisioningStatus !== 'completed').forEach(item => {
         const { productName, status, crmOrder, description, workzone } = item;
         if (!workzone) return;
         
@@ -675,15 +676,15 @@ export default function ProvisioningDashboardPage() {
   const [activeTab, setActiveTab] = useState('unassigned');
 
   useEffect(() => {
-    if (unassignedOrders.length > 0) {
-      setActiveTab('unassigned');
-    } else if (inProgressOrders.length > 0) {
-      setActiveTab('in-progress');
-    } else if (completedOrders.length > 0) {
-      setActiveTab('completed');
-    } else {
-      setActiveTab('unassigned');
-    }
+      if (unassignedOrders.length > 0) {
+        setActiveTab('unassigned');
+      } else if (inProgressOrders.length > 0) {
+        setActiveTab('in-progress');
+      } else if (completedOrders.length > 0) {
+        setActiveTab('completed');
+      } else {
+        setActiveTab('unassigned');
+      }
   }, [unassignedOrders.length, inProgressOrders.length, completedOrders.length]);
 
   return (

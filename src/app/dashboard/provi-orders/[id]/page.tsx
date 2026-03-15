@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, Loader2, PackageOpen, Truck, MapPin, PackageCheck, Phone, AlertTriangle, Send, Camera, Upload, Wrench, Check, Circle, Calendar as CalendarIcon, FileUp, Save } from 'lucide-react';
-import type { ProvisioningRecord, ProvisioningMaterial, Pelanggan } from '@/lib/types';
+import type { ProvisioningRecord, ProvisioningMaterial, Pelanggan, RiwayatGangguan, UserProfile } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
@@ -182,6 +182,8 @@ export default function OrderDetailPage() {
   const [usedMaterials, setUsedMaterials] = useState<Record<string, { used: boolean, quantity: number }>>({});
   const [psDate, setPsDate] = useState<Date | undefined>(new Date());
 
+  const userDocRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
   const orderRef = useMemoFirebase(() => doc(firestore, 'provisioning-records', id), [firestore, id]);
   const { data: order, isLoading } = useDoc<ProvisioningRecord>(orderRef);
@@ -333,7 +335,7 @@ export default function OrderDetailPage() {
 
     const handleCompleteOrder = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!user || !order || !psDate) {
+        if (!user || !order || !psDate || !userProfile) {
             toast({ variant: 'destructive', title: 'Error', description: 'Sesi pengguna atau data order tidak valid.' });
             return;
         }
@@ -352,13 +354,36 @@ export default function OrderDetailPage() {
                 .filter(([, { used }]) => used)
                 .map(([name, { quantity }]) => ({ name, quantity }));
             
+            const completedTimestamp = Timestamp.fromDate(psDate);
             await updateDoc(orderRef, {
                 provisioningStatus: 'completed',
                 baPhotoUrl,
                 valinsId,
                 materials: materialsToSave,
-                completedAt: Timestamp.fromDate(psDate),
+                completedAt: completedTimestamp,
             });
+
+            // Create history record
+            const riwayatData: Omit<RiwayatGangguan, 'id'> = {
+                pelangganId: order.serviceNo,
+                userId: user.uid,
+                noService: order.serviceNo,
+                namaPetugas: order.assignedTo_userName || userProfile.displayName || user.email,
+                nik: userProfile.nik || '',
+                jenisOrder: order.crmOrder,
+                typeOrder: order.description || '',
+                keterangan: `Penyelesaian WO Provisioning: ${order.workorder}`,
+                tanggalLapor: order.assignedAt || order.createdAt || serverTimestamp(), // Best guess
+                tanggalOpen: order.assignedAt || order.createdAt || serverTimestamp(),
+                tanggalClose: completedTimestamp,
+                layanan: [order.productName],
+                materials: materialsToSave,
+                sto: order.workzone,
+                noTiket: order.workorder,
+                dorongClose: false,
+            };
+    
+            await addDoc(collection(firestore, 'riwayat-gangguan'), riwayatData);
     
             toast({ title: 'Order Selesai!', description: 'Pekerjaan provisioning telah berhasil diselesaikan dan disimpan.' });
             router.push('/dashboard/provi-orders');
@@ -378,7 +403,7 @@ export default function OrderDetailPage() {
       }));
   };
 
-  if (isLoading) {
+  if (isLoading || isProfileLoading) {
     return <div className="space-y-4"><Skeleton className="h-48 w-full" /></div>;
   }
 
