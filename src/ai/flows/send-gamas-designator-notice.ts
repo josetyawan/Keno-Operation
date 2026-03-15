@@ -38,7 +38,7 @@ Buat pesan yang jelas, singkat, dan informatif.
 `;
 
     const res = await ai.generate({
-      model: 'gemini-pro',
+      model: 'gemini-1.5-flash-latest',
       prompt,
     });
 

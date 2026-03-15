@@ -21,7 +21,6 @@ const summaryPrompt = ai.definePrompt({
   name: 'summaryPrompt',
   input: { schema: summarizeInputSchema },
   output: { schema: summarizeOutputSchema },
-  model: 'gemini-pro',
   prompt: `Summarize the following nota details into a short, easy-to-read paragraph. Extract the key information like who, what, when, and how much.
 
 Nota Details:
@@ -38,7 +37,11 @@ const summarizeNotaFlow = ai.defineFlow(
     outputSchema: summarizeOutputSchema,
   },
   async (input) => {
-    const { output } = await summaryPrompt(input);
+    const { output } = await summaryPrompt({
+      ...input,
+      // @ts-ignore - specifying model for a prompt is not yet in the SDK
+      model: 'gemini-1.5-flash-latest',
+    });
     return output!;
   }
 );
