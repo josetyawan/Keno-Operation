@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, doc, Timestamp } from 'firebase/firestore';
-import type { UserProfile, Performance, RiwayatGangguan, OtherWork } from '@/lib/types';
+import type { UserProfile, Performance, RiwayatGangguan, OtherWork, ProvisioningRecord } from '@/lib/types';
 import { productivityWeights } from '@/lib/bobot-produktivitas';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -65,42 +66,51 @@ export default function UserPerformancePage() {
             where('userId', '==', user.uid)
         );
     }, [firestore, user?.uid]);
+    
+    const provisioningQuery = useMemoFirebase(() => {
+        if (!user?.uid) return null;
+        return query(
+            collection(firestore, 'provisioning-records'),
+            where('assignedTo_userId', '==', user.uid)
+        );
+    }, [firestore, user?.uid]);
 
     const { data: riwayatList, isLoading: isRiwayatLoading } = useCollection<RiwayatGangguan>(riwayatQuery);
     const { data: otherWorksList, isLoading: isOtherWorksLoading } = useCollection<OtherWork>(otherWorksQuery);
+    const { data: provisioningList, isLoading: isProvisioningLoading } = useCollection<ProvisioningRecord>(provisioningQuery);
 
     const availablePeriods = useMemo(() => {
         const periods = new Set<string>();
         
-        // Add periods from HO performance records
         if (sortedPerformanceRecords) {
             sortedPerformanceRecords.forEach(p => {
                 periods.add(`${p.tahun}-${String(p.bulan).padStart(2, '0')}`);
             });
         }
         
-        // Add periods from riwayatList
         if (riwayatList) {
             riwayatList.forEach(item => {
                 const itemDate = item.tanggalLapor?.toDate();
-                if (itemDate) {
-                    periods.add(format(itemDate, 'yyyy-MM'));
-                }
+                if (itemDate) periods.add(format(itemDate, 'yyyy-MM'));
             });
         }
         
-        // Add periods from otherWorksList
         if (otherWorksList) {
             otherWorksList.forEach(item => {
                 const itemDate = item.tanggalPengerjaan?.toDate();
-                if (itemDate) {
-                    periods.add(format(itemDate, 'yyyy-MM'));
-                }
+                if (itemDate) periods.add(format(itemDate, 'yyyy-MM'));
+            });
+        }
+        
+        if (provisioningList) {
+            provisioningList.forEach(item => {
+                const itemDate = item.completedAt?.toDate();
+                if (itemDate) periods.add(format(itemDate, 'yyyy-MM'));
             });
         }
         
         return Array.from(periods).sort().reverse();
-    }, [sortedPerformanceRecords, riwayatList, otherWorksList]);
+    }, [sortedPerformanceRecords, riwayatList, otherWorksList, provisioningList]);
     
     useEffect(() => {
         if (availablePeriods.length > 0 && !selectedPeriod) {
@@ -123,7 +133,7 @@ export default function UserPerformancePage() {
     }, [selectedPeriod]);
 
     const manualPerformanceData = useMemo(() => {
-        if (isRiwayatLoading || isOtherWorksLoading || !riwayatList || !otherWorksList || !selectedDateRange) return null;
+        if (isRiwayatLoading || isOtherWorksLoading || isProvisioningLoading || !riwayatList || !otherWorksList || !provisioningList || !selectedDateRange) return null;
 
         const { startDate, endDate } = selectedDateRange;
 
@@ -136,12 +146,18 @@ export default function UserPerformancePage() {
             const itemDate = item.tanggalPengerjaan?.toDate();
             return itemDate && itemDate >= startDate && itemDate <= endDate;
         });
+        
+        const filteredProvisioning = provisioningList.filter(item => {
+            const itemDate = item.completedAt?.toDate();
+            return itemDate && itemDate >= startDate && itemDate <= endDate;
+        });
 
         const JAM_KERJA_SEBULAN = 8 * 22;
 
         const workItems = [
             ...filteredRiwayat,
-            ...filteredOtherWorks
+            ...filteredOtherWorks,
+            ...filteredProvisioning
         ];
 
         let totalBobot = 0;
@@ -149,11 +165,22 @@ export default function UserPerformancePage() {
 
         workItems.forEach(item => {
             let bobot = 0;
-            const itemOrderType = (item as RiwayatGangguan).typeOrder || (item as OtherWork).orderType;
+            let jenisOrder: string;
+            let orderType: string | undefined;
+
+            if ('crmOrder' in item) { // ProvisioningRecord
+                jenisOrder = item.crmOrder;
+                orderType = item.description;
+            } else { // RiwayatGangguan or OtherWork
+                jenisOrder = item.jenisOrder;
+                orderType = (item as RiwayatGangguan).typeOrder || (item as OtherWork).orderType;
+            }
+            
+            if (!jenisOrder) return;
 
             const weightItem = allWeights.find(w => {
-                const isJenisMatch = w.jenis_order_name === item.jenisOrder;
-                const isOrderTypeMatch = !w.order_type || w.order_type === itemOrderType;
+                const isJenisMatch = w.jenis_order_name === jenisOrder;
+                const isOrderTypeMatch = !w.order_type || w.order_type === orderType;
                 return isJenisMatch && isOrderTypeMatch;
             });
 
@@ -168,11 +195,11 @@ export default function UserPerformancePage() {
             totalBobot,
             productivity,
         };
-    }, [riwayatList, otherWorksList, isRiwayatLoading, isOtherWorksLoading, selectedDateRange]);
+    }, [riwayatList, otherWorksList, provisioningList, isRiwayatLoading, isOtherWorksLoading, isProvisioningLoading, selectedDateRange]);
     
     // --- End of New Logic ---
 
-    const isLoading = isUserLoading || isPerformanceLoading || isRiwayatLoading || isOtherWorksLoading;
+    const isLoading = isUserLoading || isPerformanceLoading || isRiwayatLoading || isOtherWorksLoading || isProvisioningLoading;
 
     const formatAsPercent = (value: string) => {
         if (typeof value !== 'string' || !value.trim()) return '-';
