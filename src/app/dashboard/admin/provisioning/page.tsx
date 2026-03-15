@@ -1,6 +1,7 @@
 
 'use client';
 
+import * as React from 'react';
 import { useState, useMemo, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import { useToast } from '@/hooks/use-toast';
@@ -10,13 +11,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Upload, FileSpreadsheet, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import { Loader2, Upload, FileSpreadsheet, ChevronLeft, ChevronRight, Trash2, ChevronRight as ChevronRightIcon } from 'lucide-react';
 import { format, isValid } from 'date-fns';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, doc, writeBatch, orderBy, getDocs, setDoc } from 'firebase/firestore';
 import type { ProvisioningRecord } from '@/lib/types';
 import { Progress } from '@/components/ui/progress';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { cn } from '@/lib/utils';
 
 const ITEMS_PER_PAGE = 5;
 
@@ -27,41 +28,74 @@ interface PivotRow {
 }
 type PivotData = Record<string, PivotRow>;
 
-// --- Recursive Component for Pivot Table Rows ---
-const PivotRowDisplay = ({
-  name,
-  data,
-  level,
-  workzones,
-}: {
-  name: string;
-  data: PivotRow;
-  level: number;
-  workzones: string[];
-}) => {
-  const hasChildren = data.children && Object.keys(data.children).length > 0;
 
+// --- Recursive Component for Pivot Table Rows ---
+const PivotTreeRows = ({
+  data,
+  level = 0,
+  parentKey = '',
+  workzones,
+  expandedRows,
+  toggleRow,
+}: {
+  data: PivotData;
+  level?: number;
+  parentKey?: string;
+  workzones: string[];
+  expandedRows: Record<string, boolean>;
+  toggleRow: (key: string) => void;
+}) => {
   return (
     <>
-      <TableRow className="bg-muted/20 hover:bg-muted/40 font-semibold">
-        <TableCell style={{ paddingLeft: `${1 + level * 1.5}rem` }} colSpan={4}>
-          {name} Total
-        </TableCell>
-        {workzones.map((wz) => (
-          <TableCell key={wz} className="text-right">{data.count[wz] || 0}</TableCell>
-        ))}
-        <TableCell className="text-right font-bold">{data.count['Grand Total'] || 0}</TableCell>
-      </TableRow>
-      {hasChildren &&
-        Object.entries(data.children).map(([childName, childData]) => (
-          <PivotRowDisplay
-            key={childName}
-            name={childName}
-            data={childData}
-            level={level + 1}
-            workzones={workzones}
-          />
-        ))}
+      {Object.entries(data).map(([name, rowData]) => {
+        const currentKey = parentKey ? `${parentKey}/${name}` : name;
+        const isExpanded = expandedRows[currentKey] ?? false;
+        const hasChildren = rowData.children && Object.keys(rowData.children).length > 0;
+
+        return (
+          <React.Fragment key={currentKey}>
+            <TableRow className="hover:bg-muted/50 data-[state=open]:bg-muted/50">
+              <TableCell style={{ paddingLeft: `${1 + level * 1.5}rem` }} className="font-medium">
+                <div className="flex items-center gap-1">
+                  {hasChildren ? (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => toggleRow(currentKey)}
+                    >
+                      <ChevronRightIcon
+                        className={cn('h-4 w-4 transition-transform', isExpanded && 'rotate-90')}
+                      />
+                    </Button>
+                  ) : (
+                    <div className="w-6" /> // Spacer for alignment
+                  )}
+                  <span className="truncate">{name}</span>
+                </div>
+              </TableCell>
+              {workzones.map((wz) => (
+                <TableCell key={wz} className="text-right tabular-nums">
+                  {rowData.count[wz] || 0}
+                </TableCell>
+              ))}
+              <TableCell className="text-right font-bold tabular-nums">
+                {rowData.count['Grand Total'] || 0}
+              </TableCell>
+            </TableRow>
+            {hasChildren && isExpanded && (
+              <PivotTreeRows
+                data={rowData.children!}
+                level={level + 1}
+                parentKey={currentKey}
+                workzones={workzones}
+                expandedRows={expandedRows}
+                toggleRow={toggleRow}
+              />
+            )}
+          </React.Fragment>
+        );
+      })}
     </>
   );
 };
@@ -74,6 +108,11 @@ export default function ProvisioningDashboardPage() {
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+
+  const toggleRow = (key: string) => {
+    setExpandedRows(prev => ({ ...prev, [key]: !prev[key] }));
+  };
 
   // Data fetching from Firestore
   const recordsQuery = useMemoFirebase(() => query(collection(firestore, 'provisioning-records'), orderBy('dateCreated', 'desc')), [firestore]);
@@ -395,84 +434,22 @@ export default function ProvisioningDashboardPage() {
                   <Table>
                       <TableHeader>
                           <TableRow>
-                              <TableHead className="w-[200px]">Product Name</TableHead>
-                              <TableHead className="w-[150px]">Status</TableHead>
-                              <TableHead className="w-[150px]">CRM Order Type</TableHead>
-                              <TableHead>Description</TableHead>
+                              <TableHead className="w-[400px]">Kategori</TableHead>
                               {workzones.map(wz => <TableHead key={wz} className="text-right">{wz}</TableHead>)}
                               <TableHead className="text-right font-bold">Grand Total</TableHead>
                           </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {Object.entries(pivotData).length > 0 ? (
-                           Object.entries(pivotData).map(([productName, productData]) => (
-                            <Accordion key={productName} type="single" collapsible className="w-full">
-                              <AccordionItem value={productName} className="border-none">
-                                <tr className="border-b bg-muted/30 hover:bg-muted/50 w-full">
-                                  <td colSpan={4} className="p-0">
-                                      <AccordionTrigger className="px-4 py-3 text-sm font-semibold w-full text-left hover:no-underline">
-                                        {productName}
-                                      </AccordionTrigger>
-                                  </td>
-                                  {workzones.map(wz => <TableCell key={wz} className="text-right">{productData.count[wz] || 0}</TableCell>)}
-                                  <TableCell className="text-right font-bold">{productData.count['Grand Total'] || 0}</TableCell>
-                                </tr>
-                                <AccordionContent asChild>
-                                  <>
-                                    {Object.entries(productData.children || {}).map(([status, statusData]) => (
-                                      <Accordion key={status} type="single" collapsible className="w-full">
-                                        <AccordionItem value={status} className="border-none">
-                                          <tr className="border-t w-full">
-                                             <td colSpan={4} className="p-0">
-                                                <AccordionTrigger className="px-4 py-2 text-sm w-full text-left hover:no-underline" style={{ paddingLeft: '2rem' }}>
-                                                  {status}
-                                                </AccordionTrigger>
-                                             </td>
-                                              {workzones.map(wz => <TableCell key={wz} className="text-right text-muted-foreground">{statusData.count[wz] || 0}</TableCell>)}
-                                              <TableCell className="text-right font-semibold text-muted-foreground">{statusData.count['Grand Total'] || 0}</TableCell>
-                                          </tr>
-                                          <AccordionContent asChild>
-                                            <>
-                                            {Object.entries(statusData.children || {}).map(([crmOrder, crmData]) => (
-                                                <Accordion key={crmOrder} type="single" collapsible className="w-full">
-                                                  <AccordionItem value={crmOrder} className="border-none">
-                                                    <tr className="border-t w-full bg-black/5">
-                                                      <td colSpan={4} className="p-0">
-                                                          <AccordionTrigger className="px-4 py-2 text-xs w-full text-left hover:no-underline" style={{ paddingLeft: '3rem' }}>
-                                                            {crmOrder}
-                                                          </AccordionTrigger>
-                                                      </td>
-                                                      {workzones.map(wz => <TableCell key={wz} className="text-right text-xs text-muted-foreground">{crmData.count[wz] || 0}</TableCell>)}
-                                                      <TableCell className="text-right text-xs font-medium text-muted-foreground">{crmData.count['Grand Total'] || 0}</TableCell>
-                                                    </tr>
-                                                    <AccordionContent asChild>
-                                                        <>
-                                                        {Object.entries(crmData.children || {}).map(([desc, descData]) => (
-                                                            <TableRow key={desc} className="text-xs">
-                                                                <TableCell colSpan={3}></TableCell>
-                                                                <TableCell style={{ paddingLeft: '4rem' }}>{desc}</TableCell>
-                                                                {workzones.map(wz => <TableCell key={wz} className="text-right">{descData.count[wz] || 0}</TableCell>)}
-                                                                <TableCell className="text-right">{descData.count['Grand Total'] || 0}</TableCell>
-                                                            </TableRow>
-                                                        ))}
-                                                        </>
-                                                    </AccordionContent>
-                                                  </AccordionItem>
-                                                </Accordion>
-                                            ))}
-                                            </>
-                                          </AccordionContent>
-                                        </AccordionItem>
-                                      </Accordion>
-                                    ))}
-                                  </>
-                                </AccordionContent>
-                              </AccordionItem>
-                            </Accordion>
-                           ))
+                        {Object.keys(pivotData).length > 0 ? (
+                           <PivotTreeRows
+                              data={pivotData}
+                              workzones={workzones}
+                              expandedRows={expandedRows}
+                              toggleRow={toggleRow}
+                            />
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={workzones.length + 5} className="h-24 text-center">Tidak ada data untuk ditampilkan di pivot table.</TableCell>
+                                <TableCell colSpan={workzones.length + 2} className="h-24 text-center">Tidak ada data untuk ditampilkan di pivot table.</TableCell>
                             </TableRow>
                         )}
                       </TableBody>
