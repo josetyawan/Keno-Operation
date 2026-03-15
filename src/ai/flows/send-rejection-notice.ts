@@ -19,6 +19,7 @@ export async function sendRejectionNotice(
 
 const rejectionNoticePrompt = ai.definePrompt({
     name: 'rejectionNoticePrompt',
+    model: 'googleai/gemini-1.5-flash',
     input: { schema: rejectionNoticeSchema },
     output: { schema: z.string() },
     prompt: `

@@ -20,6 +20,7 @@ export async function sendProductivityRekap(
 const b2cRekapPrompt = ai.definePrompt(
     {
         name: 'b2cRekapPrompt',
+        model: 'googleai/gemini-1.5-flash',
         input: { schema: sendProductivityRekapInputSchema },
         output: { schema: z.string() },
         prompt: `

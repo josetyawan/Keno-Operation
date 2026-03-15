@@ -19,6 +19,7 @@ export async function sendGamasDesignatorNotice(
 
 const gamasDesignatorPrompt = ai.definePrompt({
     name: 'gamasDesignatorNoticePrompt',
+    model: 'googleai/gemini-1.5-flash',
     input: { schema: gamasDesignatorNoticeSchema },
     output: { schema: z.string() },
     prompt: `

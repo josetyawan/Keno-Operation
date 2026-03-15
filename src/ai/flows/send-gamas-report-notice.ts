@@ -19,6 +19,7 @@ export async function sendGamasReportNotice(
 
 const gamasReportPrompt = ai.definePrompt({
     name: 'gamasReportNoticePrompt',
+    model: 'googleai/gemini-1.5-flash',
     input: { schema: gamasReportNoticeSchema },
     output: { schema: z.string() },
     prompt: `

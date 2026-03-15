@@ -18,6 +18,7 @@ export async function sendSwapApprovalNotice(
 
 const swapApprovalPrompt = ai.definePrompt({
     name: 'swapApprovalNoticePrompt',
+    model: 'googleai/gemini-1.5-flash',
     input: { schema: swapApprovalNoticeSchema },
     output: { schema: z.string() },
     prompt: `

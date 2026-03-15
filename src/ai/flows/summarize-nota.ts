@@ -20,6 +20,7 @@ export async function summarizeNota(
 
 const summaryPrompt = ai.definePrompt({
   name: 'summaryPrompt',
+  model: 'googleai/gemini-1.5-flash',
   input: { schema: summarizeInputSchema },
   output: { schema: summarizeOutputSchema },
   prompt: `Summarize the following nota details into a short, easy-to-read paragraph. Extract the key information like who, what, when, and how much.

@@ -38,6 +38,7 @@ export async function sendTelegramReport(input: z.infer<typeof sendTelegramRepor
 
 const telegramReportPrompt = ai.definePrompt({
     name: 'telegramReportPrompt',
+    model: 'googleai/gemini-1.5-flash',
     input: { schema: z.object({
         rekapString: z.string(),
         grandTotalFormatted: z.string(),

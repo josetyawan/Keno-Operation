@@ -26,6 +26,7 @@ export async function sendPaidNotice(input: z.infer<typeof sendPaidNoticeInputSc
 
 const paidNoticePrompt = ai.definePrompt({
     name: 'paidNoticePrompt',
+    model: 'googleai/gemini-1.5-flash',
     input: { schema: z.object({
         rekapString: z.string(),
         grandTotal: z.number(),

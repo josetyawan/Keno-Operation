@@ -19,6 +19,7 @@ export async function sendAttendanceNotice(input: z.infer<typeof attendanceNotic
 const attendancePrompt = ai.definePrompt(
   {
     name: 'attendanceNoticePrompt',
+    model: 'googleai/gemini-1.5-flash',
     input: { schema: attendanceNoticeSchema },
     output: { schema: z.string() },
     prompt: `

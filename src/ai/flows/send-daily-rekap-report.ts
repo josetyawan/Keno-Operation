@@ -18,6 +18,7 @@ export async function sendDailyRekapReport(
 
 const dailyRekapPrompt = ai.definePrompt({
     name: 'dailyRekapPrompt',
+    model: 'googleai/gemini-1.5-flash',
     input: { schema: z.object({
         combinedMessage: z.string(),
         hasPhotos: z.boolean(),
