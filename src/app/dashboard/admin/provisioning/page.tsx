@@ -12,11 +12,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, Upload, FileSpreadsheet, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { format, isValid } from 'date-fns';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, doc, writeBatch, orderBy, getDocs } from 'firebase/firestore';
+import { collection, query, doc, writeBatch, orderBy, getDocs, setDoc } from 'firebase/firestore';
 import type { ProvisioningRecord } from '@/lib/types';
 import { Progress } from '@/components/ui/progress';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 5;
+
+// --- Pivot Table Data Structure ---
+interface PivotRow {
+  count: Record<string, number>; // { DMA: 5, KUD: 3, Grand Total: 8 }
+  children?: Record<string, PivotRow>;
+}
+type PivotData = Record<string, PivotRow>;
+
 
 export default function ProvisioningDashboardPage() {
   const { toast } = useToast();
@@ -116,7 +125,7 @@ export default function ProvisioningDashboardPage() {
         let headers: string[] = [];
 
         for (let i = 0; i < dataAsArray.length; i++) {
-            const row = dataAsArray[i];
+            const row = dataAsArray[i] || [];
             const lowercasedRow = row.map(cell => String(cell || '').toLowerCase().trim());
             
             if (lowercasedRow.includes('workorder') && lowercasedRow.some(h => h.includes('customer'))) {
@@ -173,10 +182,10 @@ export default function ProvisioningDashboardPage() {
             const scOrderValue = row[headerMapping.scOrder!]?.toString() || '';
             let finalScOrder = scOrderValue;
 
-            const aoMoMatch = scOrderValue.match(/(?:A|M)O[a-z0-9]+/i);
+            const aoMoMatch = scOrderValue.match(/(?:AO|MO|AOi|MOi|AOs)[a-z0-9]+/i);
 
             if (aoMoMatch && aoMoMatch[0]) {
-                finalScOrder = aoMoMatch[0];
+                finalScOrder = aoMoMatch[0].split('_')[0];
             } else if (finalScOrder.startsWith('SC') && finalScOrder.includes('_')) {
                 finalScOrder = finalScOrder.split('_')[0];
             }
@@ -212,7 +221,7 @@ export default function ProvisioningDashboardPage() {
               workzone: row[headerMapping.workzone!] || 'N/A',
             };
             
-            const docRef = doc(recordsCollection);
+            const docRef = doc(recordsCollection, finalScOrder); // Use SC Order as ID
             batch.set(docRef, newRecord);
             writeCount++;
             newRecordsCount++;
@@ -260,6 +269,43 @@ export default function ProvisioningDashboardPage() {
     return filtered;
   }, [data, selectedWorkzone, searchQuery]);
 
+  // --- Pivot Table Logic ---
+  const pivotData = useMemo((): PivotData => {
+    const pivot: PivotData = {};
+    const localWorkzones = [...workzones, 'Grand Total'];
+
+    const increment = (obj: PivotRow, workzone: string) => {
+      obj.count[workzone] = (obj.count[workzone] || 0) + 1;
+      obj.count['Grand Total'] = (obj.count['Grand Total'] || 0) + 1;
+    };
+
+    filteredData.forEach(item => {
+      const { productName, status, crmOrder, description, workzone } = item;
+
+      // Product Name level
+      if (!pivot[productName]) pivot[productName] = { count: {}, children: {} };
+      increment(pivot[productName], workzone);
+
+      // Status level
+      const statusNode = pivot[productName].children!;
+      if (!statusNode[status]) statusNode[status] = { count: {}, children: {} };
+      increment(statusNode[status], workzone);
+
+      // CRM Order Type level
+      const crmNode = statusNode[status].children!;
+      if (!crmNode[crmOrder]) crmNode[crmOrder] = { count: {}, children: {} };
+      increment(crmNode[crmOrder], workzone);
+      
+      // Description level
+      const descNode = crmNode[crmOrder].children!;
+      if (!descNode[description]) descNode[description] = { count: {} };
+      increment(descNode[description], workzone);
+    });
+
+    return pivot;
+  }, [filteredData, workzones]);
+
+
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     return filteredData.slice(startIndex, startIndex + ITEMS_PER_PAGE);
@@ -296,6 +342,97 @@ export default function ProvisioningDashboardPage() {
         </CardContent>
       </Card>
       
+      {/* Pivot Table Section */}
+      <Card>
+          <CardHeader>
+              <CardTitle>Pivot Table Rekap</CardTitle>
+              <CardDescription>Ringkasan data provisioning yang dikelompokkan.</CardDescription>
+          </CardHeader>
+          <CardContent>
+              <div className="overflow-x-auto">
+                  <Table>
+                      <TableHeader>
+                          <TableRow>
+                              <TableHead className="w-[200px]">Product Name</TableHead>
+                              <TableHead className="w-[150px]">Status</TableHead>
+                              <TableHead className="w-[150px]">CRM Order Type</TableHead>
+                              <TableHead>Description</TableHead>
+                              {workzones.map(wz => <TableHead key={wz} className="text-right">{wz}</TableHead>)}
+                              <TableHead className="text-right font-bold">Grand Total</TableHead>
+                          </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {Object.entries(pivotData).map(([productName, productData]) => (
+                            <Accordion key={productName} type="single" collapsible>
+                                <AccordionItem value={productName} className="border-b-0">
+                                    <TableRow className="font-bold bg-muted/30">
+                                        <TableCell><AccordionTrigger className="p-0 hover:no-underline">{productName}</AccordionTrigger></TableCell>
+                                        <TableCell></TableCell>
+                                        <TableCell></TableCell>
+                                        <TableCell>{productName} Total</TableCell>
+                                        {workzones.map(wz => <TableCell key={wz} className="text-right">{productData.count[wz] || 0}</TableCell>)}
+                                        <TableCell className="text-right">{productData.count['Grand Total'] || 0}</TableCell>
+                                    </TableRow>
+                                    <AccordionContent asChild>
+                                      <>
+                                        {Object.entries(productData.children || {}).map(([status, statusData]) => (
+                                          <Accordion key={status} type="single" collapsible>
+                                            <AccordionItem value={status} className="border-b-0">
+                                                <TableRow>
+                                                  <TableCell className="pl-8"><AccordionTrigger className="p-0 hover:no-underline">{status}</AccordionTrigger></TableCell>
+                                                  <TableCell></TableCell>
+                                                  <TableCell></TableCell>
+                                                  <TableCell>{status} Total</TableCell>
+                                                  {workzones.map(wz => <TableCell key={wz} className="text-right">{statusData.count[wz] || 0}</TableCell>)}
+                                                  <TableCell className="text-right">{statusData.count['Grand Total'] || 0}</TableCell>
+                                                </TableRow>
+                                                <AccordionContent asChild>
+                                                  <>
+                                                  {Object.entries(statusData.children || {}).map(([crmOrder, crmData]) => (
+                                                    <Accordion key={crmOrder} type="single" collapsible>
+                                                      <AccordionItem value={crmOrder} className="border-b-0">
+                                                        <TableRow>
+                                                            <TableCell></TableCell>
+                                                            <TableCell className="pl-12"><AccordionTrigger className="p-0 hover:no-underline">{crmOrder}</AccordionTrigger></TableCell>
+                                                            <TableCell></TableCell>
+                                                            <TableCell>{crmOrder} Total</TableCell>
+                                                            {workzones.map(wz => <TableCell key={wz} className="text-right">{crmData.count[wz] || 0}</TableCell>)}
+                                                            <TableCell className="text-right">{crmData.count['Grand Total'] || 0}</TableCell>
+                                                        </TableRow>
+                                                        <AccordionContent asChild>
+                                                          <>
+                                                          {Object.entries(crmData.children || {}).map(([desc, descData]) => (
+                                                              <TableRow key={desc}>
+                                                                  <TableCell></TableCell>
+                                                                  <TableCell></TableCell>
+                                                                  <TableCell className="pl-16">{crmOrder}</TableCell>
+                                                                  <TableCell>{desc}</TableCell>
+                                                                  {workzones.map(wz => <TableCell key={wz} className="text-right">{descData.count[wz] || 0}</TableCell>)}
+                                                                  <TableCell className="text-right">{descData.count['Grand Total'] || 0}</TableCell>
+                                                              </TableRow>
+                                                          ))}
+                                                          </>
+                                                        </AccordionContent>
+                                                      </AccordionItem>
+                                                    </Accordion>
+                                                  ))}
+                                                  </>
+                                                </AccordionContent>
+                                            </AccordionItem>
+                                          </Accordion>
+                                        ))}
+                                      </>
+                                    </AccordionContent>
+                                </AccordionItem>
+                            </Accordion>
+                        ))}
+                      </TableBody>
+                  </Table>
+              </div>
+          </CardContent>
+      </Card>
+
+
       <Card>
         <CardHeader>
           <CardTitle>Data Provisioning</CardTitle>
