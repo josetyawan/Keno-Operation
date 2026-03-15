@@ -78,6 +78,8 @@ export async function GET(request: NextRequest) {
                     totalSales: totalProductivity,
                     totalVisit: productiveUserCount,
                 });
+                // Add a 1-second delay to avoid rate limiting
+                await new Promise(resolve => setTimeout(resolve, 1000));
             }
         }
 
