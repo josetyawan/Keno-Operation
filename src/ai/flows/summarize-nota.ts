@@ -40,7 +40,7 @@ const summarizeNotaFlow = ai.defineFlow(
   async (input) => {
     const { output } = await summaryPrompt({
       ...input,
-      model: 'gemini-1.5-flash',
+      model: 'text-bison-001',
     });
     return output!;
   }

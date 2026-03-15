@@ -56,7 +56,7 @@ Tambahkan ucapan terima kasih dan konfirmasi bahwa semua laporan terverifikasi p
 `;
 
     const llmResponse = await ai.generate({
-      model: 'gemini-1.5-flash',
+      model: 'text-bison-001',
       prompt: prompt,
     });
 
