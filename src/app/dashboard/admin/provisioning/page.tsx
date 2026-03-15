@@ -98,22 +98,54 @@ export default function ProvisioningDashboardPage() {
 
     setIsImporting(true);
     setImportProgress(0);
-    toast({ title: "Memulai impor...", description: "Membaca file Excel Anda." });
+    toast({ title: "Memulai impor...", description: "Membaca file Excel dan data yang ada." });
 
     const reader = new FileReader();
     reader.onload = async (e) => {
       try {
+        // --- 1. Fetch existing SC Orders for duplicate checking ---
+        const existingRecordsSnap = await getDocs(collection(firestore, 'provisioning-records'));
+        const existingScOrders = new Set(existingRecordsSnap.docs.map(doc => doc.data().scOrder));
+        
+        // --- 2. Read Excel file ---
         const arrayBuffer = e.target?.result;
         const wb = XLSX.read(arrayBuffer, { type: 'array', cellDates: true });
         const wsname = wb.SheetNames[0];
         const ws = wb.Sheets[wsname];
-        const jsonData: any[] = XLSX.utils.sheet_to_json(ws);
         
+        // Convert to array of arrays to find header row dynamically
+        const dataAsArray: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
+        
+        let headerRowIndex = -1;
+        let headers: string[] = [];
+
+        for (let i = 0; i < dataAsArray.length; i++) {
+            const row = dataAsArray[i];
+            // Find a row that looks like a header, e.g., contains 'Workorder'
+            if (row && row.some(cell => typeof cell === 'string' && cell.toLowerCase().trim() === 'workorder')) {
+                headerRowIndex = i;
+                headers = row.map(cell => String(cell || '').trim());
+                break;
+            }
+        }
+
+        if (headerRowIndex === -1) {
+            throw new Error("Header 'Workorder' tidak ditemukan. Pastikan file Excel memiliki baris header yang benar.");
+        }
+
+        // The actual data starts from the row after the header
+        const dataRows = dataAsArray.slice(headerRowIndex + 1);
+        const jsonData = dataRows.map(row => {
+            const obj: Record<string, any> = {};
+            headers.forEach((header, index) => {
+                obj[header] = row[index];
+            });
+            return obj;
+        });
+
         if (jsonData.length === 0) {
           throw new Error("File Excel kosong atau format tidak didukung.");
         }
-
-        const headers = Object.keys(jsonData[0]);
 
         const headerMapping = {
           workorder: findHeader(headers, ['workorder']),
@@ -133,9 +165,11 @@ export default function ProvisioningDashboardPage() {
         };
         
         const recordsCollection = collection(firestore, 'provisioning-records');
-        const batchSize = 400; // Firestore limit is 500 writes per batch
+        const batchSize = 400;
         let batch = writeBatch(firestore);
         let writeCount = 0;
+        let skippedCount = 0;
+        let newRecordsCount = 0;
         
         for (let i = 0; i < jsonData.length; i++) {
             const row = jsonData[i];
@@ -143,17 +177,19 @@ export default function ProvisioningDashboardPage() {
             const scOrderValue = row[headerMapping.scOrder!]?.toString() || '';
             let finalScOrder = scOrderValue;
 
-            // Regex to find AO, AOi, AOk, AOs, MO, MOi, MOk, MOs etc. followed by alphanumeric characters.
             const aoMoMatch = scOrderValue.match(/(?:A|M)O[a-z]?\w+/);
 
             if (aoMoMatch && aoMoMatch[0]) {
                 finalScOrder = aoMoMatch[0];
             } else if (scOrderValue.startsWith('SC')) {
-                // Take the part before the first underscore, or the whole string if no underscore.
                 finalScOrder = scOrderValue.split('_')[0];
             }
-            // else, finalScOrder remains the original scOrderValue for cases like "1-452..." or "MYIA-..."
 
+            // --- 3. Skip if SC Order already exists ---
+            if (existingScOrders.has(finalScOrder)) {
+                skippedCount++;
+                continue;
+            }
 
             const formatDateValue = (dateValue: any) => {
               if (!dateValue) return '-';
@@ -181,6 +217,7 @@ export default function ProvisioningDashboardPage() {
             const docRef = doc(recordsCollection);
             batch.set(docRef, newRecord);
             writeCount++;
+            newRecordsCount++;
 
             if (writeCount === batchSize) {
                 await batch.commit();
@@ -195,7 +232,7 @@ export default function ProvisioningDashboardPage() {
             await batch.commit();
         }
 
-        toast({ title: "Impor Berhasil!", description: `${jsonData.length} baris data telah diunggah ke database.` });
+        toast({ title: "Impor Selesai!", description: `${newRecordsCount} baris data baru telah diunggah. ${skippedCount} baris dilewati karena sudah ada.` });
         setSelectedWorkzone('all');
         setCurrentPage(1);
 
@@ -347,3 +384,5 @@ export default function ProvisioningDashboardPage() {
     </div>
   );
 }
+
+    
