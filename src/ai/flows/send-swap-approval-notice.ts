@@ -18,7 +18,7 @@ export async function sendSwapApprovalNotice(
 
 const swapApprovalPrompt = ai.definePrompt({
     name: 'swapApprovalNoticePrompt',
-    model: 'googleai/gemini-1.5-pro-latest',
+    model: 'googleai/gemini-pro',
     input: { schema: swapApprovalNoticeSchema },
     prompt: `
 Buatkan notifikasi singkat untuk persetujuan tukar jadwal jaga.
