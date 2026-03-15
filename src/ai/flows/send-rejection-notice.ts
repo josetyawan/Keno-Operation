@@ -2,6 +2,7 @@
 'use server';
 
 import { ai } from '@/ai/genkit';
+import { googleAI } from '@genkit-ai/google-genai';
 import { z } from 'zod';
 
 const rejectionNoticeSchema = z.object({
@@ -38,7 +39,7 @@ Pesan harus menginstruksikan PIC untuk memeriksa detail penolakan di aplikasi, m
 `;
 
     const res = await ai.generate({
-      model: 'gemini-1.5-flash',
+      model: googleAI.model('gemini-1.5-flash'),
       prompt,
     });
 
