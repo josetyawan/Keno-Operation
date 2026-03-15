@@ -1,4 +1,5 @@
 
+      
 rules_version = '2';
 
 service firebase.storage {
@@ -46,10 +47,6 @@ service firebase.storage {
     // --- WRITE RULES ---
     
     match /notas/{userId}/{allPaths=**} {
-      allow write: if isApproved() && (isOwner(userId) || isAdmin() || isKorlap());
-    }
-    
-    match /provisioning_evidence/{userId}/{allPaths=**} {
       allow write: if isApproved() && (isOwner(userId) || isAdmin() || isKorlap());
     }
 
