@@ -678,7 +678,7 @@ export default function ProvisioningDashboardPage() {
     if (inProgressOrders.length > 0) return 'in-progress';
     if (completedOrders.length > 0) return 'completed';
     return 'unassigned';
-  }, [unassignedOrders, inProgressOrders, completedOrders]);
+  }, [unassignedOrders.length, inProgressOrders.length, completedOrders.length]);
 
   return (
     <div className="space-y-6">
@@ -744,7 +744,7 @@ export default function ProvisioningDashboardPage() {
         </CardHeader>
       </Card>
 
-      <Tabs defaultValue={defaultTab} className="w-full">
+      <Tabs key={defaultTab} defaultValue={defaultTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="unassigned">
             <Package className="mr-2" />
