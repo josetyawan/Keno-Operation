@@ -70,11 +70,11 @@ service firebase.storage {
     }
     
     match /provi_evidence/{userId}/{allPaths=**} {
-      allow write: if isApproved() && isOwner(userId);
+      allow write: if isApproved() && (isOwner(userId) || isAdmin() || isKorlap());
     }
 
     match /kendala/{userId}/{allPaths=**} {
-      allow write: if isApproved() && isOwner(userId);
+      allow write: if isApproved() && (isOwner(userId) || isAdmin() || isKorlap());
     }
   }
 }
