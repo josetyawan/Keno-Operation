@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -18,6 +17,7 @@ import { collection, query, doc, writeBatch, orderBy, getDocs, setDoc } from 'fi
 import type { ProvisioningRecord } from '@/lib/types';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 const ITEMS_PER_PAGE = 5;
 
@@ -28,6 +28,13 @@ interface PivotRow {
 }
 type PivotData = Record<string, PivotRow>;
 
+type FilterPath = {
+  productName?: string;
+  status?: string;
+  crmOrder?: string;
+  description?: string;
+  workzone?: string;
+};
 
 // --- Recursive Component for Pivot Table Rows ---
 const PivotTreeRows = ({
@@ -37,6 +44,7 @@ const PivotTreeRows = ({
   workzones,
   expandedRows,
   toggleRow,
+  filterPath = {}
 }: {
   data: PivotData;
   level?: number;
@@ -44,13 +52,21 @@ const PivotTreeRows = ({
   workzones: string[];
   expandedRows: Record<string, boolean>;
   toggleRow: (key: string) => void;
+  filterPath?: FilterPath;
 }) => {
+  const filterKeys = ['productName', 'status', 'crmOrder', 'description'];
+
   return (
     <>
       {Object.entries(data).map(([name, rowData]) => {
         const currentKey = parentKey ? `${parentKey}/${name}` : name;
         const isExpanded = expandedRows[currentKey] ?? false;
         const hasChildren = rowData.children && Object.keys(rowData.children).length > 0;
+        
+        const newFilterPath: FilterPath = {
+          ...filterPath,
+          [filterKeys[level]]: name,
+        };
 
         return (
           <React.Fragment key={currentKey}>
@@ -74,11 +90,22 @@ const PivotTreeRows = ({
                   <span className="truncate">{name}</span>
                 </div>
               </TableCell>
-              {workzones.map((wz) => (
-                <TableCell key={wz} className="text-right tabular-nums">
-                  {rowData.count[wz] || 0}
-                </TableCell>
-              ))}
+              {workzones.map((wz) => {
+                const count = rowData.count[wz] || 0;
+                const queryString = new URLSearchParams({ ...newFilterPath, workzone: wz }).toString();
+                const href = `/dashboard/admin/provisioning/list?${queryString}`;
+                return (
+                  <TableCell key={wz} className="text-right tabular-nums">
+                    {count > 0 ? (
+                      <Link href={href} className="hover:underline hover:text-primary">
+                        {count}
+                      </Link>
+                    ) : (
+                      0
+                    )}
+                  </TableCell>
+                )
+              })}
               <TableCell className="text-right font-bold tabular-nums">
                 {rowData.count['Grand Total'] || 0}
               </TableCell>
@@ -91,6 +118,7 @@ const PivotTreeRows = ({
                 workzones={workzones}
                 expandedRows={expandedRows}
                 toggleRow={toggleRow}
+                filterPath={newFilterPath}
               />
             )}
           </React.Fragment>
