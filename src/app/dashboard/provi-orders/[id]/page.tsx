@@ -123,7 +123,7 @@ export default function OrderDetailPage() {
     setIsUpdating(true);
     try {
         const uploadPromises = Array.from(kendalaFiles).map(async file => {
-            const filePath = `evidences/${order.id}/kendala_${Date.now()}-${file.name}`;
+            const filePath = `evidences/${user.uid}/kendala_${Date.now()}-${file.name}`;
             const storageRef = ref(storage, filePath);
             await uploadBytes(storageRef, file);
             return getDownloadURL(storageRef);
@@ -158,7 +158,7 @@ export default function OrderDetailPage() {
     }
     setIsUpdating(true);
     try {
-        const filePath = `evidences/${order.id}/rumah_${Date.now()}-${housePhoto.name}`;
+        const filePath = `evidences/${user.uid}/rumah_${Date.now()}-${housePhoto.name}`;
         const storageRef = ref(storage, filePath);
         await uploadBytes(storageRef, housePhoto);
         const photoUrl = await getDownloadURL(storageRef);

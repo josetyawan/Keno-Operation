@@ -48,6 +48,10 @@ service firebase.storage {
     match /notas/{userId}/{allPaths=**} {
       allow write: if isApproved() && (isOwner(userId) || isAdmin() || isKorlap());
     }
+    
+    match /evidences/{userId}/{allPaths=**} {
+        allow write: if isApproved() && (isOwner(userId) || isAdmin() || isKorlap());
+    }
 
     match /pelanggan_photos/{userId}/{allPaths=**} {
       allow write: if isApproved() && isOwner(userId);
@@ -67,11 +71,6 @@ service firebase.storage {
 
     match /alker-photos/{userId}/{allPaths=**} {
        allow write: if isApproved() && isOwner(userId);
-    }
-    
-    // Consolidated rule for all provisioning-related evidence
-    match /evidences/{orderId}/{allPaths=**} {
-      allow write: if isSignedIn() && (get(/databases/(default)/documents/provisioning-records/$(orderId)).data.assignedTo_userId == request.auth.uid || isAdmin() || isKorlap());
     }
   }
 }
