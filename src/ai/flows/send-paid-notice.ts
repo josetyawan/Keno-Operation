@@ -24,6 +24,31 @@ export async function sendPaidNotice(input: z.infer<typeof sendPaidNoticeInputSc
   return sendPaidNoticeFlow(input);
 }
 
+const paidNoticePrompt = ai.definePrompt({
+    name: 'paidNoticePrompt',
+    input: { schema: z.object({
+        rekapString: z.string(),
+        grandTotal: z.number(),
+        paidDate: z.string(),
+    }) },
+    output: { schema: z.string() },
+    prompt: `
+Buat notifikasi pembayaran LUNAS untuk dikirim ke grup Telegram.
+Gunakan format yang rapi dan informatif, dengan emoji yang sesuai (misal: ✅💸).
+Berikut adalah data pembayaran yang telah dilunasi:
+
+Tanggal Pembayaran: {{{paidDate}}}
+
+Data:
+{{{rekapString}}}
+
+---
+GRAND TOTAL LUNAS: Rp {{{grandTotalFormatted}}}
+
+Tambahkan ucapan terima kasih dan konfirmasi bahwa semua laporan terverifikasi pada periode tersebut telah dibayarkan.
+`,
+});
+
 const sendPaidNoticeFlow = ai.defineFlow(
   {
     name: 'sendPaidNotice',
@@ -39,28 +64,13 @@ const sendPaidNoticeFlow = ai.defineFlow(
       )
       .join('\n');
 
-    const prompt = `
-Buat notifikasi pembayaran LUNAS untuk dikirim ke grup Telegram.
-Gunakan format yang rapi dan informatif, dengan emoji yang sesuai (misal: ✅💸).
-Berikut adalah data pembayaran yang telah dilunasi:
-
-Tanggal Pembayaran: ${paidDate}
-
-Data:
-${rekapString}
-
----
-GRAND TOTAL LUNAS: Rp ${grandTotal.toLocaleString('id-ID')}
-
-Tambahkan ucapan terima kasih dan konfirmasi bahwa semua laporan terverifikasi pada periode tersebut telah dibayarkan.
-`;
-
-    const llmResponse = await ai.generate({
-      model: 'text-bison@001',
-      prompt: prompt,
+    const { output } = await paidNoticePrompt({
+        rekapString,
+        grandTotal,
+        paidDate,
+        grandTotalFormatted: grandTotal.toLocaleString('id-ID'),
     });
-
-    // In a real implementation, the generated text would be sent to a Telegram tool.
-    return llmResponse.text;
+    
+    return output!;
   }
 );

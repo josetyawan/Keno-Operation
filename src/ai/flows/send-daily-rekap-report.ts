@@ -16,6 +16,32 @@ export async function sendDailyRekapReport(
   return sendDailyRekapReportFlow(input);
 }
 
+const dailyRekapPrompt = ai.definePrompt({
+    name: 'dailyRekapPrompt',
+    input: { schema: z.object({
+        combinedMessage: z.string(),
+        hasPhotos: z.boolean(),
+        photoCount: z.number(),
+        photoCaption: z.string().optional(),
+    }) },
+    output: { schema: z.string() },
+    prompt: `
+Anda adalah asisten yang bertugas membuat laporan rekap harian untuk dikirim ke grup Telegram.
+Format laporan harus profesional, ringkas, dan mudah dibaca.
+Gunakan Markdown untuk formatting.
+
+Berikut adalah data rekap yang perlu diformat:
+---
+{{{combinedMessage}}}
+---
+{{#if hasPhotos}}
+Laporan ini juga memiliki {{{photoCount}}} lampiran foto dengan judul: "{{{photoCaption}}}". Sertakan pemberitahuan tentang foto ini di akhir laporan.
+{{/if}}
+
+Buat satu pesan laporan tunggal yang siap kirim.
+`,
+});
+
 const sendDailyRekapReportFlow = ai.defineFlow(
   {
     name: 'sendDailyRekapReport',
@@ -26,27 +52,13 @@ const sendDailyRekapReportFlow = ai.defineFlow(
     const combinedMessage = input.rekapMessages.join('\n\n---\n\n');
     const hasPhotos = input.photos.length > 0;
 
-    const prompt = `
-Anda adalah asisten yang bertugas membuat laporan rekap harian untuk dikirim ke grup Telegram.
-Format laporan harus profesional, ringkas, dan mudah dibaca.
-Gunakan Markdown untuk formatting.
-
-Berikut adalah data rekap yang perlu diformat:
----
-${combinedMessage}
----
-${hasPhotos ? `\nLaporan ini juga memiliki ${input.photos.length} lampiran foto dengan judul: "${input.photoCaption || 'Lampiran Foto'}". Sertakan pemberitahuan tentang foto ini di akhir laporan.` : ''}
-
-Buat satu pesan laporan tunggal yang siap kirim.
-`;
-
-    const res = await ai.generate({
-      model: 'text-bison@001',
-      prompt: prompt,
+    const { output } = await dailyRekapPrompt({
+        combinedMessage: combinedMessage,
+        hasPhotos: hasPhotos,
+        photoCount: input.photos.length,
+        photoCaption: input.photoCaption || 'Lampiran Foto',
     });
     
-    // In a real implementation, this would likely call a tool to send the message and photos.
-    // For now, we return the generated text.
-    return res.text;
+    return output!;
   }
 );

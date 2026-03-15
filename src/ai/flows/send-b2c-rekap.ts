@@ -17,6 +17,25 @@ export async function sendProductivityRekap(
   return sendProductivityRekapFlow(input);
 }
 
+const b2cRekapPrompt = ai.definePrompt(
+    {
+        name: 'b2cRekapPrompt',
+        input: { schema: sendProductivityRekapInputSchema },
+        output: { schema: z.string() },
+        prompt: `
+Buatkan laporan rekap produktivitas harian profesional.
+
+Unit: {{{unit}}}
+Tanggal: {{{date}}}
+Total Sales: {{{totalSales}}}
+Total Visit: {{{totalVisit}}}
+
+Format singkat siap kirim Telegram.
+`,
+    }
+);
+
+
 const sendProductivityRekapFlow = ai.defineFlow(
   {
     name: 'sendProductivityRekap',
@@ -24,22 +43,10 @@ const sendProductivityRekapFlow = ai.defineFlow(
     outputSchema: z.string(),
   },
   async (input) => {
-    const prompt = `
-Buatkan laporan rekap produktivitas harian profesional.
-
-Unit: ${input.unit}
-Tanggal: ${input.date}
-Total Sales: ${input.totalSales}
-Total Visit: ${input.totalVisit}
-
-Format singkat siap kirim Telegram.
-`;
-
-    const res = await ai.generate({
-      model: 'text-bison@001',
-      prompt,
+    const { output } = await b2cRekapPrompt({
+        ...input,
     });
 
-    return res.text;
+    return output!;
   }
 );

@@ -17,6 +17,25 @@ export async function sendRejectionNotice(
   return sendRejectionNoticeFlow(input);
 }
 
+const rejectionNoticePrompt = ai.definePrompt({
+    name: 'rejectionNoticePrompt',
+    input: { schema: rejectionNoticeSchema },
+    output: { schema: z.string() },
+    prompt: `
+Buatkan notifikasi penolakan laporan nota untuk dikirim ke Telegram.
+Gunakan format yang jelas, singkat, dan profesional. Gunakan emoji yang sesuai (misal: ❌).
+
+Detail Laporan Ditolak:
+- PIC: {{{picName}}}
+- Tanggal Nota: {{{notaDate}}}
+- Segmen: {{{segment}}}
+- Alasan Penolakan: {{{reason}}}
+
+Pesan harus menginstruksikan PIC untuk memeriksa detail penolakan di aplikasi, memperbaiki laporannya, dan mengirim ulang untuk verifikasi.
+`,
+});
+
+
 const sendRejectionNoticeFlow = ai.defineFlow(
   {
     name: 'sendRejectionNotice',
@@ -24,25 +43,7 @@ const sendRejectionNoticeFlow = ai.defineFlow(
     outputSchema: z.string(),
   },
   async (input) => {
-    const prompt = `
-Buatkan notifikasi penolakan laporan nota untuk dikirim ke Telegram.
-Gunakan format yang jelas, singkat, dan profesional. Gunakan emoji yang sesuai (misal: ❌).
-
-Detail Laporan Ditolak:
-- PIC: ${input.picName}
-- Tanggal Nota: ${input.notaDate}
-- Segmen: ${input.segment}
-- Alasan Penolakan: ${input.reason}
-
-Pesan harus menginstruksikan PIC untuk memeriksa detail penolakan di aplikasi, memperbaiki laporannya, dan mengirim ulang untuk verifikasi.
-`;
-
-    const res = await ai.generate({
-      model: 'text-bison@001',
-      prompt,
-    });
-
-    // In a real implementation, this would be sent to a Telegram tool.
-    return res.text;
+    const { output } = await rejectionNoticePrompt(input);
+    return output!;
   }
 );

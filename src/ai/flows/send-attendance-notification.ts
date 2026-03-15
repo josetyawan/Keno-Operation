@@ -16,6 +16,28 @@ export async function sendAttendanceNotice(input: z.infer<typeof attendanceNotic
     return sendAttendanceNoticeFlow(input);
 }
 
+const attendancePrompt = ai.definePrompt(
+  {
+    name: 'attendanceNoticePrompt',
+    input: { schema: attendanceNoticeSchema },
+    output: { schema: z.string() },
+    prompt: `
+Buat notifikasi absensi untuk dikirim ke grup Telegram.
+Gunakan format yang ringkas dan informatif.
+
+{{{statusEmoji}}} *{{{status}}}*
+- *Nama:* {{{userName}}}
+{{#if reason}}- *Alasan:* {{{reason}}}{{/if}}
+{{#if coordinates}}- *Lokasi:* https://www.google.com/maps/search/?api=1&query={{{coordinates}}}{{/if}}
+
+{{#if photoUrl}}[Lihat Foto Bukti]({{{photoUrl}}}){{/if}}
+
+Buat pesan ini dalam format Markdown yang siap kirim.
+`,
+  }
+);
+
+
 const sendAttendanceNoticeFlow = ai.defineFlow(
   {
     name: 'sendAttendanceNoticeFlow',
@@ -36,26 +58,11 @@ const sendAttendanceNoticeFlow = ai.defineFlow(
         statusEmoji = '🤝';
     }
 
-    const prompt = `
-Buat notifikasi absensi untuk dikirim ke grup Telegram.
-Gunakan format yang ringkas dan informatif.
-
-${statusEmoji} *${input.status}*
-- *Nama:* ${input.userName}
-${input.reason ? `- *Alasan:* ${input.reason}` : ''}
-${input.coordinates && input.coordinates !== 'N/A' ? `- *Lokasi:* https://www.google.com/maps/search/?api=1&query=${input.coordinates}` : ''}
-
-${input.photoUrl ? `[Lihat Foto Bukti](${input.photoUrl})` : ''}
-
-Buat pesan ini dalam format Markdown yang siap kirim.
-`;
-
-    const res = await ai.generate({
-      model: 'text-bison@001',
-      prompt,
+    const { output } = await attendancePrompt({
+        ...input,
+        statusEmoji: statusEmoji,
     });
     
-    // In a real implementation, this would be sent to a Telegram tool.
-    return res.text;
+    return output!;
   }
 );

@@ -16,6 +16,24 @@ export async function sendSwapApprovalNotice(
   return sendSwapApprovalNoticeFlow(input);
 }
 
+const swapApprovalPrompt = ai.definePrompt({
+    name: 'swapApprovalNoticePrompt',
+    input: { schema: swapApprovalNoticeSchema },
+    output: { schema: z.string() },
+    prompt: `
+Buatkan notifikasi singkat untuk persetujuan tukar jadwal jaga.
+Tujuan: Menginformasikan kedua teknisi bahwa pertukaran telah disetujui.
+Format: Siap kirim ke Telegram. Gunakan emoji yang sesuai (misal: ✅🤝).
+
+Detail Pertukaran:
+- Tanggal: {{{swapDate}}}
+- Teknisi Awal (Request): {{{requesterName}}}
+- Teknisi Pengganti: {{{replacementName}}}
+
+Buat pesan yang jelas, singkat, dan informatif. Ucapkan terima kasih kepada teknisi pengganti.
+`
+});
+
 const sendSwapApprovalNoticeFlow = ai.defineFlow(
   {
     name: 'sendSwapApprovalNotice',
@@ -23,26 +41,7 @@ const sendSwapApprovalNoticeFlow = ai.defineFlow(
     outputSchema: z.string(),
   },
   async (input) => {
-    const prompt = `
-Buatkan notifikasi singkat untuk persetujuan tukar jadwal jaga.
-Tujuan: Menginformasikan kedua teknisi bahwa pertukaran telah disetujui.
-Format: Siap kirim ke Telegram. Gunakan emoji yang sesuai (misal: ✅🤝).
-
-Detail Pertukaran:
-- Tanggal: ${input.swapDate}
-- Teknisi Awal (Request): ${input.requesterName}
-- Teknisi Pengganti: ${input.replacementName}
-
-Buat pesan yang jelas, singkat, dan informatif. Ucapkan terima kasih kepada teknisi pengganti.
-`;
-
-    const res = await ai.generate({
-      model: 'text-bison@001',
-      prompt,
-    });
-
-    // In a real implementation, this would call a tool to send the message.
-    // For now, we return the generated text.
-    return res.text;
+    const { output } = await swapApprovalPrompt(input);
+    return output!;
   }
 );

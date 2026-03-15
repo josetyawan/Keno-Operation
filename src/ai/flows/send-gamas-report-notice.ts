@@ -17,6 +17,26 @@ export async function sendGamasReportNotice(
   return sendGamasReportNoticeFlow(input);
 }
 
+const gamasReportPrompt = ai.definePrompt({
+    name: 'gamasReportNoticePrompt',
+    input: { schema: gamasReportNoticeSchema },
+    output: { schema: z.string() },
+    prompt: `
+Buatkan notifikasi singkat untuk laporan Gamas yang baru saja ditinjau.
+Tujuan: Menginformasikan teknisi tentang status laporannya.
+Format: Siap kirim ke Telegram. Gunakan emoji yang sesuai.
+
+Detail Laporan:
+- No. Tiket: {{{noTiket}}}
+- Teknisi: {{{userName}}}
+- Status Baru: {{{status}}}
+{{#if rejectionReason}}- Alasan Penolakan: {{{rejectionReason}}}{{/if}}
+
+Buat pesan yang jelas dan to-the-point.
+`
+});
+
+
 const sendGamasReportNoticeFlow = ai.defineFlow(
   {
     name: 'sendGamasReportNotice',
@@ -24,27 +44,7 @@ const sendGamasReportNoticeFlow = ai.defineFlow(
     outputSchema: z.string(),
   },
   async (input) => {
-    const prompt = `
-Buatkan notifikasi singkat untuk laporan Gamas yang baru saja ditinjau.
-Tujuan: Menginformasikan teknisi tentang status laporannya.
-Format: Siap kirim ke Telegram. Gunakan emoji yang sesuai.
-
-Detail Laporan:
-- No. Tiket: ${input.noTiket}
-- Teknisi: ${input.userName}
-- Status Baru: ${input.status}
-${input.rejectionReason ? `- Alasan Penolakan: ${input.rejectionReason}` : ''}
-
-Buat pesan yang jelas dan to-the-point.
-`;
-
-    const res = await ai.generate({
-      model: 'text-bison@001',
-      prompt,
-    });
-
-    // In a real implementation, this would likely call a tool to send the message.
-    // For now, we return the generated text.
-    return res.text;
+    const { output } = await gamasReportPrompt(input);
+    return output!;
   }
 );

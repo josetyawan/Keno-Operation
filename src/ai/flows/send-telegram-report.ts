@@ -36,6 +36,32 @@ export async function sendTelegramReport(input: z.infer<typeof sendTelegramRepor
     }
 }
 
+const telegramReportPrompt = ai.definePrompt({
+    name: 'telegramReportPrompt',
+    input: { schema: z.object({
+        rekapString: z.string(),
+        grandTotalFormatted: z.string(),
+        rekapDate: z.string(),
+    }) },
+    output: { schema: z.string() },
+    prompt: `
+Buat laporan rekap pembayaran untuk dikirim ke Telegram.
+Gunakan format yang rapi dan mudah dibaca.
+Berikut adalah data rekapnya dalam format: [No. Pembayaran] [Nama] [Segmen] [Tanggal] [Nominal]
+
+Tanggal Rekap: {{{rekapDate}}}
+
+Data:
+{{{rekapString}}}
+
+---
+GRAND TOTAL: Rp {{{grandTotalFormatted}}}
+
+Tambahkan header dan footer yang sesuai untuk laporan ini. Pastikan formatnya ringkas.
+`,
+});
+
+
 const sendTelegramReportFlow = ai.defineFlow(
   {
     name: 'sendTelegramReportFlow',
@@ -47,28 +73,13 @@ const sendTelegramReportFlow = ai.defineFlow(
     const rekapString = rekapData
         .map(item => `${item.phone} ${item.name} ${item.segmen} ${item.tanggal} ${item.nominal}`)
         .join('\n');
-
-    const prompt = `
-Buat laporan rekap pembayaran untuk dikirim ke Telegram.
-Gunakan format yang rapi dan mudah dibaca.
-Berikut adalah data rekapnya dalam format: [No. Pembayaran] [Nama] [Segmen] [Tanggal] [Nominal]
-
-Tanggal Rekap: ${rekapDate}
-
-Data:
-${rekapString}
-
----
-GRAND TOTAL: Rp ${grandTotal.toLocaleString('id-ID')}
-
-Tambahkan header dan footer yang sesuai untuk laporan ini. Pastikan formatnya ringkas.
-`;
     
-    const llmResponse = await ai.generate({
-      model: 'text-bison@001',
-      prompt: prompt,
+    const { output } = await telegramReportPrompt({
+        rekapString,
+        grandTotalFormatted: grandTotal.toLocaleString('id-ID'),
+        rekapDate
     });
     
-    return llmResponse.text;
+    return output!;
   }
 );

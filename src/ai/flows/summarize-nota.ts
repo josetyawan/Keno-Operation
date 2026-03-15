@@ -40,7 +40,6 @@ const summarizeNotaFlow = ai.defineFlow(
   async (input) => {
     const { output } = await summaryPrompt({
       ...input,
-      model: 'text-bison@001',
     });
     return output!;
   }
