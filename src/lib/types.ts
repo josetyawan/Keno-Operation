@@ -384,7 +384,7 @@ export type ProvisioningRecord = {
   assignedTo_userId?: string;
   assignedTo_userName?: string;
   assignedAt?: any; // Timestamp
-  provisioningStatus?: 'unassigned' | 'assigned' | 'picked_up' | 'departed' | 'arrived' | 'kendala' | 'completed';
+  provisioningStatus?: 'unassigned' | 'assigned' | 'picked_up' | 'departed' | 'arrived' | 'kendala' | 'wip_odp_done' | 'completed';
   pickupAt?: any; // Timestamp
   departAt?: any; // Timestamp
   arriveAt?: any; // Timestamp
@@ -393,10 +393,11 @@ export type ProvisioningRecord = {
   kendalaNotes?: string;
   kendalaPhotos?: string[];
   customerHousePhoto?: string;
-  baPhoto?: string;
+  odpPort?: string;
+  odpQRCodeUrl?: string;
+  // Fields for completion
+  baPhotoUrl?: string;
   valinsId?: string;
   materials?: ProvisioningMaterial[];
   completedAt?: any; // Timestamp
 };
-
-    

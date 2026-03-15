@@ -517,7 +517,35 @@
         "bookingDate": { "type": "string" },
         "productName": { "type": "string" },
         "productType": { "type": "string" },
-        "workzone": { "type": "string" }
+        "workzone": { "type": "string" },
+        "assignedTo_userId": { "type": "string" },
+        "assignedTo_userName": { "type": "string" },
+        "assignedAt": { "type": "string", "format": "date-time" },
+        "provisioningStatus": { "type": "string", "enum": ["unassigned", "assigned", "picked_up", "departed", "arrived", "kendala", "wip_odp_done", "completed"] },
+        "pickupAt": { "type": "string", "format": "date-time" },
+        "departAt": { "type": "string", "format": "date-time" },
+        "arriveAt": { "type": "string", "format": "date-time" },
+        "arriveCoordinates": { "type": "string" },
+        "progressNotes": { "type": "string" },
+        "kendalaNotes": { "type": "string" },
+        "kendalaPhotos": { "type": "array", "items": { "type": "string", "format": "uri" } },
+        "customerHousePhoto": { "type": "string", "format": "uri" },
+        "odpPort": { "type": "string" },
+        "odpQRCodeUrl": { "type": "string", "format": "uri" },
+        "baPhotoUrl": { "type": "string", "format": "uri" },
+        "valinsId": { "type": "string" },
+        "materials": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "quantity": { "type": "number" }
+            },
+            "required": ["name", "quantity"]
+          }
+        },
+        "completedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "workorder", "scOrder", "serviceNo"]
     }
