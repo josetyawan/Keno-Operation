@@ -1,7 +1,7 @@
 
 'use server';
 
-import { ai, googleAIGenkitPlugin } from '@/ai/genkit';
+import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
 const dailyRekapInputSchema = z.object({
@@ -18,7 +18,7 @@ export async function sendDailyRekapReport(
 
 const dailyRekapPrompt = ai.definePrompt({
     name: 'dailyRekapPrompt',
-    model: googleAIGenkitPlugin.model('gemini-1.5-flash'),
+    model: 'googleai/gemini-1.5-flash',
     input: { schema: z.object({
         combinedMessage: z.string(),
         hasPhotos: z.boolean(),

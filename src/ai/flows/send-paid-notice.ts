@@ -1,7 +1,7 @@
 
 'use server';
 
-import { ai, googleAIGenkitPlugin } from '@/ai/genkit';
+import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
 const rekapDataItemSchema = z.object({
@@ -26,7 +26,7 @@ export async function sendPaidNotice(input: z.infer<typeof sendPaidNoticeInputSc
 
 const paidNoticePrompt = ai.definePrompt({
     name: 'paidNoticePrompt',
-    model: googleAIGenkitPlugin.model('gemini-1.5-flash'),
+    model: 'googleai/gemini-1.5-flash',
     input: { schema: z.object({
         rekapString: z.string(),
         grandTotal: z.number(),

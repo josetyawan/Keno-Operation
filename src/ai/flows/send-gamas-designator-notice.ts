@@ -1,7 +1,7 @@
 
 'use server';
 
-import { ai, googleAIGenkitPlugin } from '@/ai/genkit';
+import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
 const gamasDesignatorNoticeSchema = z.object({
@@ -19,7 +19,7 @@ export async function sendGamasDesignatorNotice(
 
 const gamasDesignatorPrompt = ai.definePrompt({
     name: 'gamasDesignatorNoticePrompt',
-    model: googleAIGenkitPlugin.model('gemini-1.5-flash'),
+    model: 'googleai/gemini-1.5-flash',
     input: { schema: gamasDesignatorNoticeSchema },
     prompt: `
 Buatkan notifikasi singkat untuk penolakan salah satu eviden designator pada laporan Gamas.

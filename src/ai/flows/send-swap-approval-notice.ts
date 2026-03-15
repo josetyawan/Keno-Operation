@@ -1,7 +1,7 @@
 
 'use server';
 
-import { ai, googleAIGenkitPlugin } from '@/ai/genkit';
+import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
 const swapApprovalNoticeSchema = z.object({
@@ -18,7 +18,7 @@ export async function sendSwapApprovalNotice(
 
 const swapApprovalPrompt = ai.definePrompt({
     name: 'swapApprovalNoticePrompt',
-    model: googleAIGenkitPlugin.model('gemini-1.5-flash'),
+    model: 'googleai/gemini-1.5-flash',
     input: { schema: swapApprovalNoticeSchema },
     prompt: `
 Buatkan notifikasi singkat untuk persetujuan tukar jadwal jaga.

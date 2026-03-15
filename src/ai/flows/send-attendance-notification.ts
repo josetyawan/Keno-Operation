@@ -1,7 +1,7 @@
 
 'use server';
 
-import { ai, googleAIGenkitPlugin } from '@/ai/genkit';
+import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
 const attendanceNoticeSchema = z.object({
@@ -20,7 +20,7 @@ export async function sendAttendanceNotice(input: z.infer<typeof attendanceNotic
 const attendancePrompt = ai.definePrompt(
   {
     name: 'attendanceNoticePrompt',
-    model: googleAIGenkitPlugin.model('gemini-1.5-flash'),
+    model: 'googleai/gemini-1.5-flash',
     input: { schema: attendanceNoticeSchema },
     prompt: `
 Buat notifikasi absensi untuk dikirim ke grup Telegram.
