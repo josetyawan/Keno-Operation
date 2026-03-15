@@ -1,11 +1,12 @@
+
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useFirestore } from '@/firebase';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, getDocs, query, where, Timestamp } from 'firebase/firestore';
 import { format, isSameDay } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
-import type { UserProfile, Schedule, RiwayatGangguan, OtherWork } from '@/lib/types';
+import type { UserProfile, Schedule, RiwayatGangguan, OtherWork, ProvisioningRecord } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -76,7 +77,7 @@ export default function ProduktivitasHarianPage() {
                 ]);
             }
             
-            const [unitUsers, riwayatList, otherWorks] = await Promise.all([
+            const [unitUsers, riwayatList, otherWorks, provisioningList] = await Promise.all([
                 fetchCollection<UserProfile>('users', [where('unit', '==', selectedUnit), where('registrationStatus', '==', 'approved')]),
                 fetchCollection<RiwayatGangguan>('riwayat-gangguan', [
                     where('tanggalLapor', '>=', Timestamp.fromDate(startDate)),
@@ -85,6 +86,10 @@ export default function ProduktivitasHarianPage() {
                 fetchCollection<OtherWork>('other-works', [
                     where('tanggalPengerjaan', '>=', Timestamp.fromDate(startDate)),
                     where('tanggalPengerjaan', '<=', Timestamp.fromDate(endDate))
+                ]),
+                 fetchCollection<ProvisioningRecord>('provisioning-records', [
+                    where('completedAt', '>=', Timestamp.fromDate(startDate)),
+                    where('completedAt', '<=', Timestamp.fromDate(endDate))
                 ])
             ]);
 
@@ -104,6 +109,15 @@ export default function ProduktivitasHarianPage() {
                     productivityMap.set(item.userId, (productivityMap.get(item.userId) || 0) + 1);
                 }
             });
+            provisioningList.forEach(item => {
+                if (item.assignedTo_userId) {
+                    const user = unitUsers.find(u => u.id === item.assignedTo_userId);
+                    if (user) {
+                        productivityMap.set(item.assignedTo_userId, (productivityMap.get(item.assignedTo_userId) || 0) + 1);
+                    }
+                }
+            });
+
 
             // Generate Summary Table
             const newSummaryData = unitUsers.map(user => {
@@ -131,10 +145,12 @@ export default function ProduktivitasHarianPage() {
             const newDetailData = productiveUsers.map(user => {
                 const userRiwayat = riwayatList.filter(r => r.userId === user.id);
                 const userOtherWorks = otherWorks.filter(w => w.userId === user.id);
+                const userProvisioning = provisioningList.filter(p => p.assignedTo_userId === user.id);
                 
                 const tickets = [
                     ...userRiwayat.map(r => ({ id: r.id, ticket: r.noTiket || '', service: r.noService || '', segment: r.jenisOrder })),
-                    ...userOtherWorks.map(w => ({ id: w.id, ticket: w.namaPekerjaan || '', service: '', segment: w.jenisOrder }))
+                    ...userOtherWorks.map(w => ({ id: w.id, ticket: w.namaPekerjaan || '', service: '', segment: w.jenisOrder })),
+                    ...userProvisioning.map(p => ({ id: p.id, ticket: p.workorder || '', service: p.serviceNo || '', segment: p.crmOrder }))
                 ];
 
                 return {
