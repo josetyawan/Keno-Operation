@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Upload, FileSpreadsheet, ChevronLeft, ChevronRight, Trash2, ChevronRight as ChevronRightIcon, User, AlertTriangle, Phone, MoreHorizontal } from 'lucide-react';
+import { Loader2, Upload, FileSpreadsheet, ChevronLeft, ChevronRight, Trash2, ChevronRight as ChevronRightIcon, User, AlertTriangle, Phone, MoreHorizontal, Edit, Save } from 'lucide-react';
 import { format, isValid } from 'date-fns';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, doc, writeBatch, orderBy, getDocs, setDoc, updateDoc, serverTimestamp, where } from 'firebase/firestore';
@@ -23,8 +23,27 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogContent, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const ITEMS_PER_PAGE = 5;
+
+const jenisOrderOptions = [
+  "PSB DATIN", "PSB OLO", "PSB WIFI", "PDA DATIN", "PDA WIFI",
+  "REPLACEMENT", "Instalasi IP Camera", "Instalasi SD-WAN",
+  "Instalasi Router", "Install AP WIFI (1 AP)", "Install AP WIFI (2 AP)",
+  "Install AP WIFI(3 AP)", "Install AP WIFI (4 AP)",
+  "Pembuatan BAI (Satkomindo,BRI MPLS)", "Provisioning MyRep", "PSB Surge",
+  "Provisioning 5 Menara Bintang", "PSB IBU - FTTR",
+  "PT Anagata Cipta Teknologi (KerjainAja)", "PSB TBG", "Provisioning Hypernet",
+  "2ND STB", "UPSELLING", "DISMANTLING EBIS",
+].sort();
+
+const typeOrderOptions: Record<string, string[]> = {
+    'DISMANTLING EBIS': ['ONT', 'STB', 'AP', 'IP CAMERA'],
+    'REPLACEMENT': ['ONT', 'STB'],
+};
+
 
 // --- Helper Functions ---
 const formatWaNumber = (phone: string) => {
@@ -38,6 +57,97 @@ const formatWaNumber = (phone: string) => {
 };
 
 // --- Child Components ---
+
+function EditOrderForm({ order, onSave, onCancel, isSaving }: { order: ProvisioningRecord, onSave: (data: Partial<ProvisioningRecord>) => void, onCancel: () => void, isSaving: boolean }) {
+    const [serviceNo, setServiceNo] = useState('');
+    const [customerName, setCustomerName] = useState('');
+    const [contactNumber, setContactNumber] = useState('');
+    const [address, setAddress] = useState('');
+    const [productName, setProductName] = useState('');
+    const [crmOrder, setCrmOrder] = useState('');
+    const [description, setDescription] = useState('');
+
+    useEffect(() => {
+        setServiceNo(order.serviceNo || '');
+        setCustomerName(order.customerName || '');
+        setContactNumber(order.contactNumber || '');
+        setAddress(order.address || '');
+        setProductName(order.productName || '');
+        setCrmOrder(order.crmOrder || '');
+        setDescription(order.description || '');
+    }, [order]);
+
+    const showOrderType = useMemo(() => Object.keys(typeOrderOptions).includes(crmOrder), [crmOrder]);
+
+    useEffect(() => {
+        if (!showOrderType) setDescription('');
+    }, [crmOrder, showOrderType]);
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        onSave({
+            serviceNo,
+            customerName,
+            contactNumber,
+            address,
+            productName,
+            crmOrder,
+            description: showOrderType ? description : '',
+        });
+    };
+
+    return (
+        <form onSubmit={handleSubmit}>
+            <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
+                <div className="grid gap-2">
+                    <Label htmlFor="edit-serviceNo">No. Internet / Service</Label>
+                    <Input id="edit-serviceNo" value={serviceNo} onChange={e => setServiceNo(e.target.value)} />
+                </div>
+                 <div className="grid gap-2">
+                    <Label htmlFor="edit-customerName">Nama Pelanggan</Label>
+                    <Input id="edit-customerName" value={customerName} onChange={e => setCustomerName(e.target.value)} />
+                </div>
+                <div className="grid gap-2">
+                    <Label htmlFor="edit-contactNumber">No. Kontak</Label>
+                    <Input id="edit-contactNumber" value={contactNumber} onChange={e => setContactNumber(e.target.value)} />
+                </div>
+                 <div className="grid gap-2">
+                    <Label htmlFor="edit-address">Alamat</Label>
+                    <Textarea id="edit-address" value={address} onChange={e => setAddress(e.target.value)} />
+                </div>
+                 <div className="grid gap-2">
+                    <Label htmlFor="edit-productName">Paket Internet</Label>
+                    <Input id="edit-productName" value={productName} onChange={e => setProductName(e.target.value)} />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="edit-crmOrder">Jenis Order</Label>
+                        <Select value={crmOrder} onValueChange={setCrmOrder}>
+                            <SelectTrigger id="edit-crmOrder"><SelectValue placeholder="Pilih Jenis Order..." /></SelectTrigger>
+                            <SelectContent><ScrollArea className="h-72">{jenisOrderOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</ScrollArea></SelectContent>
+                        </Select>
+                    </div>
+                    {showOrderType && (
+                        <div className="grid gap-2">
+                            <Label htmlFor="edit-description">Order Type</Label>
+                            <Select value={description} onValueChange={setDescription}>
+                                <SelectTrigger id="edit-description"><SelectValue placeholder="Pilih Tipe Order..." /></SelectTrigger>
+                                <SelectContent>{typeOrderOptions[crmOrder].map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</SelectContent>
+                            </Select>
+                        </div>
+                    )}
+                </div>
+            </div>
+            <DialogFooter>
+                <Button type="button" variant="ghost" onClick={onCancel}>Batal</Button>
+                <Button type="submit" disabled={isSaving}>
+                    {isSaving && <Loader2 className="mr-2 animate-spin" />}
+                    Simpan Perubahan
+                </Button>
+            </DialogFooter>
+        </form>
+    );
+}
 
 function AssignTechnicianDialog({ order, users, isOpen, onOpenChange, onAssign, isAssigning }: { order: ProvisioningRecord; users: UserProfile[]; isOpen: boolean; onOpenChange: (open: boolean) => void; onAssign: (techId: string) => void; isAssigning: boolean; }) {
   const [selectedTechnician, setSelectedTechnician] = useState('');
@@ -212,6 +322,9 @@ export default function ProvisioningDashboardPage() {
   
   const [orderToAssign, setOrderToAssign] = useState<ProvisioningRecord | null>(null);
   const [isAssigning, setIsAssigning] = useState(false);
+  
+  const [orderToEdit, setOrderToEdit] = useState<ProvisioningRecord | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Data fetching
   const recordsQuery = useMemoFirebase(() => query(collection(firestore, 'provisioning-records'), orderBy('dateCreated', 'desc')), [firestore]);
@@ -472,6 +585,21 @@ export default function ProvisioningDashboardPage() {
         setIsAssigning(false);
     }
   }
+
+  const handleUpdate = async (data: Partial<ProvisioningRecord>) => {
+    if (!orderToEdit) return;
+    setIsSaving(true);
+    const docRef = doc(firestore, 'provisioning-records', orderToEdit.id);
+    try {
+        await updateDoc(docRef, data);
+        toast({ title: "Order Diperbarui" });
+        setOrderToEdit(null); // close dialog on success
+    } catch (e: any) {
+        toast({ variant: 'destructive', title: 'Gagal Memperbarui', description: (e as Error).message });
+    } finally {
+        setIsSaving(false);
+    }
+  };
   
   const filteredData = useMemo(() => {
     let filtered = selectedWorkzone === 'all'
@@ -630,6 +758,10 @@ export default function ProvisioningDashboardPage() {
                             <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                             <DropdownMenuContent>
                                 <DropdownMenuLabel>Aksi</DropdownMenuLabel>
+                                <DropdownMenuItem onSelect={() => setOrderToEdit(item)}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    <span>Edit Data</span>
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onSelect={() => setOrderToAssign(item)} disabled={areTechniciansLoading}>
                                     <User className="mr-2 h-4 w-4" />
                                     <span>Tugaskan Teknisi</span>
@@ -671,8 +803,23 @@ export default function ProvisioningDashboardPage() {
           isAssigning={isAssigning}
         />
       )}
+
+      {orderToEdit && (
+        <Dialog open={!!orderToEdit} onOpenChange={(open) => !open && setOrderToEdit(null)}>
+            <DialogContent className="max-w-xl">
+                <DialogHeader>
+                    <DialogTitle>Edit Data Order</DialogTitle>
+                    <DialogDescription>Perbarui data untuk WO: {orderToEdit.workorder}</DialogDescription>
+                </DialogHeader>
+                <EditOrderForm 
+                    order={orderToEdit}
+                    onSave={handleUpdate}
+                    onCancel={() => setOrderToEdit(null)}
+                    isSaving={isSaving}
+                />
+            </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
-
-    
