@@ -2,7 +2,6 @@
 'use server';
 
 import { ai } from '@/ai/genkit';
-import { googleAI } from '@genkit-ai/google-genai';
 import { z } from 'zod';
 
 const gamasReportNoticeSchema = z.object({
@@ -40,7 +39,7 @@ Buat pesan yang jelas dan to-the-point.
 `;
 
     const res = await ai.generate({
-      model: googleAI.model('gemini-1.5-flash'),
+      model: 'googleai/gemini-1.5-flash',
       prompt,
     });
 

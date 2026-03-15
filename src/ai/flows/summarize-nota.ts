@@ -2,8 +2,7 @@
 'use server';
 
 import { ai } from '@/ai/genkit';
-import { googleAI } from '@genkit-ai/google-genai';
-import { z } from 'zod';
+import { z } from 'genkit';
 
 const summarizeInputSchema = z.object({
   notaContent: z.string(),
@@ -23,7 +22,7 @@ const summaryPrompt = ai.definePrompt({
   name: 'summaryPrompt',
   input: { schema: summarizeInputSchema },
   output: { schema: summarizeOutputSchema },
-  model: googleAI.model('gemini-1.5-flash'),
+  model: 'googleai/gemini-1.5-flash',
   prompt: `Summarize the following nota details into a short, easy-to-read paragraph. Extract the key information like who, what, when, and how much.
 
 Nota Details:
