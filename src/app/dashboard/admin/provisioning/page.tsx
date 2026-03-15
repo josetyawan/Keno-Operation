@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -47,7 +46,7 @@ export default function ProvisioningDashboardPage() {
   const findHeader = (headers: string[], aliases: string[]): string | undefined => {
     const lowerAliases = aliases.map(a => a.toLowerCase().trim());
     for (const header of headers) {
-        if (header && lowerAliases.includes(header.toLowerCase().trim())) {
+        if (header && lowerAliases.some(alias => header.toLowerCase().trim().includes(alias))) {
             return header;
         }
     }
@@ -114,15 +113,15 @@ export default function ProvisioningDashboardPage() {
         const ws = wb.Sheets[wsname];
         
         // Convert to array of arrays to find header row dynamically
-        const dataAsArray: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
+        const dataAsArray: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
         
         let headerRowIndex = -1;
         let headers: string[] = [];
 
         for (let i = 0; i < dataAsArray.length; i++) {
             const row = dataAsArray[i];
-            // Find a row that looks like a header, e.g., contains 'Workorder'
-            if (row && row.some(cell => typeof cell === 'string' && cell.toLowerCase().trim() === 'workorder')) {
+            // Find a row that looks like a header, e.g., contains 'Workorder' AND 'Customer Name'
+            if (row && row.some(cell => typeof cell === 'string' && (cell.toLowerCase().trim() === 'workorder')) && row.some(cell => typeof cell === 'string' && (cell.toLowerCase().trim() === 'customer name'))) {
                 headerRowIndex = i;
                 headers = row.map(cell => String(cell || '').trim());
                 break;
@@ -130,7 +129,7 @@ export default function ProvisioningDashboardPage() {
         }
 
         if (headerRowIndex === -1) {
-            throw new Error("Header 'Workorder' tidak ditemukan. Pastikan file Excel memiliki baris header yang benar.");
+            throw new Error("Header tidak ditemukan. Pastikan file Excel memiliki baris header yang benar (Contoh: 'Workorder', 'Customer Name').");
         }
 
         // The actual data starts from the row after the header
@@ -149,9 +148,9 @@ export default function ProvisioningDashboardPage() {
 
         const headerMapping = {
           workorder: findHeader(headers, ['workorder']),
-          scOrder: findHeader(headers, ['sc order no/track', 'id/csrm no']),
-          serviceNo: findHeader(headers, ['service no.', 'service no']),
-          crmOrder: findHeader(headers, ['crm, order type', 'crm order type']),
+          scOrder: findHeader(headers, ['sc order', 'id/csrm no']),
+          serviceNo: findHeader(headers, ['service no']),
+          crmOrder: findHeader(headers, ['crm', 'order type']),
           status: findHeader(headers, ['status']),
           customerName: findHeader(headers, ['customer name']),
           contactNumber: findHeader(headers, ['contact number']),
@@ -177,15 +176,20 @@ export default function ProvisioningDashboardPage() {
             const scOrderValue = row[headerMapping.scOrder!]?.toString() || '';
             let finalScOrder = scOrderValue;
 
-            const aoMoMatch = scOrderValue.match(/(?:A|M)O[a-z]?\w+/);
+            // Updated Regex to match AO or MO followed by k, i, or s
+            const aoMoMatch = scOrderValue.match(/(?:A|M)O(?:k|i|s)\w+/);
 
             if (aoMoMatch && aoMoMatch[0]) {
                 finalScOrder = aoMoMatch[0];
-            } else if (scOrderValue.startsWith('SC')) {
-                finalScOrder = scOrderValue.split('_')[0];
+            } else if (finalScOrder.startsWith('SC') && finalScOrder.includes('_')) {
+                finalScOrder = finalScOrder.split('_')[0];
             }
+            // All other cases will use the original scOrderValue
 
             // --- 3. Skip if SC Order already exists ---
+            if (!finalScOrder) { // Skip if the key field is empty
+                continue;
+            }
             if (existingScOrders.has(finalScOrder)) {
                 skippedCount++;
                 continue;
@@ -200,11 +204,11 @@ export default function ProvisioningDashboardPage() {
             const newRecord: Omit<ProvisioningRecord, 'id'> = {
               workorder: row[headerMapping.workorder!] || '-',
               scOrder: finalScOrder,
-              serviceNo: row[headerMapping.serviceNo!] || '-',
+              serviceNo: row[headerMapping.serviceNo!]?.toString() || '-',
               crmOrder: row[headerMapping.crmOrder!] || '-',
               status: row[headerMapping.status!] || '-',
               customerName: row[headerMapping.customerName!] || '-',
-              contactNumber: row[headerMapping.contactNumber!] || '-',
+              contactNumber: row[headerMapping.contactNumber!]?.toString() || '-',
               address: row[headerMapping.address!] || '-',
               description: row[headerMapping.description!] || '-',
               dateCreated: formatDateValue(row[headerMapping.dateCreated!]),
@@ -384,5 +388,3 @@ export default function ProvisioningDashboardPage() {
     </div>
   );
 }
-
-    
