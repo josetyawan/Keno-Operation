@@ -672,6 +672,13 @@ export default function ProvisioningDashboardPage() {
     return completedOrders.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [completedOrders, completedPage]);
   const totalCompletedPages = Math.ceil(completedOrders.length / ITEMS_PER_PAGE);
+  
+  const defaultTab = useMemo(() => {
+    if (unassignedOrders.length > 0) return 'unassigned';
+    if (inProgressOrders.length > 0) return 'in-progress';
+    if (completedOrders.length > 0) return 'completed';
+    return 'unassigned';
+  }, [unassignedOrders, inProgressOrders, completedOrders]);
 
   return (
     <div className="space-y-6">
@@ -737,7 +744,7 @@ export default function ProvisioningDashboardPage() {
         </CardHeader>
       </Card>
 
-      <Tabs defaultValue="unassigned" className="w-full">
+      <Tabs defaultValue={defaultTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="unassigned">
             <Package className="mr-2" />
@@ -876,5 +883,3 @@ export default function ProvisioningDashboardPage() {
     </div>
   );
 }
-
-    
