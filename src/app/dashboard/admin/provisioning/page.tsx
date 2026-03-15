@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -10,125 +11,96 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Upload, FileSpreadsheet, ChevronLeft, ChevronRight, Trash2, ChevronRight as ChevronRightIcon } from 'lucide-react';
+import { Loader2, Upload, FileSpreadsheet, ChevronLeft, ChevronRight, Trash2, ChevronRight as ChevronRightIcon, User, AlertTriangle, Phone, MoreHorizontal } from 'lucide-react';
 import { format, isValid } from 'date-fns';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, doc, writeBatch, orderBy, getDocs, setDoc } from 'firebase/firestore';
-import type { ProvisioningRecord } from '@/lib/types';
+import { collection, query, doc, writeBatch, orderBy, getDocs, setDoc, updateDoc, serverTimestamp, where } from 'firebase/firestore';
+import type { ProvisioningRecord, UserProfile } from '@/lib/types';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogContent, DialogFooter, DialogClose } from '@/components/ui/dialog';
 
 const ITEMS_PER_PAGE = 5;
 
-// --- Pivot Table Data Structure ---
-interface PivotRow {
-  count: Record<string, number>; // { DMA: 5, KUD: 3, Grand Total: 8 }
-  children?: Record<string, PivotRow>;
-}
-type PivotData = Record<string, PivotRow>;
-
-type FilterPath = {
-  productName?: string;
-  status?: string;
-  crmOrder?: string;
-  description?: string;
-  workzone?: string;
+// --- Helper Functions ---
+const formatWaNumber = (phone: string) => {
+    let cleanPhone = phone.replace(/\D/g, '');
+    if (cleanPhone.startsWith('0')) {
+        cleanPhone = '62' + cleanPhone.substring(1);
+    } else if (!cleanPhone.startsWith('62')) {
+        cleanPhone = '62' + cleanPhone;
+    }
+    return `https://wa.me/${cleanPhone}`;
 };
 
-// --- Recursive Component for Pivot Table Rows ---
-const PivotTreeRows = ({
-  data,
-  level = 0,
-  parentKey = '',
-  workzones,
-  expandedRows,
-  toggleRow,
-  filterPath = {}
-}: {
-  data: PivotData;
-  level?: number;
-  parentKey?: string;
-  workzones: string[];
-  expandedRows: Record<string, boolean>;
-  toggleRow: (key: string) => void;
-  filterPath?: FilterPath;
-}) => {
-  const filterKeys = ['productName', 'status', 'crmOrder', 'description'];
+// --- Child Components ---
 
+function AssignTechnicianDialog({ order, users, isOpen, onOpenChange, onAssign }: { order: ProvisioningRecord; users: UserProfile[]; isOpen: boolean; onOpenChange: (open: boolean) => void; onAssign: (techId: string) => void; }) {
+  const [selectedTechnician, setSelectedTechnician] = useState('');
   return (
-    <>
-      {Object.entries(data).map(([name, rowData]) => {
-        const currentKey = parentKey ? `${parentKey}/${name}` : name;
-        const isExpanded = expandedRows[currentKey] ?? false;
-        const hasChildren = rowData.children && Object.keys(rowData.children).length > 0;
-        
-        const newFilterPath: FilterPath = {
-          ...filterPath,
-          [filterKeys[level]]: name,
-        };
-
-        return (
-          <React.Fragment key={currentKey}>
-            <TableRow className="hover:bg-muted/50 data-[state=open]:bg-muted/50">
-              <TableCell style={{ paddingLeft: `${1 + level * 1.5}rem` }} className="font-medium">
-                <div className="flex items-center gap-1">
-                  {hasChildren ? (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={() => toggleRow(currentKey)}
-                    >
-                      <ChevronRightIcon
-                        className={cn('h-4 w-4 transition-transform', isExpanded && 'rotate-90')}
-                      />
-                    </Button>
-                  ) : (
-                    <div className="w-6" /> // Spacer for alignment
-                  )}
-                  <span className="truncate">{name}</span>
-                </div>
-              </TableCell>
-              {workzones.map((wz) => {
-                const count = rowData.count[wz] || 0;
-                const queryString = new URLSearchParams({ ...newFilterPath, workzone: wz }).toString();
-                const href = `/dashboard/admin/provisioning/list?${queryString}`;
-                return (
-                  <TableCell key={wz} className="text-right tabular-nums">
-                    {count > 0 ? (
-                      <Link href={href} className="hover:underline hover:text-primary">
-                        {count}
-                      </Link>
-                    ) : (
-                      0
-                    )}
-                  </TableCell>
-                )
-              })}
-              <TableCell className="text-right font-bold tabular-nums">
-                {rowData.count['Grand Total'] || 0}
-              </TableCell>
-            </TableRow>
-            {hasChildren && isExpanded && (
-              <PivotTreeRows
-                data={rowData.children!}
-                level={level + 1}
-                parentKey={currentKey}
-                workzones={workzones}
-                expandedRows={expandedRows}
-                toggleRow={toggleRow}
-                filterPath={newFilterPath}
-              />
-            )}
-          </React.Fragment>
-        );
-      })}
-    </>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Tugaskan Teknisi</DialogTitle>
+          <DialogDescription>
+            Pilih teknisi untuk menangani order WO: {order.workorder}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-4">
+          <Select value={selectedTechnician} onValueChange={setSelectedTechnician}>
+            <SelectTrigger>
+              <SelectValue placeholder="Pilih seorang teknisi..." />
+            </SelectTrigger>
+            <SelectContent>
+              {users.map(u => <SelectItem key={u.id} value={u.id}>{u.displayName}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <DialogFooter>
+          <DialogClose asChild><Button variant="ghost">Batal</Button></DialogClose>
+          <Button onClick={() => onAssign(selectedTechnician)} disabled={!selectedTechnician}>Tugaskan</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
-};
+}
+
+function KendalaCard() {
+    const firestore = useFirestore();
+    const kendalaQuery = useMemoFirebase(() => {
+        return query(collection(firestore, 'provisioning-records'), where('provisioningStatus', '==', 'kendala'));
+    }, [firestore]);
+
+    const { data: kendalaOrders, isLoading } = useCollection<ProvisioningRecord>(kendalaQuery);
+
+    return (
+        <Card className="border-destructive">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-destructive">
+                    <AlertTriangle /> Monitoring Kendala
+                </CardTitle>
+                <CardDescription>Daftar order provisioning yang mengalami kendala dan memerlukan perhatian.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {isLoading ? <Skeleton className="h-10 w-full" /> : 
+                 kendalaOrders && kendalaOrders.length > 0 ? (
+                    <ul className="space-y-2">
+                        {kendalaOrders.map(order => (
+                            <li key={order.id} className="text-sm p-2 bg-destructive/10 rounded-md">
+                                <Link href={`/dashboard/provi-orders/${order.id}`} className="font-medium hover:underline">{order.customerName}</Link> ({order.workorder}) - Teknisi: {order.assignedTo_userName}
+                            </li>
+                        ))}
+                    </ul>
+                ) : <p className="text-sm text-muted-foreground">Tidak ada order yang berkendala saat ini.</p>}
+            </CardContent>
+        </Card>
+    );
+}
 
 
+// --- Main Component ---
 export default function ProvisioningDashboardPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -137,28 +109,30 @@ export default function ProvisioningDashboardPage() {
   const [importProgress, setImportProgress] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+  
+  const [orderToAssign, setOrderToAssign] = useState<ProvisioningRecord | null>(null);
 
-  const toggleRow = (key: string) => {
-    setExpandedRows(prev => ({ ...prev, [key]: !prev[key] }));
-  };
+  const toggleRow = (key: string) => setExpandedRows(prev => ({ ...prev, [key]: !prev[key] }));
 
-  // Data fetching from Firestore
+  // Data fetching
   const recordsQuery = useMemoFirebase(() => query(collection(firestore, 'provisioning-records'), orderBy('dateCreated', 'desc')), [firestore]);
   const { data, isLoading: areRecordsLoading } = useCollection<ProvisioningRecord>(recordsQuery);
+  
+  const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users'), where('role', '==', 'teknisi'), where('registrationStatus', '==', 'approved')), [firestore]);
+  const { data: technicians, isLoading: areTechniciansLoading } = useCollection<UserProfile>(usersQuery);
 
   const [workzones, setWorkzones] = useState<string[]>([]);
   const [selectedWorkzone, setSelectedWorkzone] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Update workzones when data changes
   useEffect(() => {
     if (data) {
       const uniqueWorkzones = [...new Set(data.map((item) => item.workzone).filter(Boolean))].sort();
       setWorkzones(uniqueWorkzones);
     }
   }, [data]);
-
+  
   const findHeader = (headers: string[], aliases: string[]): string | undefined => {
     const lowerAliases = aliases.map(a => a.toLowerCase().trim());
     for (const header of headers) {
@@ -219,7 +193,7 @@ export default function ProvisioningDashboardPage() {
     reader.onload = async (e) => {
       try {
         const existingRecordsSnap = await getDocs(collection(firestore, 'provisioning-records'));
-        const existingScOrders = new Set(existingRecordsSnap.docs.map(doc => doc.data().scOrder));
+        const existingScOrders = new Set(existingRecordsSnap.docs.map(doc => doc.id));
         
         const arrayBuffer = e.target?.result;
         const wb = XLSX.read(arrayBuffer, { type: 'array', cellDates: true });
@@ -289,7 +263,7 @@ export default function ProvisioningDashboardPage() {
             const scOrderValue = row[headerMapping.scOrder!]?.toString() || '';
             let finalScOrder = scOrderValue;
 
-            const aoMoMatch = scOrderValue.match(/(?:AO|MO|AOi|MOi|AOs)[a-z0-9]+/i);
+            const aoMoMatch = scOrderValue.match(/(?:AO|MO|AOi|MOi|AOs|PDAk)[a-z0-9]+/i);
             
             if (aoMoMatch && aoMoMatch[0]) {
                 finalScOrder = aoMoMatch[0].split('_')[0];
@@ -326,6 +300,7 @@ export default function ProvisioningDashboardPage() {
               productName: row[headerMapping.productName!] || '-',
               productType: row[headerMapping.productType!] || '-',
               workzone: row[headerMapping.workzone!] || 'N/A',
+              provisioningStatus: 'unassigned',
             };
             
             const docRef = doc(recordsCollection, finalScOrder); // Use SC Order as ID
@@ -359,6 +334,27 @@ export default function ProvisioningDashboardPage() {
     };
     reader.readAsArrayBuffer(file);
   };
+
+  const handleAssign = async (technicianId: string) => {
+    if (!orderToAssign || !technicianId) return;
+
+    const technician = technicians?.find(t => t.id === technicianId);
+    if (!technician) return;
+
+    const docRef = doc(firestore, 'provisioning-records', orderToAssign.id);
+    try {
+        await updateDoc(docRef, {
+            assignedTo_userId: technician.id,
+            assignedTo_userName: technician.displayName,
+            assignedAt: serverTimestamp(),
+            provisioningStatus: 'assigned',
+        });
+        toast({ title: 'Sukses', description: `Order ditugaskan kepada ${technician.displayName}.` });
+        setOrderToAssign(null);
+    } catch (error: any) {
+        toast({ variant: 'destructive', title: 'Gagal Menugaskan', description: error.message });
+    }
+  }
   
   const filteredData = useMemo(() => {
     let filtered = selectedWorkzone === 'all'
@@ -376,44 +372,34 @@ export default function ProvisioningDashboardPage() {
     return filtered;
   }, [data, selectedWorkzone, searchQuery]);
 
-  // --- Pivot Table Logic ---
-  const pivotData = useMemo((): PivotData => {
-    const pivot: PivotData = {};
-
-    const increment = (obj: PivotRow, workzone: string) => {
+  const pivotData = useMemo((): any => {
+    const pivot: any = {};
+    const increment = (obj: any, workzone: string) => {
         if (!obj.count) obj.count = {};
         obj.count[workzone] = (obj.count[workzone] || 0) + 1;
         obj.count['Grand Total'] = (obj.count['Grand Total'] || 0) + 1;
     };
-    
     (data || []).forEach(item => {
         const { productName, status, crmOrder, description, workzone } = item;
         if (!workzone) return;
-
         const pName = productName || 'N/A';
         const s = status || 'N/A';
         const crm = crmOrder || 'N/A';
         const desc = description || 'N/A';
-
         if (!pivot[pName]) pivot[pName] = { count: {}, children: {} };
         increment(pivot[pName], workzone);
-
         const statusNode = pivot[pName].children!;
         if (!statusNode[s]) statusNode[s] = { count: {}, children: {} };
         increment(statusNode[s], workzone);
-
         const crmNode = statusNode[s].children!;
         if (!crmNode[crm]) crmNode[crm] = { count: {}, children: {} };
         increment(crmNode[crm], workzone);
-        
         const descNode = crmNode[crm].children!;
         if (!descNode[desc]) descNode[desc] = { count: {} };
         increment(descNode[desc], workzone);
     });
-
     return pivot;
   }, [data]);
-
 
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -425,6 +411,8 @@ export default function ProvisioningDashboardPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold tracking-tight">Dashboard Provisioning</h1>
+      
+      <KendalaCard />
       
       <Card>
         <CardHeader>
@@ -451,7 +439,6 @@ export default function ProvisioningDashboardPage() {
         </CardContent>
       </Card>
       
-      {/* Pivot Table Section */}
       <Card>
           <CardHeader>
               <CardTitle>Pivot Table Rekap</CardTitle>
@@ -467,20 +454,6 @@ export default function ProvisioningDashboardPage() {
                               <TableHead className="text-right font-bold">Grand Total</TableHead>
                           </TableRow>
                       </TableHeader>
-                      <TableBody>
-                        {Object.keys(pivotData).length > 0 ? (
-                           <PivotTreeRows
-                              data={pivotData}
-                              workzones={workzones}
-                              expandedRows={expandedRows}
-                              toggleRow={toggleRow}
-                            />
-                        ) : (
-                            <TableRow>
-                                <TableCell colSpan={workzones.length + 2} className="h-24 text-center">Tidak ada data untuk ditampilkan di pivot table.</TableCell>
-                            </TableRow>
-                        )}
-                      </TableBody>
                   </Table>
               </div>
           </CardContent>
@@ -515,43 +488,50 @@ export default function ProvisioningDashboardPage() {
                 <TableRow>
                   <TableHead>Workorder</TableHead>
                   <TableHead>SC Order</TableHead>
-                  <TableHead>Service No.</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>CRM Order Type</TableHead>
-                  <TableHead>Status</TableHead>
                   <TableHead>Customer Name</TableHead>
-                  <TableHead>Contact Number</TableHead>
+                  <TableHead>Contact</TableHead>
                   <TableHead>Address</TableHead>
-                  <TableHead>Date Created</TableHead>
-                  <TableHead>Booking Date</TableHead>
-                  <TableHead>Product Name</TableHead>
-                  <TableHead>Product Type</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {areRecordsLoading ? (
-                    <TableRow><TableCell colSpan={13} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
+                    <TableRow><TableCell colSpan={7} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
                 ) : paginatedData.length > 0 ? (
                   paginatedData.map((item) => (
                     <TableRow key={item.id}>
                       <TableCell>{item.workorder}</TableCell>
                       <TableCell>{item.scOrder}</TableCell>
-                      <TableCell>{item.serviceNo}</TableCell>
-                      <TableCell>{item.description}</TableCell>
-                      <TableCell>{item.crmOrder}</TableCell>
-                      <TableCell>{item.status}</TableCell>
                       <TableCell>{item.customerName}</TableCell>
-                      <TableCell>{item.contactNumber}</TableCell>
+                      <TableCell>
+                        <a href={formatWaNumber(item.contactNumber)} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
+                          <Phone className="h-3 w-3"/> {item.contactNumber}
+                        </a>
+                      </TableCell>
                       <TableCell className="max-w-xs truncate">{item.address}</TableCell>
-                      <TableCell>{item.dateCreated}</TableCell>
-                      <TableCell>{item.bookingDate}</TableCell>
-                      <TableCell>{item.productName}</TableCell>
-                      <TableCell>{item.productType}</TableCell>
+                      <TableCell>
+                        <Badge variant={item.provisioningStatus === 'assigned' ? 'default' : 'secondary'}>
+                          {item.provisioningStatus === 'assigned' ? `Ditugaskan ke ${item.assignedTo_userName}` : 'Belum Ditugaskan'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                                <DropdownMenuLabel>Aksi</DropdownMenuLabel>
+                                <DropdownMenuItem onSelect={() => setOrderToAssign(item)} disabled={areTechniciansLoading}>
+                                    <User className="mr-2 h-4 w-4" />
+                                    <span>Tugaskan Teknisi</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={13} className="h-24 text-center">
+                    <TableCell colSpan={7} className="h-24 text-center">
                       {data && data.length > 0 ? "Tidak ada data yang cocok dengan filter Anda." : "Silakan impor file Excel untuk menampilkan data."}
                     </TableCell>
                   </TableRow>
@@ -570,6 +550,18 @@ export default function ProvisioningDashboardPage() {
             </CardFooter>
         )}
       </Card>
+      
+      {orderToAssign && technicians && (
+        <AssignTechnicianDialog 
+          order={orderToAssign}
+          users={technicians}
+          isOpen={!!orderToAssign}
+          onOpenChange={(open) => !open && setOrderToAssign(null)}
+          onAssign={handleAssign}
+        />
+      )}
     </div>
   );
 }
+
+    

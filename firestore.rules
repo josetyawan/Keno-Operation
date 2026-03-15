@@ -215,8 +215,9 @@ service cloud.firestore {
     }
 
     match /provisioning-records/{recordId} {
-      allow read: if isAdmin() || isKorlap();
-      allow write: if isAdmin() || isKorlap();
+      allow read: if isAdmin() || isKorlap() || (isApproved() && resource.data.assignedTo_userId == request.auth.uid);
+      allow create: if isAdmin() || isKorlap();
+      allow update: if (isAdmin() || isKorlap()) || (isApproved() && resource.data.assignedTo_userId == request.auth.uid);
     }
   }
 }

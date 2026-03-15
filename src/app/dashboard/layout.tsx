@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home, Network, Search, BarChart3, Map, FolderGit2, Contact, CalendarClock, ClipboardCheck, CalendarOff, UserCircle, Briefcase, Settings, Building, Wrench, CalendarDays, MessageSquare, Upload, Component, Send, FileWarning, FileSpreadsheet, Files, BookOpen, Weight } from 'lucide-react';
+import { LayoutGrid, Menu, LogOut, Users, Bot, Tags, Home, Network, Search, BarChart3, Map, FolderGit2, Contact, CalendarClock, ClipboardCheck, CalendarOff, UserCircle, Briefcase, Settings, Building, Wrench, CalendarDays, MessageSquare, Upload, Component, Send, FileWarning, FileSpreadsheet, Files, BookOpen, Weight, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils';
 const navLinks = [
   { href: '/dashboard', label: 'Home', icon: Home, access: 'public' },
   { href: '/dashboard/chat', label: 'Chat', icon: MessageSquare, access: 'public' },
+  { href: '/dashboard/provi-orders', label: 'Order Provi', icon: Truck, access: 'allpro' },
   { href: '/dashboard/nota', label: 'Laporan Nota', icon: LayoutGrid, access: 'nota' },
   { href: '/dashboard/gamas', label: 'Laporan Gamas', icon: FileWarning, access: 'allpro' },
   { href: '/dashboard/other-works/new', label: 'Input Pekerjaan Lain', icon: Briefcase, access: 'allpro' },
@@ -359,3 +360,5 @@ export default function DashboardLayout({
     </div>
   );
 }
+
+    

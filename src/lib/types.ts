@@ -359,6 +359,11 @@ export type Performance = {
   date: any; // Timestamp
 };
 
+export type ProvisioningMaterial = {
+  name: string;
+  quantity: number;
+};
+
 export type ProvisioningRecord = {
   id: string;
   workorder: string;
@@ -375,4 +380,22 @@ export type ProvisioningRecord = {
   productName: string;
   productType: string;
   workzone: string;
+  // New fields for provisioning workflow
+  assignedTo_userId?: string;
+  assignedTo_userName?: string;
+  assignedAt?: any; // Timestamp
+  provisioningStatus?: 'unassigned' | 'assigned' | 'picked_up' | 'departed' | 'arrived' | 'kendala' | 'completed';
+  pickupAt?: any; // Timestamp
+  departAt?: any; // Timestamp
+  arriveAt?: any; // Timestamp
+  progressNotes?: string;
+  kendalaNotes?: string;
+  kendalaPhotos?: string[];
+  customerHousePhoto?: string;
+  baPhoto?: string;
+  valinsId?: string;
+  materials?: ProvisioningMaterial[];
+  completedAt?: any; // Timestamp
 };
+
+    
