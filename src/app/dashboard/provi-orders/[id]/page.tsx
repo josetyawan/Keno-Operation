@@ -12,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, Loader2, PackageOpen, Truck, MapPin, PackageCheck, Phone, AlertTriangle, Send, Camera, Upload, Wrench, Check, Circle, Calendar as CalendarIcon, FileUp, Save } from 'lucide-react';
 import type { ProvisioningRecord, ProvisioningMaterial, Pelanggan } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
 import Link from 'next/link';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
@@ -644,3 +644,5 @@ export default function OrderDetailPage() {
     </div>
   );
 }
+
+    

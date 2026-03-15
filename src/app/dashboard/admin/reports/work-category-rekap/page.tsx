@@ -278,7 +278,7 @@ export default function WorkCategoryRekapPage() {
                                         <TableCell>{item.noTiket || item.namaPekerjaan || item.workorder || item.serviceNo || '-'}</TableCell>
                                         <TableCell>{isProvisioning ? item.crmOrder : item.jenisOrder}</TableCell>
                                         <TableCell>{getWorkCategory(item)}</TableCell>
-                                        <TableCell>{format(tanggal.toDate(), 'dd MMM yyyy')}</TableCell>
+                                        <TableCell>{tanggal?.toDate ? format(tanggal.toDate(), 'dd MMM yyyy') : '-'}</TableCell>
                                     </TableRow>
                                 )})
                             ) : (
@@ -292,3 +292,5 @@ export default function WorkCategoryRekapPage() {
         </div>
     );
 }
+
+    
