@@ -1,6 +1,6 @@
 'use server';
 
-import { ai } from '@/ai/genkit';
+import { ai, googleAIGenkitPlugin } from '@/ai/genkit';
 import { z } from 'zod';
 
 const swapApprovalNoticeSchema = z.object({
@@ -36,7 +36,7 @@ Buat pesan yang jelas, singkat, dan informatif. Ucapkan terima kasih kepada tekn
 `;
 
     const res = await ai.generate({
-      model: 'googleai/gemini-pro',
+      model: googleAIGenkitPlugin.model('gemini-pro'),
       prompt,
     });
 

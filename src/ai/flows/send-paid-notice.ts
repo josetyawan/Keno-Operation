@@ -1,6 +1,6 @@
 'use server';
 
-import { ai } from '@/ai/genkit';
+import { ai, googleAIGenkitPlugin } from '@/ai/genkit';
 import { z } from 'zod';
 
 const rekapDataItemSchema = z.object({
@@ -55,7 +55,7 @@ Tambahkan ucapan terima kasih dan konfirmasi bahwa semua laporan terverifikasi p
 `;
 
     const llmResponse = await ai.generate({
-      model: 'googleai/gemini-pro',
+      model: googleAIGenkitPlugin.model('gemini-pro'),
       prompt: prompt,
     });
 
