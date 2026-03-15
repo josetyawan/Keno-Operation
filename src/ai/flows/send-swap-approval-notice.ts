@@ -37,7 +37,7 @@ Buat pesan yang jelas, singkat, dan informatif. Ucapkan terima kasih kepada tekn
 `;
 
     const res = await ai.generate({
-      model: 'text-bison-001',
+      model: 'text-bison@001',
       prompt,
     });
 

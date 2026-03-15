@@ -39,7 +39,7 @@ Buat pesan yang jelas dan to-the-point.
 `;
 
     const res = await ai.generate({
-      model: 'text-bison-001',
+      model: 'text-bison@001',
       prompt,
     });
 

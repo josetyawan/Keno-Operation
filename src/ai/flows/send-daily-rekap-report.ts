@@ -41,7 +41,7 @@ Buat satu pesan laporan tunggal yang siap kirim.
 `;
 
     const res = await ai.generate({
-      model: 'text-bison-001',
+      model: 'text-bison@001',
       prompt: prompt,
     });
     
