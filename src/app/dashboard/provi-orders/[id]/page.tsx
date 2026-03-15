@@ -113,18 +113,18 @@ export default function OrderDetailPage() {
   
   const handleKendalaSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!kendalaReason.trim() || !kendalaFiles || kendalaFiles.length < 2 || kendalaFiles.length > 10) {
-        toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Mohon isi alasan dan unggah 2-10 foto bukti.' });
+     if (!user) {
+        toast({ variant: 'destructive', title: 'Error Autentikasi', description: 'Sesi pengguna tidak ditemukan. Silakan login ulang.' });
         return;
     }
-    if (!user) {
-        toast({ variant: 'destructive', title: 'Error Autentikasi', description: 'Sesi pengguna tidak ditemukan. Silakan login ulang.' });
+    if (!kendalaReason.trim() || !kendalaFiles || kendalaFiles.length < 2 || kendalaFiles.length > 10) {
+        toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Mohon isi alasan dan unggah 2-10 foto bukti.' });
         return;
     }
     setIsUpdating(true);
     try {
         const uploadPromises = Array.from(kendalaFiles).map(async file => {
-            const filePath = `kendala-evidences/${user.uid}/${Date.now()}-${file.name}`;
+            const filePath = `evidences/${user.uid}/kendala_${Date.now()}-${file.name}`;
             const storageRef = ref(storage, filePath);
             await uploadBytes(storageRef, file);
             return getDownloadURL(storageRef);
@@ -149,17 +149,17 @@ export default function OrderDetailPage() {
   
   const handleProgressSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!housePhoto) {
-        toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Mohon unggah foto rumah pelanggan.' });
-        return;
-    }
     if (!user) {
         toast({ variant: 'destructive', title: 'Error Autentikasi', description: 'Sesi pengguna tidak ditemukan. Silakan login ulang.' });
         return;
     }
+    if (!housePhoto) {
+        toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Mohon unggah foto rumah pelanggan.' });
+        return;
+    }
     setIsUpdating(true);
     try {
-        const filePath = `provi-evidences/${user.uid}/rumah_${Date.now()}-${housePhoto.name}`;
+        const filePath = `evidences/${user.uid}/rumah_${Date.now()}-${housePhoto.name}`;
         const storageRef = ref(storage, filePath);
         await uploadBytes(storageRef, housePhoto);
         const photoUrl = await getDownloadURL(storageRef);

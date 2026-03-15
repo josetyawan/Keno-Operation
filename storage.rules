@@ -69,11 +69,8 @@ service firebase.storage {
        allow write: if isApproved() && isOwner(userId);
     }
     
-    match /provi-evidences/{userId}/{allPaths=**} {
-      allow write: if isApproved() && (isOwner(userId) || isAdmin() || isKorlap());
-    }
-
-    match /kendala-evidences/{userId}/{allPaths=**} {
+    // Consolidated rule for all provisioning-related evidence
+    match /evidences/{userId}/{allPaths=**} {
       allow write: if isApproved() && (isOwner(userId) || isAdmin() || isKorlap());
     }
   }
