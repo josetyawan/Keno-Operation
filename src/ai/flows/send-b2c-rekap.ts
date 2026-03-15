@@ -35,7 +35,7 @@ Format singkat siap kirim Telegram.
 `;
 
     const res = await ai.generate({
-      model: 'gemini-1.0-pro',
+      model: 'gemini-pro',
       prompt,
     });
 

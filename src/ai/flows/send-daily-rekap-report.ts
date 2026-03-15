@@ -40,7 +40,7 @@ Buat satu pesan laporan tunggal yang siap kirim.
 `;
 
     const res = await ai.generate({
-      model: 'gemini-1.0-pro',
+      model: 'gemini-pro',
       prompt: prompt,
     });
     

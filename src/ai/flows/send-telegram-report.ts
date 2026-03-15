@@ -64,7 +64,7 @@ Tambahkan header dan footer yang sesuai untuk laporan ini. Pastikan formatnya ri
 `;
     
     const llmResponse = await ai.generate({
-      model: 'gemini-1.0-pro',
+      model: 'gemini-pro',
       prompt: prompt,
     });
     

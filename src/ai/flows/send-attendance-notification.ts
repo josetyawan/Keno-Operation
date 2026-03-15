@@ -50,7 +50,7 @@ Buat pesan ini dalam format Markdown yang siap kirim.
 `;
 
     const res = await ai.generate({
-      model: 'googleai/gemini-pro',
+      model: 'gemini-pro',
       prompt,
     });
     

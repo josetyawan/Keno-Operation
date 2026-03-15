@@ -37,7 +37,7 @@ Pesan harus menginstruksikan PIC untuk memeriksa detail penolakan di aplikasi, m
 `;
 
     const res = await ai.generate({
-      model: 'gemini-1.0-pro',
+      model: 'gemini-pro',
       prompt,
     });
 
