@@ -1,3 +1,4 @@
+
 'use server';
 
 import { ai } from '@/ai/genkit';
@@ -35,7 +36,7 @@ Format singkat siap kirim Telegram.
 `;
 
     const res = await ai.generate({
-      model: 'gemini-1.5-flash-latest',
+      model: 'gemini-1.5-flash',
       prompt,
     });
 

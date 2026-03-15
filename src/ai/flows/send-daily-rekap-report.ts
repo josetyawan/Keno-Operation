@@ -1,3 +1,4 @@
+
 'use server';
 
 import { ai } from '@/ai/genkit';
@@ -40,7 +41,7 @@ Buat satu pesan laporan tunggal yang siap kirim.
 `;
 
     const res = await ai.generate({
-      model: 'gemini-1.5-flash-latest',
+      model: 'gemini-1.5-flash',
       prompt: prompt,
     });
     
