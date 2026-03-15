@@ -72,21 +72,23 @@ const typeOrderOptions: Record<string, string[]> = {
 };
 
 function InitialDataForm({ order, onSave }: { order: ProvisioningRecord, onSave: (data: Partial<ProvisioningRecord>) => void }) {
-    const [serviceNo, setServiceNo] = useState('');
-    const [productName, setProductName] = useState('');
-    const [crmOrder, setCrmOrder] = useState('');
-    const [description, setDescription] = useState(''); // This will be our "Order Type"
+    const [serviceNo, setServiceNo] = useState(order.serviceNo || '');
+    const [productName, setProductName] = useState(order.productName || '');
+    const [crmOrder, setCrmOrder] = useState(order.crmOrder || '');
+    const [description, setDescription] = useState(order.description || ''); // This will be our "Order Type"
     const [isSaving, setIsSaving] = useState(false);
     const { toast } = useToast();
 
     const showOrderType = useMemo(() => Object.keys(typeOrderOptions).includes(crmOrder), [crmOrder]);
 
+    // If crmOrder changes and it no longer has an order type, clear the description
     useEffect(() => {
         if (!showOrderType) setDescription('');
     }, [crmOrder, showOrderType]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        // Now, productName and crmOrder are also required.
         if (!serviceNo.trim() || !productName.trim() || !crmOrder) {
             toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'No. Internet, Paket, dan Jenis Order wajib diisi.' });
             return;
@@ -98,25 +100,31 @@ function InitialDataForm({ order, onSave }: { order: ProvisioningRecord, onSave:
             crmOrder,
             description: showOrderType ? description : '',
         };
-        await onSave(updateData);
-        setIsSaving(false);
+        try {
+            await onSave(updateData);
+        } catch (error) {
+            // Error is handled by the parent, but we should stop the saving indicator here.
+        } finally {
+             setIsSaving(false);
+        }
     };
 
     return (
         <Card>
             <CardHeader>
                 <CardTitle>Lengkapi Data Order</CardTitle>
-                <CardDescription>No. Internet untuk order ini belum ada. Mohon lengkapi data di bawah ini untuk melanjutkan.</CardDescription>
+                <CardDescription>Data berikut diperlukan untuk melanjutkan progres. Mohon lengkapi data yang masih kosong.</CardDescription>
             </CardHeader>
             <form onSubmit={handleSubmit}>
                 <CardContent className="space-y-4">
                     <div className="grid gap-2">
                         <Label htmlFor="serviceNo">No. Internet / Service *</Label>
-                        <Input id="serviceNo" value={serviceNo} onChange={e => setServiceNo(e.target.value)} required />
+                        <Input id="serviceNo" value={serviceNo} onChange={e => setServiceNo(e.target.value)} required disabled={!!order.serviceNo} />
+                         {!!order.serviceNo && <p className="text-xs text-muted-foreground">No. Service tidak dapat diubah.</p>}
                     </div>
                     <div className="grid gap-2">
                         <Label htmlFor="productName">Paket Internet *</Label>
-                        <Input id="productName" value={productName} onChange={e => setProductName(e.target.value)} required />
+                        <Input id="productName" value={productName} onChange={e => setProductName(e.target.value)} required placeholder="Contoh: Indihome 50Mbps"/>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="grid gap-2">
@@ -241,7 +249,7 @@ export default function OrderDetailPage() {
                 noService: updateData.serviceNo,
                 namaPelanggan: order.customerName,
                 alamat: order.address,
-                nomorTelepon: order.contactNumber,
+                nomorTelepon: order.contactNumber ? [order.contactNumber] : [],
                 serviceArea: order.workzone, // Assuming workzone is service area
                 lastEditedBy: user?.email || 'system',
                 lastEditedDate: serverTimestamp(),
@@ -382,8 +390,9 @@ export default function OrderDetailPage() {
   const canDepart = order.provisioningStatus === 'picked_up' && order.assignedTo_userId === user?.uid;
   const canArrive = order.provisioningStatus === 'departed' && order.assignedTo_userId === user?.uid;
   const hasArrived = order.provisioningStatus === 'arrived' && order.assignedTo_userId === user?.uid;
-  const showInitialForm = hasArrived && !order.serviceNo;
-  const showActionButtons = hasArrived && !!order.serviceNo;
+  
+  const showInitialForm = hasArrived && (!order.serviceNo || !order.productName || !order.crmOrder);
+  const showActionButtons = hasArrived && !!order.serviceNo && !!order.productName && !!order.crmOrder;
   const isWipOdpDone = order.provisioningStatus === 'wip_odp_done' && order.assignedTo_userId === user?.uid;
 
 
@@ -415,9 +424,9 @@ export default function OrderDetailPage() {
                             </a>
                         </TableCell>
                     </TableRow>
-                    <TableRow><TableCell className="font-medium">Produk</TableCell><TableCell>{order.productName || 'Belum diinput'}</TableCell></TableRow>
-                    <TableRow><TableCell className="font-medium">CRM Order Type</TableCell><TableCell>{order.crmOrder || 'Belum diinput'}</TableCell></TableRow>
-                    <TableRow><TableCell className="font-medium">Deskripsi</TableCell><TableCell>{order.description || '-'}</TableCell></TableRow>
+                    <TableRow><TableCell className="font-medium">Paket</TableCell><TableCell>{order.productName || 'Belum diinput'}</TableCell></TableRow>
+                    <TableRow><TableCell className="font-medium">Jenis Order</TableCell><TableCell>{order.crmOrder || 'Belum diinput'}</TableCell></TableRow>
+                    <TableRow><TableCell className="font-medium">Order Type</TableCell><TableCell>{order.description || '-'}</TableCell></TableRow>
                     <TableRow><TableCell className="font-medium">Tanggal Booking</TableCell><TableCell>{order.bookingDate}</TableCell></TableRow>
                     <TableRow><TableCell className="font-medium">Workzone</TableCell><TableCell>{order.workzone}</TableCell></TableRow>
                 </TableBody>
@@ -644,5 +653,3 @@ export default function OrderDetailPage() {
     </div>
   );
 }
-
-    
