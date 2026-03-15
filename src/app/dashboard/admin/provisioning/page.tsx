@@ -70,8 +70,8 @@ export default function ProvisioningDashboardPage() {
         let batch = writeBatch(firestore);
         let count = 0;
 
-        for (const doc of querySnapshot.docs) {
-            batch.delete(doc.ref);
+        for (const docSnapshot of querySnapshot.docs) {
+            batch.delete(docSnapshot.ref);
             count++;
             if (count % batchSize === 0) {
                 await batch.commit();
@@ -124,6 +124,7 @@ export default function ProvisioningDashboardPage() {
           customerName: findHeader(headers, ['customer name']),
           contactNumber: findHeader(headers, ['contact number']),
           address: findHeader(headers, ['address']),
+          description: findHeader(headers, ['description']),
           dateCreated: findHeader(headers, ['date created']),
           bookingDate: findHeader(headers, ['booking date']),
           productName: findHeader(headers, ['product name']),
@@ -142,20 +143,16 @@ export default function ProvisioningDashboardPage() {
             const scOrderValue = row[headerMapping.scOrder!]?.toString() || '';
             let finalScOrder = scOrderValue;
 
-            if (scOrderValue) {
-                // Regex to find AO, AOi, AOk, AOs, MO, MOi, MOk, MOs etc. followed by alphanumeric characters.
-                const aoMoMatch = scOrderValue.match(/(A|M)O[a-z]?[a-zA-Z0-9]+/);
+            // Regex to find AO, AOi, AOk, AOs, MO, MOi, MOk, MOs etc. followed by alphanumeric characters.
+            const aoMoMatch = scOrderValue.match(/(?:A|M)O[a-z]?\w+/);
 
-                if (aoMoMatch && aoMoMatch[0]) {
-                    finalScOrder = aoMoMatch[0];
-                } else if (scOrderValue.startsWith('SC')) {
-                    // Take the part before the first underscore, or the whole string if no underscore.
-                    finalScOrder = scOrderValue.split('_')[0];
-                }
-                // else, finalScOrder remains the original scOrderValue for cases like "1-452..." or "MYIA-..."
-            } else {
-                finalScOrder = '-';
+            if (aoMoMatch && aoMoMatch[0]) {
+                finalScOrder = aoMoMatch[0];
+            } else if (scOrderValue.startsWith('SC')) {
+                // Take the part before the first underscore, or the whole string if no underscore.
+                finalScOrder = scOrderValue.split('_')[0];
             }
+            // else, finalScOrder remains the original scOrderValue for cases like "1-452..." or "MYIA-..."
 
 
             const formatDateValue = (dateValue: any) => {
@@ -173,6 +170,7 @@ export default function ProvisioningDashboardPage() {
               customerName: row[headerMapping.customerName!] || '-',
               contactNumber: row[headerMapping.contactNumber!] || '-',
               address: row[headerMapping.address!] || '-',
+              description: row[headerMapping.description!] || '-',
               dateCreated: formatDateValue(row[headerMapping.dateCreated!]),
               bookingDate: formatDateValue(row[headerMapping.bookingDate!]),
               productName: row[headerMapping.productName!] || '-',
@@ -292,6 +290,7 @@ export default function ProvisioningDashboardPage() {
                   <TableHead>Workorder</TableHead>
                   <TableHead>SC Order</TableHead>
                   <TableHead>Service No.</TableHead>
+                  <TableHead>Description</TableHead>
                   <TableHead>CRM Order Type</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Customer Name</TableHead>
@@ -305,13 +304,14 @@ export default function ProvisioningDashboardPage() {
               </TableHeader>
               <TableBody>
                 {areRecordsLoading ? (
-                    <TableRow><TableCell colSpan={12} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
+                    <TableRow><TableCell colSpan={13} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
                 ) : paginatedData.length > 0 ? (
                   paginatedData.map((item) => (
                     <TableRow key={item.id}>
                       <TableCell>{item.workorder}</TableCell>
                       <TableCell>{item.scOrder}</TableCell>
                       <TableCell>{item.serviceNo}</TableCell>
+                      <TableCell>{item.description}</TableCell>
                       <TableCell>{item.crmOrder}</TableCell>
                       <TableCell>{item.status}</TableCell>
                       <TableCell>{item.customerName}</TableCell>
@@ -325,7 +325,7 @@ export default function ProvisioningDashboardPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={12} className="h-24 text-center">
+                    <TableCell colSpan={13} className="h-24 text-center">
                       {data && data.length > 0 ? "Tidak ada data yang cocok dengan filter Anda." : "Silakan impor file Excel untuk menampilkan data."}
                     </TableCell>
                   </TableRow>

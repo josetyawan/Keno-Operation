@@ -358,3 +358,21 @@ export type Performance = {
   totalPerformance: string;
   date: any; // Timestamp
 };
+
+export type ProvisioningRecord = {
+  id: string;
+  workorder: string;
+  scOrder: string;
+  serviceNo: string;
+  crmOrder: string;
+  status: string;
+  customerName: string;
+  contactNumber: string;
+  address: string;
+  description?: string;
+  dateCreated: string;
+  bookingDate: string;
+  productName: string;
+  productType: string;
+  workzone: string;
+};
