@@ -388,6 +388,7 @@ export type ProvisioningRecord = {
   pickupAt?: any; // Timestamp
   departAt?: any; // Timestamp
   arriveAt?: any; // Timestamp
+  arriveCoordinates?: string;
   progressNotes?: string;
   kendalaNotes?: string;
   kendalaPhotos?: string[];

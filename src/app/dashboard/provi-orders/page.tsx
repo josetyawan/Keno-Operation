@@ -1,13 +1,15 @@
+
 'use client';
 
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, orderBy } from 'firebase/firestore';
 import type { ProvisioningRecord } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Truck } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo } from 'react';
+import { Badge } from '@/components/ui/badge';
 
 export default function TechnicianOrdersPage() {
   const { user, isUserLoading } = useUser();
@@ -53,10 +55,15 @@ export default function TechnicianOrdersPage() {
             <Link key={order.id} href={`/dashboard/provi-orders/${order.id}`}>
               <Card className="hover:border-primary transition-colors">
                 <CardHeader>
-                  <CardTitle>{order.customerName}</CardTitle>
-                  <CardDescription>
-                    WO: {order.workorder} | SC: {order.scOrder}
-                  </CardDescription>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle>{order.customerName}</CardTitle>
+                      <CardDescription>
+                        WO: {order.workorder} | SC: {order.scOrder}
+                      </CardDescription>
+                    </div>
+                    <Badge variant={order.provisioningStatus === 'kendala' ? 'destructive' : 'secondary'}>{order.provisioningStatus}</Badge>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground">{order.address}</p>
@@ -75,3 +82,5 @@ export default function TechnicianOrdersPage() {
     </div>
   );
 }
+
+    

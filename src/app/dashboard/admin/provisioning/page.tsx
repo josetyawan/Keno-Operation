@@ -621,8 +621,8 @@ export default function ProvisioningDashboardPage() {
                       </TableCell>
                       <TableCell className="max-w-xs truncate">{item.address}</TableCell>
                       <TableCell>
-                        <Badge variant={item.provisioningStatus === 'assigned' ? 'default' : 'secondary'}>
-                          {item.provisioningStatus === 'assigned' ? `Ditugaskan ke ${item.assignedTo_userName}` : 'Belum Ditugaskan'}
+                        <Badge variant={item.provisioningStatus === 'assigned' ? 'default' : item.provisioningStatus === 'kendala' ? 'destructive' : 'secondary'}>
+                          {item.provisioningStatus === 'assigned' ? `Ditugaskan ke ${item.assignedTo_userName}` : item.provisioningStatus === 'kendala' ? 'Kendala' : 'Belum Ditugaskan'}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
@@ -674,3 +674,5 @@ export default function ProvisioningDashboardPage() {
     </div>
   );
 }
+
+    
