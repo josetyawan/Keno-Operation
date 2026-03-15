@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
         const riwayatData = {
             noService: noServiceMatch ? noServiceMatch[1].trim() : '',
             noTiket: noTiketMatch ? noTiketMatch[1].trim() : '',
-            teknisi: teknisiMatch ? teknisiMatch[1].trim() : '',
+            namaPetugas: teknisiMatch ? teknisiMatch[1].trim() : '',
             keterangan: keteranganMatch ? keteranganMatch[1].trim() : 'Laporan diterima dari bot.',
             tanggalLapor: Timestamp.now(),
             sumber: 'Telegram Bot', // Add a source field
