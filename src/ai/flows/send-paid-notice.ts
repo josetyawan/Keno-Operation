@@ -1,7 +1,7 @@
 
 'use server';
 
-import { ai } from '@/ai/genkit';
+import { ai, googleAIGenkitPlugin } from '@/ai/genkit';
 import { z } from 'zod';
 
 const rekapDataItemSchema = z.object({
@@ -26,7 +26,7 @@ export async function sendPaidNotice(input: z.infer<typeof sendPaidNoticeInputSc
 
 const paidNoticePrompt = ai.definePrompt({
     name: 'paidNoticePrompt',
-    model: 'googleai/gemini-1.5-flash',
+    model: googleAIGenkitPlugin.model('gemini-1.5-flash'),
     input: { schema: z.object({
         rekapString: z.string(),
         grandTotal: z.number(),
@@ -72,6 +72,6 @@ const sendPaidNoticeFlow = ai.defineFlow(
         grandTotalFormatted: grandTotal.toLocaleString('id-ID'),
     });
     
-    return output?.text || '';
+    return output?.text() || '';
   }
 );

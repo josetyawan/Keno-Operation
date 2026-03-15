@@ -1,7 +1,7 @@
 
 'use server';
 
-import { ai } from '@/ai/genkit';
+import { ai, googleAIGenkitPlugin } from '@/ai/genkit';
 import { z } from 'zod';
 
 const rejectionNoticeSchema = z.object({
@@ -19,7 +19,7 @@ export async function sendRejectionNotice(
 
 const rejectionNoticePrompt = ai.definePrompt({
     name: 'rejectionNoticePrompt',
-    model: 'googleai/gemini-1.5-flash',
+    model: googleAIGenkitPlugin.model('gemini-1.5-flash'),
     input: { schema: rejectionNoticeSchema },
     prompt: `
 Buatkan notifikasi penolakan laporan nota untuk dikirim ke Telegram.
@@ -44,6 +44,6 @@ const sendRejectionNoticeFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await rejectionNoticePrompt(input);
-    return output?.text || '';
+    return output?.text() || '';
   }
 );

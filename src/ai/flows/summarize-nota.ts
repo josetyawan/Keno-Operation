@@ -1,7 +1,7 @@
 
 'use server';
 
-import { ai } from '@/ai/genkit';
+import { ai, googleAIGenkitPlugin } from '@/ai/genkit';
 import { z } from 'genkit';
 
 const summarizeInputSchema = z.object({
@@ -20,7 +20,7 @@ export async function summarizeNota(
 
 const summaryPrompt = ai.definePrompt({
   name: 'summaryPrompt',
-  model: 'googleai/gemini-1.5-flash',
+  model: googleAIGenkitPlugin.model('gemini-1.5-flash'),
   input: { schema: summarizeInputSchema },
   prompt: `Summarize the following nota details into a short, easy-to-read paragraph. Extract the key information like who, what, when, and how much.
 
@@ -45,9 +45,7 @@ const summarizeNotaFlow = ai.defineFlow(
     });
     
     try {
-        // The output is a string, so we need to parse it.
-        // It might be wrapped in ```json ... ```, so we need to clean that.
-        let jsonString = output?.text || '{}';
+        let jsonString = output?.text() || '{}';
         const jsonMatch = jsonString.match(/```json\n([\s\S]*?)\n```/);
         if (jsonMatch && jsonMatch[1]) {
             jsonString = jsonMatch[1];
@@ -55,7 +53,7 @@ const summarizeNotaFlow = ai.defineFlow(
         const parsed = JSON.parse(jsonString);
         return summarizeOutputSchema.parse(parsed); // Validate with Zod
     } catch (e) {
-        console.error("Failed to parse AI summary output as JSON:", e, "Raw output:", output?.text);
+        console.error("Failed to parse AI summary output as JSON:", e, "Raw output:", output?.text());
         // Fallback in case of parsing error
         return { summary: "AI could not generate a valid summary." };
     }

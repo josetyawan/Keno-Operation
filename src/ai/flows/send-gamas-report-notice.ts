@@ -1,7 +1,7 @@
 
 'use server';
 
-import { ai } from '@/ai/genkit';
+import { ai, googleAIGenkitPlugin } from '@/ai/genkit';
 import { z } from 'zod';
 
 const gamasReportNoticeSchema = z.object({
@@ -19,7 +19,7 @@ export async function sendGamasReportNotice(
 
 const gamasReportPrompt = ai.definePrompt({
     name: 'gamasReportNoticePrompt',
-    model: 'googleai/gemini-1.5-flash',
+    model: googleAIGenkitPlugin.model('gemini-1.5-flash'),
     input: { schema: gamasReportNoticeSchema },
     prompt: `
 Buatkan notifikasi singkat untuk laporan Gamas yang baru saja ditinjau.
@@ -45,6 +45,6 @@ const sendGamasReportNoticeFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await gamasReportPrompt(input);
-    return output?.text || '';
+    return output?.text() || '';
   }
 );

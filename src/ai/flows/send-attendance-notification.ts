@@ -1,7 +1,7 @@
 
 'use server';
 
-import { ai } from '@/ai/genkit';
+import { ai, googleAIGenkitPlugin } from '@/ai/genkit';
 import { z } from 'zod';
 
 const attendanceNoticeSchema = z.object({
@@ -10,6 +10,7 @@ const attendanceNoticeSchema = z.object({
   reason: z.string().optional(),
   photoUrl: z.string().optional(),
   coordinates: z.string().optional(),
+  statusEmoji: z.string(),
 });
 
 export async function sendAttendanceNotice(input: z.infer<typeof attendanceNoticeSchema>): Promise<string> {
@@ -19,7 +20,7 @@ export async function sendAttendanceNotice(input: z.infer<typeof attendanceNotic
 const attendancePrompt = ai.definePrompt(
   {
     name: 'attendanceNoticePrompt',
-    model: 'googleai/gemini-1.5-flash',
+    model: googleAIGenkitPlugin.model('gemini-1.5-flash'),
     input: { schema: attendanceNoticeSchema },
     prompt: `
 Buat notifikasi absensi untuk dikirim ke grup Telegram.
@@ -41,7 +42,13 @@ Buat pesan ini dalam format Markdown yang siap kirim.
 const sendAttendanceNoticeFlow = ai.defineFlow(
   {
     name: 'sendAttendanceNoticeFlow',
-    inputSchema: attendanceNoticeSchema,
+    inputSchema: z.object({
+        userName: z.string(),
+        status: z.string(),
+        reason: z.string().optional(),
+        photoUrl: z.string().optional(),
+        coordinates: z.string().optional(),
+    }),
     outputSchema: z.string(),
   },
   async (input) => {
@@ -63,6 +70,6 @@ const sendAttendanceNoticeFlow = ai.defineFlow(
         statusEmoji: statusEmoji,
     });
     
-    return output?.text || '';
+    return output?.text() || '';
   }
 );

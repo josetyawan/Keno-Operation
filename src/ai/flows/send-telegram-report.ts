@@ -1,7 +1,7 @@
 
 'use server';
 
-import { ai } from '@/ai/genkit';
+import { ai, googleAIGenkitPlugin } from '@/ai/genkit';
 import { z } from 'zod';
 
 const rekapDataItemSchema = z.object({
@@ -38,7 +38,7 @@ export async function sendTelegramReport(input: z.infer<typeof sendTelegramRepor
 
 const telegramReportPrompt = ai.definePrompt({
     name: 'telegramReportPrompt',
-    model: 'googleai/gemini-1.5-flash',
+    model: googleAIGenkitPlugin.model('gemini-1.5-flash'),
     input: { schema: z.object({
         rekapString: z.string(),
         grandTotalFormatted: z.string(),
@@ -80,6 +80,6 @@ const sendTelegramReportFlow = ai.defineFlow(
         rekapDate
     });
     
-    return output?.text || '';
+    return output?.text() || '';
   }
 );

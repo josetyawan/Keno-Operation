@@ -1,7 +1,7 @@
 
 'use server';
 
-import { ai } from '@/ai/genkit';
+import { ai, googleAIGenkitPlugin } from '@/ai/genkit';
 import { z } from 'zod';
 
 const sendProductivityRekapInputSchema = z.object({
@@ -20,7 +20,7 @@ export async function sendProductivityRekap(
 const b2cRekapPrompt = ai.definePrompt(
     {
         name: 'b2cRekapPrompt',
-        model: 'googleai/gemini-1.5-flash',
+        model: googleAIGenkitPlugin.model('gemini-1.5-flash'),
         input: { schema: sendProductivityRekapInputSchema },
         prompt: `
 Buatkan laporan rekap produktivitas harian profesional.
@@ -47,6 +47,6 @@ const sendProductivityRekapFlow = ai.defineFlow(
         ...input,
     });
 
-    return output?.text || '';
+    return output?.text() || '';
   }
 );
