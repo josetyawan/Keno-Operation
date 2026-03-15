@@ -401,4 +401,5 @@ export type ProvisioningRecord = {
   valinsId?: string;
   materials?: ProvisioningMaterial[];
   completedAt?: any; // Timestamp
+  isSynced?: boolean;
 };

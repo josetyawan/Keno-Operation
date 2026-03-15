@@ -9,7 +9,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Loader2, PackageOpen, Truck, MapPin, PackageCheck, Phone, AlertTriangle, Send, Camera, Upload, Wrench, Check, Circle, Calendar as CalendarIcon, FileUp, Save } from 'lucide-react';
+import { ArrowLeft, Loader2, PackageOpen, Truck, MapPin, PackageCheck, Phone, AlertTriangle, Send, Camera, Upload, Wrench, Check, Circle, Calendar as CalendarIcon, FileUp, Save, RefreshCw } from 'lucide-react';
 import type { ProvisioningRecord, ProvisioningMaterial, Pelanggan, RiwayatGangguan, UserProfile } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useRef, useEffect, useMemo } from 'react';
@@ -169,6 +169,7 @@ export default function OrderDetailPage() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isProgressDialogOpen, setIsProgressDialogOpen] = useState(false);
   const [isKendalaDialogOpen, setIsKendalaDialogOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   
   const [kendalaReason, setKendalaReason] = useState('');
   const [kendalaFiles, setKendalaFiles] = useState<FileList | null>(null);
@@ -322,6 +323,53 @@ export default function OrderDetailPage() {
             setIsUpdating(false);
         }
     };
+    
+    // --- Combined logic for creating related documents ---
+    const syncRelatedData = async (orderToSync: ProvisioningRecord) => {
+        if (!user || !user.email || !userProfile) throw new Error("Sesi pengguna tidak valid.");
+
+        // Step 1: Create/Update Pelanggan Document
+        const pelangganDocRef = doc(firestore, 'pelanggan', orderToSync.serviceNo);
+        const pelangganData: Partial<Pelanggan> = {
+            noService: orderToSync.serviceNo,
+            namaPelanggan: orderToSync.customerName,
+            alamat: orderToSync.address,
+            nomorTelepon: orderToSync.contactNumber ? [orderToSync.contactNumber] : [],
+            serviceArea: orderToSync.workzone,
+            sto: orderToSync.odpName?.split('-')[1] || '',
+            koordinat: orderToSync.arriveCoordinates || '',
+            odpName: orderToSync.odpName,
+            odpPort: orderToSync.odpPort,
+            odpQRCodeUrl: orderToSync.odpQRCodeUrl,
+            fotoCpUrl: orderToSync.customerHousePhoto,
+            userId: user.uid,
+            userEmail: user.email!,
+            lastEditedBy: user.email!,
+            lastEditedDate: serverTimestamp(),
+        };
+        await setDoc(pelangganDocRef, pelangganData, { merge: true });
+
+        // Step 2: Create Riwayat Gangguan (History) Document
+        const riwayatData: Omit<RiwayatGangguan, 'id'> = {
+            pelangganId: orderToSync.serviceNo,
+            userId: user.uid,
+            noService: orderToSync.serviceNo,
+            namaPetugas: orderToSync.assignedTo_userName || userProfile.displayName || user.email!,
+            nik: userProfile.nik || '',
+            jenisOrder: orderToSync.crmOrder,
+            typeOrder: orderToSync.description || '',
+            keterangan: `Penyelesaian WO Provisioning: ${orderToSync.workorder}`,
+            tanggalLapor: orderToSync.assignedAt || Timestamp.now(),
+            tanggalOpen: orderToSync.assignedAt || Timestamp.now(),
+            tanggalClose: orderToSync.completedAt || Timestamp.now(),
+            layanan: [orderToSync.productName],
+            materials: orderToSync.materials || [],
+            sto: orderToSync.workzone,
+            noTiket: orderToSync.workorder,
+            dorongClose: false,
+        };
+        await addDoc(collection(firestore, 'riwayat-gangguan'), riwayatData);
+    };
 
     const handleCompleteOrder = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -339,67 +387,32 @@ export default function OrderDetailPage() {
         }
         setIsCompleting(true);
         try {
+            // Upload BA photo
             const baPhotoPath = `notas/${user.uid}/ba_${Date.now()}-${baPhoto.name}`;
             const baStorageRef = ref(storage, baPhotoPath);
             await uploadBytes(baStorageRef, baPhoto);
             const baPhotoUrl = await getDownloadURL(baStorageRef);
     
+            // Prepare material data
             const materialsToSave: ProvisioningMaterial[] = Object.entries(usedMaterials)
                 .filter(([, { used }]) => used)
                 .map(([name, { quantity }]) => ({ name, quantity }));
             
             const completedTimestamp = Timestamp.fromDate(psDate);
 
-            // Step 1: Create/Update Pelanggan Document
-            const pelangganDocRef = doc(firestore, 'pelanggan', order.serviceNo);
-            const pelangganData: Partial<Pelanggan> = {
-                noService: order.serviceNo,
-                namaPelanggan: order.customerName,
-                alamat: order.address,
-                nomorTelepon: order.contactNumber ? [order.contactNumber] : [],
-                serviceArea: order.workzone,
-                sto: order.odpName?.split('-')[1] || '',
-                koordinat: order.arriveCoordinates || '',
-                odpName: order.odpName,
-                odpPort: order.odpPort,
-                odpQRCodeUrl: order.odpQRCodeUrl,
-                fotoCpUrl: order.customerHousePhoto,
-                userId: user.uid,
-                userEmail: user.email!,
-                lastEditedBy: user.email!,
-                lastEditedDate: serverTimestamp(),
-            };
-            await setDoc(pelangganDocRef, pelangganData, { merge: true });
-
-            // Step 2: Create Riwayat Gangguan (History) Document
-            const riwayatData: Omit<RiwayatGangguan, 'id'> = {
-                pelangganId: order.serviceNo,
-                userId: user.uid,
-                noService: order.serviceNo,
-                namaPetugas: order.assignedTo_userName || userProfile.displayName || user.email!,
-                nik: userProfile.nik || '',
-                jenisOrder: order.crmOrder,
-                typeOrder: order.description || '',
-                keterangan: `Penyelesaian WO Provisioning: ${order.workorder}`,
-                tanggalLapor: order.assignedAt || Timestamp.now(),
-                tanggalOpen: order.assignedAt || Timestamp.now(),
-                tanggalClose: completedTimestamp,
-                layanan: [order.productName],
-                materials: materialsToSave,
-                sto: order.workzone,
-                noTiket: order.workorder,
-                dorongClose: false,
-            };
-            await addDoc(collection(firestore, 'riwayat-gangguan'), riwayatData);
-            
-            // Step 3: Update Provisioning Order to 'completed'
+            // Update main order document
             await updateDoc(orderRef, {
                 provisioningStatus: 'completed',
                 baPhotoUrl,
                 valinsId,
                 materials: materialsToSave,
                 completedAt: completedTimestamp,
+                isSynced: true, // Mark as synced from the start
             });
+
+            // Sync to pelanggan and riwayat
+            const updatedOrderData = { ...order, completedAt: completedTimestamp, materials: materialsToSave };
+            await syncRelatedData(updatedOrderData as ProvisioningRecord);
     
             toast({ title: 'Order Selesai!', description: 'Pekerjaan provisioning telah berhasil diselesaikan dan dicatat dalam histori.' });
             router.push('/dashboard/provi-orders');
@@ -410,6 +423,20 @@ export default function OrderDetailPage() {
         } finally {
             setIsCompleting(false);
         }
+    };
+    
+    const handleManualSync = async () => {
+      if (!order) return;
+      setIsSyncing(true);
+      try {
+        await syncRelatedData(order);
+        await updateDoc(orderRef, { isSynced: true });
+        toast({ title: 'Sinkronisasi Berhasil', description: 'Data telah berhasil disinkronkan ke Data Pelanggan dan Riwayat Gangguan.' });
+      } catch (error: any) {
+        toast({ variant: 'destructive', title: 'Gagal Sinkronisasi', description: error.message });
+      } finally {
+        setIsSyncing(false);
+      }
     };
   
   const handleMaterialChange = (name: string, used: boolean, quantity?: number) => {
@@ -691,6 +718,23 @@ export default function OrderDetailPage() {
                         )}
                     </TableBody>
                 </Table>
+                {userProfile?.role === 'admin' && !order.isSynced && (
+                    <div className="mt-6 border-t pt-4">
+                        <h4 className="font-semibold text-amber-600">Aksi Admin</h4>
+                        <p className="text-sm text-muted-foreground mb-3">
+                            Data ini tampaknya belum tersinkronisasi ke Data Pelanggan & Riwayat. Klik untuk melakukan sinkronisasi manual.
+                        </p>
+                        <Button onClick={handleManualSync} disabled={isSyncing}>
+                            {isSyncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <RefreshCw className="mr-2 h-4 w-4" />}
+                            Sinkronkan Data
+                        </Button>
+                    </div>
+                )}
+                 {order.isSynced && (
+                    <div className="mt-6 text-sm text-green-600 flex items-center gap-2">
+                        <Check /> Data telah tersinkronisasi dengan histori pelanggan.
+                    </div>
+                )}
             </CardContent>
         </Card>
       )}
