@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -63,7 +62,7 @@ const jenisOrderOptions = [
   "Pembuatan BAI (Satkomindo,BRI MPLS)", "Provisioning MyRep", "PSB Surge",
   "Provisioning 5 Menara Bintang", "PSB IBU - FTTR",
   "PT Anagata Cipta Teknologi (KerjainAja)", "PSB TBG", "Provisioning Hypernet",
-  "2ND STB", "UPSELLING", "DISMANTLING EBIS",
+  "2ND STB", "UPSELLING", "DISMANTLING EBIS", "PSB Indihome", "PSB Indibiz", "PDA Indihome", "PDA Indibiz"
 ].sort();
 
 const typeOrderOptions: Record<string, string[]> = {
@@ -276,7 +275,7 @@ export default function OrderDetailPage() {
         setIsUpdating(true);
         try {
             const uploadPromises = Array.from(kendalaFiles).map(async file => {
-                const filePath = `notas/${user.uid}/kendala_${Date.now()}-${file.name}`;
+                const filePath = `evidences/${user.uid}/kendala_${Date.now()}-${file.name}`;
                 const storageRef = ref(storage, filePath);
                 await uploadBytes(storageRef, file);
                 return getDownloadURL(storageRef);
@@ -311,7 +310,7 @@ export default function OrderDetailPage() {
         }
         setIsUpdating(true);
         try {
-            const filePath = `notas/${user.uid}/rumah_${Date.now()}-${housePhoto.name}`;
+            const filePath = `evidences/${user.uid}/rumah_${Date.now()}-${housePhoto.name}`;
             const storageRef = ref(storage, filePath);
             await uploadBytes(storageRef, housePhoto);
             const photoUrl = await getDownloadURL(storageRef);
@@ -343,7 +342,7 @@ export default function OrderDetailPage() {
         }
         setIsCompleting(true);
         try {
-            const baPhotoPath = `notas/${user.uid}/ba_${Date.now()}-${baPhoto.name}`;
+            const baPhotoPath = `evidences/${user.uid}/ba_${Date.now()}-${baPhoto.name}`;
             const baStorageRef = ref(storage, baPhotoPath);
             await uploadBytes(baStorageRef, baPhoto);
             const baPhotoUrl = await getDownloadURL(baStorageRef);

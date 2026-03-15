@@ -28,24 +28,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 const ITEMS_PER_PAGE = 5;
 
-const jenisOrderOptions = [
-  "PSB DATIN", "PSB OLO", "PSB WIFI", "PDA DATIN", "PDA WIFI",
-  "REPLACEMENT", "Instalasi IP Camera", "Instalasi SD-WAN",
-  "Instalasi Router", "Install AP WIFI (1 AP)", "Install AP WIFI (2 AP)",
-  "Install AP WIFI(3 AP)", "Install AP WIFI (4 AP)",
-  "Pembuatan BAI (Satkomindo,BRI MPLS)", "Provisioning MyRep", "PSB Surge",
-  "Provisioning 5 Menara Bintang", "PSB IBU - FTTR",
-  "PT Anagata Cipta Teknologi (KerjainAja)", "PSB TBG", "Provisioning Hypernet",
-  "2ND STB", "UPSELLING", "DISMANTLING EBIS",
-].sort();
-
-const typeOrderOptions: Record<string, string[]> = {
-    'DISMANTLING EBIS': ['ONT', 'STB', 'AP', 'IP CAMERA'],
-    'REPLACEMENT': ['ONT', 'STB'],
-};
-
-
-// --- Helper Functions ---
 const formatWaNumber = (phone: string) => {
     let cleanPhone = phone.replace(/\D/g, '');
     if (cleanPhone.startsWith('0')) {
@@ -66,6 +48,22 @@ function EditOrderForm({ order, onSave, onCancel, isSaving }: { order: Provision
     const [productName, setProductName] = useState('');
     const [crmOrder, setCrmOrder] = useState('');
     const [description, setDescription] = useState('');
+
+    const jenisOrderOptions = [
+      "PSB DATIN", "PSB OLO", "PSB WIFI", "PDA DATIN", "PDA WIFI",
+      "REPLACEMENT", "Instalasi IP Camera", "Instalasi SD-WAN",
+      "Instalasi Router", "Install AP WIFI (1 AP)", "Install AP WIFI (2 AP)",
+      "Install AP WIFI(3 AP)", "Install AP WIFI (4 AP)",
+      "Pembuatan BAI (Satkomindo,BRI MPLS)", "Provisioning MyRep", "PSB Surge",
+      "Provisioning 5 Menara Bintang", "PSB IBU - FTTR",
+      "PT Anagata Cipta Teknologi (KerjainAja)", "PSB TBG", "Provisioning Hypernet",
+      "2ND STB", "UPSELLING", "DISMANTLING EBIS", "PSB Indihome", "PSB Indibiz", "PDA Indihome", "PDA Indibiz"
+    ].sort();
+
+    const typeOrderOptions: Record<string, string[]> = {
+        'DISMANTLING EBIS': ['ONT', 'STB', 'AP', 'IP CAMERA'],
+        'REPLACEMENT': ['ONT', 'STB'],
+    };
 
     useEffect(() => {
         setServiceNo(order.serviceNo || '');
