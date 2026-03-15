@@ -69,7 +69,10 @@ service firebase.storage {
     match /alker-photos/{userId}/{allPaths=**} {
        allow write: if isApproved() && isOwner(userId);
     }
+
+    match /evidences/{userId}/{allPaths=**} {
+      allow write: if isApproved() && (isOwner(userId) || isAdmin() || isKorlap());
+    }
   }
 }
-
     
