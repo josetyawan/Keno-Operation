@@ -123,7 +123,7 @@ export default function OrderDetailPage() {
     setIsUpdating(true);
     try {
         const uploadPromises = Array.from(kendalaFiles).map(async file => {
-            const filePath = `evidences/${user.uid}/kendala_${Date.now()}-${file.name}`;
+            const filePath = `provi_evidences/${user.uid}/kendala_${Date.now()}-${file.name}`;
             const storageRef = ref(storage, filePath);
             await uploadBytes(storageRef, file);
             return getDownloadURL(storageRef);
@@ -158,7 +158,7 @@ export default function OrderDetailPage() {
     }
     setIsUpdating(true);
     try {
-        const filePath = `evidences/${user.uid}/rumah_${Date.now()}-${housePhoto.name}`;
+        const filePath = `provi_evidences/${user.uid}/rumah_${Date.now()}-${housePhoto.name}`;
         const storageRef = ref(storage, filePath);
         await uploadBytes(storageRef, housePhoto);
         const photoUrl = await getDownloadURL(storageRef);
@@ -280,64 +280,67 @@ export default function OrderDetailPage() {
          <Card>
             <CardHeader><CardTitle className="text-green-600 flex items-center gap-2"><PackageCheck/> Anda Telah Tiba</CardTitle></CardHeader>
             <CardContent className="grid md:grid-cols-2 gap-4">
-                <Button onClick={() => setIsProgressDialogOpen(true)} className="w-full" size="lg">Lanjutkan Progres</Button>
-                <Button onClick={() => setIsKendalaDialogOpen(true)} variant="destructive" className="w-full" size="lg">Laporkan Kendala</Button>
+                <Dialog open={isProgressDialogOpen} onOpenChange={setIsProgressDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button className="w-full" size="lg">Lanjutkan Progres</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Input Progres Awal</DialogTitle>
+                            <DialogDescription>Lengkapi data ODP dan foto rumah pelanggan.</DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handleProgressSubmit} className="space-y-4">
+                             <div className="grid grid-cols-2 gap-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="odp-port">Port ODP</Label>
+                                    <Input id="odp-port" value={odpPort} onChange={e => setOdpPort(e.target.value)} placeholder="Contoh: 5"/>
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="odp-qr">URL QR Code ODP</Label>
+                                    <Input id="odp-qr" value={odpQr} onChange={e => setOdpQr(e.target.value)} placeholder="https://..."/>
+                                </div>
+                             </div>
+                             <div className="grid gap-2">
+                                <Label htmlFor="house-photo">Foto Rumah Pelanggan</Label>
+                                <Input id="house-photo" type="file" accept="image/*" onChange={e => setHousePhoto(e.target.files?.[0] || null)} required/>
+                                {housePhoto && <p className="text-xs text-muted-foreground">{housePhoto.name}</p>}
+                             </div>
+                            <DialogFooter>
+                                <DialogClose asChild><Button type="button" variant="ghost">Batal</Button></DialogClose>
+                                <Button type="submit" disabled={isUpdating}>{isUpdating ? <Loader2 className="animate-spin" /> : 'Simpan Progres'}</Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+                
+                <Dialog open={isKendalaDialogOpen} onOpenChange={setIsKendalaDialogOpen}>
+                    <DialogTrigger asChild>
+                         <Button variant="destructive" className="w-full" size="lg">Laporkan Kendala</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Laporkan Kendala</DialogTitle>
+                            <DialogDescription>Jelaskan kendala yang terjadi dan lampirkan foto bukti.</DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handleKendalaSubmit} className="space-y-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="kendala-reason">Alasan Kendala</Label>
+                                <Textarea id="kendala-reason" value={kendalaReason} onChange={e => setKendalaReason(e.target.value)} placeholder="Contoh: Pelanggan tidak ada di rumah, alamat tidak ditemukan, dll." required/>
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="kendala-evidence">Foto Bukti (min 2, maks 10)</Label>
+                                <Input id="kendala-evidence" type="file" multiple accept="image/*" onChange={e => setKendalaFiles(e.target.files)} required/>
+                            </div>
+                            <DialogFooter>
+                                <DialogClose asChild><Button type="button" variant="ghost">Batal</Button></DialogClose>
+                                <Button type="submit" disabled={isUpdating}>{isUpdating ? <Loader2 className="animate-spin" /> : 'Kirim Laporan'}</Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
             </CardContent>
         </Card>
       )}
-
-      <Dialog open={isKendalaDialogOpen} onOpenChange={setIsKendalaDialogOpen}>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Laporkan Kendala</DialogTitle>
-                <DialogDescription>Jelaskan kendala yang terjadi dan lampirkan foto bukti.</DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleKendalaSubmit} className="space-y-4">
-                <div className="grid gap-2">
-                    <Label htmlFor="kendala-reason">Alasan Kendala</Label>
-                    <Textarea id="kendala-reason" value={kendalaReason} onChange={e => setKendalaReason(e.target.value)} placeholder="Contoh: Pelanggan tidak ada di rumah, alamat tidak ditemukan, dll." required/>
-                </div>
-                <div className="grid gap-2">
-                    <Label htmlFor="kendala-evidence">Foto Bukti (min 2, maks 10)</Label>
-                    <Input id="kendala-evidence" type="file" multiple accept="image/*" onChange={e => setKendalaFiles(e.target.files)} required/>
-                </div>
-                <DialogFooter>
-                    <DialogClose asChild><Button type="button" variant="ghost">Batal</Button></DialogClose>
-                    <Button type="submit" disabled={isUpdating}>{isUpdating ? <Loader2 className="animate-spin" /> : 'Kirim Laporan'}</Button>
-                </DialogFooter>
-            </form>
-        </DialogContent>
-      </Dialog>
-      
-      <Dialog open={isProgressDialogOpen} onOpenChange={setIsProgressDialogOpen}>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Input Progres Awal</DialogTitle>
-                <DialogDescription>Lengkapi data ODP dan foto rumah pelanggan.</DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleProgressSubmit} className="space-y-4">
-                 <div className="grid grid-cols-2 gap-4">
-                    <div className="grid gap-2">
-                        <Label htmlFor="odp-port">Port ODP</Label>
-                        <Input id="odp-port" value={odpPort} onChange={e => setOdpPort(e.target.value)} placeholder="Contoh: 5"/>
-                    </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="odp-qr">URL QR Code ODP</Label>
-                        <Input id="odp-qr" value={odpQr} onChange={e => setOdpQr(e.target.value)} placeholder="https://..."/>
-                    </div>
-                 </div>
-                 <div className="grid gap-2">
-                    <Label htmlFor="house-photo">Foto Rumah Pelanggan</Label>
-                    <Input id="house-photo" type="file" accept="image/*" onChange={e => setHousePhoto(e.target.files?.[0] || null)} required/>
-                    {housePhoto && <p className="text-xs text-muted-foreground">{housePhoto.name}</p>}
-                 </div>
-                <DialogFooter>
-                    <DialogClose asChild><Button type="button" variant="ghost">Batal</Button></DialogClose>
-                    <Button type="submit" disabled={isUpdating}>{isUpdating ? <Loader2 className="animate-spin" /> : 'Simpan Progres'}</Button>
-                </DialogFooter>
-            </form>
-        </DialogContent>
-      </Dialog>
 
     </div>
   );

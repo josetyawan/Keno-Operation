@@ -49,8 +49,8 @@ service firebase.storage {
       allow write: if isApproved() && (isOwner(userId) || isAdmin() || isKorlap());
     }
     
-    match /evidences/{userId}/{allPaths=**} {
-        allow write: if isApproved() && (isOwner(userId) || isAdmin() || isKorlap());
+    match /provi_evidences/{userId}/{allPaths=**} {
+      allow write: if isApproved() && (isOwner(userId) || isAdmin() || isKorlap());
     }
 
     match /pelanggan_photos/{userId}/{allPaths=**} {
