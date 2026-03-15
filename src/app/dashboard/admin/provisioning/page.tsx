@@ -11,8 +11,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Upload, FileSpreadsheet, ChevronLeft, ChevronRight, Trash2, ChevronRight as ChevronRightIcon, User, AlertTriangle, Phone, MoreHorizontal, Edit, Save } from 'lucide-react';
-import { format, isValid } from 'date-fns';
+import { Loader2, Upload, FileSpreadsheet, ChevronLeft, ChevronRight, Trash2, ChevronRightIcon, User, AlertTriangle, Phone, MoreHorizontal, Edit, Save, Package, Truck, PackageCheck } from 'lucide-react';
+import { format } from 'date-fns';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, doc, writeBatch, orderBy, getDocs, setDoc, updateDoc, serverTimestamp, where } from 'firebase/firestore';
 import type { ProvisioningRecord, UserProfile } from '@/lib/types';
@@ -25,6 +25,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 const ITEMS_PER_PAGE = 5;
 
@@ -333,8 +334,12 @@ export default function ProvisioningDashboardPage() {
 
   const [workzones, setWorkzones] = useState<string[]>([]);
   const [selectedWorkzone, setSelectedWorkzone] = useState('all');
-  const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // States for pagination
+  const [unassignedPage, setUnassignedPage] = useState(1);
+  const [inProgressPage, setInProgressPage] = useState(1);
+  const [completedPage, setCompletedPage] = useState(1);
   
   useEffect(() => {
     if (data) {
@@ -504,7 +509,7 @@ export default function ProvisioningDashboardPage() {
             const formatDateValue = (dateValue: any) => {
               if (!dateValue) return '-';
               const date = new Date(dateValue);
-              return isValid(date) ? format(date, 'dd-MM-yyyy HH:mm') : String(dateValue);
+              return date instanceof Date && !isNaN(date.valueOf()) ? format(date, 'dd-MM-yyyy HH:mm') : String(dateValue);
             };
             
             const newRecord: Omit<ProvisioningRecord, 'id'> = {
@@ -544,10 +549,8 @@ export default function ProvisioningDashboardPage() {
         }
 
         toast({ title: "Impor Selesai!", description: `${newRecordsCount} baris data baru telah diunggah. ${skippedCount} baris dilewati karena sudah ada.` });
-        setSelectedWorkzone('all');
-        setCurrentPage(1);
-
-      } catch (error: any) {
+        
+    } catch (error: any) {
         console.error("Import error:", error);
         toast({ variant: 'destructive', title: "Impor Gagal", description: error.message });
       } finally {
@@ -599,20 +602,25 @@ export default function ProvisioningDashboardPage() {
     }
   };
   
-  const filteredData = useMemo(() => {
-    let filtered = selectedWorkzone === 'all'
-      ? (data ?? [])
-      : (data ?? []).filter(item => item.workzone === selectedWorkzone);
+  const { unassignedOrders, inProgressOrders, completedOrders } = useMemo(() => {
+    const allOrders = data || [];
+    let filteredOrders = allOrders;
 
+    if (selectedWorkzone !== 'all') {
+        filteredOrders = filteredOrders.filter(o => o.workzone === selectedWorkzone);
+    }
     if (searchQuery) {
-        const lowerCaseQuery = searchQuery.toLowerCase();
-        filtered = filtered.filter(item => 
-            Object.values(item).some(val => 
-                String(val).toLowerCase().includes(lowerCaseQuery)
-            )
+        const lowerQuery = searchQuery.toLowerCase();
+        filteredOrders = filteredOrders.filter(o =>
+            Object.values(o).some(val => String(val).toLowerCase().includes(lowerQuery))
         );
     }
-    return filtered;
+    
+    return {
+        unassignedOrders: filteredOrders.filter(o => o.provisioningStatus === 'unassigned'),
+        inProgressOrders: filteredOrders.filter(o => ['assigned', 'picked_up', 'departed', 'arrived', 'wip_odp_done'].includes(o.provisioningStatus || '')),
+        completedOrders: filteredOrders.filter(o => o.provisioningStatus === 'completed'),
+    };
   }, [data, selectedWorkzone, searchQuery]);
 
   const pivotData = useMemo(() => {
@@ -647,12 +655,23 @@ export default function ProvisioningDashboardPage() {
   }, [data]);
   
 
-  const paginatedData = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredData.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [filteredData, currentPage]);
+  const paginatedUnassigned = useMemo(() => {
+    const startIndex = (unassignedPage - 1) * ITEMS_PER_PAGE;
+    return unassignedOrders.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [unassignedOrders, unassignedPage]);
+  const totalUnassignedPages = Math.ceil(unassignedOrders.length / ITEMS_PER_PAGE);
   
-  const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
+  const paginatedInProgress = useMemo(() => {
+    const startIndex = (inProgressPage - 1) * ITEMS_PER_PAGE;
+    return inProgressOrders.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [inProgressOrders, inProgressPage]);
+  const totalInProgressPages = Math.ceil(inProgressOrders.length / ITEMS_PER_PAGE);
+  
+  const paginatedCompleted = useMemo(() => {
+    const startIndex = (completedPage - 1) * ITEMS_PER_PAGE;
+    return completedOrders.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [completedOrders, completedPage]);
+  const totalCompletedPages = Math.ceil(completedOrders.length / ITEMS_PER_PAGE);
 
   return (
     <div className="space-y-6">
@@ -698,8 +717,7 @@ export default function ProvisioningDashboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Data Provisioning</CardTitle>
-          <CardDescription>Menampilkan {filteredData.length} dari {data?.length || 0} total baris.</CardDescription>
+          <CardTitle>Filter Laporan</CardTitle>
           <div className="flex flex-col md:flex-row gap-4 pt-4">
             <div className="grid gap-2">
                 <Label htmlFor="workzone-filter">Filter Workzone</Label>
@@ -717,79 +735,116 @@ export default function ProvisioningDashboardPage() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Workorder</TableHead>
-                  <TableHead>SC Order</TableHead>
-                  <TableHead>Customer Name</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Address</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {areRecordsLoading ? (
-                    <TableRow><TableCell colSpan={7} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
-                ) : paginatedData.length > 0 ? (
-                  paginatedData.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>{item.workorder}</TableCell>
-                      <TableCell>{item.scOrder}</TableCell>
-                      <TableCell>{item.customerName}</TableCell>
-                      <TableCell>
-                        <a href={formatWaNumber(item.contactNumber)} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
-                          <Phone className="h-3 w-3"/> {item.contactNumber}
-                        </a>
-                      </TableCell>
-                      <TableCell className="max-w-xs truncate">{item.address}</TableCell>
-                      <TableCell>
-                        <Badge variant={item.provisioningStatus === 'assigned' ? 'default' : item.provisioningStatus === 'kendala' ? 'destructive' : 'secondary'}>
-                          {item.provisioningStatus === 'assigned' ? `Ditugaskan ke ${item.assignedTo_userName}` : item.provisioningStatus === 'kendala' ? 'Kendala' : 'Belum Ditugaskan'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                                <DropdownMenuLabel>Aksi</DropdownMenuLabel>
-                                <DropdownMenuItem onSelect={() => setOrderToEdit(item)}>
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    <span>Edit Data</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onSelect={() => setOrderToAssign(item)} disabled={areTechniciansLoading}>
-                                    <User className="mr-2 h-4 w-4" />
-                                    <span>Tugaskan Teknisi</span>
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center">
-                      {data && data.length > 0 ? "Tidak ada data yang cocok dengan filter Anda." : "Silakan impor file Excel untuk menampilkan data."}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-        {totalPages > 1 && (
-            <CardFooter>
-                <div className="text-xs text-muted-foreground">Halaman <strong>{currentPage}</strong> dari <strong>{totalPages}</strong></div>
-                <div className="flex items-center gap-2 ml-auto">
-                    <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1}><ChevronLeft className="h-4 w-4" /> Sebelumnya</Button>
-                    <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}>Berikutnya <ChevronRight className="h-4 w-4" /></Button>
-                </div>
-            </CardFooter>
-        )}
       </Card>
+
+      <Tabs defaultValue="unassigned" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="unassigned">
+            <Package className="mr-2" />
+            Order Baru ({unassignedOrders.length})
+          </TabsTrigger>
+          <TabsTrigger value="in-progress">
+            <Truck className="mr-2" />
+            Dikerjakan ({inProgressOrders.length})
+          </TabsTrigger>
+          <TabsTrigger value="completed">
+            <PackageCheck className="mr-2" />
+            Selesai ({completedOrders.length})
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="unassigned">
+          <Card>
+            <CardContent className="pt-6">
+                <Table>
+                    <TableHeader><TableRow>
+                        <TableHead>Workorder</TableHead><TableHead>SC Order</TableHead>
+                        <TableHead>Customer Name</TableHead><TableHead>Contact</TableHead>
+                        <TableHead>Address</TableHead><TableHead className="text-right">Aksi</TableHead>
+                    </TableRow></TableHeader>
+                    <TableBody>
+                        {areRecordsLoading ? <TableRow><TableCell colSpan={6}><Skeleton className="h-10 w-full" /></TableCell></TableRow> : paginatedUnassigned.length > 0 ? (
+                            paginatedUnassigned.map(item => (
+                                <TableRow key={item.id}><TableCell>{item.workorder}</TableCell><TableCell>{item.scOrder}</TableCell><TableCell>{item.customerName}</TableCell>
+                                    <TableCell>
+                                        <a href={formatWaNumber(item.contactNumber)} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1"><Phone className="h-3 w-3" />{item.contactNumber}</a>
+                                    </TableCell>
+                                    <TableCell className="max-w-xs truncate">{item.address}</TableCell>
+                                    <TableCell className="text-right">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                            <DropdownMenuContent><DropdownMenuLabel>Aksi</DropdownMenuLabel>
+                                                <DropdownMenuItem onSelect={() => setOrderToEdit(item)}><Edit className="mr-2 h-4 w-4" />Edit Data</DropdownMenuItem>
+                                                <DropdownMenuItem onSelect={() => setOrderToAssign(item)} disabled={areTechniciansLoading}><User className="mr-2 h-4 w-4" />Tugaskan Teknisi</DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        ) : <TableRow><TableCell colSpan={6} className="h-24 text-center">Tidak ada order baru.</TableCell></TableRow>}
+                    </TableBody>
+                </Table>
+            </CardContent>
+            {totalUnassignedPages > 1 && <CardFooter>
+                <div className="text-xs text-muted-foreground">Halaman <strong>{unassignedPage}</strong> dari <strong>{totalUnassignedPages}</strong></div>
+                <div className="flex items-center gap-2 ml-auto">
+                    <Button variant="outline" size="sm" onClick={() => setUnassignedPage(p => Math.max(p - 1, 1))} disabled={unassignedPage === 1}><ChevronLeft className="h-4 w-4" /> Sebelumnya</Button>
+                    <Button variant="outline" size="sm" onClick={() => setUnassignedPage(p => Math.min(p + 1, totalUnassignedPages))} disabled={unassignedPage === totalUnassignedPages}>Berikutnya <ChevronRight className="h-4 w-4" /></Button>
+                </div>
+            </CardFooter>}
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="in-progress">
+          <Card><CardContent className="pt-6">
+            <Table><TableHeader><TableRow><TableHead>Workorder</TableHead><TableHead>Customer</TableHead><TableHead>Teknisi</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Aksi</TableHead></TableRow></TableHeader>
+                <TableBody>
+                    {areRecordsLoading ? <TableRow><TableCell colSpan={5}><Skeleton className="h-10 w-full" /></TableCell></TableRow> : paginatedInProgress.length > 0 ? (
+                        paginatedInProgress.map(item => (
+                            <TableRow key={item.id}><TableCell>{item.workorder}</TableCell><TableCell>{item.customerName}</TableCell><TableCell>{item.assignedTo_userName}</TableCell>
+                                <TableCell><Badge variant="secondary">{item.provisioningStatus}</Badge></TableCell>
+                                <TableCell className="text-right"><Button asChild variant="outline" size="sm"><Link href={`/dashboard/provi-orders/${item.id}`}>Lihat Detail</Link></Button></TableCell>
+                            </TableRow>
+                        ))
+                    ) : <TableRow><TableCell colSpan={5} className="h-24 text-center">Tidak ada order yang sedang dikerjakan.</TableCell></TableRow>}
+                </TableBody>
+            </Table>
+          </CardContent>
+            {totalInProgressPages > 1 && <CardFooter>
+                <div className="text-xs text-muted-foreground">Halaman <strong>{inProgressPage}</strong> dari <strong>{totalInProgressPages}</strong></div>
+                <div className="flex items-center gap-2 ml-auto">
+                    <Button variant="outline" size="sm" onClick={() => setInProgressPage(p => Math.max(p - 1, 1))} disabled={inProgressPage === 1}><ChevronLeft className="h-4 w-4" /> Sebelumnya</Button>
+                    <Button variant="outline" size="sm" onClick={() => setInProgressPage(p => Math.min(p + 1, totalInProgressPages))} disabled={inProgressPage === totalInProgressPages}>Berikutnya <ChevronRight className="h-4 w-4" /></Button>
+                </div>
+            </CardFooter>}
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="completed">
+           <Card><CardContent className="pt-6">
+                <Table><TableHeader><TableRow><TableHead>Workorder</TableHead><TableHead>Customer</TableHead><TableHead>Teknisi</TableHead><TableHead>Tanggal PS</TableHead><TableHead className="text-right">Aksi</TableHead></TableRow></TableHeader>
+                    <TableBody>
+                         {areRecordsLoading ? <TableRow><TableCell colSpan={5}><Skeleton className="h-10 w-full" /></TableCell></TableRow> : paginatedCompleted.length > 0 ? (
+                            paginatedCompleted.map(item => (
+                                <TableRow key={item.id}><TableCell>{item.workorder}</TableCell><TableCell>{item.customerName}</TableCell><TableCell>{item.assignedTo_userName}</TableCell>
+                                    <TableCell>{item.completedAt?.toDate ? format(item.completedAt.toDate(), 'dd MMM yyyy') : '-'}</TableCell>
+                                    <TableCell className="text-right"><Button asChild variant="outline" size="sm"><Link href={`/dashboard/provi-orders/${item.id}`}>Lihat Detail</Link></Button></TableCell>
+                                </TableRow>
+                            ))
+                        ) : <TableRow><TableCell colSpan={5} className="h-24 text-center">Tidak ada order yang selesai.</TableCell></TableRow>}
+                    </TableBody>
+                </Table>
+            </CardContent>
+             {totalCompletedPages > 1 && <CardFooter>
+                <div className="text-xs text-muted-foreground">Halaman <strong>{completedPage}</strong> dari <strong>{totalCompletedPages}</strong></div>
+                <div className="flex items-center gap-2 ml-auto">
+                    <Button variant="outline" size="sm" onClick={() => setCompletedPage(p => Math.max(p - 1, 1))} disabled={completedPage === 1}><ChevronLeft className="h-4 w-4" /> Sebelumnya</Button>
+                    <Button variant="outline" size="sm" onClick={() => setCompletedPage(p => Math.min(p + 1, totalCompletedPages))} disabled={completedPage === totalCompletedPages}>Berikutnya <ChevronRight className="h-4 w-4" /></Button>
+                </div>
+            </CardFooter>}
+            </Card>
+        </TabsContent>
+      </Tabs>
       
       {orderToAssign && technicians && (
         <AssignTechnicianDialog 
@@ -821,3 +876,5 @@ export default function ProvisioningDashboardPage() {
     </div>
   );
 }
+
+    
