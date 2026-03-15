@@ -2,6 +2,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
+import { googleAI } from '@genkit-ai/google-genai';
 
 const gamasReportNoticeSchema = z.object({
   userName: z.string(),
@@ -13,14 +14,12 @@ const gamasReportNoticeSchema = z.object({
 export async function sendGamasReportNotice(
   input: z.infer<typeof gamasReportNoticeSchema>
 ): Promise<string> {
-  // return sendGamasReportNoticeFlow(input);
-  console.log("AI Flow 'sendGamasReportNotice' is temporarily disabled due to API issues.");
-  return Promise.resolve("AI feature is temporarily disabled.");
+  return sendGamasReportNoticeFlow(input);
 }
 
 const gamasReportPrompt = ai.definePrompt({
     name: 'gamasReportNoticePrompt',
-    model: 'googleai/gemini-pro',
+    model: googleAI.model('gemini-pro'),
     input: { schema: gamasReportNoticeSchema },
     prompt: `
 Buatkan notifikasi singkat untuk laporan Gamas yang baru saja ditinjau.

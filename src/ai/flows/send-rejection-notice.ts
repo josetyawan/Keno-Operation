@@ -2,6 +2,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
+import { googleAI } from '@genkit-ai/google-genai';
 
 const rejectionNoticeSchema = z.object({
   picName: z.string(),
@@ -13,14 +14,12 @@ const rejectionNoticeSchema = z.object({
 export async function sendRejectionNotice(
   input: z.infer<typeof rejectionNoticeSchema>
 ): Promise<string> {
-  // return sendRejectionNoticeFlow(input);
-  console.log("AI Flow 'sendRejectionNotice' is temporarily disabled due to API issues.");
-  return Promise.resolve("AI feature is temporarily disabled.");
+  return sendRejectionNoticeFlow(input);
 }
 
 const rejectionNoticePrompt = ai.definePrompt({
     name: 'rejectionNoticePrompt',
-    model: 'googleai/gemini-pro',
+    model: googleAI.model('gemini-pro'),
     input: { schema: rejectionNoticeSchema },
     prompt: `
 Buatkan notifikasi penolakan laporan nota untuk dikirim ke Telegram.

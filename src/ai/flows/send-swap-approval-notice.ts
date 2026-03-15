@@ -2,6 +2,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
+import { googleAI } from '@genkit-ai/google-genai';
 
 const swapApprovalNoticeSchema = z.object({
   requesterName: z.string(),
@@ -12,14 +13,12 @@ const swapApprovalNoticeSchema = z.object({
 export async function sendSwapApprovalNotice(
   input: z.infer<typeof swapApprovalNoticeSchema>
 ): Promise<string> {
-  // return sendSwapApprovalNoticeFlow(input);
-  console.log("AI Flow 'sendSwapApprovalNotice' is temporarily disabled due to API issues.");
-  return Promise.resolve("AI feature is temporarily disabled.");
+  return sendSwapApprovalNoticeFlow(input);
 }
 
 const swapApprovalPrompt = ai.definePrompt({
     name: 'swapApprovalNoticePrompt',
-    model: 'googleai/gemini-pro',
+    model: googleAI.model('gemini-pro'),
     input: { schema: swapApprovalNoticeSchema },
     prompt: `
 Buatkan notifikasi singkat untuk persetujuan tukar jadwal jaga.

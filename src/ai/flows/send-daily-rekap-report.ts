@@ -2,6 +2,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
+import { googleAI } from '@genkit-ai/google-genai';
 
 const dailyRekapInputSchema = z.object({
   rekapMessages: z.array(z.string()),
@@ -12,14 +13,12 @@ const dailyRekapInputSchema = z.object({
 export async function sendDailyRekapReport(
   input: z.infer<typeof dailyRekapInputSchema>
 ): Promise<string> {
-  // return sendDailyRekapReportFlow(input);
-  console.log("AI Flow 'sendDailyRekapReport' is temporarily disabled due to API issues.");
-  return Promise.resolve("AI feature is temporarily disabled.");
+  return sendDailyRekapReportFlow(input);
 }
 
 const dailyRekapPrompt = ai.definePrompt({
     name: 'dailyRekapPrompt',
-    model: 'googleai/gemini-pro',
+    model: googleAI.model('gemini-pro'),
     input: { schema: z.object({
         combinedMessage: z.string(),
         hasPhotos: z.boolean(),

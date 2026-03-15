@@ -2,6 +2,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
+import { googleAI } from '@genkit-ai/google-genai';
 
 const attendanceNoticeSchema = z.object({
   userName: z.string(),
@@ -13,15 +14,13 @@ const attendanceNoticeSchema = z.object({
 });
 
 export async function sendAttendanceNotice(input: z.infer<typeof attendanceNoticeSchema>): Promise<string> {
-    // return sendAttendanceNoticeFlow(input);
-    console.log("AI Flow 'sendAttendanceNotice' is temporarily disabled due to API issues.");
-    return Promise.resolve("AI feature is temporarily disabled.");
+    return sendAttendanceNoticeFlow(input);
 }
 
 const attendancePrompt = ai.definePrompt(
   {
     name: 'attendanceNoticePrompt',
-    model: 'googleai/gemini-pro',
+    model: googleAI.model('gemini-pro'),
     input: { schema: attendanceNoticeSchema },
     prompt: `
 Buat notifikasi absensi untuk dikirim ke grup Telegram.

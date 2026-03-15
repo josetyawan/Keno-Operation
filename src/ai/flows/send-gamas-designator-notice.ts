@@ -2,6 +2,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
+import { googleAI } from '@genkit-ai/google-genai';
 
 const gamasDesignatorNoticeSchema = z.object({
   userName: z.string(),
@@ -13,14 +14,12 @@ const gamasDesignatorNoticeSchema = z.object({
 export async function sendGamasDesignatorNotice(
   input: z.infer<typeof gamasDesignatorNoticeSchema>
 ): Promise<string> {
-  // return sendGamasDesignatorNoticeFlow(input);
-  console.log("AI Flow 'sendGamasDesignatorNotice' is temporarily disabled due to API issues.");
-  return Promise.resolve("AI feature is temporarily disabled.");
+  return sendGamasDesignatorNoticeFlow(input);
 }
 
 const gamasDesignatorPrompt = ai.definePrompt({
     name: 'gamasDesignatorNoticePrompt',
-    model: 'googleai/gemini-pro',
+    model: googleAI.model('gemini-pro'),
     input: { schema: gamasDesignatorNoticeSchema },
     prompt: `
 Buatkan notifikasi singkat untuk penolakan salah satu eviden designator pada laporan Gamas.

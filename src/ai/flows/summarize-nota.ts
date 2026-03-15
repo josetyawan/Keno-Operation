@@ -2,6 +2,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
+import { googleAI } from '@genkit-ai/google-genai';
 
 const summarizeInputSchema = z.object({
   notaContent: z.string(),
@@ -14,14 +15,12 @@ const summarizeOutputSchema = z.object({
 export async function summarizeNota(
   input: z.infer<typeof summarizeInputSchema>
 ): Promise<z.infer<typeof summarizeOutputSchema>> {
-  // return summarizeNotaFlow(input);
-  console.log("AI Flow 'summarizeNota' is temporarily disabled due to API issues.");
-  return Promise.resolve({ summary: "AI Summary is temporarily disabled due to API configuration issues." });
+  return summarizeNotaFlow(input);
 }
 
 const summaryPrompt = ai.definePrompt({
   name: 'summaryPrompt',
-  model: 'googleai/gemini-pro',
+  model: googleAI.model('gemini-pro'),
   input: { schema: summarizeInputSchema },
   prompt: `Summarize the following nota details into a short, easy-to-read paragraph. Extract the key information like who, what, when, and how much.
 
@@ -47,6 +46,7 @@ const summarizeNotaFlow = ai.defineFlow(
     
     try {
         let jsonString = output?.text || '{}';
+        // Handle cases where the model might wrap the JSON in markdown
         const jsonMatch = jsonString.match(/```json\n([\s\S]*?)\n```/);
         if (jsonMatch && jsonMatch[1]) {
             jsonString = jsonMatch[1];

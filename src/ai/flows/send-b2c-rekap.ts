@@ -2,6 +2,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
+import { googleAI } from '@genkit-ai/google-genai';
 
 const sendProductivityRekapInputSchema = z.object({
   unit: z.string(),
@@ -13,15 +14,13 @@ const sendProductivityRekapInputSchema = z.object({
 export async function sendProductivityRekap(
   input: z.infer<typeof sendProductivityRekapInputSchema>
 ): Promise<string> {
-  // return sendProductivityRekapFlow(input);
-  console.log("AI Flow 'sendProductivityRekap' is temporarily disabled due to API issues.");
-  return Promise.resolve("AI feature is temporarily disabled.");
+  return sendProductivityRekapFlow(input);
 }
 
 const b2cRekapPrompt = ai.definePrompt(
     {
         name: 'b2cRekapPrompt',
-        model: 'googleai/gemini-pro',
+        model: googleAI.model('gemini-pro'),
         input: { schema: sendProductivityRekapInputSchema },
         prompt: `
 Buatkan laporan rekap produktivitas harian profesional.

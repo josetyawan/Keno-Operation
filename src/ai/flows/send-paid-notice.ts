@@ -2,6 +2,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
+import { googleAI } from '@genkit-ai/google-genai';
 
 const rekapDataItemSchema = z.object({
   phone: z.string(),
@@ -20,14 +21,12 @@ const sendPaidNoticeInputSchema = z.object({
 });
 
 export async function sendPaidNotice(input: z.infer<typeof sendPaidNoticeInputSchema>): Promise<string> {
-  // return sendPaidNoticeFlow(input);
-  console.log("AI Flow 'sendPaidNotice' is temporarily disabled due to API issues.");
-  return Promise.resolve("AI feature is temporarily disabled.");
+  return sendPaidNoticeFlow(input);
 }
 
 const paidNoticePrompt = ai.definePrompt({
     name: 'paidNoticePrompt',
-    model: 'googleai/gemini-pro',
+    model: googleAI.model('gemini-pro'),
     input: { schema: z.object({
         rekapString: z.string(),
         grandTotal: z.number(),
