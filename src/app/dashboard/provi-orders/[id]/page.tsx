@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -119,7 +120,7 @@ export default function OrderDetailPage() {
     setIsUpdating(true);
     try {
         const uploadPromises = Array.from(kendalaFiles).map(async file => {
-            const filePath = `kendala/${user?.uid}/${Date.now()}-${file.name}`;
+            const filePath = `kendala-evidences/${user?.uid}/${Date.now()}-${file.name}`;
             const storageRef = ref(storage, filePath);
             await uploadBytes(storageRef, file);
             return getDownloadURL(storageRef);
@@ -150,7 +151,7 @@ export default function OrderDetailPage() {
     }
     setIsUpdating(true);
     try {
-        const filePath = `provi_evidence/${user?.uid}/rumah_${Date.now()}-${housePhoto.name}`;
+        const filePath = `provi-evidences/${user?.uid}/rumah_${Date.now()}-${housePhoto.name}`;
         const storageRef = ref(storage, filePath);
         await uploadBytes(storageRef, housePhoto);
         const photoUrl = await getDownloadURL(storageRef);
