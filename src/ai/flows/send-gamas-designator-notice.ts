@@ -19,7 +19,7 @@ export async function sendGamasDesignatorNotice(
 
 const gamasDesignatorPrompt = ai.definePrompt({
     name: 'gamasDesignatorNoticePrompt',
-    model: 'googleai/gemini-1.5-flash',
+    model: 'googleai/gemini-1.5-flash-latest',
     input: { schema: gamasDesignatorNoticeSchema },
     prompt: `
 Buatkan notifikasi singkat untuk penolakan salah satu eviden designator pada laporan Gamas.

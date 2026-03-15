@@ -20,7 +20,7 @@ export async function sendProductivityRekap(
 const b2cRekapPrompt = ai.definePrompt(
     {
         name: 'b2cRekapPrompt',
-        model: 'googleai/gemini-1.5-flash',
+        model: 'googleai/gemini-1.5-flash-latest',
         input: { schema: sendProductivityRekapInputSchema },
         prompt: `
 Buatkan laporan rekap produktivitas harian profesional.

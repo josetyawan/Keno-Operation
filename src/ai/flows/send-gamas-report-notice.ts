@@ -19,7 +19,7 @@ export async function sendGamasReportNotice(
 
 const gamasReportPrompt = ai.definePrompt({
     name: 'gamasReportNoticePrompt',
-    model: 'googleai/gemini-1.5-flash',
+    model: 'googleai/gemini-1.5-flash-latest',
     input: { schema: gamasReportNoticeSchema },
     prompt: `
 Buatkan notifikasi singkat untuk laporan Gamas yang baru saja ditinjau.

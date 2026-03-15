@@ -19,7 +19,7 @@ export async function sendRejectionNotice(
 
 const rejectionNoticePrompt = ai.definePrompt({
     name: 'rejectionNoticePrompt',
-    model: 'googleai/gemini-1.5-flash',
+    model: 'googleai/gemini-1.5-flash-latest',
     input: { schema: rejectionNoticeSchema },
     prompt: `
 Buatkan notifikasi penolakan laporan nota untuk dikirim ke Telegram.
