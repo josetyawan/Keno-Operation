@@ -56,6 +56,7 @@ const materialList: { name: string; type: 'meter' | 'check' | 'pcs' }[] = [
 ];
 
 const jenisOrderOptions = [
+  "PSB Indihome", "PSB Indibiz", "PDA Indihome", "PDA Indibiz",
   "PSB DATIN", "PSB OLO", "PSB WIFI", "PDA DATIN", "PDA WIFI",
   "REPLACEMENT", "Instalasi IP Camera", "Instalasi SD-WAN",
   "Instalasi Router", "Install AP WIFI (1 AP)", "Install AP WIFI (2 AP)",
@@ -63,7 +64,7 @@ const jenisOrderOptions = [
   "Pembuatan BAI (Satkomindo,BRI MPLS)", "Provisioning MyRep", "PSB Surge",
   "Provisioning 5 Menara Bintang", "PSB IBU - FTTR",
   "PT Anagata Cipta Teknologi (KerjainAja)", "PSB TBG", "Provisioning Hypernet",
-  "2ND STB", "UPSELLING", "DISMANTLING EBIS", "PSB Indihome", "PSB Indibiz", "PDA Indihome", "PDA Indibiz"
+  "2ND STB", "UPSELLING", "DISMANTLING EBIS"
 ].sort();
 
 const typeOrderOptions: Record<string, string[]> = {
@@ -172,6 +173,7 @@ export default function OrderDetailPage() {
   const [kendalaReason, setKendalaReason] = useState('');
   const [kendalaFiles, setKendalaFiles] = useState<FileList | null>(null);
 
+  const [odpName, setOdpName] = useState('');
   const [odpPort, setOdpPort] = useState('');
   const [odpQr, setOdpQr] = useState('');
   const [housePhoto, setHousePhoto] = useState<File | null>(null);
@@ -241,24 +243,11 @@ export default function OrderDetailPage() {
   }
   
     const handleInitialDataSave = async (updateData: Partial<ProvisioningRecord>) => {
-        if (!order || !updateData.serviceNo) return;
+        if (!order) return;
         
         try {
             await updateDoc(orderRef, updateData);
-            
-            const pelangganDocRef = doc(firestore, 'pelanggan', updateData.serviceNo);
-            const pelangganData: Partial<Pelanggan> = {
-                noService: updateData.serviceNo,
-                namaPelanggan: order.customerName,
-                alamat: order.address,
-                nomorTelepon: order.contactNumber ? [order.contactNumber] : [],
-                serviceArea: order.workzone, // Assuming workzone is service area
-                lastEditedBy: user?.email || 'system',
-                lastEditedDate: serverTimestamp(),
-            };
-            await setDoc(pelangganDocRef, pelangganData, { merge: true });
-
-            toast({ title: 'Data Order & Pelanggan Disimpan', description: 'Anda sekarang dapat melanjutkan progres.' });
+            toast({ title: 'Data Order Disimpan', description: 'Anda sekarang dapat melanjutkan progres.' });
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Gagal Menyimpan Data Awal', description: error.message });
             throw error; // Re-throw to prevent form from closing
@@ -320,6 +309,7 @@ export default function OrderDetailPage() {
     
             await updateDoc(orderRef, {
                 provisioningStatus: 'wip_odp_done',
+                odpName: odpName,
                 odpPort,
                 odpQRCodeUrl: odpQr,
                 customerHousePhoto: photoUrl
@@ -343,6 +333,10 @@ export default function OrderDetailPage() {
             toast({ variant: 'destructive', title: 'Foto BA Wajib', description: 'Harap unggah foto Berita Acara.' });
             return;
         }
+        if (!order.serviceNo) {
+            toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Nomor Service/Internet belum diisi. Lengkapi data order terlebih dahulu.' });
+            return;
+        }
         setIsCompleting(true);
         try {
             const baPhotoPath = `notas/${user.uid}/ba_${Date.now()}-${baPhoto.name}`;
@@ -355,26 +349,40 @@ export default function OrderDetailPage() {
                 .map(([name, { quantity }]) => ({ name, quantity }));
             
             const completedTimestamp = Timestamp.fromDate(psDate);
-            await updateDoc(orderRef, {
-                provisioningStatus: 'completed',
-                baPhotoUrl,
-                valinsId,
-                materials: materialsToSave,
-                completedAt: completedTimestamp,
-            });
 
-            // Create history record
+            // Step 1: Create/Update Pelanggan Document
+            const pelangganDocRef = doc(firestore, 'pelanggan', order.serviceNo);
+            const pelangganData: Partial<Pelanggan> = {
+                noService: order.serviceNo,
+                namaPelanggan: order.customerName,
+                alamat: order.address,
+                nomorTelepon: order.contactNumber ? [order.contactNumber] : [],
+                serviceArea: order.workzone,
+                sto: order.odpName?.split('-')[1] || '',
+                koordinat: order.arriveCoordinates || '',
+                odpName: order.odpName,
+                odpPort: order.odpPort,
+                odpQRCodeUrl: order.odpQRCodeUrl,
+                fotoCpUrl: order.customerHousePhoto,
+                userId: user.uid,
+                userEmail: user.email!,
+                lastEditedBy: user.email!,
+                lastEditedDate: serverTimestamp(),
+            };
+            await setDoc(pelangganDocRef, pelangganData, { merge: true });
+
+            // Step 2: Create Riwayat Gangguan (History) Document
             const riwayatData: Omit<RiwayatGangguan, 'id'> = {
                 pelangganId: order.serviceNo,
                 userId: user.uid,
                 noService: order.serviceNo,
-                namaPetugas: order.assignedTo_userName || userProfile.displayName || user.email,
+                namaPetugas: order.assignedTo_userName || userProfile.displayName || user.email!,
                 nik: userProfile.nik || '',
                 jenisOrder: order.crmOrder,
                 typeOrder: order.description || '',
                 keterangan: `Penyelesaian WO Provisioning: ${order.workorder}`,
-                tanggalLapor: order.assignedAt || order.createdAt || serverTimestamp(), // Best guess
-                tanggalOpen: order.assignedAt || order.createdAt || serverTimestamp(),
+                tanggalLapor: order.assignedAt || Timestamp.now(),
+                tanggalOpen: order.assignedAt || Timestamp.now(),
                 tanggalClose: completedTimestamp,
                 layanan: [order.productName],
                 materials: materialsToSave,
@@ -382,10 +390,18 @@ export default function OrderDetailPage() {
                 noTiket: order.workorder,
                 dorongClose: false,
             };
-    
             await addDoc(collection(firestore, 'riwayat-gangguan'), riwayatData);
+            
+            // Step 3: Update Provisioning Order to 'completed'
+            await updateDoc(orderRef, {
+                provisioningStatus: 'completed',
+                baPhotoUrl,
+                valinsId,
+                materials: materialsToSave,
+                completedAt: completedTimestamp,
+            });
     
-            toast({ title: 'Order Selesai!', description: 'Pekerjaan provisioning telah berhasil diselesaikan dan disimpan.' });
+            toast({ title: 'Order Selesai!', description: 'Pekerjaan provisioning telah berhasil diselesaikan dan dicatat dalam histori.' });
             router.push('/dashboard/provi-orders');
     
         } catch (error: any) {
@@ -522,7 +538,11 @@ export default function OrderDetailPage() {
                             <DialogDescription>Lengkapi data ODP dan foto rumah pelanggan.</DialogDescription>
                         </DialogHeader>
                         <form onSubmit={handleProgressSubmit} className="space-y-4">
-                             <div className="grid grid-cols-2 gap-4">
+                             <div className="grid gap-2">
+                                <Label htmlFor="odp-name">Nama ODP</Label>
+                                <Input id="odp-name" value={odpName} onChange={e => setOdpName(e.target.value)} placeholder="Contoh: ODP-KDS-FA/001"/>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
                                 <div className="grid gap-2">
                                     <Label htmlFor="odp-port">Port ODP</Label>
                                     <Input id="odp-port" value={odpPort} onChange={e => setOdpPort(e.target.value)} placeholder="Contoh: 5"/>

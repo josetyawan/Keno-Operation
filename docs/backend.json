@@ -531,6 +531,7 @@
         "kendalaNotes": { "type": "string" },
         "kendalaPhotos": { "type": "array", "items": { "type": "string", "format": "uri" } },
         "customerHousePhoto": { "type": "string", "format": "uri" },
+        "odpName": { "type": "string" },
         "odpPort": { "type": "string" },
         "odpQRCodeUrl": { "type": "string", "format": "uri" },
         "baPhotoUrl": { "type": "string", "format": "uri" },

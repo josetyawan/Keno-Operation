@@ -393,6 +393,7 @@ export type ProvisioningRecord = {
   kendalaNotes?: string;
   kendalaPhotos?: string[];
   customerHousePhoto?: string;
+  odpName?: string;
   odpPort?: string;
   odpQRCodeUrl?: string;
   // Fields for completion
@@ -401,5 +402,3 @@ export type ProvisioningRecord = {
   materials?: ProvisioningMaterial[];
   completedAt?: any; // Timestamp
 };
-
-    
