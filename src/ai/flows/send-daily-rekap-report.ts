@@ -1,6 +1,6 @@
 'use server';
 
-import { ai, googleAIGenkitPlugin } from '@/ai/genkit';
+import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
 const dailyRekapInputSchema = z.object({
@@ -40,7 +40,7 @@ Buat satu pesan laporan tunggal yang siap kirim.
 `;
 
     const res = await ai.generate({
-      model: googleAIGenkitPlugin.model('gemini-pro'),
+      model: 'googleai/gemini-pro',
       prompt: prompt,
     });
     

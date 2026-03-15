@@ -1,6 +1,6 @@
 'use server';
 
-import { ai, googleAIGenkitPlugin } from '@/ai/genkit';
+import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
 const attendanceNoticeSchema = z.object({
@@ -50,7 +50,7 @@ Buat pesan ini dalam format Markdown yang siap kirim.
 `;
 
     const res = await ai.generate({
-      model: googleAIGenkitPlugin.model('gemini-pro'),
+      model: 'googleai/gemini-pro',
       prompt,
     });
     

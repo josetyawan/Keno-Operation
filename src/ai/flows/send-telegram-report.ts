@@ -1,6 +1,6 @@
 'use server';
 
-import { ai, googleAIGenkitPlugin } from '@/ai/genkit';
+import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
 const rekapDataItemSchema = z.object({
@@ -64,7 +64,7 @@ Tambahkan header dan footer yang sesuai untuk laporan ini. Pastikan formatnya ri
 `;
     
     const llmResponse = await ai.generate({
-      model: googleAIGenkitPlugin.model('gemini-pro'),
+      model: 'googleai/gemini-pro',
       prompt: prompt,
     });
     
