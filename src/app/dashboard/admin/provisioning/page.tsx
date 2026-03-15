@@ -39,7 +39,7 @@ const formatWaNumber = (phone: string) => {
 
 // --- Child Components ---
 
-function AssignTechnicianDialog({ order, users, isOpen, onOpenChange, onAssign }: { order: ProvisioningRecord; users: UserProfile[]; isOpen: boolean; onOpenChange: (open: boolean) => void; onAssign: (techId: string) => void; }) {
+function AssignTechnicianDialog({ order, users, isOpen, onOpenChange, onAssign, isAssigning }: { order: ProvisioningRecord; users: UserProfile[]; isOpen: boolean; onOpenChange: (open: boolean) => void; onAssign: (techId: string) => void; isAssigning: boolean; }) {
   const [selectedTechnician, setSelectedTechnician] = useState('');
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -61,8 +61,11 @@ function AssignTechnicianDialog({ order, users, isOpen, onOpenChange, onAssign }
           </Select>
         </div>
         <DialogFooter>
-          <DialogClose asChild><Button variant="ghost">Batal</Button></DialogClose>
-          <Button onClick={() => onAssign(selectedTechnician)} disabled={!selectedTechnician}>Tugaskan</Button>
+          <DialogClose asChild><Button variant="ghost" disabled={isAssigning}>Batal</Button></DialogClose>
+          <Button onClick={() => onAssign(selectedTechnician)} disabled={!selectedTechnician || isAssigning}>
+            {isAssigning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {isAssigning ? 'Menugaskan...' : 'Tugaskan'}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -208,6 +211,7 @@ export default function ProvisioningDashboardPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   
   const [orderToAssign, setOrderToAssign] = useState<ProvisioningRecord | null>(null);
+  const [isAssigning, setIsAssigning] = useState(false);
 
   // Data fetching
   const recordsQuery = useMemoFirebase(() => query(collection(firestore, 'provisioning-records'), orderBy('dateCreated', 'desc')), [firestore]);
@@ -362,13 +366,15 @@ export default function ProvisioningDashboardPage() {
         for (let i = 0; i < jsonData.length; i++) {
             const row = jsonData[i];
             
-            const scOrderValue = row[headerMapping.scOrder]?.toString() || '';
+            const scOrderValue = String(row[headerMapping.scOrder] || '').trim();
             let finalScOrder = '';
             
-            const aoMoMatch = scOrderValue.match(/(?:AO|MO|AOi|MOi|AOs|PDAk)[a-z0-9]+/i);
+            if (!scOrderValue) continue;
 
-            if (aoMoMatch && aoMoMatch[0]) {
-                finalScOrder = aoMoMatch[0].split('_')[0];
+            const aoMoMatch = scOrderValue.match(/(?:AOk|AOi|AOs|MOk|MOi|PDAk)[a-z0-9]+/i);
+
+            if (aoMoMatch?.[0]) {
+                finalScOrder = aoMoMatch[0];
             } else if (scOrderValue.startsWith('SC') && scOrderValue.includes('_')) {
                  finalScOrder = scOrderValue.split('_')[0];
             } else {
@@ -378,6 +384,7 @@ export default function ProvisioningDashboardPage() {
             if (!finalScOrder) {
                 continue;
             }
+
             if (existingScOrders.has(finalScOrder)) {
                 skippedCount++;
                 continue;
@@ -441,9 +448,13 @@ export default function ProvisioningDashboardPage() {
 
   const handleAssign = async (technicianId: string) => {
     if (!orderToAssign || !technicianId) return;
+    setIsAssigning(true);
 
     const technician = technicians?.find(t => t.id === technicianId);
-    if (!technician) return;
+    if (!technician) {
+        setIsAssigning(false);
+        return;
+    };
 
     const docRef = doc(firestore, 'provisioning-records', orderToAssign.id);
     try {
@@ -457,6 +468,8 @@ export default function ProvisioningDashboardPage() {
         setOrderToAssign(null);
     } catch (error: any) {
         toast({ variant: 'destructive', title: 'Gagal Menugaskan', description: error.message });
+    } finally {
+        setIsAssigning(false);
     }
   }
   
@@ -655,6 +668,7 @@ export default function ProvisioningDashboardPage() {
           isOpen={!!orderToAssign}
           onOpenChange={(open) => !open && setOrderToAssign(null)}
           onAssign={handleAssign}
+          isAssigning={isAssigning}
         />
       )}
     </div>
