@@ -1,4 +1,3 @@
-
 'use server';
 
 import { ai } from '@/ai/genkit';
@@ -13,7 +12,9 @@ const dailyRekapInputSchema = z.object({
 export async function sendDailyRekapReport(
   input: z.infer<typeof dailyRekapInputSchema>
 ): Promise<string> {
-  return sendDailyRekapReportFlow(input);
+  // return sendDailyRekapReportFlow(input);
+  console.log("AI Flow 'sendDailyRekapReport' is temporarily disabled due to API issues.");
+  return Promise.resolve("AI feature is temporarily disabled.");
 }
 
 const dailyRekapPrompt = ai.definePrompt({

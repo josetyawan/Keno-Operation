@@ -1,4 +1,3 @@
-
 'use server';
 
 import { ai } from '@/ai/genkit';
@@ -14,7 +13,9 @@ const sendProductivityRekapInputSchema = z.object({
 export async function sendProductivityRekap(
   input: z.infer<typeof sendProductivityRekapInputSchema>
 ): Promise<string> {
-  return sendProductivityRekapFlow(input);
+  // return sendProductivityRekapFlow(input);
+  console.log("AI Flow 'sendProductivityRekap' is temporarily disabled due to API issues.");
+  return Promise.resolve("AI feature is temporarily disabled.");
 }
 
 const b2cRekapPrompt = ai.definePrompt(

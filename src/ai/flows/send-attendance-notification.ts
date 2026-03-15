@@ -1,4 +1,3 @@
-
 'use server';
 
 import { ai } from '@/ai/genkit';
@@ -14,7 +13,9 @@ const attendanceNoticeSchema = z.object({
 });
 
 export async function sendAttendanceNotice(input: z.infer<typeof attendanceNoticeSchema>): Promise<string> {
-    return sendAttendanceNoticeFlow(input);
+    // return sendAttendanceNoticeFlow(input);
+    console.log("AI Flow 'sendAttendanceNotice' is temporarily disabled due to API issues.");
+    return Promise.resolve("AI feature is temporarily disabled.");
 }
 
 const attendancePrompt = ai.definePrompt(

@@ -1,4 +1,3 @@
-
 'use server';
 
 import { ai } from '@/ai/genkit';
@@ -13,7 +12,9 @@ const swapApprovalNoticeSchema = z.object({
 export async function sendSwapApprovalNotice(
   input: z.infer<typeof swapApprovalNoticeSchema>
 ): Promise<string> {
-  return sendSwapApprovalNoticeFlow(input);
+  // return sendSwapApprovalNoticeFlow(input);
+  console.log("AI Flow 'sendSwapApprovalNotice' is temporarily disabled due to API issues.");
+  return Promise.resolve("AI feature is temporarily disabled.");
 }
 
 const swapApprovalPrompt = ai.definePrompt({

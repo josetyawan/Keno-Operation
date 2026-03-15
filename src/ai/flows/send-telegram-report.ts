@@ -1,4 +1,3 @@
-
 'use server';
 
 import { ai } from '@/ai/genkit';
@@ -23,7 +22,9 @@ const sendTelegramReportInputSchema = z.object({
 // This is a wrapper function for the AI flow to align with the expected return type in the component.
 export async function sendTelegramReport(input: z.infer<typeof sendTelegramReportInputSchema>): Promise<{ success: boolean; error?: string }> {
     try {
-        const reportText = await sendTelegramReportFlow(input);
+        // const reportText = await sendTelegramReportFlow(input);
+        console.log("AI Flow 'sendTelegramReport' is temporarily disabled due to API issues.");
+        const reportText = "AI feature for Telegram reports is temporarily disabled.";
         
         // In a real-world scenario, you'd use a tool to send this `reportText` to a Telegram service.
         // For now, we log it and simulate a successful operation.

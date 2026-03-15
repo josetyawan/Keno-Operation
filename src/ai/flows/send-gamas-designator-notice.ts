@@ -1,4 +1,3 @@
-
 'use server';
 
 import { ai } from '@/ai/genkit';
@@ -14,7 +13,9 @@ const gamasDesignatorNoticeSchema = z.object({
 export async function sendGamasDesignatorNotice(
   input: z.infer<typeof gamasDesignatorNoticeSchema>
 ): Promise<string> {
-  return sendGamasDesignatorNoticeFlow(input);
+  // return sendGamasDesignatorNoticeFlow(input);
+  console.log("AI Flow 'sendGamasDesignatorNotice' is temporarily disabled due to API issues.");
+  return Promise.resolve("AI feature is temporarily disabled.");
 }
 
 const gamasDesignatorPrompt = ai.definePrompt({

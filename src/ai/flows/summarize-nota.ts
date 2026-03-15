@@ -1,4 +1,3 @@
-
 'use server';
 
 import { ai } from '@/ai/genkit';
@@ -15,7 +14,9 @@ const summarizeOutputSchema = z.object({
 export async function summarizeNota(
   input: z.infer<typeof summarizeInputSchema>
 ): Promise<z.infer<typeof summarizeOutputSchema>> {
-  return summarizeNotaFlow(input);
+  // return summarizeNotaFlow(input);
+  console.log("AI Flow 'summarizeNota' is temporarily disabled due to API issues.");
+  return Promise.resolve({ summary: "AI Summary is temporarily disabled due to API configuration issues." });
 }
 
 const summaryPrompt = ai.definePrompt({
