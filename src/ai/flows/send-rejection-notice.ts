@@ -2,7 +2,6 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { googleAI } from '@genkit-ai/google-genai';
 
 const rejectionNoticeSchema = z.object({
   picName: z.string(),
@@ -19,7 +18,7 @@ export async function sendRejectionNotice(
 
 const rejectionNoticePrompt = ai.definePrompt({
     name: 'rejectionNoticePrompt',
-    model: googleAI.model('gemini-pro'),
+    model: 'googleai/gemini-pro-vision',
     input: { schema: rejectionNoticeSchema },
     prompt: `
 Buatkan notifikasi penolakan laporan nota untuk dikirim ke Telegram.

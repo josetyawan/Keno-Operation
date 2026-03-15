@@ -2,7 +2,6 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { googleAI } from '@genkit-ai/google-genai';
 
 const rekapDataItemSchema = z.object({
     phone: z.string(),
@@ -38,7 +37,7 @@ export async function sendTelegramReport(input: z.infer<typeof sendTelegramRepor
 
 const telegramReportPrompt = ai.definePrompt({
     name: 'telegramReportPrompt',
-    model: googleAI.model('gemini-pro'),
+    model: 'googleai/gemini-pro-vision',
     input: { schema: z.object({
         rekapString: z.string(),
         grandTotalFormatted: z.string(),

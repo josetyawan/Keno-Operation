@@ -2,7 +2,6 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { googleAI } from '@genkit-ai/google-genai';
 
 const gamasReportNoticeSchema = z.object({
   userName: z.string(),
@@ -19,7 +18,7 @@ export async function sendGamasReportNotice(
 
 const gamasReportPrompt = ai.definePrompt({
     name: 'gamasReportNoticePrompt',
-    model: googleAI.model('gemini-pro'),
+    model: 'googleai/gemini-pro-vision',
     input: { schema: gamasReportNoticeSchema },
     prompt: `
 Buatkan notifikasi singkat untuk laporan Gamas yang baru saja ditinjau.

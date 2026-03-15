@@ -2,7 +2,6 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { googleAI } from '@genkit-ai/google-genai';
 
 const sendProductivityRekapInputSchema = z.object({
   unit: z.string(),
@@ -20,7 +19,7 @@ export async function sendProductivityRekap(
 const b2cRekapPrompt = ai.definePrompt(
     {
         name: 'b2cRekapPrompt',
-        model: googleAI.model('gemini-pro'),
+        model: 'googleai/gemini-pro-vision',
         input: { schema: sendProductivityRekapInputSchema },
         prompt: `
 Buatkan laporan rekap produktivitas harian profesional.
