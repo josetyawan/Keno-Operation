@@ -117,10 +117,14 @@ export default function OrderDetailPage() {
         toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Mohon isi alasan dan unggah 2-10 foto bukti.' });
         return;
     }
+    if (!user) {
+        toast({ variant: 'destructive', title: 'Error Autentikasi', description: 'Sesi pengguna tidak ditemukan. Silakan login ulang.' });
+        return;
+    }
     setIsUpdating(true);
     try {
         const uploadPromises = Array.from(kendalaFiles).map(async file => {
-            const filePath = `kendala-evidences/${user?.uid}/${Date.now()}-${file.name}`;
+            const filePath = `kendala-evidences/${user.uid}/${Date.now()}-${file.name}`;
             const storageRef = ref(storage, filePath);
             await uploadBytes(storageRef, file);
             return getDownloadURL(storageRef);
@@ -149,9 +153,13 @@ export default function OrderDetailPage() {
         toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Mohon unggah foto rumah pelanggan.' });
         return;
     }
+    if (!user) {
+        toast({ variant: 'destructive', title: 'Error Autentikasi', description: 'Sesi pengguna tidak ditemukan. Silakan login ulang.' });
+        return;
+    }
     setIsUpdating(true);
     try {
-        const filePath = `provi-evidences/${user?.uid}/rumah_${Date.now()}-${housePhoto.name}`;
+        const filePath = `provi-evidences/${user.uid}/rumah_${Date.now()}-${housePhoto.name}`;
         const storageRef = ref(storage, filePath);
         await uploadBytes(storageRef, housePhoto);
         const photoUrl = await getDownloadURL(storageRef);
