@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -26,6 +27,45 @@ interface PivotRow {
 }
 type PivotData = Record<string, PivotRow>;
 
+// --- Recursive Component for Pivot Table Rows ---
+const PivotRowDisplay = ({
+  name,
+  data,
+  level,
+  workzones,
+}: {
+  name: string;
+  data: PivotRow;
+  level: number;
+  workzones: string[];
+}) => {
+  const hasChildren = data.children && Object.keys(data.children).length > 0;
+
+  return (
+    <>
+      <TableRow className="bg-muted/20 hover:bg-muted/40 font-semibold">
+        <TableCell style={{ paddingLeft: `${1 + level * 1.5}rem` }} colSpan={4}>
+          {name} Total
+        </TableCell>
+        {workzones.map((wz) => (
+          <TableCell key={wz} className="text-right">{data.count[wz] || 0}</TableCell>
+        ))}
+        <TableCell className="text-right font-bold">{data.count['Grand Total'] || 0}</TableCell>
+      </TableRow>
+      {hasChildren &&
+        Object.entries(data.children).map(([childName, childData]) => (
+          <PivotRowDisplay
+            key={childName}
+            name={childName}
+            data={childData}
+            level={level + 1}
+            workzones={workzones}
+          />
+        ))}
+    </>
+  );
+};
+
 
 export default function ProvisioningDashboardPage() {
   const { toast } = useToast();
@@ -47,7 +87,7 @@ export default function ProvisioningDashboardPage() {
   // Update workzones when data changes
   useEffect(() => {
     if (data) {
-      const uniqueWorkzones = [...new Set(data.map((item) => item.workzone))].sort();
+      const uniqueWorkzones = [...new Set(data.map((item) => item.workzone).filter(Boolean))].sort();
       setWorkzones(uniqueWorkzones);
     }
   }, [data]);
@@ -153,20 +193,20 @@ export default function ProvisioningDashboardPage() {
         }
 
         const headerMapping = {
-          workorder: findHeader(headers, ['workorder']),
-          scOrder: findHeader(headers, ['sc order', 'id/csrm no']),
-          serviceNo: findHeader(headers, ['service no']),
-          crmOrder: findHeader(headers, ['crm', 'order type']),
-          status: findHeader(headers, ['status']),
-          customerName: findHeader(headers, ['customer name']),
-          contactNumber: findHeader(headers, ['contact number']),
-          address: findHeader(headers, ['address']),
-          description: findHeader(headers, ['description']),
-          dateCreated: findHeader(headers, ['date created']),
-          bookingDate: findHeader(headers, ['booking date']),
-          productName: findHeader(headers, ['product name']),
-          productType: findHeader(headers, ['product type']),
-          workzone: findHeader(headers, ['workzone']),
+            workorder: findHeader(headers, ['workorder']),
+            scOrder: findHeader(headers, ['sc order', 'id/csrm no']),
+            serviceNo: findHeader(headers, ['service no']),
+            crmOrder: findHeader(headers, ['crm', 'order type']),
+            status: findHeader(headers, ['status']),
+            customerName: findHeader(headers, ['customer name']),
+            contactNumber: findHeader(headers, ['contact number']),
+            address: findHeader(headers, ['address']),
+            description: findHeader(headers, ['description']),
+            dateCreated: findHeader(headers, ['date created']),
+            bookingDate: findHeader(headers, ['booking date']),
+            productName: findHeader(headers, ['product name']),
+            productType: findHeader(headers, ['product type']),
+            workzone: findHeader(headers, ['workzone']),
         };
         
         const recordsCollection = collection(firestore, 'provisioning-records');
@@ -183,7 +223,7 @@ export default function ProvisioningDashboardPage() {
             let finalScOrder = scOrderValue;
 
             const aoMoMatch = scOrderValue.match(/(?:AO|MO|AOi|MOi|AOs)[a-z0-9]+/i);
-
+            
             if (aoMoMatch && aoMoMatch[0]) {
                 finalScOrder = aoMoMatch[0].split('_')[0];
             } else if (finalScOrder.startsWith('SC') && finalScOrder.includes('_')) {
@@ -213,7 +253,7 @@ export default function ProvisioningDashboardPage() {
               customerName: row[headerMapping.customerName!] || '-',
               contactNumber: row[headerMapping.contactNumber!]?.toString() || '-',
               address: row[headerMapping.address!] || '-',
-              description: row[headerMapping.description!] || '-',
+              description: headerMapping.description ? (row[headerMapping.description] || '-') : '-',
               dateCreated: formatDateValue(row[headerMapping.dateCreated!]),
               bookingDate: formatDateValue(row[headerMapping.bookingDate!]),
               productName: row[headerMapping.productName!] || '-',
@@ -272,38 +312,40 @@ export default function ProvisioningDashboardPage() {
   // --- Pivot Table Logic ---
   const pivotData = useMemo((): PivotData => {
     const pivot: PivotData = {};
-    const localWorkzones = [...workzones, 'Grand Total'];
 
     const increment = (obj: PivotRow, workzone: string) => {
-      obj.count[workzone] = (obj.count[workzone] || 0) + 1;
-      obj.count['Grand Total'] = (obj.count['Grand Total'] || 0) + 1;
+        if (!obj.count) obj.count = {};
+        obj.count[workzone] = (obj.count[workzone] || 0) + 1;
+        obj.count['Grand Total'] = (obj.count['Grand Total'] || 0) + 1;
     };
+    
+    (data || []).forEach(item => {
+        const { productName, status, crmOrder, description, workzone } = item;
+        if (!workzone) return;
 
-    filteredData.forEach(item => {
-      const { productName, status, crmOrder, description, workzone } = item;
+        const pName = productName || 'N/A';
+        const s = status || 'N/A';
+        const crm = crmOrder || 'N/A';
+        const desc = description || 'N/A';
 
-      // Product Name level
-      if (!pivot[productName]) pivot[productName] = { count: {}, children: {} };
-      increment(pivot[productName], workzone);
+        if (!pivot[pName]) pivot[pName] = { count: {}, children: {} };
+        increment(pivot[pName], workzone);
 
-      // Status level
-      const statusNode = pivot[productName].children!;
-      if (!statusNode[status]) statusNode[status] = { count: {}, children: {} };
-      increment(statusNode[status], workzone);
+        const statusNode = pivot[pName].children!;
+        if (!statusNode[s]) statusNode[s] = { count: {}, children: {} };
+        increment(statusNode[s], workzone);
 
-      // CRM Order Type level
-      const crmNode = statusNode[status].children!;
-      if (!crmNode[crmOrder]) crmNode[crmOrder] = { count: {}, children: {} };
-      increment(crmNode[crmOrder], workzone);
-      
-      // Description level
-      const descNode = crmNode[crmOrder].children!;
-      if (!descNode[description]) descNode[description] = { count: {} };
-      increment(descNode[description], workzone);
+        const crmNode = statusNode[s].children!;
+        if (!crmNode[crm]) crmNode[crm] = { count: {}, children: {} };
+        increment(crmNode[crm], workzone);
+        
+        const descNode = crmNode[crm].children!;
+        if (!descNode[desc]) descNode[desc] = { count: {} };
+        increment(descNode[desc], workzone);
     });
 
     return pivot;
-  }, [filteredData, workzones]);
+  }, [data]);
 
 
   const paginatedData = useMemo(() => {
@@ -349,7 +391,7 @@ export default function ProvisioningDashboardPage() {
               <CardDescription>Ringkasan data provisioning yang dikelompokkan.</CardDescription>
           </CardHeader>
           <CardContent>
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto border rounded-lg">
                   <Table>
                       <TableHeader>
                           <TableRow>
@@ -362,70 +404,77 @@ export default function ProvisioningDashboardPage() {
                           </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {Object.entries(pivotData).map(([productName, productData]) => (
-                            <Accordion key={productName} type="single" collapsible>
-                                <AccordionItem value={productName} className="border-b-0">
-                                    <TableRow className="font-bold bg-muted/30">
-                                        <TableCell><AccordionTrigger className="p-0 hover:no-underline">{productName}</AccordionTrigger></TableCell>
-                                        <TableCell></TableCell>
-                                        <TableCell></TableCell>
-                                        <TableCell>{productName} Total</TableCell>
-                                        {workzones.map(wz => <TableCell key={wz} className="text-right">{productData.count[wz] || 0}</TableCell>)}
-                                        <TableCell className="text-right">{productData.count['Grand Total'] || 0}</TableCell>
-                                    </TableRow>
-                                    <AccordionContent asChild>
-                                      <>
-                                        {Object.entries(productData.children || {}).map(([status, statusData]) => (
-                                          <Accordion key={status} type="single" collapsible>
-                                            <AccordionItem value={status} className="border-b-0">
-                                                <TableRow>
-                                                  <TableCell className="pl-8"><AccordionTrigger className="p-0 hover:no-underline">{status}</AccordionTrigger></TableCell>
-                                                  <TableCell></TableCell>
-                                                  <TableCell></TableCell>
-                                                  <TableCell>{status} Total</TableCell>
-                                                  {workzones.map(wz => <TableCell key={wz} className="text-right">{statusData.count[wz] || 0}</TableCell>)}
-                                                  <TableCell className="text-right">{statusData.count['Grand Total'] || 0}</TableCell>
-                                                </TableRow>
-                                                <AccordionContent asChild>
-                                                  <>
-                                                  {Object.entries(statusData.children || {}).map(([crmOrder, crmData]) => (
-                                                    <Accordion key={crmOrder} type="single" collapsible>
-                                                      <AccordionItem value={crmOrder} className="border-b-0">
-                                                        <TableRow>
-                                                            <TableCell></TableCell>
-                                                            <TableCell className="pl-12"><AccordionTrigger className="p-0 hover:no-underline">{crmOrder}</AccordionTrigger></TableCell>
-                                                            <TableCell></TableCell>
-                                                            <TableCell>{crmOrder} Total</TableCell>
-                                                            {workzones.map(wz => <TableCell key={wz} className="text-right">{crmData.count[wz] || 0}</TableCell>)}
-                                                            <TableCell className="text-right">{crmData.count['Grand Total'] || 0}</TableCell>
-                                                        </TableRow>
-                                                        <AccordionContent asChild>
-                                                          <>
-                                                          {Object.entries(crmData.children || {}).map(([desc, descData]) => (
-                                                              <TableRow key={desc}>
-                                                                  <TableCell></TableCell>
-                                                                  <TableCell></TableCell>
-                                                                  <TableCell className="pl-16">{crmOrder}</TableCell>
-                                                                  <TableCell>{desc}</TableCell>
-                                                                  {workzones.map(wz => <TableCell key={wz} className="text-right">{descData.count[wz] || 0}</TableCell>)}
-                                                                  <TableCell className="text-right">{descData.count['Grand Total'] || 0}</TableCell>
-                                                              </TableRow>
-                                                          ))}
-                                                          </>
-                                                        </AccordionContent>
-                                                      </AccordionItem>
-                                                    </Accordion>
-                                                  ))}
-                                                  </>
-                                                </AccordionContent>
-                                            </AccordionItem>
-                                          </Accordion>
-                                        ))}
-                                      </>
-                                    </AccordionContent>
-                                </AccordionItem>
+                        {Object.entries(pivotData).length > 0 ? (
+                           Object.entries(pivotData).map(([productName, productData]) => (
+                            <Accordion key={productName} type="single" collapsible className="w-full">
+                              <AccordionItem value={productName} className="border-none">
+                                <tr className="border-b bg-muted/30 hover:bg-muted/50 w-full">
+                                  <td colSpan={4} className="p-0">
+                                      <AccordionTrigger className="px-4 py-3 text-sm font-semibold w-full text-left hover:no-underline">
+                                        {productName}
+                                      </AccordionTrigger>
+                                  </td>
+                                  {workzones.map(wz => <TableCell key={wz} className="text-right">{productData.count[wz] || 0}</TableCell>)}
+                                  <TableCell className="text-right font-bold">{productData.count['Grand Total'] || 0}</TableCell>
+                                </tr>
+                                <AccordionContent asChild>
+                                  <>
+                                    {Object.entries(productData.children || {}).map(([status, statusData]) => (
+                                      <Accordion key={status} type="single" collapsible className="w-full">
+                                        <AccordionItem value={status} className="border-none">
+                                          <tr className="border-t w-full">
+                                             <td colSpan={4} className="p-0">
+                                                <AccordionTrigger className="px-4 py-2 text-sm w-full text-left hover:no-underline" style={{ paddingLeft: '2rem' }}>
+                                                  {status}
+                                                </AccordionTrigger>
+                                             </td>
+                                              {workzones.map(wz => <TableCell key={wz} className="text-right text-muted-foreground">{statusData.count[wz] || 0}</TableCell>)}
+                                              <TableCell className="text-right font-semibold text-muted-foreground">{statusData.count['Grand Total'] || 0}</TableCell>
+                                          </tr>
+                                          <AccordionContent asChild>
+                                            <>
+                                            {Object.entries(statusData.children || {}).map(([crmOrder, crmData]) => (
+                                                <Accordion key={crmOrder} type="single" collapsible className="w-full">
+                                                  <AccordionItem value={crmOrder} className="border-none">
+                                                    <tr className="border-t w-full bg-black/5">
+                                                      <td colSpan={4} className="p-0">
+                                                          <AccordionTrigger className="px-4 py-2 text-xs w-full text-left hover:no-underline" style={{ paddingLeft: '3rem' }}>
+                                                            {crmOrder}
+                                                          </AccordionTrigger>
+                                                      </td>
+                                                      {workzones.map(wz => <TableCell key={wz} className="text-right text-xs text-muted-foreground">{crmData.count[wz] || 0}</TableCell>)}
+                                                      <TableCell className="text-right text-xs font-medium text-muted-foreground">{crmData.count['Grand Total'] || 0}</TableCell>
+                                                    </tr>
+                                                    <AccordionContent asChild>
+                                                        <>
+                                                        {Object.entries(crmData.children || {}).map(([desc, descData]) => (
+                                                            <TableRow key={desc} className="text-xs">
+                                                                <TableCell colSpan={3}></TableCell>
+                                                                <TableCell style={{ paddingLeft: '4rem' }}>{desc}</TableCell>
+                                                                {workzones.map(wz => <TableCell key={wz} className="text-right">{descData.count[wz] || 0}</TableCell>)}
+                                                                <TableCell className="text-right">{descData.count['Grand Total'] || 0}</TableCell>
+                                                            </TableRow>
+                                                        ))}
+                                                        </>
+                                                    </AccordionContent>
+                                                  </AccordionItem>
+                                                </Accordion>
+                                            ))}
+                                            </>
+                                          </AccordionContent>
+                                        </AccordionItem>
+                                      </Accordion>
+                                    ))}
+                                  </>
+                                </AccordionContent>
+                              </AccordionItem>
                             </Accordion>
-                        ))}
+                           ))
+                        ) : (
+                            <TableRow>
+                                <TableCell colSpan={workzones.length + 5} className="h-24 text-center">Tidak ada data untuk ditampilkan di pivot table.</TableCell>
+                            </TableRow>
+                        )}
                       </TableBody>
                   </Table>
               </div>
