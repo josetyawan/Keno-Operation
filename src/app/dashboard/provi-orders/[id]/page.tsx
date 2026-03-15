@@ -3,16 +3,22 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { useStorage } from '@/firebase/provider';
+import { doc, updateDoc, serverTimestamp, addDoc, collection } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Loader2, PackageOpen, Truck, MapPin, PackageCheck, Phone } from 'lucide-react';
+import { ArrowLeft, Loader2, PackageOpen, Truck, MapPin, PackageCheck, Phone, AlertTriangle, Send, Camera, Upload } from 'lucide-react';
 import type { ProvisioningRecord } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
 import Link from 'next/link';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import Image from 'next/image';
 
 const formatWaNumber = (phone: string) => {
     if (!phone) return '#';
@@ -31,8 +37,22 @@ export default function OrderDetailPage() {
   const router = useRouter();
   const { user } = useUser();
   const firestore = useFirestore();
+  const storage = useStorage();
   const { toast } = useToast();
+  
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isProgressDialogOpen, setIsProgressDialogOpen] = useState(false);
+  const [isKendalaDialogOpen, setIsKendalaDialogOpen] = useState(false);
+  
+  // State for Kendala Dialog
+  const [kendalaReason, setKendalaReason] = useState('');
+  const [kendalaFiles, setKendalaFiles] = useState<FileList | null>(null);
+
+  // State for Progress Dialog
+  const [odpPort, setOdpPort] = useState('');
+  const [odpQr, setOdpQr] = useState('');
+  const [housePhoto, setHousePhoto] = useState<File | null>(null);
+
 
   const orderRef = useMemoFirebase(() => doc(firestore, 'provisioning-records', id), [firestore, id]);
   const { data: order, isLoading } = useDoc<ProvisioningRecord>(orderRef);
@@ -77,14 +97,77 @@ export default function OrderDetailPage() {
   };
 
   const handleArrive = async () => {
+    setIsUpdating(true);
     try {
-        const position = await new Promise<GeolocationPosition>((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject));
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0}));
         const coordinates = `${position.coords.latitude}, ${position.coords.longitude}`;
         await handleUpdateStatus('arrived', { arriveCoordinates: coordinates });
     } catch (error: any) {
          toast({ variant: 'destructive', title: 'Gagal Mendapatkan Lokasi', description: error.message });
+    } finally {
+        setIsUpdating(false);
     }
   }
+  
+  const handleKendalaSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!kendalaReason.trim() || !kendalaFiles || kendalaFiles.length < 2 || kendalaFiles.length > 10) {
+        toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Mohon isi alasan dan unggah 2-10 foto bukti.' });
+        return;
+    }
+    setIsUpdating(true);
+    try {
+        const uploadPromises = Array.from(kendalaFiles).map(async file => {
+            const filePath = `kendala/${user?.uid}/${Date.now()}-${file.name}`;
+            const storageRef = ref(storage, filePath);
+            await uploadBytes(storageRef, file);
+            return getDownloadURL(storageRef);
+        });
+
+        const photoUrls = await Promise.all(uploadPromises);
+
+        await updateDoc(orderRef, {
+            provisioningStatus: 'kendala',
+            kendalaNotes: kendalaReason,
+            kendalaPhotos: photoUrls,
+            kendalaAt: serverTimestamp(),
+        });
+        toast({ title: 'Kendala Dilaporkan', description: 'Laporan kendala Anda telah disimpan.' });
+        setIsKendalaDialogOpen(false);
+    } catch (error: any) {
+        toast({ variant: 'destructive', title: 'Gagal Melaporkan Kendala', description: error.message });
+    } finally {
+        setIsUpdating(false);
+    }
+  };
+  
+  const handleProgressSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!housePhoto) {
+        toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Mohon unggah foto rumah pelanggan.' });
+        return;
+    }
+    setIsUpdating(true);
+    try {
+        const filePath = `provi_evidence/${user?.uid}/rumah_${Date.now()}-${housePhoto.name}`;
+        const storageRef = ref(storage, filePath);
+        await uploadBytes(storageRef, housePhoto);
+        const photoUrl = await getDownloadURL(storageRef);
+
+        await updateDoc(orderRef, {
+            provisioningStatus: 'wip_odp_done',
+            odpPort,
+            odpQRCodeUrl: odpQr,
+            customerHousePhoto: photoUrl
+        });
+        toast({ title: 'Progres Disimpan', description: 'Data ODP dan foto rumah pelanggan berhasil disimpan.' });
+        setIsProgressDialogOpen(false);
+    } catch (error: any) {
+        toast({ variant: 'destructive', title: 'Gagal Menyimpan Progres', description: error.message });
+    } finally {
+        setIsUpdating(false);
+    }
+  };
 
 
   if (isLoading) {
@@ -98,7 +181,7 @@ export default function OrderDetailPage() {
   const canPickup = order.provisioningStatus === 'assigned' && order.assignedTo_userId === user?.uid;
   const canDepart = order.provisioningStatus === 'picked_up' && order.assignedTo_userId === user?.uid;
   const canArrive = order.provisioningStatus === 'departed' && order.assignedTo_userId === user?.uid;
-  const hasArrived = order.provisioningStatus === 'arrived';
+  const hasArrived = order.provisioningStatus === 'arrived' && order.assignedTo_userId === user?.uid;
 
 
   return (
@@ -174,11 +257,11 @@ export default function OrderDetailPage() {
           <CardHeader><CardTitle>Aksi Berikutnya</CardTitle></CardHeader>
           <CardContent>
               <p className="mb-4 text-sm text-muted-foreground">
-                  Anda sedang dalam perjalanan. Klik jika Anda sudah tiba di lokasi pelanggan.
+                  Anda sedang dalam perjalanan. Klik jika Anda sudah tiba di lokasi pelanggan. Aksi ini akan mencatat koordinat Anda.
               </p>
               <Button onClick={handleArrive} disabled={isUpdating} className="w-full">
                    {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <MapPin className="mr-2 h-4 w-4" />}
-                   {isUpdating ? 'Memproses...' : 'Tiba di Lokasi'}
+                   {isUpdating ? 'Mencatat Lokasi...' : 'Tiba di Lokasi'}
               </Button>
           </CardContent>
         </Card>
@@ -187,13 +270,65 @@ export default function OrderDetailPage() {
       {hasArrived && (
          <Card>
             <CardHeader><CardTitle className="text-green-600 flex items-center gap-2"><PackageCheck/> Anda Telah Tiba</CardTitle></CardHeader>
-            <CardContent>
-                <p className="text-sm text-muted-foreground">
-                    Silakan lanjutkan dengan pekerjaan di lokasi. Formulir untuk input progres dan kendala akan tersedia di sini segera.
-                </p>
+            <CardContent className="grid md:grid-cols-2 gap-4">
+                <Button onClick={() => setIsProgressDialogOpen(true)} className="w-full" size="lg">Lanjutkan Progres</Button>
+                <Button onClick={() => setIsKendalaDialogOpen(true)} variant="destructive" className="w-full" size="lg">Laporkan Kendala</Button>
             </CardContent>
         </Card>
       )}
+
+      <Dialog open={isKendalaDialogOpen} onOpenChange={setIsKendalaDialogOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Laporkan Kendala</DialogTitle>
+                <DialogDescription>Jelaskan kendala yang terjadi dan lampirkan foto bukti.</DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleKendalaSubmit} className="space-y-4">
+                <div className="grid gap-2">
+                    <Label htmlFor="kendala-reason">Alasan Kendala</Label>
+                    <Textarea id="kendala-reason" value={kendalaReason} onChange={e => setKendalaReason(e.target.value)} placeholder="Contoh: Pelanggan tidak ada di rumah, alamat tidak ditemukan, dll." required/>
+                </div>
+                <div className="grid gap-2">
+                    <Label htmlFor="kendala-evidence">Foto Bukti (min 2, maks 10)</Label>
+                    <Input id="kendala-evidence" type="file" multiple accept="image/*" onChange={e => setKendalaFiles(e.target.files)} required/>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild><Button type="button" variant="ghost">Batal</Button></DialogClose>
+                    <Button type="submit" disabled={isUpdating}>{isUpdating ? <Loader2 className="animate-spin" /> : 'Kirim Laporan'}</Button>
+                </DialogFooter>
+            </form>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={isProgressDialogOpen} onOpenChange={setIsProgressDialogOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Input Progres Awal</DialogTitle>
+                <DialogDescription>Lengkapi data ODP dan foto rumah pelanggan.</DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleProgressSubmit} className="space-y-4">
+                 <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="odp-port">Port ODP</Label>
+                        <Input id="odp-port" value={odpPort} onChange={e => setOdpPort(e.target.value)} placeholder="Contoh: 5"/>
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="odp-qr">URL QR Code ODP</Label>
+                        <Input id="odp-qr" value={odpQr} onChange={e => setOdpQr(e.target.value)} placeholder="https://..."/>
+                    </div>
+                 </div>
+                 <div className="grid gap-2">
+                    <Label htmlFor="house-photo">Foto Rumah Pelanggan</Label>
+                    <Input id="house-photo" type="file" accept="image/*" onChange={e => setHousePhoto(e.target.files?.[0] || null)} required/>
+                    {housePhoto && <p className="text-xs text-muted-foreground">{housePhoto.name}</p>}
+                 </div>
+                <DialogFooter>
+                    <DialogClose asChild><Button type="button" variant="ghost">Batal</Button></DialogClose>
+                    <Button type="submit" disabled={isUpdating}>{isUpdating ? <Loader2 className="animate-spin" /> : 'Simpan Progres'}</Button>
+                </DialogFooter>
+            </form>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );
