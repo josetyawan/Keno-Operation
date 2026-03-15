@@ -1,13 +1,13 @@
-
 'use client';
 
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import type { ProvisioningRecord } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Truck } from 'lucide-react';
 import Link from 'next/link';
+import { useMemo } from 'react';
 
 export default function TechnicianOrdersPage() {
   const { user, isUserLoading } = useUser();
@@ -17,12 +17,21 @@ export default function TechnicianOrdersPage() {
     if (!user) return null;
     return query(
       collection(firestore, 'provisioning-records'),
-      where('assignedTo_userId', '==', user.uid),
-      orderBy('assignedAt', 'desc')
+      where('assignedTo_userId', '==', user.uid)
     );
   }, [firestore, user]);
 
   const { data: orders, isLoading: areOrdersLoading } = useCollection<ProvisioningRecord>(ordersQuery);
+
+  const sortedOrders = useMemo(() => {
+    if (!orders) return [];
+    return [...orders].sort((a, b) => {
+      const timeA = a.assignedAt?.toDate ? a.assignedAt.toDate().getTime() : 0;
+      const timeB = b.assignedAt?.toDate ? b.assignedAt.toDate().getTime() : 0;
+      return timeB - timeA; // Descending
+    });
+  }, [orders]);
+
 
   const isLoading = isUserLoading || areOrdersLoading;
 
@@ -38,9 +47,9 @@ export default function TechnicianOrdersPage() {
           <Skeleton className="h-24 w-full" />
           <Skeleton className="h-24 w-full" />
         </div>
-      ) : orders && orders.length > 0 ? (
+      ) : sortedOrders && sortedOrders.length > 0 ? (
         <div className="space-y-4">
-          {orders.map(order => (
+          {sortedOrders.map(order => (
             <Link key={order.id} href={`/dashboard/provi-orders/${order.id}`}>
               <Card className="hover:border-primary transition-colors">
                 <CardHeader>
@@ -66,5 +75,3 @@ export default function TechnicianOrdersPage() {
     </div>
   );
 }
-
-    
