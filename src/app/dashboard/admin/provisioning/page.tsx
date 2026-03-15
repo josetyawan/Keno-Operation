@@ -102,17 +102,14 @@ export default function ProvisioningDashboardPage() {
     const reader = new FileReader();
     reader.onload = async (e) => {
       try {
-        // --- 1. Fetch existing SC Orders for duplicate checking ---
         const existingRecordsSnap = await getDocs(collection(firestore, 'provisioning-records'));
         const existingScOrders = new Set(existingRecordsSnap.docs.map(doc => doc.data().scOrder));
         
-        // --- 2. Read Excel file ---
         const arrayBuffer = e.target?.result;
         const wb = XLSX.read(arrayBuffer, { type: 'array', cellDates: true });
         const wsname = wb.SheetNames[0];
         const ws = wb.Sheets[wsname];
         
-        // Convert to array of arrays to find header row dynamically
         const dataAsArray: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
         
         let headerRowIndex = -1;
@@ -120,8 +117,9 @@ export default function ProvisioningDashboardPage() {
 
         for (let i = 0; i < dataAsArray.length; i++) {
             const row = dataAsArray[i];
-            // Find a row that looks like a header, e.g., contains 'Workorder' AND 'Customer Name'
-            if (row && row.some(cell => typeof cell === 'string' && (cell.toLowerCase().trim() === 'workorder')) && row.some(cell => typeof cell === 'string' && (cell.toLowerCase().trim() === 'customer name'))) {
+            const lowercasedRow = row.map(cell => String(cell || '').toLowerCase().trim());
+            
+            if (lowercasedRow.includes('workorder') && lowercasedRow.some(h => h.includes('customer'))) {
                 headerRowIndex = i;
                 headers = row.map(cell => String(cell || '').trim());
                 break;
@@ -132,7 +130,6 @@ export default function ProvisioningDashboardPage() {
             throw new Error("Header tidak ditemukan. Pastikan file Excel memiliki baris header yang benar (Contoh: 'Workorder', 'Customer Name').");
         }
 
-        // The actual data starts from the row after the header
         const dataRows = dataAsArray.slice(headerRowIndex + 1);
         const jsonData = dataRows.map(row => {
             const obj: Record<string, any> = {};
@@ -176,18 +173,15 @@ export default function ProvisioningDashboardPage() {
             const scOrderValue = row[headerMapping.scOrder!]?.toString() || '';
             let finalScOrder = scOrderValue;
 
-            // Updated Regex to match AO or MO followed by k, i, or s
-            const aoMoMatch = scOrderValue.match(/(?:A|M)O(?:k|i|s)\w+/);
+            const aoMoMatch = scOrderValue.match(/(?:A|M)O[a-z0-9]+/i);
 
             if (aoMoMatch && aoMoMatch[0]) {
                 finalScOrder = aoMoMatch[0];
             } else if (finalScOrder.startsWith('SC') && finalScOrder.includes('_')) {
                 finalScOrder = finalScOrder.split('_')[0];
             }
-            // All other cases will use the original scOrderValue
-
-            // --- 3. Skip if SC Order already exists ---
-            if (!finalScOrder) { // Skip if the key field is empty
+            
+            if (!finalScOrder) {
                 continue;
             }
             if (existingScOrders.has(finalScOrder)) {
