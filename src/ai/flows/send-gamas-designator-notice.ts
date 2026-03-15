@@ -45,6 +45,6 @@ const sendGamasDesignatorNoticeFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await gamasDesignatorPrompt(input);
-    return output?.text() || '';
+    return output?.text || '';
   }
 );

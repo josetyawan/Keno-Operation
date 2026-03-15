@@ -72,6 +72,6 @@ const sendPaidNoticeFlow = ai.defineFlow(
         grandTotalFormatted: grandTotal.toLocaleString('id-ID'),
     });
     
-    return output?.text() || '';
+    return output?.text || '';
   }
 );

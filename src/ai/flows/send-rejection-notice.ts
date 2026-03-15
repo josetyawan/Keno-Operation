@@ -44,6 +44,6 @@ const sendRejectionNoticeFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await rejectionNoticePrompt(input);
-    return output?.text() || '';
+    return output?.text || '';
   }
 );

@@ -47,6 +47,6 @@ const sendProductivityRekapFlow = ai.defineFlow(
         ...input,
     });
 
-    return output?.text() || '';
+    return output?.text || '';
   }
 );

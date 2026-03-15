@@ -45,7 +45,7 @@ const summarizeNotaFlow = ai.defineFlow(
     });
     
     try {
-        let jsonString = output?.text() || '{}';
+        let jsonString = output?.text || '{}';
         const jsonMatch = jsonString.match(/```json\n([\s\S]*?)\n```/);
         if (jsonMatch && jsonMatch[1]) {
             jsonString = jsonMatch[1];
@@ -53,7 +53,7 @@ const summarizeNotaFlow = ai.defineFlow(
         const parsed = JSON.parse(jsonString);
         return summarizeOutputSchema.parse(parsed); // Validate with Zod
     } catch (e) {
-        console.error("Failed to parse AI summary output as JSON:", e, "Raw output:", output?.text());
+        console.error("Failed to parse AI summary output as JSON:", e, "Raw output:", output?.text);
         // Fallback in case of parsing error
         return { summary: "AI could not generate a valid summary." };
     }

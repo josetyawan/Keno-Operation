@@ -45,6 +45,6 @@ const sendGamasReportNoticeFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await gamasReportPrompt(input);
-    return output?.text() || '';
+    return output?.text || '';
   }
 );

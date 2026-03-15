@@ -80,6 +80,6 @@ const sendTelegramReportFlow = ai.defineFlow(
         rekapDate
     });
     
-    return output?.text() || '';
+    return output?.text || '';
   }
 );

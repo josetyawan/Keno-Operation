@@ -42,6 +42,6 @@ const sendSwapApprovalNoticeFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await swapApprovalPrompt(input);
-    return output?.text() || '';
+    return output?.text || '';
   }
 );

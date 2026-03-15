@@ -70,6 +70,6 @@ const sendAttendanceNoticeFlow = ai.defineFlow(
         statusEmoji: statusEmoji,
     });
     
-    return output?.text() || '';
+    return output?.text || '';
   }
 );

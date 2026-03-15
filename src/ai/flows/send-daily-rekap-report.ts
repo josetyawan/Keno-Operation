@@ -59,6 +59,6 @@ const sendDailyRekapReportFlow = ai.defineFlow(
         photoCaption: input.photoCaption || 'Lampiran Foto',
     });
     
-    return output?.text() || '';
+    return output?.text || '';
   }
 );
