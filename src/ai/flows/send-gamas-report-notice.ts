@@ -38,7 +38,7 @@ Buat pesan yang jelas dan to-the-point.
 `;
 
     const res = await ai.generate({
-      model: 'googleai/gemini-pro',
+      model: 'gemini-1.0-pro',
       prompt,
     });
 

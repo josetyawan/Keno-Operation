@@ -21,7 +21,7 @@ const summaryPrompt = ai.definePrompt({
   name: 'summaryPrompt',
   input: { schema: summarizeInputSchema },
   output: { schema: summarizeOutputSchema },
-  model: 'googleai/gemini-pro',
+  model: 'gemini-1.0-pro',
   prompt: `Summarize the following nota details into a short, easy-to-read paragraph. Extract the key information like who, what, when, and how much.
 
 Nota Details:

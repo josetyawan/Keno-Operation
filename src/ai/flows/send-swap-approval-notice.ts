@@ -36,7 +36,7 @@ Buat pesan yang jelas, singkat, dan informatif. Ucapkan terima kasih kepada tekn
 `;
 
     const res = await ai.generate({
-      model: 'googleai/gemini-pro',
+      model: 'gemini-1.0-pro',
       prompt,
     });
 

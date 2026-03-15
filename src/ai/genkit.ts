@@ -9,7 +9,6 @@ const googleAIGenkitPlugin = googleAI();
 export const ai = genkit({
   plugins: [
     // Register the plugin with Genkit.
-    // Use the 'googleai' prefix for models, e.g., 'googleai/gemini-pro'.
     googleAIGenkitPlugin,
   ],
 });
