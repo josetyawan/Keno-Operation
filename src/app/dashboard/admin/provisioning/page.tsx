@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -617,7 +616,7 @@ export default function ProvisioningDashboardPage() {
     }
     
     return {
-        unassignedOrders: filteredOrders.filter(o => o.provisioningStatus === 'unassigned'),
+        unassignedOrders: filteredOrders.filter(o => o.provisioningStatus === 'unassigned' || !o.provisioningStatus),
         inProgressOrders: filteredOrders.filter(o => ['assigned', 'picked_up', 'departed', 'arrived', 'wip_odp_done'].includes(o.provisioningStatus || '')),
         completedOrders: filteredOrders.filter(o => o.provisioningStatus === 'completed'),
     };
@@ -673,11 +672,18 @@ export default function ProvisioningDashboardPage() {
   }, [completedOrders, completedPage]);
   const totalCompletedPages = Math.ceil(completedOrders.length / ITEMS_PER_PAGE);
   
-  const defaultTab = useMemo(() => {
-    if (unassignedOrders.length > 0) return 'unassigned';
-    if (inProgressOrders.length > 0) return 'in-progress';
-    if (completedOrders.length > 0) return 'completed';
-    return 'unassigned';
+  const [activeTab, setActiveTab] = useState('unassigned');
+
+  useEffect(() => {
+    if (unassignedOrders.length > 0) {
+      setActiveTab('unassigned');
+    } else if (inProgressOrders.length > 0) {
+      setActiveTab('in-progress');
+    } else if (completedOrders.length > 0) {
+      setActiveTab('completed');
+    } else {
+      setActiveTab('unassigned');
+    }
   }, [unassignedOrders.length, inProgressOrders.length, completedOrders.length]);
 
   return (
@@ -744,7 +750,7 @@ export default function ProvisioningDashboardPage() {
         </CardHeader>
       </Card>
 
-      <Tabs key={defaultTab} defaultValue={defaultTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="unassigned">
             <Package className="mr-2" />
