@@ -58,7 +58,8 @@ function EditOrderForm({ order, onSave, onCancel, isSaving }: { order: Provision
       "Pembuatan BAI (Satkomindo,BRI MPLS)", "Provisioning MyRep", "PSB Surge",
       "Provisioning 5 Menara Bintang", "PSB IBU - FTTR",
       "PT Anagata Cipta Teknologi (KerjainAja)", "PSB TBG", "Provisioning Hypernet",
-      "2ND STB", "UPSELLING", "DISMANTLING EBIS", "PSB Indihome", "PSB Indibiz", "PDA Indihome", "PDA Indibiz"
+      "2ND STB", "UPSELLING", "DISMANTLING EBIS",
+      "PSB Indihome", "PSB Indibiz", "PDA Indihome", "PDA Indibiz"
     ].sort();
 
     const typeOrderOptions: Record<string, string[]> = {

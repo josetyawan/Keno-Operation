@@ -137,6 +137,10 @@ export const productivityWeights: Record<string, BobotItem[]> = {
     { jenis_order_name: "Pembuatan BAI (Satkomindo,BRI MPLS)", bobot: 0.67 },
   ],
   "PROVISIONING B2C": [
+    { jenis_order_name: "PSB Indihome", bobot: 1.5 },
+    { jenis_order_name: "PSB Indibiz", bobot: 1.5 },
+    { jenis_order_name: "PDA Indihome", bobot: 1.5 },
+    { jenis_order_name: "PDA Indibiz", bobot: 1.5 },
     { jenis_order_name: "2ND STB", bobot: 1.6 },
     { jenis_order_name: "UPSELLING", bobot: 1.1 },
   ],
