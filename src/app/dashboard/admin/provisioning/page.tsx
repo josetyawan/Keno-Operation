@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogContent, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const ITEMS_PER_PAGE = 5;
 
@@ -99,6 +100,102 @@ function KendalaCard() {
     );
 }
 
+function PivotTable({ data, workzones }: { data: any, workzones: string[] }) {
+    const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+
+    const toggleRow = (key: string) => {
+        setExpandedRows(prev => ({ ...prev, [key]: !prev[key] }));
+    };
+
+    const renderPivotRows = (node: any, level = 0, prefix = '') => {
+        const rows: React.ReactNode[] = [];
+        const sortedKeys = Object.keys(node).sort();
+
+        sortedKeys.forEach(key => {
+            const currentKey = `${prefix}${key}`;
+            const isExpanded = expandedRows[currentKey];
+            const hasChildren = Object.keys(node[key].children).length > 0;
+            
+            rows.push(
+                <TableRow key={currentKey} className={cn(level > 0 && "bg-muted/50")}>
+                    <TableCell style={{ paddingLeft: `${level * 1.5 + 1}rem` }} className="font-medium">
+                        <div className="flex items-center gap-2">
+                            {hasChildren && (
+                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => toggleRow(currentKey)}>
+                                    <ChevronRightIcon className={cn("h-4 w-4 transition-transform", isExpanded && "rotate-90")} />
+                                </Button>
+                            )}
+                            <span className={cn(!hasChildren && "ml-8")}>{key}</span>
+                        </div>
+                    </TableCell>
+                    {workzones.map(wz => {
+                        const count = node[key].count[wz] || 0;
+                        const filters = {
+                            workzone: wz,
+                            productName: level === 0 ? key : prefix.split('>')[0],
+                            status: level === 1 ? key : undefined,
+                            crmOrder: level === 2 ? key : undefined,
+                            description: level === 3 ? key : undefined
+                        };
+                        
+                        const filteredFilters = Object.entries(filters).filter(([, value]) => value !== undefined);
+                        const queryString = new URLSearchParams(filteredFilters as any).toString();
+
+                        return (
+                            <TableCell key={wz} className="text-right">
+                                {count > 0 ? (
+                                    <Link href={`/dashboard/admin/provisioning/list?${queryString}`} className="hover:underline text-blue-600 font-medium">
+                                        {count}
+                                    </Link>
+                                ) : 0}
+                            </TableCell>
+                        )
+                    })}
+                    <TableCell className="text-right font-bold">
+                        {node[key].count['Grand Total'] || 0}
+                    </TableCell>
+                </TableRow>
+            );
+
+            if (isExpanded && hasChildren) {
+                rows.push(...renderPivotRows(node[key].children, level + 1, `${currentKey}>`));
+            }
+        });
+
+        return rows;
+    };
+    
+    const totalCount = Object.values(data).reduce((acc: number, item: any) => acc + (item.count['Grand Total'] || 0), 0);
+    const workzoneTotals = workzones.map(wz => Object.values(data).reduce((acc: number, item: any) => acc + (item.count[wz] || 0), 0));
+
+
+    return (
+        <div className="overflow-x-auto border rounded-lg">
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead className="w-[400px]">Kategori</TableHead>
+                        {workzones.map(wz => <TableHead key={wz} className="text-right">{wz}</TableHead>)}
+                        <TableHead className="text-right font-bold">Grand Total</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                   {Object.keys(data).length > 0 ? renderPivotRows(data) : (
+                       <TableRow><TableCell colSpan={workzones.length + 2} className="h-24 text-center">Silakan impor file Excel untuk melihat rekap.</TableCell></TableRow>
+                   )}
+                </TableBody>
+                 <TableRow className="font-bold bg-muted">
+                    <TableCell>Grand Total</TableCell>
+                    {workzoneTotals.map((total, index) => (
+                        <TableCell key={index} className="text-right">{total}</TableCell>
+                    ))}
+                    <TableCell className="text-right">{totalCount}</TableCell>
+                </TableRow>
+            </Table>
+        </div>
+    )
+}
+
 
 // --- Main Component ---
 export default function ProvisioningDashboardPage() {
@@ -108,11 +205,8 @@ export default function ProvisioningDashboardPage() {
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
   
   const [orderToAssign, setOrderToAssign] = useState<ProvisioningRecord | null>(null);
-
-  const toggleRow = (key: string) => setExpandedRows(prev => ({ ...prev, [key]: !prev[key] }));
 
   // Data fetching
   const recordsQuery = useMemoFirebase(() => query(collection(firestore, 'provisioning-records'), orderBy('dateCreated', 'desc')), [firestore]);
@@ -125,7 +219,7 @@ export default function ProvisioningDashboardPage() {
   const [selectedWorkzone, setSelectedWorkzone] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
-
+  
   useEffect(() => {
     if (data) {
       const uniqueWorkzones = [...new Set(data.map((item) => item.workzone).filter(Boolean))].sort();
@@ -232,10 +326,13 @@ export default function ProvisioningDashboardPage() {
         if (jsonData.length === 0) {
           throw new Error("File Excel kosong atau format tidak didukung.");
         }
+        
+        const scOrderHeader = findHeader(headers, ['sc order', 'id/csrm no']);
+        if (!scOrderHeader) throw new Error("Kolom 'SC Order' atau 'ID/CSRM No' tidak ditemukan.");
 
         const headerMapping = {
             workorder: findHeader(headers, ['workorder']),
-            scOrder: findHeader(headers, ['sc order', 'id/csrm no']),
+            scOrder: scOrderHeader,
             serviceNo: findHeader(headers, ['service no']),
             crmOrder: findHeader(headers, ['crm', 'order type']),
             status: findHeader(headers, ['status']),
@@ -249,6 +346,10 @@ export default function ProvisioningDashboardPage() {
             productType: findHeader(headers, ['product type']),
             workzone: findHeader(headers, ['workzone']),
         };
+
+        if (Object.values(headerMapping).some(val => val === undefined)) {
+            console.warn("Header mapping incomplete:", headerMapping);
+        }
         
         const recordsCollection = collection(firestore, 'provisioning-records');
         const batchSize = 400;
@@ -260,15 +361,17 @@ export default function ProvisioningDashboardPage() {
         for (let i = 0; i < jsonData.length; i++) {
             const row = jsonData[i];
             
-            const scOrderValue = row[headerMapping.scOrder!]?.toString() || '';
-            let finalScOrder = scOrderValue;
-
-            const aoMoMatch = scOrderValue.match(/(?:AO|MO|AOi|MOi|AOs|PDAk)[a-z0-9]+/i);
+            const scOrderValue = row[headerMapping.scOrder]?.toString() || '';
+            let finalScOrder = '';
             
+            const aoMoMatch = scOrderValue.match(/(?:AO|MO|AOi|MOi|AOs|PDAk)[a-z0-9]+/i);
+
             if (aoMoMatch && aoMoMatch[0]) {
                 finalScOrder = aoMoMatch[0].split('_')[0];
-            } else if (finalScOrder.startsWith('SC') && finalScOrder.includes('_')) {
-                finalScOrder = finalScOrder.split('_')[0];
+            } else if (scOrderValue.startsWith('SC') && scOrderValue.includes('_')) {
+                 finalScOrder = scOrderValue.split('_')[0];
+            } else {
+                 finalScOrder = scOrderValue;
             }
             
             if (!finalScOrder) {
@@ -372,34 +475,37 @@ export default function ProvisioningDashboardPage() {
     return filtered;
   }, [data, selectedWorkzone, searchQuery]);
 
-  const pivotData = useMemo((): any => {
+  const pivotData = useMemo(() => {
     const pivot: any = {};
-    const increment = (obj: any, workzone: string) => {
-        if (!obj.count) obj.count = {};
-        obj.count[workzone] = (obj.count[workzone] || 0) + 1;
-        obj.count['Grand Total'] = (obj.count['Grand Total'] || 0) + 1;
-    };
+
     (data || []).forEach(item => {
         const { productName, status, crmOrder, description, workzone } = item;
         if (!workzone) return;
-        const pName = productName || 'N/A';
-        const s = status || 'N/A';
-        const crm = crmOrder || 'N/A';
-        const desc = description || 'N/A';
-        if (!pivot[pName]) pivot[pName] = { count: {}, children: {} };
-        increment(pivot[pName], workzone);
-        const statusNode = pivot[pName].children!;
-        if (!statusNode[s]) statusNode[s] = { count: {}, children: {} };
-        increment(statusNode[s], workzone);
-        const crmNode = statusNode[s].children!;
-        if (!crmNode[crm]) crmNode[crm] = { count: {}, children: {} };
-        increment(crmNode[crm], workzone);
-        const descNode = crmNode[crm].children!;
-        if (!descNode[desc]) descNode[desc] = { count: {} };
-        increment(descNode[desc], workzone);
+        
+        const keys = [
+            productName || 'N/A',
+            status || 'N/A',
+            crmOrder || 'N/A',
+            description || 'N/A'
+        ];
+
+        let currentNode = pivot;
+        keys.forEach((key, index) => {
+            if (!currentNode[key]) {
+                currentNode[key] = { count: {}, children: {} };
+            }
+            // Increment count for the current node
+            currentNode[key].count[workzone] = (currentNode[key].count[workzone] || 0) + 1;
+            currentNode[key].count['Grand Total'] = (currentNode[key].count['Grand Total'] || 0) + 1;
+
+            if (index < keys.length) {
+                currentNode = currentNode[key].children;
+            }
+        });
     });
     return pivot;
   }, [data]);
+  
 
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -445,17 +551,7 @@ export default function ProvisioningDashboardPage() {
               <CardDescription>Ringkasan data provisioning yang dikelompokkan.</CardDescription>
           </CardHeader>
           <CardContent>
-              <div className="overflow-x-auto border rounded-lg">
-                  <Table>
-                      <TableHeader>
-                          <TableRow>
-                              <TableHead className="w-[400px]">Kategori</TableHead>
-                              {workzones.map(wz => <TableHead key={wz} className="text-right">{wz}</TableHead>)}
-                              <TableHead className="text-right font-bold">Grand Total</TableHead>
-                          </TableRow>
-                      </TableHeader>
-                  </Table>
-              </div>
+              <PivotTable data={pivotData} workzones={workzones} />
           </CardContent>
       </Card>
 
@@ -563,5 +659,3 @@ export default function ProvisioningDashboardPage() {
     </div>
   );
 }
-
-    
