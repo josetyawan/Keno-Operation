@@ -51,7 +51,7 @@ Buat pesan ini dalam format Markdown yang siap kirim.
 `;
 
     const res = await ai.generate({
-      model: 'gemini-pro',
+      model: 'gemini-1.5-flash',
       prompt,
     });
     
