@@ -1,25 +1,25 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { collection, query, doc, setDoc, Timestamp, orderBy, getDocs, writeBatch, type DocumentReference, where } from 'firebase/firestore'; // Added where
-import type { UserProfile, Performance, RiwayatGangguan, OtherWork } from '@/lib/types';
-import { productivityWeights } from '@/lib/bobot-produktivitas'; // Import weights
+import { collection, query, doc, setDoc, Timestamp, orderBy, getDocs, writeBatch, type DocumentReference, where } from 'firebase/firestore';
+import type { UserProfile, Performance, RiwayatGangguan, OtherWork, ProvisioningRecord } from '@/lib/types';
+import { productivityWeights } from '@/lib/bobot-produktivitas';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, Loader2, ChevronLeft, ChevronRight, RefreshCw, BarChart } from 'lucide-react'; // Added BarChart icon
+import { Upload, Loader2, ChevronLeft, ChevronRight, RefreshCw, BarChart } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
-import { format, startOfMonth, endOfMonth } from 'date-fns'; // Added date-fns helpers
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-// Helper to safely parse bobot which might be a string with a comma
 const parseBobot = (bobot: number | string | undefined): number => {
     if (typeof bobot === 'number') return bobot;
     if (typeof bobot === 'string') {
@@ -35,7 +35,6 @@ export default function AdminPerformancePage() {
     const router = useRouter();
     const { toast } = useToast();
     
-    // ... existing state ...
     const [isImporting, setIsImporting] = useState(false);
     const [importProgress, setImportProgress] = useState(0);
     const [isSyncing, setIsSyncing] = useState(false);
@@ -44,12 +43,10 @@ export default function AdminPerformancePage() {
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 5;
     
-    // --- New state for manual productivity ---
     const [manualPeriod, setManualPeriod] = useState<string | undefined>();
     const [manualSearchQuery, setManualSearchQuery] = useState('');
     const [manualCurrentPage, setManualCurrentPage] = useState(1);
 
-    // --- Data fetching ---
     const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
         useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
     );
@@ -60,7 +57,6 @@ export default function AdminPerformancePage() {
     const performanceQuery = useMemoFirebase(() => query(collection(firestore, 'performance'), orderBy('date', 'desc')), [firestore]);
     const { data: performanceRecords, isLoading: areRecordsLoading } = useCollection<Performance>(performanceQuery);
     
-    // --- Efficient data fetching for manual calculation ---
     const manualPeriodDateRange = useMemo(() => {
         if (!manualPeriod) return null;
         const [year, month] = manualPeriod.split('-').map(Number);
@@ -85,10 +81,18 @@ export default function AdminPerformancePage() {
         ) : null
     ), [firestore, manualPeriodDateRange]);
 
+    const provisioningQuery = useMemoFirebase(() => (
+         manualPeriodDateRange ? query(
+            collection(firestore, 'provisioning-records'),
+            where('completedAt', '>=', Timestamp.fromDate(manualPeriodDateRange.startDate)),
+            where('completedAt', '<=', Timestamp.fromDate(manualPeriodDateRange.endDate))
+        ) : null
+    ), [firestore, manualPeriodDateRange]);
+
     const { data: riwayatList, isLoading: isRiwayatLoading } = useCollection<RiwayatGangguan>(riwayatQuery);
     const { data: otherWorksList, isLoading: isOtherWorksLoading } = useCollection<OtherWork>(otherWorksQuery);
+    const { data: provisioningList, isLoading: isProvisioningLoading } = useCollection<ProvisioningRecord>(provisioningQuery);
 
-    // ... existing memos ...
     const userMapByNik = useMemo(() => {
         if (!allUsers) return new Map<string, UserProfile>();
         const map = new Map<string, UserProfile>();
@@ -117,15 +121,14 @@ export default function AdminPerformancePage() {
 
     const totalPages = Math.ceil(filteredRecords.length / ITEMS_PER_PAGE);
 
-    // --- New memos for manual calculation ---
     const availableManualPeriods = useMemo(() => {
-        const periods: string[] = [];
+        const periods = new Set<string>();
         const now = new Date();
         for (let i = 0; i < 12; i++) {
             const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-            periods.push(format(date, 'yyyy-MM'));
+            periods.add(format(date, 'yyyy-MM'));
         }
-        return periods;
+        return Array.from(periods);
     }, []);
     
     useEffect(() => {
@@ -135,27 +138,44 @@ export default function AdminPerformancePage() {
     }, [availableManualPeriods, manualPeriod]);
 
     const manualPerformanceData = useMemo(() => {
-        if (!manualPeriod || !allUsers || !riwayatList || !otherWorksList) return [];
+        if (!manualPeriod || !allUsers || !riwayatList || !otherWorksList || !provisioningList) return [];
 
         const JAM_KERJA_SEBULAN = 8 * 22; // 8 jam/hari, 22 hari/bulan
 
-        const workItems = [
+        const workItems: (RiwayatGangguan | OtherWork | ProvisioningRecord)[] = [
             ...riwayatList,
-            ...otherWorksList
+            ...otherWorksList,
+            ...provisioningList,
         ];
         
         const bobotByUser = new Map<string, number>();
 
         workItems.forEach(item => {
-            const userId = item.userId;
-            let bobot = 0;
-            
-            const allWeights = Object.values(productivityWeights).flat();
-            const itemOrderType = (item as RiwayatGangguan).typeOrder || (item as OtherWork).orderType;
+            let userId: string | undefined;
+            if ('assignedTo_userId' in item) { // ProvisioningRecord
+                userId = item.assignedTo_userId;
+            } else { // RiwayatGangguan or OtherWork
+                userId = item.userId;
+            }
+            if (!userId) return;
 
+            let bobot = 0;
+            const allWeights = Object.values(productivityWeights).flat();
+            
+            let jenisOrder: string;
+            let orderType: string | undefined;
+
+            if ('crmOrder' in item) { // ProvisioningRecord
+                jenisOrder = item.crmOrder;
+                orderType = item.description;
+            } else { // RiwayatGangguan or OtherWork
+                jenisOrder = item.jenisOrder;
+                orderType = (item as RiwayatGangguan).typeOrder || (item as OtherWork).orderType;
+            }
+            
             const weightItem = allWeights.find(w => {
-                const isJenisMatch = w.jenis_order_name === item.jenisOrder;
-                const isOrderTypeMatch = !w.order_type || w.order_type === itemOrderType;
+                const isJenisMatch = w.jenis_order_name === jenisOrder;
+                const isOrderTypeMatch = !w.order_type || w.order_type === orderType;
                 return isJenisMatch && isOrderTypeMatch;
             });
 
@@ -182,7 +202,7 @@ export default function AdminPerformancePage() {
 
         return performanceData.sort((a,b) => b.productivity - a.productivity);
 
-    }, [manualPeriod, riwayatList, otherWorksList, allUsers]);
+    }, [manualPeriod, riwayatList, otherWorksList, provisioningList, allUsers]);
 
     const filteredManualPerformance = useMemo(() => {
         if (!manualSearchQuery) return manualPerformanceData;
@@ -202,7 +222,6 @@ export default function AdminPerformancePage() {
     }, [filteredManualPerformance, manualCurrentPage]);
 
 
-    // ... existing handlers (handleFileImport, handleSyncUserIds) ...
     const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) {
@@ -373,12 +392,9 @@ export default function AdminPerformancePage() {
     
             performanceSnapshot.forEach(perfDoc => {
                 const perfData = perfDoc.data() as Performance;
-                // Check if the performance record has a NIK
                 if (perfData.nik) {
                     const expectedUserId = userMapByNik.get(perfData.nik.trim());
-                    // If we found a user with that NIK and the userId in the performance record is missing or incorrect...
                     if (expectedUserId && perfData.userId !== expectedUserId) {
-                        // ...stage an update.
                         docsToUpdate.push({
                             ref: perfDoc.ref,
                             data: { userId: expectedUserId }
@@ -393,7 +409,6 @@ export default function AdminPerformancePage() {
                 return;
             }
     
-            // Commit updates in chunks to avoid exceeding batch limits
             const batchSize = 400;
             let updatedCount = 0;
             for (let i = 0; i < docsToUpdate.length; i += batchSize) {
@@ -421,7 +436,7 @@ export default function AdminPerformancePage() {
 
 
     const isLoadingInitial = isUserLoading || isProfileLoading || areUsersLoading || areRecordsLoading;
-    const isLoadingManual = isRiwayatLoading || isOtherWorksLoading;
+    const isLoadingManual = isRiwayatLoading || isOtherWorksLoading || isProvisioningLoading;
 
     if (isLoadingInitial && !performanceRecords) {
         return (

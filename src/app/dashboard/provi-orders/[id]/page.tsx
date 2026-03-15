@@ -1,18 +1,16 @@
 
-
-      
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
 import { useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { useStorage } from '@/firebase/provider';
-import { doc, updateDoc, serverTimestamp, addDoc, collection } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, addDoc, collection, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Loader2, PackageOpen, Truck, MapPin, PackageCheck, Phone, AlertTriangle, Send, Camera, Upload, Wrench, Check, Circle, Calendar as CalendarIcon, FileUp } from 'lucide-react';
-import type { ProvisioningRecord, ProvisioningMaterial } from '@/lib/types';
+import { ArrowLeft, Loader2, PackageOpen, Truck, MapPin, PackageCheck, Phone, AlertTriangle, Send, Camera, Upload, Wrench, Check, Circle, Calendar as CalendarIcon, FileUp, Save } from 'lucide-react';
+import type { ProvisioningRecord, ProvisioningMaterial, Pelanggan } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useRef, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
@@ -26,6 +24,9 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { Checkbox } from '@/components/ui/checkbox';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ScrollArea } from '@/components/ui/scroll-area';
+
 
 const formatWaNumber = (phone: string) => {
     if (!phone) return '#';
@@ -38,7 +39,7 @@ const formatWaNumber = (phone: string) => {
     return `https://wa.me/${cleanPhone}`;
 };
 
-const materialList = [
+const materialList: { name: string; type: 'meter' | 'check' | 'pcs' }[] = [
     { name: "dropcore", type: 'meter' },
     { name: "precon 50m", type: 'check' },
     { name: "precon 100m", type: 'check' },
@@ -46,12 +47,106 @@ const materialList = [
     { name: "Precon 200m", type: 'check' },
     { name: "Precon 250m", type: 'check' },
     { name: "prekso", type: 'check' },
-    { name: "OTP", type: 'check' },
-    { name: "SOC", type: 'check' },
-    { name: "S-Klem", type: 'check' },
-    { name: "Bracket", type: 'check' },
+    { name: "OTP", type: 'pcs' },
+    { name: "SOC", type: 'pcs' },
+    { name: "S-Klem", type: 'pcs' },
+    { name: "Bracket", type: 'pcs' },
+    { name: "Kabel UTP", type: 'meter' },
+    { name: "RJ45", type: 'pcs' },
 ];
 
+const jenisOrderOptions = [
+  "PSB DATIN", "PSB OLO", "PSB WIFI", "PDA DATIN", "PDA WIFI",
+  "REPLACEMENT", "Instalasi IP Camera", "Instalasi SD-WAN",
+  "Instalasi Router", "Install AP WIFI (1 AP)", "Install AP WIFI (2 AP)",
+  "Install AP WIFI(3 AP)", "Install AP WIFI (4 AP)",
+  "Pembuatan BAI (Satkomindo,BRI MPLS)", "Provisioning MyRep", "PSB Surge",
+  "Provisioning 5 Menara Bintang", "PSB IBU - FTTR",
+  "PT Anagata Cipta Teknologi (KerjainAja)", "PSB TBG", "Provisioning Hypernet",
+  "2ND STB", "UPSELLING", "DISMANTLING EBIS",
+].sort();
+
+const typeOrderOptions: Record<string, string[]> = {
+    'DISMANTLING EBIS': ['ONT', 'STB', 'AP', 'IP CAMERA'],
+    'REPLACEMENT': ['ONT', 'STB'],
+};
+
+function InitialDataForm({ order, onSave }: { order: ProvisioningRecord, onSave: (data: Partial<ProvisioningRecord>) => void }) {
+    const [serviceNo, setServiceNo] = useState('');
+    const [productName, setProductName] = useState('');
+    const [crmOrder, setCrmOrder] = useState('');
+    const [description, setDescription] = useState(''); // This will be our "Order Type"
+    const [isSaving, setIsSaving] = useState(false);
+    const { toast } = useToast();
+
+    const showOrderType = useMemo(() => Object.keys(typeOrderOptions).includes(crmOrder), [crmOrder]);
+
+    useEffect(() => {
+        if (!showOrderType) setDescription('');
+    }, [crmOrder, showOrderType]);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!serviceNo.trim() || !productName.trim() || !crmOrder) {
+            toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'No. Internet, Paket, dan Jenis Order wajib diisi.' });
+            return;
+        }
+        setIsSaving(true);
+        const updateData: Partial<ProvisioningRecord> = {
+            serviceNo,
+            productName,
+            crmOrder,
+            description: showOrderType ? description : '',
+        };
+        await onSave(updateData);
+        setIsSaving(false);
+    };
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Lengkapi Data Order</CardTitle>
+                <CardDescription>No. Internet untuk order ini belum ada. Mohon lengkapi data di bawah ini untuk melanjutkan.</CardDescription>
+            </CardHeader>
+            <form onSubmit={handleSubmit}>
+                <CardContent className="space-y-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="serviceNo">No. Internet / Service *</Label>
+                        <Input id="serviceNo" value={serviceNo} onChange={e => setServiceNo(e.target.value)} required />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="productName">Paket Internet *</Label>
+                        <Input id="productName" value={productName} onChange={e => setProductName(e.target.value)} required />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="crmOrder">Jenis Order *</Label>
+                            <Select value={crmOrder} onValueChange={setCrmOrder} required>
+                                <SelectTrigger id="crmOrder"><SelectValue placeholder="Pilih Jenis Order..." /></SelectTrigger>
+                                <SelectContent><ScrollArea className="h-72">{jenisOrderOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</ScrollArea></SelectContent>
+                            </Select>
+                        </div>
+                        {showOrderType && (
+                            <div className="grid gap-2">
+                                <Label htmlFor="description">Order Type *</Label>
+                                <Select value={description} onValueChange={setDescription} required>
+                                    <SelectTrigger id="description"><SelectValue placeholder="Pilih Tipe Order..." /></SelectTrigger>
+                                    <SelectContent>{typeOrderOptions[crmOrder].map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</SelectContent>
+                                </Select>
+                            </div>
+                        )}
+                    </div>
+                </CardContent>
+                <CardFooter>
+                    <Button type="submit" disabled={isSaving}>
+                        {isSaving ? <Loader2 className="mr-2 animate-spin" /> : <Save className="mr-2" />}
+                        Simpan & Lanjutkan
+                    </Button>
+                </CardFooter>
+            </form>
+        </Card>
+    );
+}
 
 export default function OrderDetailPage() {
   const params = useParams();
@@ -66,16 +161,13 @@ export default function OrderDetailPage() {
   const [isProgressDialogOpen, setIsProgressDialogOpen] = useState(false);
   const [isKendalaDialogOpen, setIsKendalaDialogOpen] = useState(false);
   
-  // State for Kendala Dialog
   const [kendalaReason, setKendalaReason] = useState('');
   const [kendalaFiles, setKendalaFiles] = useState<FileList | null>(null);
 
-  // State for Progress Dialog
   const [odpPort, setOdpPort] = useState('');
   const [odpQr, setOdpQr] = useState('');
   const [housePhoto, setHousePhoto] = useState<File | null>(null);
   
-  // State for Completion Form
   const [isCompleting, setIsCompleting] = useState(false);
   const [baPhoto, setBaPhoto] = useState<File | null>(null);
   const [valinsId, setValinsId] = useState('');
@@ -138,122 +230,145 @@ export default function OrderDetailPage() {
     }
   }
   
-  const handleKendalaSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-     if (!user || !order) {
-        toast({ variant: 'destructive', title: 'Error Autentikasi', description: 'Sesi pengguna atau data order tidak ditemukan. Silakan login ulang.' });
-        return;
-    }
-    if (!kendalaReason.trim() || !kendalaFiles || kendalaFiles.length < 2 || kendalaFiles.length > 10) {
-        toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Mohon isi alasan dan unggah 2-10 foto bukti.' });
-        return;
-    }
-    setIsUpdating(true);
-    try {
-        const uploadPromises = Array.from(kendalaFiles).map(async file => {
-            const filePath = `notas/${user.uid}/kendala_${Date.now()}-${file.name}`;
-            const storageRef = ref(storage, filePath);
-            await uploadBytes(storageRef, file);
-            return getDownloadURL(storageRef);
-        });
-
-        const photoUrls = await Promise.all(uploadPromises);
-
-        await updateDoc(orderRef, {
-            provisioningStatus: 'kendala',
-            kendalaNotes: kendalaReason,
-            kendalaPhotos: photoUrls,
-            kendalaAt: serverTimestamp(),
-        });
-        toast({ title: 'Kendala Dilaporkan', description: 'Laporan kendala Anda telah disimpan.' });
-        setIsKendalaDialogOpen(false);
-    } catch (error: any) {
-        toast({ variant: 'destructive', title: 'Gagal Melaporkan Kendala', description: error.message });
-    } finally {
-        setIsUpdating(false);
-    }
-  };
-  
-  const handleProgressSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !order) {
-        toast({ variant: 'destructive', title: 'Error Autentikasi', description: 'Sesi pengguna atau data order tidak ditemukan. Silakan login ulang.' });
-        return;
-    }
-    if (!housePhoto) {
-        toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Mohon unggah foto rumah pelanggan.' });
-        return;
-    }
-    setIsUpdating(true);
-    try {
-        const filePath = `notas/${user.uid}/rumah_${Date.now()}-${housePhoto.name}`;
-        const storageRef = ref(storage, filePath);
-        await uploadBytes(storageRef, housePhoto);
-        const photoUrl = await getDownloadURL(storageRef);
-
-        await updateDoc(orderRef, {
-            provisioningStatus: 'wip_odp_done',
-            odpPort,
-            odpQRCodeUrl: odpQr,
-            customerHousePhoto: photoUrl
-        });
-        toast({ title: 'Progres Disimpan', description: 'Data ODP dan foto rumah pelanggan berhasil disimpan.' });
-        setIsProgressDialogOpen(false);
-    } catch (error: any) {
-        toast({ variant: 'destructive', title: 'Gagal Menyimpan Progres', description: error.message });
-    } finally {
-        setIsUpdating(false);
-    }
-  };
-
-  const handleCompleteOrder = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !order || !psDate) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Sesi pengguna atau data order tidak valid.' });
-        return;
-    }
-    if (!baPhoto) {
-        toast({ variant: 'destructive', title: 'Foto BA Wajib', description: 'Harap unggah foto Berita Acara.' });
-        return;
-    }
-    setIsCompleting(true);
-    try {
-        const baPhotoPath = `notas/${user.uid}/ba_${Date.now()}-${baPhoto.name}`;
-        const baStorageRef = ref(storage, baPhotoPath);
-        await uploadBytes(baStorageRef, baPhoto);
-        const baPhotoUrl = await getDownloadURL(baStorageRef);
-
-        const materialsToSave: ProvisioningMaterial[] = Object.entries(usedMaterials)
-            .filter(([, { used }]) => used)
-            .map(([name, { quantity }]) => ({ name, quantity }));
+    const handleInitialDataSave = async (updateData: Partial<ProvisioningRecord>) => {
+        if (!order || !updateData.serviceNo) return;
         
-        await updateDoc(orderRef, {
-            provisioningStatus: 'completed',
-            baPhotoUrl,
-            valinsId,
-            materials: materialsToSave,
-            completedAt: Timestamp.fromDate(psDate),
-        });
+        try {
+            await updateDoc(orderRef, updateData);
+            
+            const pelangganDocRef = doc(firestore, 'pelanggan', updateData.serviceNo);
+            const pelangganData: Partial<Pelanggan> = {
+                noService: updateData.serviceNo,
+                namaPelanggan: order.customerName,
+                alamat: order.address,
+                nomorTelepon: order.contactNumber,
+                serviceArea: order.workzone, // Assuming workzone is service area
+                lastEditedBy: user?.email || 'system',
+                lastEditedDate: serverTimestamp(),
+            };
+            await setDoc(pelangganDocRef, pelangganData, { merge: true });
 
-        toast({ title: 'Order Selesai!', description: 'Pekerjaan provisioning telah berhasil diselesaikan dan disimpan.' });
-        // Optional: redirect to a "success" page or back to the list
-        router.push('/dashboard/provi-orders');
+            toast({ title: 'Data Order & Pelanggan Disimpan', description: 'Anda sekarang dapat melanjutkan progres.' });
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Gagal Menyimpan Data Awal', description: error.message });
+            throw error; // Re-throw to prevent form from closing
+        }
+    };
 
-    } catch (error: any) {
-        console.error("Failed to complete order:", error);
-        toast({ variant: 'destructive', title: 'Gagal Menyelesaikan Order', description: error.message });
-    } finally {
-        setIsCompleting(false);
-    }
-  };
+    const handleKendalaSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!user || !order) {
+            toast({ variant: 'destructive', title: 'Error Autentikasi', description: 'Sesi pengguna atau data order tidak ditemukan. Silakan login ulang.' });
+            return;
+        }
+        if (!kendalaReason.trim() || !kendalaFiles || kendalaFiles.length < 2 || kendalaFiles.length > 10) {
+            toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Mohon isi alasan dan unggah 2-10 foto bukti.' });
+            return;
+        }
+        setIsUpdating(true);
+        try {
+            const uploadPromises = Array.from(kendalaFiles).map(async file => {
+                const filePath = `notas/${user.uid}/kendala_${Date.now()}-${file.name}`;
+                const storageRef = ref(storage, filePath);
+                await uploadBytes(storageRef, file);
+                return getDownloadURL(storageRef);
+            });
+    
+            const photoUrls = await Promise.all(uploadPromises);
+    
+            await updateDoc(orderRef, {
+                provisioningStatus: 'kendala',
+                kendalaNotes: kendalaReason,
+                kendalaPhotos: photoUrls,
+                kendalaAt: serverTimestamp(),
+            });
+            toast({ title: 'Kendala Dilaporkan', description: 'Laporan kendala Anda telah disimpan.' });
+            setIsKendalaDialogOpen(false);
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Gagal Melaporkan Kendala', description: error.message });
+        } finally {
+            setIsUpdating(false);
+        }
+    };
   
-  const handleMaterialChange = (name: string, used: boolean, quantity: number = 1) => {
+    const handleProgressSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!user || !order) {
+            toast({ variant: 'destructive', title: 'Error Autentikasi', description: 'Sesi pengguna atau data order tidak ditemukan. Silakan login ulang.' });
+            return;
+        }
+        if (!housePhoto) {
+            toast({ variant: 'destructive', title: 'Data Tidak Lengkap', description: 'Mohon unggah foto rumah pelanggan.' });
+            return;
+        }
+        setIsUpdating(true);
+        try {
+            const filePath = `notas/${user.uid}/rumah_${Date.now()}-${housePhoto.name}`;
+            const storageRef = ref(storage, filePath);
+            await uploadBytes(storageRef, housePhoto);
+            const photoUrl = await getDownloadURL(storageRef);
+    
+            await updateDoc(orderRef, {
+                provisioningStatus: 'wip_odp_done',
+                odpPort,
+                odpQRCodeUrl: odpQr,
+                customerHousePhoto: photoUrl
+            });
+            toast({ title: 'Progres Disimpan', description: 'Data ODP dan foto rumah pelanggan berhasil disimpan.' });
+            setIsProgressDialogOpen(false);
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Gagal Menyimpan Progres', description: error.message });
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
+    const handleCompleteOrder = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!user || !order || !psDate) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Sesi pengguna atau data order tidak valid.' });
+            return;
+        }
+        if (!baPhoto) {
+            toast({ variant: 'destructive', title: 'Foto BA Wajib', description: 'Harap unggah foto Berita Acara.' });
+            return;
+        }
+        setIsCompleting(true);
+        try {
+            const baPhotoPath = `notas/${user.uid}/ba_${Date.now()}-${baPhoto.name}`;
+            const baStorageRef = ref(storage, baPhotoPath);
+            await uploadBytes(baStorageRef, baPhoto);
+            const baPhotoUrl = await getDownloadURL(baStorageRef);
+    
+            const materialsToSave: ProvisioningMaterial[] = Object.entries(usedMaterials)
+                .filter(([, { used }]) => used)
+                .map(([name, { quantity }]) => ({ name, quantity }));
+            
+            await updateDoc(orderRef, {
+                provisioningStatus: 'completed',
+                baPhotoUrl,
+                valinsId,
+                materials: materialsToSave,
+                completedAt: Timestamp.fromDate(psDate),
+            });
+    
+            toast({ title: 'Order Selesai!', description: 'Pekerjaan provisioning telah berhasil diselesaikan dan disimpan.' });
+            router.push('/dashboard/provi-orders');
+    
+        } catch (error: any) {
+            console.error("Failed to complete order:", error);
+            toast({ variant: 'destructive', title: 'Gagal Menyelesaikan Order', description: error.message });
+        } finally {
+            setIsCompleting(false);
+        }
+    };
+  
+  const handleMaterialChange = (name: string, used: boolean, quantity?: number) => {
       setUsedMaterials(prev => ({
           ...prev,
-          [name]: { used, quantity: used ? quantity : 0 }
+          [name]: { used, quantity: used ? (quantity ?? (prev[name]?.quantity || 1)) : 0 }
       }));
   };
-
 
   if (isLoading) {
     return <div className="space-y-4"><Skeleton className="h-48 w-full" /></div>;
@@ -267,6 +382,8 @@ export default function OrderDetailPage() {
   const canDepart = order.provisioningStatus === 'picked_up' && order.assignedTo_userId === user?.uid;
   const canArrive = order.provisioningStatus === 'departed' && order.assignedTo_userId === user?.uid;
   const hasArrived = order.provisioningStatus === 'arrived' && order.assignedTo_userId === user?.uid;
+  const showInitialForm = hasArrived && !order.serviceNo;
+  const showActionButtons = hasArrived && !!order.serviceNo;
   const isWipOdpDone = order.provisioningStatus === 'wip_odp_done' && order.assignedTo_userId === user?.uid;
 
 
@@ -290,7 +407,7 @@ export default function OrderDetailPage() {
                 <TableBody>
                     <TableRow><TableCell className="font-medium">Workorder</TableCell><TableCell>{order.workorder}</TableCell></TableRow>
                     <TableRow><TableCell className="font-medium">SC Order</TableCell><TableCell>{order.scOrder}</TableCell></TableRow>
-                    <TableRow><TableCell className="font-medium">Service No</TableCell><TableCell>{order.serviceNo}</TableCell></TableRow>
+                    <TableRow><TableCell className="font-medium">Service No</TableCell><TableCell>{order.serviceNo || 'Belum diinput'}</TableCell></TableRow>
                     <TableRow><TableCell className="font-medium">Kontak Pelanggan</TableCell>
                         <TableCell>
                             <a href={formatWaNumber(order.contactNumber)} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
@@ -298,8 +415,8 @@ export default function OrderDetailPage() {
                             </a>
                         </TableCell>
                     </TableRow>
-                    <TableRow><TableCell className="font-medium">Produk</TableCell><TableCell>{order.productName} ({order.productType})</TableCell></TableRow>
-                    <TableRow><TableCell className="font-medium">CRM Order Type</TableCell><TableCell>{order.crmOrder}</TableCell></TableRow>
+                    <TableRow><TableCell className="font-medium">Produk</TableCell><TableCell>{order.productName || 'Belum diinput'}</TableCell></TableRow>
+                    <TableRow><TableCell className="font-medium">CRM Order Type</TableCell><TableCell>{order.crmOrder || 'Belum diinput'}</TableCell></TableRow>
                     <TableRow><TableCell className="font-medium">Deskripsi</TableCell><TableCell>{order.description || '-'}</TableCell></TableRow>
                     <TableRow><TableCell className="font-medium">Tanggal Booking</TableCell><TableCell>{order.bookingDate}</TableCell></TableRow>
                     <TableRow><TableCell className="font-medium">Workzone</TableCell><TableCell>{order.workzone}</TableCell></TableRow>
@@ -353,7 +470,11 @@ export default function OrderDetailPage() {
         </Card>
       )}
 
-      {hasArrived && (
+      {showInitialForm && (
+        <InitialDataForm order={order} onSave={handleInitialDataSave} />
+      )}
+
+      {showActionButtons && (
          <Card>
             <CardHeader><CardTitle className="text-green-600 flex items-center gap-2"><PackageCheck/> Anda Telah Tiba</CardTitle></CardHeader>
             <CardContent className="grid md:grid-cols-2 gap-4">
@@ -378,7 +499,7 @@ export default function OrderDetailPage() {
                                 </div>
                              </div>
                              <div className="grid gap-2">
-                                <Label htmlFor="house-photo">Foto Rumah Pelanggan</Label>
+                                <Label htmlFor="house-photo">Foto Rumah Pelanggan *</Label>
                                 <Input id="house-photo" type="file" accept="image/*" onChange={e => setHousePhoto(e.target.files?.[0] || null)} required/>
                                 {housePhoto && <p className="text-xs text-muted-foreground">{housePhoto.name}</p>}
                              </div>
@@ -448,11 +569,11 @@ export default function OrderDetailPage() {
                                         onCheckedChange={(checked) => handleMaterialChange(material.name, !!checked)}
                                     />
                                     <div className="grid gap-1.5 leading-none">
-                                        <Label htmlFor={`mat-${material.name}`} className="font-normal">{material.name}</Label>
-                                        {material.type === 'meter' && usedMaterials[material.name]?.used && (
+                                        <Label htmlFor={`mat-${material.name}`} className="font-normal capitalize">{material.name}</Label>
+                                        {(material.type === 'meter' || material.type === 'pcs') && usedMaterials[material.name]?.used && (
                                             <Input
                                                 type="number"
-                                                placeholder="meter"
+                                                placeholder={material.type}
                                                 className="h-8 w-24"
                                                 value={usedMaterials[material.name]?.quantity || ''}
                                                 onChange={(e) => handleMaterialChange(material.name, true, Number(e.target.value))}
@@ -523,4 +644,3 @@ export default function OrderDetailPage() {
     </div>
   );
 }
-

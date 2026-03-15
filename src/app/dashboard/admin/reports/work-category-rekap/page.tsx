@@ -13,30 +13,36 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, FileSpreadsheet } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
-import type { RiwayatGangguan, OtherWork } from '@/lib/types';
+import type { RiwayatGangguan, OtherWork, ProvisioningRecord } from '@/lib/types';
 import { productivityWeights } from '@/lib/bobot-produktivitas';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import * as XLSX from 'xlsx';
 
-// Define categories based on the keys in productivityWeights
 const workCategories = Object.keys(productivityWeights);
 
-// Create a reverse mapping from jenis_order_name to category
 const orderToCategoryMap = new Map<string, string>();
 Object.entries(productivityWeights).forEach(([category, items]) => {
   items.forEach(item => {
-    // Create a unique key for items with order_type
     const key = item.order_type ? `${item.jenis_order_name}#${item.order_type}` : item.jenis_order_name;
     orderToCategoryMap.set(key, category);
   });
 });
 
 
-const getWorkCategory = (item: RiwayatGangguan | OtherWork): string | null => {
-    const jenisOrder = item.jenisOrder;
-    const orderType = (item as RiwayatGangguan).typeOrder || (item as OtherWork).orderType;
+const getWorkCategory = (item: RiwayatGangguan | OtherWork | ProvisioningRecord): string | null => {
+    let jenisOrder: string;
+    let orderType: string | undefined;
 
-    // First try with orderType if it exists
+    if ('crmOrder' in item) { // ProvisioningRecord
+        jenisOrder = item.crmOrder;
+        orderType = item.description;
+    } else { // RiwayatGangguan or OtherWork
+        jenisOrder = item.jenisOrder;
+        orderType = (item as RiwayatGangguan).typeOrder || (item as OtherWork).orderType;
+    }
+    
+    if (!jenisOrder) return null;
+
     if (orderType) {
         const keyWithOrderType = `${jenisOrder}#${orderType}`;
         if (orderToCategoryMap.has(keyWithOrderType)) {
@@ -44,12 +50,11 @@ const getWorkCategory = (item: RiwayatGangguan | OtherWork): string | null => {
         }
     }
     
-    // Fallback to just jenisOrder
     if (orderToCategoryMap.has(jenisOrder)) {
         return orderToCategoryMap.get(jenisOrder)!;
     }
 
-    return null; // or a default category like 'Lainnya'
+    return null;
 };
 
 
@@ -100,13 +105,23 @@ export default function WorkCategoryRekapPage() {
         );
     }, [firestore, dateRange]);
 
+    const provisioningQuery = useMemoFirebase(() => {
+        if (!dateRange) return null;
+        return query(
+            collection(firestore, 'provisioning-records'),
+            where('completedAt', '>=', Timestamp.fromDate(dateRange.startDate)),
+            where('completedAt', '<=', Timestamp.fromDate(dateRange.endDate))
+        );
+    }, [firestore, dateRange]);
+
     const { data: riwayatList, isLoading: isRiwayatLoading } = useCollection<RiwayatGangguan>(riwayatQuery);
     const { data: otherWorksList, isLoading: isOtherWorksLoading } = useCollection<OtherWork>(otherWorksQuery);
+    const { data: provisioningList, isLoading: isProvisioningLoading } = useCollection<ProvisioningRecord>(provisioningQuery);
 
     const filteredData = useMemo(() => {
-        if (!riwayatList || !otherWorksList) return [];
+        if (!riwayatList || !otherWorksList || !provisioningList) return [];
 
-        const allWorkItems: (RiwayatGangguan | OtherWork)[] = [...riwayatList, ...otherWorksList];
+        const allWorkItems: (RiwayatGangguan | OtherWork | ProvisioningRecord)[] = [...riwayatList, ...otherWorksList, ...provisioningList];
         
         if (selectedCategory === 'all') {
             return allWorkItems;
@@ -117,7 +132,7 @@ export default function WorkCategoryRekapPage() {
             return category === selectedCategory;
         });
 
-    }, [riwayatList, otherWorksList, selectedCategory]);
+    }, [riwayatList, otherWorksList, provisioningList, selectedCategory]);
 
     const handleExportExcel = () => {
         if (filteredData.length === 0) {
@@ -127,36 +142,53 @@ export default function WorkCategoryRekapPage() {
 
         setIsLoading(true);
 
-        const dataToExport = filteredData.map((item) => {
-            const isRiwayat = 'noService' in item;
-            const createDate = isRiwayat ? (item as RiwayatGangguan).tanggalOpen : (item as OtherWork).tanggalPengerjaan;
-            const closeDate = isRiwayat ? (item as RiwayatGangguan).tanggalClose : (item as OtherWork).tanggalSelesai;
-            
-            let woNumber = '';
-            const category = getWorkCategory(item);
-            const jenisOrderLower = item.jenisOrder.toLowerCase();
+        const dataToExport = filteredData.map((item, index) => {
+            const isProvisioning = 'crmOrder' in item;
+            const isRiwayat = 'noService' in item && !isProvisioning;
 
-            if (category && category.toUpperCase().includes('PROVISIONING')) {
-                if (!isRiwayat) {
-                    woNumber = (item as OtherWork).namaPekerjaan || '';
-                }
-            } else if (jenisOrderLower.includes('spbu')) {
-                if (isRiwayat) {
-                    woNumber = (item as RiwayatGangguan).noService || '';
-                }
+            let createDate, closeDate, chief, jenisOrder, orderType, woNumber = '';
+
+            if (isProvisioning) {
+                const record = item as ProvisioningRecord;
+                createDate = record.assignedAt;
+                closeDate = record.completedAt;
+                chief = record.assignedTo_userId || ''; // Assuming NIK is not available, using userId as fallback
+                jenisOrder = record.crmOrder;
+                orderType = record.description || '';
+                woNumber = record.workorder;
+            } else if (isRiwayat) {
+                const record = item as RiwayatGangguan;
+                createDate = record.tanggalOpen;
+                closeDate = record.tanggalClose;
+                chief = record.nik || '';
+                jenisOrder = record.jenisOrder;
+                orderType = record.typeOrder || '';
+            } else { // OtherWork
+                const record = item as OtherWork;
+                createDate = record.tanggalPengerjaan;
+                closeDate = record.tanggalSelesai;
+                chief = record.nik || '';
+                jenisOrder = record.jenisOrder;
+                orderType = record.orderType || '';
+                woNumber = record.namaPekerjaan || '';
             }
-            
-            const chief = item.nik || '';
+
+            const category = getWorkCategory(item);
+             if (category && category.toUpperCase().includes('PROVISIONING')) {
+                if ('workorder' in item) woNumber = item.workorder;
+            } else if (jenisOrder.toLowerCase().includes('spbu')) {
+                if ('noService' in item) woNumber = item.noService;
+            }
 
             return {
-                'Service Number': isRiwayat ? (item as RiwayatGangguan).noService : '-',
+                'Service Number': isRiwayat ? (item as RiwayatGangguan).noService : (isProvisioning ? (item as ProvisioningRecord).serviceNo : '-'),
                 'WO Number': woNumber,
                 'Ticket Id': (item as RiwayatGangguan).noTiket || '',
                 'Chief': chief,
                 'GAUL': 0,
                 'Guarantee Status': '',
-                'Jenis Order': item.jenisOrder,
-                'Order Type': (item as RiwayatGangguan).typeOrder || (item as OtherWork).orderType || '',
+                'Jenis Order': jenisOrder,
+                'Order Type': orderType || '',
                 'Create Date(YYYY-MM-DD HH:MM:SS)': createDate?.toDate ? format(createDate.toDate(), 'yyyy-MM-dd HH:mm:ss') : '-',
                 'Closed Date(YYYY-MM-DD HH:MM:SS)': closeDate?.toDate ? format(closeDate.toDate(), 'yyyy-MM-dd HH:mm:ss') : '-',
                 'AREA': 'JAWA BALI',
@@ -174,6 +206,8 @@ export default function WorkCategoryRekapPage() {
 
         setIsLoading(false);
     };
+    
+    const pageIsLoading = isRiwayatLoading || isOtherWorksLoading || isProvisioningLoading;
 
     return (
         <div className="space-y-6">
@@ -208,7 +242,7 @@ export default function WorkCategoryRekapPage() {
                             </SelectContent>
                         </Select>
                     </div>
-                     <Button onClick={handleExportExcel} disabled={isLoading || isRiwayatLoading || isOtherWorksLoading || filteredData.length === 0}>
+                     <Button onClick={handleExportExcel} disabled={isLoading || pageIsLoading || filteredData.length === 0}>
                         {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-2 h-4 w-4" />}
                         Download Excel
                     </Button>
@@ -232,18 +266,19 @@ export default function WorkCategoryRekapPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {(isRiwayatLoading || isOtherWorksLoading) ? (
+                            {(pageIsLoading) ? (
                                 <TableRow><TableCell colSpan={5} className="h-24 text-center">Memuat data...</TableCell></TableRow>
                             ) : filteredData.length > 0 ? (
-                                filteredData.slice(0, 20).map(item => { // Preview first 20 items
-                                    const isRiwayat = 'noService' in item;
+                                filteredData.slice(0, 20).map((item: any) => {
+                                    const isProvisioning = 'crmOrder' in item;
+                                    const tanggal = isProvisioning ? item.completedAt : ('tanggalLapor' in item ? item.tanggalLapor : item.tanggalPengerjaan);
                                     return (
                                     <TableRow key={item.id}>
-                                        <TableCell>{item.namaPetugas}</TableCell>
-                                        <TableCell>{(item as RiwayatGangguan).noTiket || (item as OtherWork).namaPekerjaan || (item as RiwayatGangguan).noService || '-'}</TableCell>
-                                        <TableCell>{item.jenisOrder}</TableCell>
+                                        <TableCell>{isProvisioning ? item.assignedTo_userName : item.namaPetugas}</TableCell>
+                                        <TableCell>{item.noTiket || item.namaPekerjaan || item.workorder || item.serviceNo || '-'}</TableCell>
+                                        <TableCell>{isProvisioning ? item.crmOrder : item.jenisOrder}</TableCell>
                                         <TableCell>{getWorkCategory(item)}</TableCell>
-                                        <TableCell>{format((isRiwayat ? (item as RiwayatGangguan).tanggalLapor : (item as OtherWork).tanggalPengerjaan).toDate(), 'dd MMM yyyy')}</TableCell>
+                                        <TableCell>{format(tanggal.toDate(), 'dd MMM yyyy')}</TableCell>
                                     </TableRow>
                                 )})
                             ) : (
