@@ -1,6 +1,5 @@
 'use server';
 
-import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
 const sendProductivityRekapInputSchema = z.object({
@@ -13,39 +12,16 @@ const sendProductivityRekapInputSchema = z.object({
 export async function sendProductivityRekap(
   input: z.infer<typeof sendProductivityRekapInputSchema>
 ): Promise<string> {
-  return sendProductivityRekapFlow(input);
+  // AI flow is temporarily disabled to resolve model availability issues.
+  const message = `
+*Rekap Produktivitas Harian*
+*Unit:* ${input.unit}
+*Tanggal:* ${input.date}
+
+- *Total Sales/Pekerjaan Selesai:* ${input.totalSales}
+- *Total Teknisi Produktif:* ${input.totalVisit}
+
+Laporan ini dibuat secara otomatis. (AI dinonaktifkan)
+  `.trim();
+  return Promise.resolve(message);
 }
-
-const b2cRekapPrompt = ai.definePrompt(
-    {
-        name: 'b2cRekapPrompt',
-        model: 'googleai/gemini-pro-vision',
-        input: { schema: sendProductivityRekapInputSchema },
-        prompt: `
-Buatkan laporan rekap produktivitas harian profesional.
-
-Unit: {{{unit}}}
-Tanggal: {{{date}}}
-Total Sales: {{{totalSales}}}
-Total Visit: {{{totalVisit}}}
-
-Format singkat siap kirim Telegram.
-`,
-    }
-);
-
-
-const sendProductivityRekapFlow = ai.defineFlow(
-  {
-    name: 'sendProductivityRekap',
-    inputSchema: sendProductivityRekapInputSchema,
-    outputSchema: z.string(),
-  },
-  async (input) => {
-    const { output } = await b2cRekapPrompt({
-        ...input,
-    });
-
-    return output?.text || '';
-  }
-);

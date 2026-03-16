@@ -1,6 +1,5 @@
 'use server';
 
-import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
 const rekapDataItemSchema = z.object({
@@ -20,57 +19,30 @@ const sendPaidNoticeInputSchema = z.object({
 });
 
 export async function sendPaidNotice(input: z.infer<typeof sendPaidNoticeInputSchema>): Promise<string> {
-  return sendPaidNoticeFlow(input);
-}
-
-const paidNoticePrompt = ai.definePrompt({
-    name: 'paidNoticePrompt',
-    model: 'googleai/gemini-pro-vision',
-    input: { schema: z.object({
-        rekapString: z.string(),
-        grandTotal: z.number(),
-        paidDate: z.string(),
-        grandTotalFormatted: z.string(),
-    }) },
-    prompt: `
-Buat notifikasi pembayaran LUNAS untuk dikirim ke grup Telegram.
-Gunakan format yang rapi dan informatif, dengan emoji yang sesuai (misal: ✅💸).
-Berikut adalah data pembayaran yang telah dilunasi:
-
-Tanggal Pembayaran: {{{paidDate}}}
-
-Data:
-{{{rekapString}}}
-
----
-GRAND TOTAL LUNAS: Rp {{{grandTotalFormatted}}}
-
-Tambahkan ucapan terima kasih dan konfirmasi bahwa semua laporan terverifikasi pada periode tersebut telah dibayarkan.
-`,
-});
-
-const sendPaidNoticeFlow = ai.defineFlow(
-  {
-    name: 'sendPaidNotice',
-    inputSchema: sendPaidNoticeInputSchema,
-    outputSchema: z.string(),
-  },
-  async ({ paidData, grandTotal, paidDate }) => {
-    // Convert array of objects to a string representation for the prompt
-    const rekapString = paidData
+  // AI flow is temporarily disabled to resolve model availability issues.
+  const rekapString = input.paidData
       .map(
         (item) =>
           `${item.phone} ${item.name} ${item.segmen} ${item.tanggal} ${item.nominal}`
       )
       .join('\n');
+      
+  const grandTotalFormatted = input.grandTotal.toLocaleString('id-ID');
 
-    const { output } = await paidNoticePrompt({
-        rekapString,
-        grandTotal,
-        paidDate,
-        grandTotalFormatted: grandTotal.toLocaleString('id-ID'),
-    });
-    
-    return output?.text || '';
-  }
-);
+  const message = `
+✅💸 *PEMBAYARAN LUNAS* 💸✅
+
+Tanggal Pembayaran: ${input.paidDate}
+
+Data Terbayar:
+${rekapString}
+
+---
+*GRAND TOTAL LUNAS: Rp ${grandTotalFormatted}*
+
+Terima kasih atas kerja keras rekan-rekan. Semua laporan terverifikasi pada periode ini telah dibayarkan.
+(AI dinonaktifkan)
+  `.trim();
+  
+  return Promise.resolve(message);
+}

@@ -1,6 +1,5 @@
 'use server';
 
-import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
 const rejectionNoticeSchema = z.object({
@@ -13,36 +12,17 @@ const rejectionNoticeSchema = z.object({
 export async function sendRejectionNotice(
   input: z.infer<typeof rejectionNoticeSchema>
 ): Promise<string> {
-  return sendRejectionNoticeFlow(input);
+  // AI flow is temporarily disabled to resolve model availability issues.
+  const message = `
+❌ *Laporan Nota Ditolak* ❌
+
+- *PIC:* ${input.picName}
+- *Tanggal Nota:* ${input.notaDate}
+- *Segmen:* ${input.segment}
+- *Alasan Penolakan:* ${input.reason}
+
+Harap periksa detail penolakan di aplikasi, perbaiki laporan Anda, dan kirim ulang untuk verifikasi.
+(AI dinonaktifkan)
+  `.trim();
+  return Promise.resolve(message);
 }
-
-const rejectionNoticePrompt = ai.definePrompt({
-    name: 'rejectionNoticePrompt',
-    model: 'googleai/gemini-pro-vision',
-    input: { schema: rejectionNoticeSchema },
-    prompt: `
-Buatkan notifikasi penolakan laporan nota untuk dikirim ke Telegram.
-Gunakan format yang jelas, singkat, dan profesional. Gunakan emoji yang sesuai (misal: ❌).
-
-Detail Laporan Ditolak:
-- PIC: {{{picName}}}
-- Tanggal Nota: {{{notaDate}}}
-- Segmen: {{{segment}}}
-- Alasan Penolakan: {{{reason}}}
-
-Pesan harus menginstruksikan PIC untuk memeriksa detail penolakan di aplikasi, memperbaiki laporannya, dan mengirim ulang untuk verifikasi.
-`,
-});
-
-
-const sendRejectionNoticeFlow = ai.defineFlow(
-  {
-    name: 'sendRejectionNotice',
-    inputSchema: rejectionNoticeSchema,
-    outputSchema: z.string(),
-  },
-  async (input) => {
-    const { output } = await rejectionNoticePrompt(input);
-    return output?.text || '';
-  }
-);

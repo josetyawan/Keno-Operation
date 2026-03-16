@@ -1,6 +1,5 @@
 'use server';
 
-import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
 const gamasDesignatorNoticeSchema = z.object({
@@ -13,37 +12,16 @@ const gamasDesignatorNoticeSchema = z.object({
 export async function sendGamasDesignatorNotice(
   input: z.infer<typeof gamasDesignatorNoticeSchema>
 ): Promise<string> {
-  return sendGamasDesignatorNoticeFlow(input);
+  // AI flow is temporarily disabled to resolve model availability issues.
+  const message = `
+⚠️ *Perbaikan Eviden Gamas Diperlukan*
+
+- *No. Tiket:* ${input.noTiket}
+- *Teknisi:* ${input.userName}
+- *Designator Ditolak:* ${input.designator}
+- *Alasan:* ${input.rejectionReason}
+
+Mohon untuk segera diperbaiki. (AI dinonaktifkan)
+  `.trim();
+  return Promise.resolve(message);
 }
-
-const gamasDesignatorPrompt = ai.definePrompt({
-    name: 'gamasDesignatorNoticePrompt',
-    model: 'googleai/gemini-pro-vision',
-    input: { schema: gamasDesignatorNoticeSchema },
-    prompt: `
-Buatkan notifikasi singkat untuk penolakan salah satu eviden designator pada laporan Gamas.
-Tujuan: Menginformasikan teknisi tentang penolakan spesifik agar bisa diperbaiki.
-Format: Siap kirim ke Telegram. Gunakan emoji yang sesuai (misal: ⚠️).
-
-Detail Laporan:
-- No. Tiket: {{{noTiket}}}
-- Teknisi: {{{userName}}}
-- Designator yang Ditolak: {{{designator}}}
-- Alasan Penolakan: {{{rejectionReason}}}
-
-Buat pesan yang jelas, singkat, dan informatif.
-`
-});
-
-
-const sendGamasDesignatorNoticeFlow = ai.defineFlow(
-  {
-    name: 'sendGamasDesignatorNotice',
-    inputSchema: gamasDesignatorNoticeSchema,
-    outputSchema: z.string(),
-  },
-  async (input) => {
-    const { output } = await gamasDesignatorPrompt(input);
-    return output?.text || '';
-  }
-);

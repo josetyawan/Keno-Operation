@@ -1,6 +1,5 @@
 'use server';
 
-import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
 const swapApprovalNoticeSchema = z.object({
@@ -12,35 +11,18 @@ const swapApprovalNoticeSchema = z.object({
 export async function sendSwapApprovalNotice(
   input: z.infer<typeof swapApprovalNoticeSchema>
 ): Promise<string> {
-  return sendSwapApprovalNoticeFlow(input);
+  // AI flow is temporarily disabled to resolve model availability issues.
+  const message = `
+✅🤝 *Persetujuan Tukar Jadwal Jaga* 🤝✅
+
+Pertukaran jadwal jaga telah disetujui.
+
+- *Tanggal:* ${input.swapDate}
+- *Teknisi Awal:* ${input.requesterName}
+- *Teknisi Pengganti:* ${input.replacementName}
+
+Terima kasih kepada ${input.replacementName} atas kesediaannya.
+(AI dinonaktifkan)
+  `.trim();
+  return Promise.resolve(message);
 }
-
-const swapApprovalPrompt = ai.definePrompt({
-    name: 'swapApprovalNoticePrompt',
-    model: 'googleai/gemini-pro-vision',
-    input: { schema: swapApprovalNoticeSchema },
-    prompt: `
-Buatkan notifikasi singkat untuk persetujuan tukar jadwal jaga.
-Tujuan: Menginformasikan kedua teknisi bahwa pertukaran telah disetujui.
-Format: Siap kirim ke Telegram. Gunakan emoji yang sesuai (misal: ✅🤝).
-
-Detail Pertukaran:
-- Tanggal: {{{swapDate}}}
-- Teknisi Awal (Request): {{{requesterName}}}
-- Teknisi Pengganti: {{{replacementName}}}
-
-Buat pesan yang jelas, singkat, dan informatif. Ucapkan terima kasih kepada teknisi pengganti.
-`
-});
-
-const sendSwapApprovalNoticeFlow = ai.defineFlow(
-  {
-    name: 'sendSwapApprovalNotice',
-    inputSchema: swapApprovalNoticeSchema,
-    outputSchema: z.string(),
-  },
-  async (input) => {
-    const { output } = await swapApprovalPrompt(input);
-    return output?.text || '';
-  }
-);

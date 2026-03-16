@@ -1,6 +1,5 @@
 'use server';
 
-import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
 const rekapDataItemSchema = z.object({
@@ -35,50 +34,27 @@ export async function sendTelegramReport(input: z.infer<typeof sendTelegramRepor
     }
 }
 
-const telegramReportPrompt = ai.definePrompt({
-    name: 'telegramReportPrompt',
-    model: 'googleai/gemini-pro-vision',
-    input: { schema: z.object({
-        rekapString: z.string(),
-        grandTotalFormatted: z.string(),
-        rekapDate: z.string(),
-    }) },
-    prompt: `
-Buat laporan rekap pembayaran untuk dikirim ke Telegram.
-Gunakan format yang rapi dan mudah dibaca.
-Berikut adalah data rekapnya dalam format: [No. Pembayaran] [Nama] [Segmen] [Tanggal] [Nominal]
 
-Tanggal Rekap: {{{rekapDate}}}
-
-Data:
-{{{rekapString}}}
-
----
-GRAND TOTAL: Rp {{{grandTotalFormatted}}}
-
-Tambahkan header dan footer yang sesuai untuk laporan ini. Pastikan formatnya ringkas.
-`,
-});
-
-
-const sendTelegramReportFlow = ai.defineFlow(
-  {
-    name: 'sendTelegramReportFlow',
-    inputSchema: sendTelegramReportInputSchema,
-    outputSchema: z.string(),
-  },
-  async ({ rekapData, grandTotal, rekapDate }) => {
-    // Convert array of objects to a string representation for the prompt
+const sendTelegramReportFlow = async ({ rekapData, grandTotal, rekapDate }: z.infer<typeof sendTelegramReportInputSchema>): Promise<string> => {
+    // AI flow is temporarily disabled to resolve model availability issues.
     const rekapString = rekapData
         .map(item => `${item.phone} ${item.name} ${item.segmen} ${item.tanggal} ${item.nominal}`)
         .join('\n');
     
-    const { output } = await telegramReportPrompt({
-        rekapString,
-        grandTotalFormatted: grandTotal.toLocaleString('id-ID'),
-        rekapDate
-    });
-    
-    return output?.text || '';
+    const grandTotalFormatted = grandTotal.toLocaleString('id-ID');
+
+    const message = `
+*Laporan Rekap Pembayaran*
+*Tanggal Rekap:* ${rekapDate}
+
+*Data:*
+${rekapString}
+
+---
+*GRAND TOTAL: Rp ${grandTotalFormatted}*
+
+(Laporan ini dibuat otomatis. AI dinonaktifkan)
+    `.trim();
+
+    return Promise.resolve(message);
   }
-);
