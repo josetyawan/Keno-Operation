@@ -1,3 +1,4 @@
+
 'use server';
 
 // A simple utility to send a message to a Telegram chat.
@@ -48,11 +49,6 @@ export async function sendTelegramMessage({
           console.error('Telegram API error (sendMediaGroup):', result);
           throw new Error(`Telegram API Error: ${result.description}`);
         }
-    }
-    
-    // If there was text but no caption, send it separately.
-    if(text && !photoCaption){
-       await sendTelegramMessage({botToken, chatId, text});
     }
 
   } else if (photoUrls.length === 1 && photoUrls[0]) {
