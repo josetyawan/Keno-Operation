@@ -1,3 +1,4 @@
+
 'use server';
 
 import { ai } from '@/ai/genkit';
@@ -51,7 +52,13 @@ const sendProductivityRekapFlow = ai.defineFlow(
     message += `*Detail Produktivitas*\n`;
     if (input.detailData.length > 0) {
       input.detailData.forEach(user => {
-        message += `\n*${user.userName}* ${user.telegramUsername || ''}\n`;
+        let userLine = `\n*${user.userName.trim()}*`;
+        if (user.telegramUsername && user.telegramUsername.trim()) {
+            userLine += ` ${user.telegramUsername.trim()}`;
+        }
+        userLine += '\n';
+        message += userLine;
+
         message += `TIKET | SERVICE | SEGMEN\n`;
         user.tickets.forEach(ticket => {
           message += `${ticket.ticket || '-'} | ${ticket.service || '-'} | ${ticket.segment || '-'}\n`;
