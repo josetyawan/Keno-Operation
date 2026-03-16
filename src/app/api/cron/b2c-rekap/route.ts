@@ -73,8 +73,17 @@ export async function GET(request: NextRequest) {
             const productiveUserCount = productivityMap.size;
 
             if (totalProductivity > 0 || productiveUserCount > 0) {
-                if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID) {
-                  console.error('Telegram Bot Token or Chat ID is not set in environment variables for B2C rekap cron.');
+                let targetChatId: string | undefined;
+                if (unit === 'B2C' || unit === 'MTC') {
+                    targetChatId = process.env.TELEGRAM_CHAT_ID_B2C_MTC;
+                } else if (unit === 'B2B') {
+                    targetChatId = process.env.TELEGRAM_CHAT_ID_B2B;
+                } else if (unit === 'Provisioning') {
+                    targetChatId = process.env.TELEGRAM_CHAT_ID_PROVISIONING;
+                }
+
+                if (!process.env.TELEGRAM_BOT_TOKEN || !targetChatId) {
+                  console.error(`Telegram Bot Token or Chat ID for unit ${unit} is not set.`);
                   continue; // Skip this unit if config is missing
                 }
                 
@@ -87,7 +96,7 @@ export async function GET(request: NextRequest) {
                 
                 await sendTelegramMessage({
                     botToken: process.env.TELEGRAM_BOT_TOKEN,
-                    chatId: process.env.TELEGRAM_CHAT_ID,
+                    chatId: targetChatId,
                     text: messageText
                 });
 

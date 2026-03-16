@@ -1,3 +1,4 @@
+
 'use server';
 
 import { sendProductivityRekap } from '@/ai/flows/send-b2c-rekap';
@@ -24,13 +25,23 @@ export async function triggerB2cRekapAction(
       totalVisit: payload.totalVisit,
     });
 
-    if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID) {
-      throw new Error('TELEGRAM_BOT_TOKEN atau TELEGRAM_CHAT_ID tidak diatur di file .env');
+    let targetChatId: string | undefined;
+    const unit = payload.unit;
+    if (unit === 'B2C' || unit === 'MTC') {
+        targetChatId = process.env.TELEGRAM_CHAT_ID_B2C_MTC;
+    } else if (unit === 'B2B') {
+        targetChatId = process.env.TELEGRAM_CHAT_ID_B2B;
+    } else if (unit === 'Provisioning') {
+        targetChatId = process.env.TELEGRAM_CHAT_ID_PROVISIONING;
+    }
+
+    if (!process.env.TELEGRAM_BOT_TOKEN || !targetChatId) {
+      throw new Error(`TELEGRAM_BOT_TOKEN atau CHAT_ID untuk unit ${unit} tidak diatur di file .env`);
     }
 
     await sendTelegramMessage({
         botToken: process.env.TELEGRAM_BOT_TOKEN,
-        chatId: process.env.TELEGRAM_CHAT_ID,
+        chatId: targetChatId,
         text: messageText,
     });
 
