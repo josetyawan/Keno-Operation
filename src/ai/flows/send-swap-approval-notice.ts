@@ -30,15 +30,15 @@ const swapApprovalNoticeFlow = ai.defineFlow(
     });
     
     // 2. Send the message to the Absensi group
-    if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID_ABSENSI) {
-      console.error('TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID_ABSENSI is not set.');
+    if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID_B2C_MTC) {
+      console.error('TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID_B2C_MTC is not set.');
       return text; // Return the generated text even if sending fails
     }
 
     try {
       await sendTelegramMessage({
         botToken: process.env.TELEGRAM_BOT_TOKEN,
-        chatId: process.env.TELEGRAM_CHAT_ID_ABSENSI,
+        chatId: process.env.TELEGRAM_CHAT_ID_B2C_MTC,
         text: text,
       });
     } catch (error) {

@@ -22,13 +22,13 @@ export async function triggerDailyRekapAction(payload: RekapPayload): Promise<{s
         
         const messageText = await sendDailyRekapReport(payload);
 
-        if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID_ABSENSI) {
-          throw new Error('TELEGRAM_BOT_TOKEN atau TELEGRAM_CHAT_ID_ABSENSI tidak diatur di file .env');
+        if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID_B2C_MTC) {
+          throw new Error('TELEGRAM_BOT_TOKEN atau TELEGRAM_CHAT_ID_B2C_MTC tidak diatur di file .env');
         }
 
         await sendTelegramMessage({
             botToken: process.env.TELEGRAM_BOT_TOKEN,
-            chatId: process.env.TELEGRAM_CHAT_ID_ABSENSI,
+            chatId: process.env.TELEGRAM_CHAT_ID_B2C_MTC,
             text: messageText,
             photoUrls: payload.photos,
             photoCaption: payload.photoCaption,

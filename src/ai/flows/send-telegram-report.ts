@@ -19,7 +19,7 @@ const sendTelegramReportInputSchema = z.object({
   rekapDate: z.string(),
 });
 
-const sendTelegramReportFlow = ai.defineFlow(
+export const sendTelegramReportFlow = ai.defineFlow(
   {
     name: 'sendTelegramReportFlow',
     inputSchema: sendTelegramReportInputSchema,
@@ -48,16 +48,3 @@ const sendTelegramReportFlow = ai.defineFlow(
     return text;
   }
 );
-
-export async function sendTelegramReport(input: z.infer<typeof sendTelegramReportInputSchema>): Promise<{ success: boolean; error?: string }> {
-    try {
-        const reportText = await sendTelegramReportFlow(input);
-        
-        console.log('Generated Telegram Report to be sent:', reportText);
-
-        return { success: true };
-    } catch (error: any) {
-        console.error("Error in sendTelegramReport flow:", error);
-        return { success: false, error: error.message || 'An unknown error occurred in the AI flow.' };
-    }
-}

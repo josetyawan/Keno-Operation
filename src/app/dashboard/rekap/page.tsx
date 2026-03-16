@@ -39,9 +39,10 @@ import type { Nota, UserProfile, CashTransaction } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { sendTelegramReport } from '@/ai/flows/send-telegram-report';
+import { sendTelegramReportFlow } from '@/ai/flows/send-telegram-report';
 import { sendLinkAjaPayment } from '@/ai/flows/send-linkaja-payment';
 import { sendPaidNotice } from '@/ai/flows/send-paid-notice';
+import { sendTelegramMessage } from '@/lib/telegram';
 import type { DateRange } from 'react-day-picker';
 import { useRouter } from 'next/navigation';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -241,7 +242,7 @@ export default function RekapPage() {
             return;
         }
         if (!users || !notas) {
-            toast({ variant: 'destructive', title: 'Data Belum Siap', description: 'Tidak dapat memproses karena data pengguna atau nota belum termuat. Coba lagi sesaat.' });
+            toast({ variant: 'destructive', title: 'Data Pengguna Belum Siap', description: 'Tidak dapat memproses karena data pengguna atau nota belum termuat. Coba lagi sesaat.' });
             return;
         }
         setIsMarkingAsPaid(true);
@@ -314,10 +315,20 @@ export default function RekapPage() {
                 }
             }
     
-            await sendPaidNotice({
+            const paidNoticeText = await sendPaidNotice({
                 paidData: paidNoticeData,
                 grandTotal: selectedTotal,
                 paidDate: format(paymentDate, 'dd MMMM yyyy', { locale: idLocale }),
+            });
+
+            if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID_FINANCE) {
+                throw new Error('Konfigurasi Telegram untuk Finance tidak ditemukan.');
+            }
+
+            await sendTelegramMessage({
+                botToken: process.env.TELEGRAM_BOT_TOKEN,
+                chatId: process.env.TELEGRAM_CHAT_ID_FINANCE,
+                text: paidNoticeText,
             });
     
             toast({ 
@@ -409,10 +420,20 @@ export default function RekapPage() {
                     }
                 }
                 
-                sendPaidNotice({
+                const paidNoticeText = await sendPaidNotice({
                     paidData: paidNoticeData,
                     grandTotal: selectedTotal,
                     paidDate: format(paymentDate, 'dd MMMM yyyy', { locale: idLocale }),
+                });
+
+                if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID_FINANCE) {
+                    throw new Error('Konfigurasi Telegram untuk Finance tidak ditemukan.');
+                }
+    
+                sendTelegramMessage({
+                    botToken: process.env.TELEGRAM_BOT_TOKEN,
+                    chatId: process.env.TELEGRAM_CHAT_ID_FINANCE,
+                    text: paidNoticeText,
                 }).catch(err => {
                     console.error("Failed to send paid notification:", err);
                 });
@@ -478,16 +499,23 @@ export default function RekapPage() {
                 }
             }
 
-            const result = await sendTelegramReport({ 
+            const reportText = await sendTelegramReportFlow({
                 rekapData: telegramRekapData,
                 grandTotal: selectedTotal,
                 rekapDate: rekapDateString
-             });
-            if (result.success) {
-                toast({ title: 'Terkirim!', description: 'Rekap item terpilih berhasil dikirim ke Telegram.' });
-            } else {
-                throw new Error(result.error || 'Unknown error');
+            });
+             if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID_FINANCE) {
+                throw new Error('Konfigurasi Telegram untuk Finance tidak ditemukan.');
             }
+
+            await sendTelegramMessage({
+                botToken: process.env.TELEGRAM_BOT_TOKEN,
+                chatId: process.env.TELEGRAM_CHAT_ID_FINANCE,
+                text: reportText,
+            });
+
+            toast({ title: 'Terkirim!', description: 'Rekap item terpilih berhasil dikirim ke Telegram.' });
+            
         } catch (error: any) {
             console.error('Telegram send error:', error);
             toast({ variant: 'destructive', title: 'Gagal Mengirim', description: error.message });
@@ -715,5 +743,4 @@ export default function RekapPage() {
         </div>
     );
 }
-
 
