@@ -27,24 +27,27 @@ export const sendTelegramReportFlow = ai.defineFlow(
   },
   async ({ rekapData, grandTotal, rekapDate }) => {
     const rekapString = rekapData
-        .map(item => `${item.phone} ${item.name} ${item.segmen} ${item.tanggal} ${item.nominal}`)
+        .map(item => {
+             // Handle the "TOTAL" rows which have an empty segmen
+            if (item.segmen === '') {
+                return `\n${item.name} ${item.nominal.toLocaleString('id-ID')}`;
+            }
+            return `${item.phone} ${item.name} ${item.segmen} ${item.tanggal} ${item.nominal.toLocaleString('id-ID')}`;
+        })
         .join('\n');
     
     const grandTotalFormatted = grandTotal.toLocaleString('id-ID');
 
-    const { text } = await ai.generate({
-      model: 'googleai/gemini-pro',
-      prompt: `Buat laporan rekap pembayaran untuk dikirim ke grup Telegram. Format harus Markdown.
-      
-      Data:
-      - Judul: Laporan Rekap Pembayaran
-      - Tanggal Rekap: ${rekapDate}
-      - Data (format: No.HP Nama Segmen Tanggal Nominal):
-      ${rekapString}
-      - GRAND TOTAL: Rp ${grandTotalFormatted}
-      
-      Jaga agar format tetap rapi dan mudah dibaca.`,
-    });
-    return text;
+    // Manually format the message without markdown
+    const message = `
+Laporan Rekap Pembayaran
+Tanggal Rekap: ${rekapDate}
+
+${rekapString}
+
+GRAND TOTAL: Rp ${grandTotalFormatted}
+    `.trim();
+    
+    return message;
   }
 );

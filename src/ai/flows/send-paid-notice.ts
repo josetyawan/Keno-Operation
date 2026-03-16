@@ -27,27 +27,31 @@ const sendPaidNoticeFlow = ai.defineFlow(
   },
   async ({ paidData, grandTotal, paidDate }) => {
     const rekapString = paidData
-      .map(
-        (item) =>
-          `${item.phone} ${item.name} ${item.segmen} ${item.tanggal} ${item.nominal}`
-      )
+      .map(item => {
+          if (item.segmen === '') { // Handle total rows
+              return `\n${item.name} ${item.nominal.toLocaleString('id-ID')}`;
+          }
+          return `${item.phone} ${item.name} ${item.segmen} ${item.tanggal} ${item.nominal.toLocaleString('id-ID')}`;
+      })
       .join('\n');
       
     const grandTotalFormatted = grandTotal.toLocaleString('id-ID');
 
-    const { text } = await ai.generate({
-      model: 'googleai/gemini-pro',
-      prompt: `Buat pengumuman pembayaran lunas untuk grup Telegram. Gunakan format Markdown.
-      
-      Data:
-      - Tanggal Pembayaran: ${paidDate}
-      - Data Terbayar (format: No.HP Nama Segmen Tanggal Nominal):
-      ${rekapString}
-      - GRAND TOTAL LUNAS: Rp ${grandTotalFormatted}
+    // Manually format the message
+    const message = `
+✅💸 LUNAS 💸✅
 
-      Gunakan emoji yang meriah seperti ✅💸 dan sampaikan terima kasih atas kerja keras rekan-rekan.`,
-    });
-    return text;
+Tanggal Pembayaran: ${paidDate}
+
+Data Terbayar (No.HP Nama Segmen Tanggal Nominal):
+${rekapString}
+
+GRAND TOTAL LUNAS: Rp ${grandTotalFormatted}
+
+Terima kasih atas kerja keras rekan-rekan semua. Tetap jaga kesehatan dan keselamatan kerja. 💪
+    `.trim();
+
+    return message;
   }
 );
 
