@@ -50,25 +50,30 @@ export async function GET(request: NextRequest) {
             const unitUsers = allUsers.filter(u => u.unit === unit && u.role === 'teknisi');
             if (unitUsers.length === 0) continue;
 
-            const userIdsInUnit = new Set(unitUsers.map(u => u.id));
             const productivityMap = new Map<string, number>();
+            
+            // --- REVISED LOGIC: Use NIK for linking ---
+            const unitUserNiks = new Set(unitUsers.map(u => u.nik).filter(Boolean));
+            const nikToUserIdMap = new Map(unitUsers.map(u => [u.nik, u.id]));
 
-            allRiwayat.forEach(item => {
-                if (userIdsInUnit.has(item.userId)) {
-                    productivityMap.set(item.userId, (productivityMap.get(item.userId) || 0) + 1);
+            [...allRiwayat, ...allOtherWorks].forEach(item => {
+                if (item.nik && unitUserNiks.has(item.nik)) {
+                    const userId = nikToUserIdMap.get(item.nik);
+                    if (userId) {
+                        productivityMap.set(userId, (productivityMap.get(userId) || 0) + 1);
+                    }
                 }
             });
-            allOtherWorks.forEach(item => {
-                if (userIdsInUnit.has(item.userId)) {
-                    productivityMap.set(item.userId, (productivityMap.get(item.userId) || 0) + 1);
-                }
-            });
+
+            // Provisioning still uses userId
+            const userIdsInUnit = new Set(unitUsers.map(u => u.id));
             allProvisioning.forEach(item => {
                 if (item.assignedTo_userId && userIdsInUnit.has(item.assignedTo_userId)) {
                     productivityMap.set(item.assignedTo_userId, (productivityMap.get(item.assignedTo_userId) || 0) + 1);
                 }
             });
-            
+            // --- END REVISED LOGIC ---
+
             const scheduleMap = new Map(allSchedules.map(s => [s.userId, s.shiftType]));
 
             // Generate Summary Data
@@ -89,8 +94,10 @@ export async function GET(request: NextRequest) {
             const productiveUsers = unitUsers.filter(user => (productivityMap.get(user.id) || 0) > 0);
 
             const detailData = productiveUsers.map(user => {
-                const userRiwayat = allRiwayat.filter(r => r.userId === user.id);
-                const userOtherWorks = allOtherWorks.filter(w => w.userId === user.id);
+                // --- REVISED LOGIC: Filter by NIK ---
+                const userRiwayat = allRiwayat.filter(r => r.nik === user.nik);
+                const userOtherWorks = allOtherWorks.filter(w => w.nik === user.nik);
+                // --- END REVISED LOGIC ---
                 const userProvisioning = allProvisioning.filter(p => p.assignedTo_userId === user.id);
             
                 const tickets = [
