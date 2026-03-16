@@ -51,23 +51,29 @@ const sendProductivityRekapFlow = ai.defineFlow(
     message += `*Detail Produktivitas*\n`;
     if (input.detailData.length > 0) {
       input.detailData.forEach(user => {
-        let name = (user.userName || '').trim();
-        const username = (user.telegramUsername || '').trim();
-
-        // If name contains the username, remove it to avoid duplication.
-        if (username && name.includes(username)) {
-          name = name.replace(username, '').trim();
-        }
+        // Start with a clean display name.
+        let name = (user.userName || 'Unknown User').trim();
         
-        // Also remove the '@' from the name if it exists, just in case
-        name = name.replace('@', '').trim();
+        // Sanitize the provided telegram username: remove '@', all spaces, and then trim.
+        const cleanTelegramUsername = (user.telegramUsername || '').replace(/@/g, '').replace(/\s+/g, '').trim();
 
+        // Now, remove any occurrence of the clean username from the display name to prevent duplication.
+        if (cleanTelegramUsername) {
+            const regex = new RegExp(cleanTelegramUsername, 'ig');
+            name = name.replace(regex, '').trim();
+        }
+
+        // Final cleanup for any leftover characters like '@'.
+        name = name.replace(/@/g, '').trim();
+
+        // Construct the final line with proper Markdown.
         let userLine = `\n*${name}*`;
-        if (username) {
-            userLine += ` ${username}`;
+        if (cleanTelegramUsername) {
+            userLine += ` @${cleanTelegramUsername}`;
         }
         userLine += '\n';
         message += userLine;
+
 
         message += `TIKET | SERVICE | SEGMEN\n`;
         user.tickets.forEach(ticket => {
