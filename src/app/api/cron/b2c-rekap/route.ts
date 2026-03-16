@@ -6,6 +6,7 @@ import { format, isSameDay } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import type { UserProfile, Schedule, RiwayatGangguan, OtherWork, ProvisioningRecord } from '@/lib/types';
 import { sendProductivityRekap } from '@/ai/flows/send-b2c-rekap';
+import { sendTelegramMessage } from '@/lib/telegram';
 
 export const dynamic = 'force-dynamic';
 
@@ -72,13 +73,24 @@ export async function GET(request: NextRequest) {
             const productiveUserCount = productivityMap.size;
 
             if (totalProductivity > 0 || productiveUserCount > 0) {
-                await sendProductivityRekap({
+                if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID) {
+                  console.error('Telegram Bot Token or Chat ID is not set in environment variables for B2C rekap cron.');
+                  continue; // Skip this unit if config is missing
+                }
+                
+                const messageText = await sendProductivityRekap({
                     unit,
                     date: format(today, 'dd MMMM yyyy', { locale: idLocale }),
                     totalSales: totalProductivity,
                     totalVisit: productiveUserCount,
                 });
-                // Add a 1-second delay to avoid rate limiting
+                
+                await sendTelegramMessage({
+                    botToken: process.env.TELEGRAM_BOT_TOKEN,
+                    chatId: process.env.TELEGRAM_CHAT_ID,
+                    text: messageText
+                });
+
                 await new Promise(resolve => setTimeout(resolve, 1000));
             }
         }

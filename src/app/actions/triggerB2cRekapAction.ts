@@ -1,6 +1,7 @@
 'use server';
 
 import { sendProductivityRekap } from '@/ai/flows/send-b2c-rekap';
+import { sendTelegramMessage } from '@/lib/telegram';
 
 interface RekapPayload {
   unit: string;
@@ -16,14 +17,23 @@ export async function triggerB2cRekapAction(
       return { success: true, message: 'Tidak ada data rekap untuk dikirim.' };
     }
 
-    await sendProductivityRekap({
+    const messageText = await sendProductivityRekap({
       date: new Date().toISOString(),
       unit: payload.unit,
       totalSales: payload.totalSales,
       totalVisit: payload.totalVisit,
     });
 
-    // jika tidak error berarti sukses
+    if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID) {
+      throw new Error('TELEGRAM_BOT_TOKEN atau TELEGRAM_CHAT_ID tidak diatur di file .env');
+    }
+
+    await sendTelegramMessage({
+        botToken: process.env.TELEGRAM_BOT_TOKEN,
+        chatId: process.env.TELEGRAM_CHAT_ID,
+        text: messageText,
+    });
+
     return {
       success: true,
       message: `Rekap produktivitas untuk unit ${payload.unit} berhasil dikirim.`,

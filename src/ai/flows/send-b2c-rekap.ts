@@ -17,19 +17,17 @@ const sendProductivityRekapFlow = ai.defineFlow(
     outputSchema: z.string(),
   },
   async (input) => {
-    const { text } = await ai.generate({
-      model: 'googleai/gemini-pro',
-      prompt: `Buat laporan rekap produktivitas harian untuk Telegram dalam format Markdown.
-      
-      Data:
-      - Unit: ${input.unit}
-      - Tanggal: ${input.date}
-      - Total Sales/Pekerjaan Selesai: ${input.totalSales}
-      - Total Teknisi Produktif: ${input.totalVisit}
-
-      Gunakan bahasa yang formal dan informatif.`,
-    });
-    return text;
+    // AI temporarily disabled to ensure app stability.
+    // This returns a placeholder message.
+    const message = `
+*Rekap Produktivitas (AI Dinonaktifkan)*
+-------------------------
+*Unit:* ${input.unit}
+*Tanggal:* ${input.date}
+*Total Sales/Pekerjaan:* ${input.totalSales}
+*Total Teknisi Produktif:* ${input.totalVisit}
+    `.trim();
+    return message;
   }
 );
 

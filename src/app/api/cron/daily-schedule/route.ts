@@ -6,6 +6,7 @@ import { format, isWeekend } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import type { UserProfile, Schedule, Attendance, Holiday } from '@/lib/types';
 import { sendDailyRekapReport } from '@/ai/flows/send-daily-rekap-report';
+import { sendTelegramMessage } from '@/lib/telegram';
 
 export const dynamic = 'force-dynamic';
 
@@ -148,11 +149,24 @@ export async function GET(request: NextRequest) {
         // --- END OF CORRECTION ---
 
         if (rekapMessages.length > 0 || photosToSend.length > 0) {
-            await sendDailyRekapReport({
+            if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID) {
+                throw new Error('Telegram Bot Token or Chat ID is not set in environment variables for daily rekap.');
+            }
+
+            const messageText = await sendDailyRekapReport({
                 rekapMessages: rekapMessages,
                 photos: photosToSend,
                 photoCaption: isJagaDay ? "Rekap Foto Absen Jaga" : undefined,
             });
+
+            await sendTelegramMessage({
+                botToken: process.env.TELEGRAM_BOT_TOKEN,
+                chatId: process.env.TELEGRAM_CHAT_ID,
+                text: messageText,
+                photoUrls: photosToSend,
+                photoCaption: isJagaDay ? "Rekap Foto Absen Jaga" : undefined,
+            });
+
             return NextResponse.json({ message: 'Daily rekap sent successfully.' });
         } else {
             return NextResponse.json({ message: 'No data to send for daily rekap.' });

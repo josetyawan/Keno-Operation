@@ -1,6 +1,7 @@
 'use server';
 
 import { sendDailyRekapReport } from '@/ai/flows/send-daily-rekap-report';
+import { sendTelegramMessage } from '@/lib/telegram';
 
 interface RekapPayload {
     rekapMessages: string[];
@@ -18,12 +19,24 @@ export async function triggerDailyRekapAction(payload: RekapPayload): Promise<{s
              return { success: true, message: 'Tidak ada data rekap untuk dikirim hari ini.' };
         }
         
-        await sendDailyRekapReport(payload);
+        const messageText = await sendDailyRekapReport(payload);
 
-return {
-  success: true,
-  message: `Rekap berhasil dikirim. ${payload.rekapMessages.length} pesan teks dan ${payload.photos.length} foto dikirim.`
-};
+        if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID) {
+          throw new Error('TELEGRAM_BOT_TOKEN atau TELEGRAM_CHAT_ID tidak diatur di file .env');
+        }
+
+        await sendTelegramMessage({
+            botToken: process.env.TELEGRAM_BOT_TOKEN,
+            chatId: process.env.TELEGRAM_CHAT_ID,
+            text: messageText,
+            photoUrls: payload.photos,
+            photoCaption: payload.photoCaption,
+        });
+
+        return {
+          success: true,
+          message: `Rekap berhasil dikirim. ${payload.rekapMessages.length} pesan teks dan ${payload.photos.length} foto dikirim.`
+        };
     } catch (error: any) {
         console.error('Error in manual rekap trigger action:', error);
         return { success: false, message: error.message };
