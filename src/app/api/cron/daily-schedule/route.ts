@@ -149,8 +149,8 @@ export async function GET(request: NextRequest) {
         // --- END OF CORRECTION ---
 
         if (rekapMessages.length > 0 || photosToSend.length > 0) {
-            if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID_B2C_MTC) {
-                throw new Error('Telegram Bot Token or B2C/MTC Chat ID is not set in environment variables for daily rekap.');
+            if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID_ABSENSI) {
+                throw new Error('Telegram Bot Token or Absensi Chat ID is not set in environment variables for daily rekap.');
             }
 
             const messageText = await sendDailyRekapReport({
@@ -161,7 +161,7 @@ export async function GET(request: NextRequest) {
 
             await sendTelegramMessage({
                 botToken: process.env.TELEGRAM_BOT_TOKEN,
-                chatId: process.env.TELEGRAM_CHAT_ID_B2C_MTC,
+                chatId: process.env.TELEGRAM_CHAT_ID_ABSENSI,
                 text: messageText,
                 photoUrls: photosToSend,
                 photoCaption: isJagaDay ? "Rekap Foto Absen Jaga" : undefined,
