@@ -86,8 +86,8 @@ export default function ProduktivitasHarianPage() {
                     where('tanggalClose', '<=', Timestamp.fromDate(endDate))
                 ]),
                 fetchCollection<OtherWork>('other-works', [
-                    where('tanggalPengerjaan', '>=', Timestamp.fromDate(startDate)),
-                    where('tanggalPengerjaan', '<=', Timestamp.fromDate(endDate))
+                    where('tanggalSelesai', '>=', Timestamp.fromDate(startDate)),
+                    where('tanggalSelesai', '<=', Timestamp.fromDate(endDate))
                 ]),
                  fetchCollection<ProvisioningRecord>('provisioning-records', [
                     where('completedAt', '>=', Timestamp.fromDate(startDate)),

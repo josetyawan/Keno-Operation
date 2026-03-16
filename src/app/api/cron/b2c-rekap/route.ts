@@ -37,8 +37,8 @@ export async function GET(request: NextRequest) {
                 where('tanggalClose', '<=', Timestamp.fromDate(endDate))
             ]),
             fetchCollection<OtherWork>(firestore, 'other-works', [
-                where('tanggalPengerjaan', '>=', Timestamp.fromDate(startDate)),
-                where('tanggalPengerjaan', '<=', Timestamp.fromDate(endDate))
+                where('tanggalSelesai', '>=', Timestamp.fromDate(startDate)),
+                where('tanggalSelesai', '<=', Timestamp.fromDate(endDate))
             ]),
             fetchCollection<ProvisioningRecord>(firestore, 'provisioning-records', [
                 where('completedAt', '>=', Timestamp.fromDate(startDate)),
