@@ -34,13 +34,13 @@ const sendProductivityRekapFlow = ai.defineFlow(
   },
   async (input) => {
     // Manually format the message to match the desired output, bypassing the AI for now.
-    let message = `*Rekap Produktivitas Teknisi*\n`;
-    message += `*Unit:* ${input.unit}\n`;
-    message += `*Tanggal:* ${input.date}\n`;
+    let message = `Rekap Produktivitas Teknisi\n`;
+    message += `Unit: ${input.unit}\n`;
+    message += `Tanggal: ${input.date}\n`;
     message += `-------------------------\n\n`;
 
     // Ringkasan Produktivitas
-    message += `*Ringkasan Produktivitas*\n`;
+    message += `Ringkasan Produktivitas\n`;
     message += `NAMA TEKNISI | PRODUKTIVITAS\n`;
     input.summaryData.forEach(item => {
         message += `${item.name} | ${item.productivity}\n`;
@@ -48,7 +48,7 @@ const sendProductivityRekapFlow = ai.defineFlow(
     message += `\n-------------------------\n\n`;
 
     // Detail Produktivitas
-    message += `*Detail Produktivitas*\n`;
+    message += `Detail Produktivitas\n`;
     if (input.detailData.length > 0) {
       input.detailData.forEach(user => {
         // Start with a clean display name.
@@ -66,8 +66,8 @@ const sendProductivityRekapFlow = ai.defineFlow(
         // Final cleanup for any leftover characters like '@'.
         name = name.replace(/@/g, '').trim();
 
-        // Construct the final line with proper Markdown.
-        let userLine = `\n*${name}*`;
+        // Construct the final line without bolding.
+        let userLine = `\n${name}`;
         if (cleanTelegramUsername) {
             userLine += ` @${cleanTelegramUsername}`;
         }
