@@ -1,5 +1,6 @@
 'use server';
 
+import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
 const rejectionNoticeSchema = z.object({
@@ -9,20 +10,30 @@ const rejectionNoticeSchema = z.object({
   reason: z.string(),
 });
 
+const rejectionNoticeFlow = ai.defineFlow(
+  {
+    name: 'rejectionNoticeFlow',
+    inputSchema: rejectionNoticeSchema,
+    outputSchema: z.string(),
+  },
+  async (input) => {
+    const { text } = await ai.generate({
+      model: 'googleai/gemini-pro',
+      prompt: `Buat notifikasi penolakan laporan nota untuk Telegram. Gunakan format Markdown.
+      
+      - PIC: ${input.picName}
+      - Tanggal Nota: ${input.notaDate}
+      - Segmen: ${input.segment}
+      - Alasan Penolakan: ${input.reason}
+      
+      Gunakan emoji ❌ dan instruksikan pengguna untuk memeriksa aplikasi dan mengirim ulang.`,
+    });
+    return text;
+  }
+);
+
 export async function sendRejectionNotice(
   input: z.infer<typeof rejectionNoticeSchema>
 ): Promise<string> {
-  // AI flow is temporarily disabled to resolve model availability issues.
-  const message = `
-❌ *Laporan Nota Ditolak* ❌
-
-- *PIC:* ${input.picName}
-- *Tanggal Nota:* ${input.notaDate}
-- *Segmen:* ${input.segment}
-- *Alasan Penolakan:* ${input.reason}
-
-Harap periksa detail penolakan di aplikasi, perbaiki laporan Anda, dan kirim ulang untuk verifikasi.
-(AI dinonaktifkan)
-  `.trim();
-  return Promise.resolve(message);
+  return rejectionNoticeFlow(input);
 }

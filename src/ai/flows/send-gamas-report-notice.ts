@@ -1,5 +1,6 @@
 'use server';
 
+import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
 const gamasReportNoticeSchema = z.object({
@@ -9,24 +10,29 @@ const gamasReportNoticeSchema = z.object({
   rejectionReason: z.string().optional(),
 });
 
+const gamasReportNoticeFlow = ai.defineFlow(
+  {
+    name: 'gamasReportNoticeFlow',
+    inputSchema: gamasReportNoticeSchema,
+    outputSchema: z.string(),
+  },
+  async ({ userName, noTiket, status, rejectionReason }) => {
+    const { text } = await ai.generate({
+      model: 'googleai/gemini-pro',
+      prompt: `Buat notifikasi status Laporan Gamas untuk Telegram. Gunakan format Markdown.
+      - No. Tiket: ${noTiket}
+      - Teknisi: ${userName}
+      - Status Baru: ${status}
+      ${rejectionReason ? `- Alasan Penolakan: ${rejectionReason}` : ''}
+      
+      Gunakan emoji ✅ untuk 'Disetujui' dan ❌ untuk 'Ditolak'.`,
+    });
+    return text;
+  }
+);
+
 export async function sendGamasReportNotice(
   input: z.infer<typeof gamasReportNoticeSchema>
 ): Promise<string> {
-  // AI flow is temporarily disabled to resolve model availability issues.
-  const emoji = input.status === 'Disetujui' ? '✅' : '❌';
-  let message = `
-${emoji} *Status Laporan Gamas Diperbarui*
-
-- *No. Tiket:* ${input.noTiket}
-- *Teknisi:* ${input.userName}
-- *Status Baru:* ${input.status}
-  `.trim();
-  
-  if (input.rejectionReason) {
-    message += `\n- *Alasan Penolakan:* ${input.rejectionReason}`;
-  }
-  
-  message += `\n\n(AI dinonaktifkan)`;
-  
-  return Promise.resolve(message);
+  return gamasReportNoticeFlow(input);
 }

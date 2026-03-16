@@ -1,5 +1,6 @@
 'use server';
 
+import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
 const rekapDataItemSchema = z.object({
@@ -18,13 +19,40 @@ const sendTelegramReportInputSchema = z.object({
   rekapDate: z.string(),
 });
 
-// This is a wrapper function for the AI flow to align with the expected return type in the component.
+const sendTelegramReportFlow = ai.defineFlow(
+  {
+    name: 'sendTelegramReportFlow',
+    inputSchema: sendTelegramReportInputSchema,
+    outputSchema: z.string(),
+  },
+  async ({ rekapData, grandTotal, rekapDate }) => {
+    const rekapString = rekapData
+        .map(item => `${item.phone} ${item.name} ${item.segmen} ${item.tanggal} ${item.nominal}`)
+        .join('\n');
+    
+    const grandTotalFormatted = grandTotal.toLocaleString('id-ID');
+
+    const { text } = await ai.generate({
+      model: 'googleai/gemini-pro',
+      prompt: `Buat laporan rekap pembayaran untuk dikirim ke grup Telegram. Format harus Markdown.
+      
+      Data:
+      - Judul: Laporan Rekap Pembayaran
+      - Tanggal Rekap: ${rekapDate}
+      - Data (format: No.HP Nama Segmen Tanggal Nominal):
+      ${rekapString}
+      - GRAND TOTAL: Rp ${grandTotalFormatted}
+      
+      Jaga agar format tetap rapi dan mudah dibaca.`,
+    });
+    return text;
+  }
+);
+
 export async function sendTelegramReport(input: z.infer<typeof sendTelegramReportInputSchema>): Promise<{ success: boolean; error?: string }> {
     try {
         const reportText = await sendTelegramReportFlow(input);
         
-        // In a real-world scenario, you'd use a tool to send this `reportText` to a Telegram service.
-        // For now, we log it and simulate a successful operation.
         console.log('Generated Telegram Report to be sent:', reportText);
 
         return { success: true };
@@ -33,28 +61,3 @@ export async function sendTelegramReport(input: z.infer<typeof sendTelegramRepor
         return { success: false, error: error.message || 'An unknown error occurred in the AI flow.' };
     }
 }
-
-
-const sendTelegramReportFlow = async ({ rekapData, grandTotal, rekapDate }: z.infer<typeof sendTelegramReportInputSchema>): Promise<string> => {
-    // AI flow is temporarily disabled to resolve model availability issues.
-    const rekapString = rekapData
-        .map(item => `${item.phone} ${item.name} ${item.segmen} ${item.tanggal} ${item.nominal}`)
-        .join('\n');
-    
-    const grandTotalFormatted = grandTotal.toLocaleString('id-ID');
-
-    const message = `
-*Laporan Rekap Pembayaran*
-*Tanggal Rekap:* ${rekapDate}
-
-*Data:*
-${rekapString}
-
----
-*GRAND TOTAL: Rp ${grandTotalFormatted}*
-
-(Laporan ini dibuat otomatis. AI dinonaktifkan)
-    `.trim();
-
-    return Promise.resolve(message);
-  }

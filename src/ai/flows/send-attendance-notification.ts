@@ -1,5 +1,6 @@
 'use server';
 
+import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
 const attendanceNoticeSchema = z.object({
@@ -8,29 +9,37 @@ const attendanceNoticeSchema = z.object({
   reason: z.string().optional(),
   photoUrl: z.string().optional(),
   coordinates: z.string().optional(),
-  statusEmoji: z.string(),
 });
 
-export async function sendAttendanceNotice(input: z.infer<typeof attendanceNoticeSchema>): Promise<string> {
-    // AI flow is temporarily disabled to resolve model availability issues.
-    let statusEmoji = '🔔';
-    if (input.status.toLowerCase().includes('hadir') || input.status.toLowerCase().includes('progres')) {
-        statusEmoji = '✅';
-    } else if (input.status.toLowerCase().includes('terlambat')) {
-        statusEmoji = '⏰';
-    } else if (input.status.toLowerCase().includes('izin')) {
-        statusEmoji = '📝';
-    } else if (input.status.toLowerCase().includes('cuti')) {
-        statusEmoji = '🌴';
-    } else if (input.status.toLowerCase().includes('tukar')) {
-        statusEmoji = '🤝';
+const attendanceNoticeFlow = ai.defineFlow(
+  {
+    name: 'attendanceNoticeFlow',
+    inputSchema: attendanceNoticeSchema,
+    outputSchema: z.string(),
+  },
+  async (input) => {
+    const { text } = await ai.generate({
+      model: 'googleai/gemini-pro',
+      prompt: `Buat notifikasi singkat untuk Telegram dalam format Markdown. Mulai dengan emoji yang sesuai.
+      
+      Data:
+      - Status: ${input.status}
+      - Nama: ${input.userName}
+      - Alasan: ${input.reason || 'Tidak ada'}
+      `,
+    });
+    
+    let message = text;
+    if (input.coordinates) {
+      message += `\n- *Lokasi:* https://www.google.com/maps/search/?api=1&query=${input.coordinates}`;
     }
-    
-    let message = `${statusEmoji} *${input.status}*\n`;
-    message += `- *Nama:* ${input.userName}\n`;
-    if (input.reason) message += `- *Alasan:* ${input.reason}\n`;
-    if (input.coordinates) message += `- *Lokasi:* https://www.google.com/maps/search/?api=1&query=${input.coordinates}\n`;
-    if (input.photoUrl) message += `\n[Lihat Foto Bukti](${input.photoUrl})`;
-    
-    return Promise.resolve(message);
+    if (input.photoUrl) {
+      message += `\n\n[Lihat Foto Bukti](${input.photoUrl})`;
+    }
+    return message;
+  }
+);
+
+export async function sendAttendanceNotice(input: z.infer<typeof attendanceNoticeSchema>): Promise<string> {
+  return attendanceNoticeFlow(input);
 }
