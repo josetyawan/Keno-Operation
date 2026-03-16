@@ -197,19 +197,11 @@ export default function ProduktivitasHarianPage() {
         }
         setIsSending(true);
 
-        const totalProductivity = summaryData.reduce((acc, item) => {
-            if (typeof item.productivity === 'number') {
-                return acc + item.productivity;
-            }
-            return acc;
-        }, 0);
-        const productiveUserCount = detailData.length;
-
         try {
             const result = await triggerB2cRekapAction({
                 unit: selectedUnit,
-                totalSales: totalProductivity,
-                totalVisit: productiveUserCount,
+                summaryData: summaryData,
+                detailData: detailData,
             });
 
             if (result.success) {
@@ -325,7 +317,7 @@ export default function ProduktivitasHarianPage() {
                                         ? detailData.map(user => (
                                             `\n${user.userName} ${user.telegramUsername}\n` +
                                             `TIKET | SERVICE | SEGMEN\n` +
-                                            user.tickets.map(t => `${t.ticket} | ${t.service} | ${t.segment}`).join('\n')
+                                            user.tickets.map(t => `${t.ticket || '-'} | ${t.service || '-'} | ${t.segment || '-'}`).join('\n')
                                         )).join('\n\n')
                                         : 'Tidak ada produktivitas tercatat untuk unit ini pada rentang tanggal yang dipilih.'
                                     }

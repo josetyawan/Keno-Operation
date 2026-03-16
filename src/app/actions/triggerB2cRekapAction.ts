@@ -3,26 +3,28 @@
 
 import { sendProductivityRekap } from '@/ai/flows/send-b2c-rekap';
 import { sendTelegramMessage } from '@/lib/telegram';
+import { format } from 'date-fns';
+import { id as idLocale } from 'date-fns/locale';
 
 interface RekapPayload {
   unit: string;
-  totalSales: number;
-  totalVisit: number;
+  summaryData: any[]; // Using any to avoid importing zod schemas
+  detailData: any[];
 }
 
 export async function triggerB2cRekapAction(
   payload: RekapPayload
 ): Promise<{ success: boolean; message: string }> {
   try {
-    if (payload.totalSales === 0 && payload.totalVisit === 0) {
+    if (payload.summaryData.length === 0) {
       return { success: true, message: 'Tidak ada data rekap untuk dikirim.' };
     }
 
     const messageText = await sendProductivityRekap({
-      date: new Date().toISOString(),
+      date: format(new Date(), 'dd MMMM yyyy', { locale: idLocale }),
       unit: payload.unit,
-      totalSales: payload.totalSales,
-      totalVisit: payload.totalVisit,
+      summaryData: payload.summaryData,
+      detailData: payload.detailData,
     });
 
     let targetChatId: string | undefined;

@@ -50,8 +50,8 @@ export async function GET(request: NextRequest) {
             const unitUsers = allUsers.filter(u => u.unit === unit && u.role === 'teknisi');
             if (unitUsers.length === 0) continue;
 
-            const productivityMap = new Map<string, number>();
             const userIdsInUnit = new Set(unitUsers.map(u => u.id));
+            const productivityMap = new Map<string, number>();
 
             allRiwayat.forEach(item => {
                 if (userIdsInUnit.has(item.userId)) {
@@ -69,10 +69,46 @@ export async function GET(request: NextRequest) {
                 }
             });
             
-            const totalProductivity = Array.from(productivityMap.values()).reduce((sum, count) => sum + count, 0);
-            const productiveUserCount = productivityMap.size;
+            const scheduleMap = new Map(allSchedules.map(s => [s.userId, s.shiftType]));
 
-            if (totalProductivity > 0 || productiveUserCount > 0) {
+            // Generate Summary Data
+            const summaryData = unitUsers.map(user => {
+                let productivity: number | 'L' = productivityMap.get(user.id) || 0;
+                const userSchedule = scheduleMap.get(user.id);
+                const isLibur = userSchedule === 'l' || userSchedule === 'libur-dijadwalkan' || userSchedule === 'cuti' || userSchedule === 'ijin';
+                if (isLibur) {
+                    productivity = 'L';
+                }
+                return {
+                    name: (user.displayName || user.email).toUpperCase(),
+                    productivity: productivity,
+                };
+            }).sort((a, b) => a.name.localeCompare(b.name));
+
+            // Generate Detail Data
+            const productiveUsers = unitUsers.filter(user => (productivityMap.get(user.id) || 0) > 0);
+
+            const detailData = productiveUsers.map(user => {
+                const userRiwayat = allRiwayat.filter(r => r.userId === user.id);
+                const userOtherWorks = allOtherWorks.filter(w => w.userId === user.id);
+                const userProvisioning = allProvisioning.filter(p => p.assignedTo_userId === user.id);
+            
+                const tickets = [
+                    ...userRiwayat.map(r => ({ id: r.id, ticket: r.noTiket || '', service: r.noService || '', segment: r.jenisOrder })),
+                    ...userOtherWorks.map(w => ({ id: w.id, ticket: w.namaPekerjaan || '', service: '', segment: w.jenisOrder })),
+                    ...userProvisioning.map(p => ({ id: p.id, ticket: p.workorder || '', service: p.serviceNo || '', segment: p.crmOrder }))
+                ];
+            
+                return {
+                    userName: user.displayName || user.email,
+                    telegramUsername: user.telegramUsername ? `@${user.telegramUsername.replace('@', '')}` : '',
+                    tickets: tickets
+                };
+            });
+
+            const totalProductivity = Array.from(productivityMap.values()).reduce((sum, count) => sum + count, 0);
+
+            if (totalProductivity > 0) {
                 let targetChatId: string | undefined;
                 if (unit === 'B2C' || unit === 'MTC') {
                     targetChatId = process.env.TELEGRAM_CHAT_ID_B2C_MTC;
@@ -89,9 +125,9 @@ export async function GET(request: NextRequest) {
                 
                 const messageText = await sendProductivityRekap({
                     unit,
-                    date: format(today, 'dd MMMM yyyy', { locale: idLocale }),
-                    totalSales: totalProductivity,
-                    totalVisit: productiveUserCount,
+                    date: format(new Date(), 'dd MMMM yyyy', { locale: idLocale }),
+                    summaryData: summaryData,
+                    detailData: detailData,
                 });
                 
                 await sendTelegramMessage({
