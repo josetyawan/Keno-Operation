@@ -26,7 +26,6 @@ export async function sendTelegramMessage({
       type: 'photo',
       media: url,
       caption: index === 0 ? (photoCaption || text) : '',
-      parse_mode: 'Markdown',
     }));
     
     // Split media into chunks of 10
@@ -58,7 +57,6 @@ export async function sendTelegramMessage({
         chat_id: chatId,
         photo: photoUrls[0],
         caption: photoCaption || text,
-        parse_mode: 'Markdown',
       };
       const response = await fetch(url, {
         method: 'POST',
@@ -78,7 +76,6 @@ export async function sendTelegramMessage({
     const body = {
       chat_id: chatId,
       text: text,
-      parse_mode: 'Markdown',
     };
     const response = await fetch(url, {
       method: 'POST',
