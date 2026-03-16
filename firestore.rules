@@ -112,8 +112,8 @@ service cloud.firestore {
     }
 
     match /riwayat-gangguan/{riwayatId} {
-      allow get: if isApproved(); // Let client-side logic handle fine-grained access
-      allow list: if isApproved() || request.query.limit == 1; // Support app lists and public API
+      allow get: if isApproved();
+      allow list: if isApproved();
       allow create: if isApproved() && isCreatingOwn('userId');
       allow update: if (isAdmin() || isKorlap()) || (isApproved() && isUpdatingOwn('userId'));
       allow delete: if isAdmin() || isKorlap();

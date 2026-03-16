@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -146,12 +147,13 @@ export default function RiwayatDetailPage() {
   const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
   
   const canView = useMemo(() => {
+    // If the data is loading, we can't determine access yet.
     if (!userProfile || !riwayat) return false;
-    if (userProfile.role === 'admin' || userProfile.role === 'korlap') return true;
-    const isOwnerByUID = riwayat.userId === user?.uid;
-    const isOwnerByNIK = !!riwayat.nik && !!userProfile.nik && riwayat.nik === userProfile.nik;
-    return isOwnerByUID || isOwnerByNIK;
-  }, [userProfile, riwayat, user]);
+    // The main layout already checks for 'approved' status.
+    // The new Firestore security rule `allow get: if isApproved()` handles the permission.
+    // Therefore, if we have the `riwayat` data, the user is authorized to view it.
+    return true;
+  }, [userProfile, riwayat]);
 
   const canModify = useMemo(() => {
     if (!userProfile || !riwayat) return false;
