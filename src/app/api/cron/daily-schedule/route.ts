@@ -150,7 +150,7 @@ export async function GET(request: NextRequest) {
 
         if (rekapMessages.length > 0 || photosToSend.length > 0) {
             if (!process.env.TELEGRAM_BOT_TOKEN_ABSENSI || !process.env.TELEGRAM_CHAT_ID_ABSENSI) {
-                throw new Error('Telegram Bot Token or Absensi Chat ID is not set in environment variables for daily rekap.');
+                throw new Error('Telegram Bot Token atau Absensi Chat ID tidak diatur di file .env untuk rekap harian.');
             }
 
             const messageText = await sendDailyRekapReport({
