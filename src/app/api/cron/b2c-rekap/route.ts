@@ -33,8 +33,8 @@ export async function GET(request: NextRequest) {
                 where('date', '<=', Timestamp.fromDate(endDate))
             ]),
             fetchCollection<RiwayatGangguan>(firestore, 'riwayat-gangguan', [
-                where('tanggalLapor', '>=', Timestamp.fromDate(startDate)),
-                where('tanggalLapor', '<=', Timestamp.fromDate(endDate))
+                where('tanggalClose', '>=', Timestamp.fromDate(startDate)),
+                where('tanggalClose', '<=', Timestamp.fromDate(endDate))
             ]),
             fetchCollection<OtherWork>(firestore, 'other-works', [
                 where('tanggalPengerjaan', '>=', Timestamp.fromDate(startDate)),
