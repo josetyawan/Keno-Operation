@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
         ]);
 
         for (const unit of units) {
-            const unitUsers = allUsers.filter(u => u.unit === unit && u.role === 'teknisi');
+            const unitUsers = allUsers.filter(u => u.unit?.trim().toUpperCase() === unit.toUpperCase() && u.role === 'teknisi');
             if (unitUsers.length === 0) continue;
 
             const productivityMap = new Map<string, number>();

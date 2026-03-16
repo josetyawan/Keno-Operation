@@ -78,8 +78,8 @@ export default function ProduktivitasHarianPage() {
                 ]);
             }
             
-            const [unitUsers, riwayatList, otherWorks, provisioningList] = await Promise.all([
-                fetchCollection<UserProfile>('users', [where('unit', '==', selectedUnit), where('registrationStatus', '==', 'approved')]),
+            const [allApprovedUsers, riwayatList, otherWorks, provisioningList] = await Promise.all([
+                fetchCollection<UserProfile>('users', [where('registrationStatus', '==', 'approved')]),
                 fetchCollection<RiwayatGangguan>('riwayat-gangguan', [
                     where('tanggalClose', '>=', Timestamp.fromDate(startDate)),
                     where('tanggalClose', '<=', Timestamp.fromDate(endDate))
@@ -93,6 +93,8 @@ export default function ProduktivitasHarianPage() {
                     where('completedAt', '<=', Timestamp.fromDate(endDate))
                 ])
             ]);
+            
+            const unitUsers = allApprovedUsers.filter(u => u.unit?.trim().toUpperCase() === selectedUnit.toUpperCase());
 
             const scheduleMap = new Map(schedules.map(s => [s.userId, s.shiftType]));
             const productivityMap = new Map<string, number>();
