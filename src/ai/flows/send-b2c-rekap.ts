@@ -1,4 +1,3 @@
-
 'use server';
 
 import { ai } from '@/ai/genkit';
@@ -52,9 +51,20 @@ const sendProductivityRekapFlow = ai.defineFlow(
     message += `*Detail Produktivitas*\n`;
     if (input.detailData.length > 0) {
       input.detailData.forEach(user => {
-        let userLine = `\n*${user.userName.trim()}*`;
-        if (user.telegramUsername && user.telegramUsername.trim()) {
-            userLine += ` ${user.telegramUsername.trim()}`;
+        let name = (user.userName || '').trim();
+        const username = (user.telegramUsername || '').trim();
+
+        // If name contains the username, remove it to avoid duplication.
+        if (username && name.includes(username)) {
+          name = name.replace(username, '').trim();
+        }
+        
+        // Also remove the '@' from the name if it exists, just in case
+        name = name.replace('@', '').trim();
+
+        let userLine = `\n*${name}*`;
+        if (username) {
+            userLine += ` ${username}`;
         }
         userLine += '\n';
         message += userLine;
