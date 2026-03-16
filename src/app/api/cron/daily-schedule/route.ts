@@ -149,7 +149,7 @@ export async function GET(request: NextRequest) {
         // --- END OF CORRECTION ---
 
         if (rekapMessages.length > 0 || photosToSend.length > 0) {
-            if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID_ABSENSI) {
+            if (!process.env.TELEGRAM_BOT_TOKEN_ABSENSI || !process.env.TELEGRAM_CHAT_ID_ABSENSI) {
                 throw new Error('Telegram Bot Token or Absensi Chat ID is not set in environment variables for daily rekap.');
             }
 
@@ -160,7 +160,7 @@ export async function GET(request: NextRequest) {
             });
 
             await sendTelegramMessage({
-                botToken: process.env.TELEGRAM_BOT_TOKEN,
+                botToken: process.env.TELEGRAM_BOT_TOKEN_ABSENSI,
                 chatId: process.env.TELEGRAM_CHAT_ID_ABSENSI,
                 text: messageText,
                 photoUrls: photosToSend,
