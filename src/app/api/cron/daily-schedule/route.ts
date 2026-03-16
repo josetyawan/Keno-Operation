@@ -5,7 +5,6 @@ import { getFirestore, collection, getDocs, query, where, Timestamp } from 'fire
 import { format, isWeekend } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import type { UserProfile, Schedule, Attendance, Holiday } from '@/lib/types';
-import { sendDailyRekapReport } from '@/ai/flows/send-daily-rekap-report';
 import { sendTelegramMessage } from '@/lib/telegram';
 
 export const dynamic = 'force-dynamic';
@@ -121,13 +120,32 @@ export async function GET(request: NextRequest) {
         const assuranceB2BUsers = allUserStatuses.filter(u => u.user.unit?.trim().toUpperCase() === 'B2B');
         const provisioningUsers = allUserStatuses.filter(u => u.user.unit?.trim().toUpperCase() === 'PROVISIONING');
 
-        const rekapMessages: string[] = [];
-        if (provisioningUsers.length > 0) rekapMessages.push(generateRekapString(provisioningUsers, 'PROVISIONING', formattedDateHeader));
-        if (assuranceB2CUsers.length > 0) rekapMessages.push(generateRekapString(assuranceB2CUsers, 'ASSURANCE - B2C', formattedDateHeader));
-        if (mtcUsers.length > 0) rekapMessages.push(generateRekapString(mtcUsers, 'ASSURANCE - MTC', formattedDateHeader));
-        if (assuranceB2BUsers.length > 0) rekapMessages.push(generateRekapString(assuranceB2BUsers, 'ASSURANCE - B2B', formattedDateHeader));
+        // --- NEW LOGIC: Send reports separately per unit ---
+        const rekapTasks = [
+            { title: 'PROVISIONING', users: provisioningUsers },
+            { title: 'ASSURANCE - B2C', users: assuranceB2CUsers },
+            { title: 'ASSURANCE - MTC', users: mtcUsers },
+            { title: 'ASSURANCE - B2B', users: assuranceB2BUsers },
+        ];
+
+        const botToken = process.env.TELEGRAM_BOT_TOKEN;
+        const chatId = process.env.TELEGRAM_CHAT_ID_ABSENSI;
+
+        if (!botToken || !chatId) {
+            throw new Error('TELEGRAM_BOT_TOKEN atau TELEGRAM_CHAT_ID_ABSENSI tidak diatur di file .env untuk rekap harian.');
+        }
+
+        let sentSomething = false;
+        for (const task of rekapTasks) {
+            if (task.users.length > 0) {
+                const messageText = generateRekapString(task.users, task.title, formattedDateHeader);
+                await sendTelegramMessage({ botToken, chatId, text: messageText });
+                sentSomething = true;
+                await new Promise(resolve => setTimeout(resolve, 500)); // Small delay between messages
+            }
+        }
         
-        // --- CORRECTED PHOTO LOGIC ---
+        // --- PHOTO LOGIC (sent as a separate summary) ---
         const onDutyUserIds = new Set<string>();
         schedules.forEach(s => {
             if (
@@ -146,27 +164,19 @@ export async function GET(request: NextRequest) {
             .filter((url): url is string => !!url);
             
         const isJagaDay = onDutyUserIds.size > 0;
-        // --- END OF CORRECTION ---
 
-        if (rekapMessages.length > 0 || photosToSend.length > 0) {
-            if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID_ABSENSI) {
-                throw new Error('TELEGRAM_BOT_TOKEN atau TELEGRAM_CHAT_ID_ABSENSI tidak diatur di file .env untuk rekap harian.');
-            }
-
-            const messageText = await sendDailyRekapReport({
-                rekapMessages: rekapMessages,
-                photos: photosToSend,
-                photoCaption: isJagaDay ? "Rekap Foto Absen Jaga" : undefined,
-            });
-
+        if (photosToSend.length > 0) {
             await sendTelegramMessage({
-                botToken: process.env.TELEGRAM_BOT_TOKEN,
-                chatId: process.env.TELEGRAM_CHAT_ID_ABSENSI,
-                text: messageText,
+                botToken,
+                chatId,
+                text: isJagaDay ? "Rekap Foto Absen Jaga" : "Rekap Foto Absen",
                 photoUrls: photosToSend,
                 photoCaption: isJagaDay ? "Rekap Foto Absen Jaga" : undefined,
             });
+            sentSomething = true;
+        }
 
+        if (sentSomething) {
             return NextResponse.json({ message: 'Daily rekap sent successfully.' });
         } else {
             return NextResponse.json({ message: 'No data to send for daily rekap.' });
