@@ -403,3 +403,13 @@ export type ProvisioningRecord = {
   completedAt?: any; // Timestamp
   isSynced?: boolean;
 };
+
+export type RekapDataItem = {
+    phone: string;
+    name: string;
+    segmen: string;
+    tanggal: string;
+    nominal: number;
+    userId: string;
+    notaId?: string;
+};

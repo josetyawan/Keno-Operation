@@ -32,32 +32,20 @@ import {
 } from "@/components/ui/alert-dialog"
 import { ArrowLeft, Calendar as CalendarIcon, Loader2, Bot, Wallet, CheckCircle } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
-import { collection, query, where, Timestamp, doc, updateDoc, addDoc } from 'firebase/firestore';
+import { collection, query, where, Timestamp, doc } from 'firebase/firestore';
 import { format, startOfDay, endOfDay, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
-import type { Nota, UserProfile, CashTransaction } from '@/lib/types';
+import type { Nota, UserProfile, RekapDataItem } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { sendTelegramReportFlow } from '@/ai/flows/send-telegram-report';
 import { sendLinkAjaPayment } from '@/ai/flows/send-linkaja-payment';
-import { sendPaidNotice } from '@/ai/flows/send-paid-notice';
-import { sendTelegramMessage } from '@/lib/telegram';
+import { markAsPaidAction, sendRekapAction } from './actions';
 import type { DateRange } from 'react-day-picker';
 import { useRouter } from 'next/navigation';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-
-type RekapDataItem = {
-    phone: string;
-    name: string;
-    segmen: string;
-    tanggal: string;
-    nominal: number;
-    userId: string;
-    notaId?: string;
-};
 
 const safeToDate = (timestamp: any): Date | null => {
     if (!timestamp) return null;
@@ -237,118 +225,71 @@ export default function RekapPage() {
             toast({ variant: 'destructive', title: 'Tidak ada data untuk ditandai lunas', description: 'Pilih setidaknya satu laporan untuk ditandai lunas.' });
             return;
         }
-        if (!user?.email) {
-            toast({ variant: 'destructive', title: 'Error', description: 'User tidak ditemukan.' });
-            return;
-        }
-        if (!users || !notas) {
-            toast({ variant: 'destructive', title: 'Data Pengguna Belum Siap', description: 'Tidak dapat memproses karena data pengguna atau nota belum termuat. Coba lagi sesaat.' });
+        if (!user?.email || !users || !notas) {
+            toast({ variant: 'destructive', title: 'Data belum siap', description: 'Coba lagi sesaat.' });
             return;
         }
         setIsMarkingAsPaid(true);
-    
-        try {
-            const paymentDate = new Date();
-    
-            for (const notaId of selectedNotaIds) {
-                const notaDocRef = doc(firestore, 'notas', notaId);
-                await updateDoc(notaDocRef, {
-                    status: 'paid',
-                    tanggalPembayaran: paymentDate
+
+        const userMap = new Map(users.map(u => [u.id, u]));
+        const selectedNotas = notas.filter(n => selectedNotaIds.includes(n.id));
+        const groupedByUser = selectedNotas.reduce((acc, nota) => {
+            const userId = nota.userId;
+            if (!acc[userId]) acc[userId] = [];
+            acc[userId].push(nota);
+            return acc;
+        }, {} as Record<string, Nota[]>);
+        
+        const paidNoticeData: RekapDataItem[] = [];
+        const sortedUserIds = Object.keys(groupedByUser).sort((a, b) => (userMap.get(a)?.displayName || '').localeCompare(userMap.get(b)?.displayName || ''));
+
+        for (const userId of sortedUserIds) {
+            const userNotas = groupedByUser[userId].sort((a, b) => (safeToDate(a.tanggal)?.getTime() ?? 0) - (safeToDate(b.tanggal)?.getTime() ?? 0));
+            const user = userMap.get(userId);
+            let userSubtotal = 0;
+            const userName = (user?.displayName || 'Unknown').replace(/\s/g, '');
+            const paymentNumber = user?.paymentInfo || (user as any)?.phone || 'No-Pembayaran';
+
+            userNotas.forEach(nota => {
+                paidNoticeData.push({
+                    phone: paymentNumber, name: userName, segmen: nota.segmen,
+                    tanggal: nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd/MM/yy') : '??/??/??',
+                    nominal: nota.nominal, userId: userId,
+                });
+                userSubtotal += nota.nominal;
+            });
+            if (userNotas.length > 0) {
+                 paidNoticeData.push({
+                    phone: paymentNumber, name: `TOTAL ${userName}`, segmen: '',
+                    tanggal: '', nominal: userSubtotal, userId: userId,
                 });
             }
+        }
+    
+        const result = await markAsPaidAction({
+            selectedNotaIds,
+            selectedTotal,
+            paymentType,
+            paidData: paidNoticeData,
+            userEmail: user.email,
+        });
 
-            // If payment is kasbon, create a transaction in cashbook
-            if (paymentType === 'kasbon') {
-                const cashTransaction: Omit<CashTransaction, 'id'> = {
-                    type: 'out',
-                    amount: selectedTotal,
-                    date: Timestamp.fromDate(paymentDate),
-                    description: `Pembayaran ${selectedNotaIds.length} nota via kasbon`,
-                    notaIds: selectedNotaIds,
-                    createdBy: user.email,
-                    createdAt: Timestamp.now()
-                };
-                await addDoc(collection(firestore, 'cashbook'), cashTransaction);
-            }
-    
-            const selectedNotas = notas.filter(n => selectedNotaIds.includes(n.id));
-            const userMap = new Map(users.map(u => [u.id, u]));
-    
-            const groupedByUser = selectedNotas.reduce((acc, nota) => {
-                const userId = nota.userId;
-                if (!acc[userId]) acc[userId] = [];
-                acc[userId].push(nota);
-                return acc;
-            }, {} as Record<string, Nota[]>);
-            
-            const paidNoticeData: RekapDataItem[] = [];
-            const sortedUserIds = Object.keys(groupedByUser).sort((a, b) => (userMap.get(a)?.displayName || '').localeCompare(userMap.get(b)?.displayName || ''));
-    
-            for (const userId of sortedUserIds) {
-                const userNotas = groupedByUser[userId].sort((a, b) => (safeToDate(a.tanggal)?.getTime() ?? 0) - (safeToDate(b.tanggal)?.getTime() ?? 0));
-                const user = userMap.get(userId);
-                let userSubtotal = 0;
-                const userName = (user?.displayName || 'Unknown').replace(/\s/g, '');
-                const paymentNumber = user?.paymentInfo || (user as any)?.phone || 'No-Pembayaran';
-    
-                userNotas.forEach(nota => {
-                    paidNoticeData.push({
-                        phone: paymentNumber,
-                        name: userName,
-                        segmen: nota.segmen,
-                        tanggal: nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd/MM/yy') : '??/??/??',
-                        nominal: nota.nominal,
-                        userId: userId,
-                    });
-                    userSubtotal += nota.nominal;
-                });
-                if (userNotas.length > 0) {
-                     paidNoticeData.push({
-                        phone: paymentNumber,
-                        name: `TOTAL ${userName}`,
-                        segmen: '',
-                        tanggal: '',
-                        nominal: userSubtotal,
-                        userId: userId,
-                    });
-                }
-            }
-    
-            const paidNoticeText = await sendPaidNotice({
-                paidData: paidNoticeData,
-                grandTotal: selectedTotal,
-                paidDate: format(paymentDate, 'dd MMMM yyyy', { locale: idLocale }),
-            });
-
-            if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID_FINANCE) {
-                throw new Error('Konfigurasi Telegram untuk Finance tidak ditemukan.');
-            }
-
-            await sendTelegramMessage({
-                botToken: process.env.TELEGRAM_BOT_TOKEN,
-                chatId: process.env.TELEGRAM_CHAT_ID_FINANCE,
-                text: paidNoticeText,
-            });
-    
+        if (result.success) {
             toast({ 
                 title: 'Laporan Telah Ditandai Lunas', 
-                description: `${selectedNotaIds.length} laporan telah diperbarui menjadi "paid" dan notifikasi telah dikirim.`,
+                description: result.message,
                 duration: 5000,
             });
-            
             setIsManualPayDialogOpen(false);
-    
-        } catch (error: any) {
-            console.error('Manual payment marking error:', error);
-            toast({ variant: 'destructive', title: 'Gagal Memperbarui Status', description: error.message });
-        } finally {
-            setIsMarkingAsPaid(false);
+        } else {
+             toast({ variant: 'destructive', title: 'Gagal Memperbarui Status', description: result.message });
         }
+        setIsMarkingAsPaid(false);
     };
 
 
     const handleLinkAjaPayment = async () => {
+        // This function can remain on the client for now as it doesn't access process.env directly.
         if (selectedNotaIds.length === 0 || selectedTotal <= 0) {
             toast({ variant: 'destructive', title: 'Tidak ada data pembayaran', description: 'Pilih laporan dengan total lebih dari nol.' });
             return;
@@ -367,80 +308,15 @@ export default function RekapPage() {
                 invoiceId: uniqueInvoiceId,
             });
 
-            if (result.success) {
-                const paymentDate = new Date();
-
+            if (result.success && result.redirectUrl) {
                 toast({ 
                     title: 'Permintaan Pembayaran Diproses', 
-                    description: result.redirectUrl ? 'Anda akan diarahkan untuk konfirmasi.' : (result.message || 'Berhasil. Memperbarui status laporan...'),
+                    description: 'Anda akan diarahkan untuk konfirmasi.',
                     duration: 5000,
                 });
-                
-                for (const notaId of selectedNotaIds) {
-                    const notaDocRef = doc(firestore, 'notas', notaId);
-                    updateDoc(notaDocRef, {
-                        status: 'paid',
-                        tanggalPembayaran: paymentDate
-                    });
-                }
-
-                const selectedNotas = notas.filter(n => selectedNotaIds.includes(n.id));
-                const userMap = new Map(users.map(u => [u.id, u]));
-
-                const groupedByUser = selectedNotas.reduce((acc, nota) => {
-                    const userId = nota.userId;
-                    if (!acc[userId]) acc[userId] = [];
-                    acc[userId].push(nota);
-                    return acc;
-                }, {} as Record<string, Nota[]>);
-                
-                const paidNoticeData: RekapDataItem[] = [];
-                const sortedUserIds = Object.keys(groupedByUser).sort((a,b) => (userMap.get(a)?.displayName || '').localeCompare(userMap.get(b)?.displayName || ''));
-        
-                for (const userId of sortedUserIds) {
-                    const userNotas = groupedByUser[userId].sort((a,b) => (safeToDate(a.tanggal)?.getTime() ?? 0) - (safeToDate(b.tanggal)?.getTime() ?? 0));
-                    const user = userMap.get(userId);
-                    let userSubtotal = 0;
-                    const userName = (user?.displayName || 'Unknown').replace(/\s/g, '');
-                    const paymentNumber = user?.paymentInfo || (user as any)?.phone || 'No-Pembayaran';
-        
-                    userNotas.forEach(nota => {
-                        paidNoticeData.push({
-                            phone: paymentNumber, name: userName, segmen: nota.segmen,
-                            tanggal: nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd/MM/yy') : '??/??/??',
-                            nominal: nota.nominal, userId: userId
-                        });
-                        userSubtotal += nota.nominal;
-                    });
-                    if (userNotas.length > 0) {
-                         paidNoticeData.push({
-                            phone: paymentNumber, name: `TOTAL ${userName}`, segmen: '',
-                            tanggal: '', nominal: userSubtotal, userId: userId
-                        });
-                    }
-                }
-                
-                const paidNoticeText = await sendPaidNotice({
-                    paidData: paidNoticeData,
-                    grandTotal: selectedTotal,
-                    paidDate: format(paymentDate, 'dd MMMM yyyy', { locale: idLocale }),
-                });
-
-                if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID_FINANCE) {
-                    throw new Error('Konfigurasi Telegram untuk Finance tidak ditemukan.');
-                }
-    
-                sendTelegramMessage({
-                    botToken: process.env.TELEGRAM_BOT_TOKEN,
-                    chatId: process.env.TELEGRAM_CHAT_ID_FINANCE,
-                    text: paidNoticeText,
-                }).catch(err => {
-                    console.error("Failed to send paid notification:", err);
-                });
-                
-                if (result.redirectUrl) {
-                    window.open(result.redirectUrl, '_blank');
-                }
+                window.open(result.redirectUrl, '_blank');
+                // The status update logic for 'paid' on the client side after redirection is complex
+                // and better handled by a webhook or manual confirmation. For now, we just redirect.
             } else {
                 throw new Error(result.message || 'Pembayaran LinkAja/Finpay gagal karena alasan yang tidak diketahui.');
             }
@@ -462,66 +338,54 @@ export default function RekapPage() {
             return;
         }
         setIsSending(true);
-        try {
-            const selectedNotas = notas.filter(n => selectedNotaIds.includes(n.id));
-            const userMap = new Map(users.map(u => [u.id, u]));
-    
-            const groupedByUser = selectedNotas.reduce((acc, nota) => {
-                const userId = nota.userId;
-                if (!acc[userId]) acc[userId] = [];
-                acc[userId].push(nota);
-                return acc;
-            }, {} as Record<string, Nota[]>);
-            
-            const telegramRekapData: RekapDataItem[] = [];
-            const sortedUserIds = Object.keys(groupedByUser).sort((a,b) => (userMap.get(a)?.displayName || '').localeCompare(userMap.get(b)?.displayName || ''));
-    
-            for (const userId of sortedUserIds) {
-                const userNotas = groupedByUser[userId].sort((a,b) => (safeToDate(a.tanggal)?.getTime() ?? 0) - (safeToDate(b.tanggal)?.getTime() ?? 0));
-                const user = userMap.get(userId);
-                let userSubtotal = 0;
-                const userName = (user?.displayName || 'Unknown').replace(/\s/g, '');
-                const paymentNumber = user?.paymentInfo || (user as any)?.phone || 'No-Pembayaran';
-    
-                userNotas.forEach(nota => {
-                    telegramRekapData.push({
-                        phone: paymentNumber, name: userName, segmen: nota.segmen,
-                        tanggal: nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd/MM/yy') : '??/??/??',
-                        nominal: nota.nominal, userId: userId
-                    });
-                    userSubtotal += nota.nominal;
+
+        const userMap = new Map(users.map(u => [u.id, u]));
+        const selectedNotas = notas.filter(n => selectedNotaIds.includes(n.id));
+        const groupedByUser = selectedNotas.reduce((acc, nota) => {
+            const userId = nota.userId;
+            if (!acc[userId]) acc[userId] = [];
+            acc[userId].push(nota);
+            return acc;
+        }, {} as Record<string, Nota[]>);
+        
+        const telegramRekapData: RekapDataItem[] = [];
+        const sortedUserIds = Object.keys(groupedByUser).sort((a,b) => (userMap.get(a)?.displayName || '').localeCompare(userMap.get(b)?.displayName || ''));
+
+        for (const userId of sortedUserIds) {
+            const userNotas = groupedByUser[userId].sort((a,b) => (safeToDate(a.tanggal)?.getTime() ?? 0) - (safeToDate(b.tanggal)?.getTime() ?? 0));
+            const user = userMap.get(userId);
+            let userSubtotal = 0;
+            const userName = (user?.displayName || 'Unknown').replace(/\s/g, '');
+            const paymentNumber = user?.paymentInfo || (user as any)?.phone || 'No-Pembayaran';
+
+            userNotas.forEach(nota => {
+                telegramRekapData.push({
+                    phone: paymentNumber, name: userName, segmen: nota.segmen,
+                    tanggal: nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd/MM/yy') : '??/??/??',
+                    nominal: nota.nominal, userId: userId
                 });
-                if (userNotas.length > 0) {
-                     telegramRekapData.push({
-                        phone: paymentNumber, name: `TOTAL ${userName}`, segmen: '',
-                        tanggal: '', nominal: userSubtotal, userId: userId
-                    });
-                }
-            }
-
-            const reportText = await sendTelegramReportFlow({
-                rekapData: telegramRekapData,
-                grandTotal: selectedTotal,
-                rekapDate: rekapDateString
+                userSubtotal += nota.nominal;
             });
-             if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID_FINANCE) {
-                throw new Error('Konfigurasi Telegram untuk Finance tidak ditemukan.');
+            if (userNotas.length > 0) {
+                 telegramRekapData.push({
+                    phone: paymentNumber, name: `TOTAL ${userName}`, segmen: '',
+                    tanggal: '', nominal: userSubtotal, userId: userId
+                });
             }
-
-            await sendTelegramMessage({
-                botToken: process.env.TELEGRAM_BOT_TOKEN,
-                chatId: process.env.TELEGRAM_CHAT_ID_FINANCE,
-                text: reportText,
-            });
-
-            toast({ title: 'Terkirim!', description: 'Rekap item terpilih berhasil dikirim ke Telegram.' });
-            
-        } catch (error: any) {
-            console.error('Telegram send error:', error);
-            toast({ variant: 'destructive', title: 'Gagal Mengirim', description: error.message });
-        } finally {
-            setIsSending(false);
         }
+
+        const result = await sendRekapAction({ 
+            rekapData: telegramRekapData,
+            grandTotal: selectedTotal,
+            rekapDate: rekapDateString
+         });
+
+        if (result.success) {
+            toast({ title: 'Terkirim!', description: 'Rekap item terpilih berhasil dikirim ke Telegram.' });
+        } else {
+             toast({ variant: 'destructive', title: 'Gagal Mengirim', description: result.message });
+        }
+        setIsSending(false);
     };
     
     const isLoading = isUserLoading || isProfileLoading || isNotasLoading || isUsersLoading;
