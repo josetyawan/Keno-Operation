@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
-import { collection, getDocs, query, where, Timestamp } from 'firebase/firestore';
+import { collection, query, where, Timestamp } from 'firebase/firestore';
 import { format, isSameDay } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import type { UserProfile, Schedule, RiwayatGangguan, OtherWork, ProvisioningRecord } from '@/lib/types';
@@ -19,6 +19,8 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import type { DateRange } from 'react-day-picker';
 import { triggerB2cRekapAction } from '@/app/actions/triggerB2cRekapAction';
+import { getDocs } from 'firebase/firestore';
+
 
 const units = ['B2C', 'B2B', 'MTC', 'Provisioning'];
 
@@ -80,8 +82,8 @@ export default function ProduktivitasHarianPage() {
             const [unitUsers, riwayatList, otherWorks, provisioningList] = await Promise.all([
                 fetchCollection<UserProfile>('users', [where('unit', '==', selectedUnit), where('registrationStatus', '==', 'approved')]),
                 fetchCollection<RiwayatGangguan>('riwayat-gangguan', [
-                    where('tanggalLapor', '>=', Timestamp.fromDate(startDate)),
-                    where('tanggalLapor', '<=', Timestamp.fromDate(endDate))
+                    where('tanggalClose', '>=', Timestamp.fromDate(startDate)),
+                    where('tanggalClose', '<=', Timestamp.fromDate(endDate))
                 ]),
                 fetchCollection<OtherWork>('other-works', [
                     where('tanggalPengerjaan', '>=', Timestamp.fromDate(startDate)),
