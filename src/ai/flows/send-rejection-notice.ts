@@ -27,18 +27,13 @@ const rejectionNoticeTextFlow = ai.defineFlow(
     outputSchema: z.string(),
   },
   async (input) => {
-    const { text } = await ai.generate({
-      model: 'googleai/gemini-pro',
-      prompt: `Buat notifikasi penolakan laporan nota untuk Telegram dalam format HTML (hanya gunakan tag <b>, <i>, dan <code>).
-      
-      - <b>PIC:</b> ${escapeHtml(input.picName)}
-      - <b>Tanggal Nota:</b> ${input.notaDate}
-      - <b>Segmen:</b> ${escapeHtml(input.segment)}
-      - <b>Alasan Penolakan:</b> <i>${escapeHtml(input.reason)}</i>
-      
-      Gunakan emoji ❌ dan instruksikan pengguna untuk memeriksa aplikasi dan mengirim ulang.`,
-    });
-    return text;
+    let message = `❌ <b>Laporan Nota Ditolak</b> ❌\n\n`;
+    message += `Laporan nota dari <b>${escapeHtml(input.picName)}</b> telah ditolak.\n\n`;
+    message += `- <b>Tanggal Nota:</b> ${input.notaDate}\n`;
+    message += `- <b>Segmen:</b> ${escapeHtml(input.segment)}\n`;
+    message += `- <b>Alasan Penolakan:</b> <i>${escapeHtml(input.reason)}</i>\n\n`;
+    message += `Mohon untuk memeriksa kembali laporan di aplikasi dan mengirim ulang jika diperlukan.`;
+    return message;
   }
 );
 

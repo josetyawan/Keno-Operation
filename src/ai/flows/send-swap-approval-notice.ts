@@ -26,17 +26,12 @@ const swapApprovalNoticeTextFlow = ai.defineFlow(
     outputSchema: z.string(),
   },
   async ({ requesterName, replacementName, swapDate }) => {
-    const { text } = await ai.generate({
-      model: 'googleai/gemini-pro',
-      prompt: `Buat notifikasi persetujuan tukar jadwal jaga untuk Telegram dalam format HTML (hanya gunakan tag <b> dan <i>).
-      
-      - <b>Tanggal:</b> ${swapDate}
-      - <b>Teknisi Awal:</b> ${escapeHtml(requesterName)}
-      - <b>Teknisi Pengganti:</b> ${escapeHtml(replacementName)}
-      
-      Gunakan emoji ✅🤝 dan ucapkan terima kasih kepada teknisi pengganti.`,
-    });
-    return text;
+    let message = `✅🤝 <b>Persetujuan Tukar Jaga</b> 🤝✅\n\n`;
+    message += `Permintaan tukar jaga untuk tanggal <b>${swapDate}</b> telah disetujui.\n\n`;
+    message += `- Teknisi Awal: ${escapeHtml(requesterName)}\n`;
+    message += `- Teknisi Pengganti: ${escapeHtml(replacementName)}\n\n`;
+    message += `Terima kasih kepada <b>${escapeHtml(replacementName)}</b> atas kesediaannya untuk menggantikan.`;
+    return message;
   }
 );
 

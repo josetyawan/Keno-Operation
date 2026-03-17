@@ -27,17 +27,16 @@ const gamasReportNoticeTextFlow = ai.defineFlow(
     outputSchema: z.string(),
   },
   async ({ userName, noTiket, status, rejectionReason }) => {
-    const { text } = await ai.generate({
-      model: 'googleai/gemini-pro',
-      prompt: `Buat notifikasi status Laporan Gamas untuk Telegram dalam format HTML (hanya gunakan tag <b>, <i>, dan <code>).
-      - No. Tiket: <code>${escapeHtml(noTiket)}</code>
-      - Teknisi: ${escapeHtml(userName)}
-      - Status Baru: <b>${escapeHtml(status)}</b>
-      ${rejectionReason ? `- Alasan Penolakan: <i>${escapeHtml(rejectionReason)}</i>` : ''}
-      
-      Gunakan emoji ✅ untuk 'Disetujui' dan ❌ untuk 'Ditolak'.`,
-    });
-    return text;
+    const isApproved = status.toLowerCase() === 'disetujui';
+    const emoji = isApproved ? '✅' : '❌';
+    let message = `${emoji} <b>Update Status Laporan Gamas</b> ${emoji}\n\n`;
+    message += `- No. Tiket: <code>${escapeHtml(noTiket)}</code>\n`;
+    message += `- Teknisi: ${escapeHtml(userName)}\n`;
+    message += `- Status Baru: <b>${escapeHtml(status)}</b>\n`;
+    if (rejectionReason) {
+      message += `- Alasan Penolakan: <i>${escapeHtml(rejectionReason)}</i>\n`;
+    }
+    return message;
   }
 );
 

@@ -27,19 +27,12 @@ const gamasDesignatorNoticeTextFlow = ai.defineFlow(
     outputSchema: z.string(),
   },
   async ({ userName, noTiket, designator, rejectionReason }) => {
-    const { text } = await ai.generate({
-      model: 'googleai/gemini-pro',
-      prompt: `Buat notifikasi Telegram dalam format HTML (hanya gunakan tag <b>, <i>, dan <code>) untuk memberitahu teknisi bahwa salah satu eviden gamas mereka ditolak.
-      
-      <b>Data Laporan:</b>
-      - Teknisi: ${escapeHtml(userName)}
-      - No. Tiket: <code>${escapeHtml(noTiket)}</code>
-      - Designator Ditolak: <code>${escapeHtml(designator)}</code>
-      - Alasan Penolakan: <b>${escapeHtml(rejectionReason)}</b>
-      
-      Gunakan emoji ⚠️ dan minta teknisi untuk segera memperbaikinya.`,
-    });
-    return text;
+    let message = `⚠️ <b>Eviden Gamas Ditolak</b> ⚠️\n\n`;
+    message += `Mohon perhatian untuk Teknisi <b>${escapeHtml(userName)}</b>.\n\n`;
+    message += `Eviden untuk tiket <code>${escapeHtml(noTiket)}</code> dengan designator <code>${escapeHtml(designator)}</code> telah ditolak.\n\n`;
+    message += `<b>Alasan Penolakan:</b>\n<i>${escapeHtml(rejectionReason)}</i>\n\n`;
+    message += `Harap segera periksa dan perbaiki eviden di aplikasi.`;
+    return message;
   }
 );
 

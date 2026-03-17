@@ -29,22 +29,21 @@ const attendanceNoticeTextFlow = ai.defineFlow(
     outputSchema: z.string(),
   },
   async (input) => {
-    // 1. Generate the base message
-    const { text } = await ai.generate({
-      model: 'googleai/gemini-pro',
-      prompt: `Buat notifikasi singkat untuk Telegram dalam format HTML sederhana (hanya gunakan tag <b> dan <i>). Mulai dengan emoji yang sesuai.
-      
-      <b>Data:</b>
-      - <b>Status:</b> ${escapeHtml(input.status)}
-      - <b>Nama:</b> ${escapeHtml(input.userName)}
-      - <b>Alasan:</b> ${escapeHtml(input.reason || 'Tidak ada')}
-      `,
-    });
-    
-    // 2. Compose the final message with optional links
-    let message = text;
+    let emoji = 'ℹ️';
+    if (input.status.toLowerCase().includes('hadir')) emoji = '✅';
+    if (input.status.toLowerCase().includes('terlambat')) emoji = '⏰';
+    if (input.status.toLowerCase().includes('izin')) emoji = '📝';
+    if (input.status.toLowerCase().includes('cuti')) emoji = '🌴';
+    if (input.status.toLowerCase().includes('request')) emoji = '🔄';
+
+    let message = `${emoji} <b>Notifikasi Absensi</b>\n\n`;
+    message += `<b>Nama:</b> ${escapeHtml(input.userName)}\n`;
+    message += `<b>Status:</b> ${escapeHtml(input.status)}\n`;
+    if (input.reason) {
+        message += `<b>Alasan:</b> <i>${escapeHtml(input.reason)}</i>\n`;
+    }
     if (input.coordinates && input.coordinates !== 'N/A') {
-      message += `\n- <b>Lokasi:</b> <a href="https://www.google.com/maps/search/?api=1&query=${input.coordinates}">Lihat di Peta</a>`;
+      message += `\n<a href="https://www.google.com/maps/search/?api=1&query=${input.coordinates}">Lihat Lokasi di Peta</a>`;
     }
 
     return message;
