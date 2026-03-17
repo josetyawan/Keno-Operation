@@ -29,25 +29,29 @@ export async function sendTelegramMessage({
       body: JSON.stringify(body),
     });
 
-    // If the request was not successful, read the body and throw an error.
     if (!response.ok) {
         const errorBody = await response.text().catch(() => 'Could not read error body');
         console.error('Telegram API HTTP error:', response.status, response.statusText, errorBody);
-        throw new Error(`Telegram API Error: Server responded with status ${response.status}.`);
+        // The error body from Telegram is often helpful JSON, so include it.
+        throw new Error(`Telegram API Error: ${errorBody}`);
     }
 
-    // If the request was successful (2xx), we can try to parse the JSON
-    // but we won't throw an error if it fails, as the message was likely sent.
-    // We can just log it for debugging.
-    try {
-        const result = await response.json();
-        if (!result.ok) {
-            // Log business logic errors but don't throw, to avoid the UI error.
-             console.warn('Telegram API business logic warning:', result);
+    // A 200 OK response from Telegram with an empty body is a success.
+    // If there is a body, we can try to parse it for more details, but success is assumed unless explicitly told otherwise.
+    const responseText = await response.text();
+    if (responseText) {
+        try {
+            const result = JSON.parse(responseText);
+            // If Telegram explicitly says it's not OK in the JSON body, we should treat it as an error.
+            if (!result.ok) {
+                console.error('Telegram API business logic error:', result);
+                throw new Error(`Telegram API Error: ${result.description || 'Unknown error'}`);
+            }
+        } catch (e) {
+            // This can happen if Telegram sends a 200 OK with a non-JSON body.
+            // Since the HTTP status was success, we can log it but not fail the operation.
+            console.warn('Could not parse successful Telegram API response, but assuming message was sent.', responseText);
         }
-    } catch (e) {
-        // This is not a critical error if the HTTP status was OK.
-        console.warn('Could not parse Telegram API response, but request was likely successful.', e);
     }
   };
 
@@ -56,9 +60,8 @@ export async function sendTelegramMessage({
     const media = photoUrls.map((url, index) => ({
       type: 'photo',
       media: url,
-      // Note: parse_mode is not reliably supported for captions in media groups across all clients.
-      // It's safer to send plain text or pre-formatted text.
       caption: index === 0 ? (photoCaption || text) : '',
+      parse_mode: 'Markdown',
     }));
     
     for (let i = 0; i < media.length; i += 10) {
@@ -96,7 +99,7 @@ export async function sendTelegramMessage({
                 break;
             }
 
-            let splitPos = remainingText.lastIndexOf('\n', TELEGRAM_MAX_MESSAGE_LENGTH);
+            let splitPos = remainingText.lastIndexOf('\\n', TELEGRAM_MAX_MESSAGE_LENGTH);
             if (splitPos === -1 || splitPos === 0) {
                 splitPos = TELEGRAM_MAX_MESSAGE_LENGTH;
             }
