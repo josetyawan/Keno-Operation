@@ -51,8 +51,8 @@ export async function sendGamasReportNotice(
     throw new Error(`Gagal membuat teks notifikasi AI: ${e.message}`);
   }
   
-  if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID_GAMAS) {
-      const errorMessage = 'Konfigurasi Telegram untuk Gamas (TELEGRAM_BOT_TOKEN atau TELEGRAM_CHAT_ID_GAMAS) tidak diatur.';
+  if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID_ABSENSI) {
+      const errorMessage = 'Konfigurasi Telegram untuk Absensi (TELEGRAM_BOT_TOKEN atau TELEGRAM_CHAT_ID_ABSENSI) tidak diatur.';
       console.error(errorMessage);
       throw new Error(errorMessage);
   }
@@ -60,7 +60,7 @@ export async function sendGamasReportNotice(
   try {
     await sendTelegramMessage({
         botToken: process.env.TELEGRAM_BOT_TOKEN,
-        chatId: process.env.TELEGRAM_CHAT_ID_GAMAS,
+        chatId: process.env.TELEGRAM_CHAT_ID_ABSENSI,
         text: messageText,
     });
   } catch (e: any) {
