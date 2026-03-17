@@ -1,6 +1,5 @@
 'use server';
 
-import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
 const rekapDataItemSchema = z.object({
@@ -19,13 +18,9 @@ const sendTelegramReportInputSchema = z.object({
   rekapDate: z.string(),
 });
 
-export const sendTelegramReportFlow = ai.defineFlow(
-  {
-    name: 'sendTelegramReportFlow',
-    inputSchema: sendTelegramReportInputSchema,
-    outputSchema: z.string(),
-  },
-  async ({ rekapData, grandTotal, rekapDate }) => {
+export async function sendTelegramReport(
+  { rekapData, grandTotal, rekapDate }: z.infer<typeof sendTelegramReportInputSchema>
+): Promise<string> {
     const rekapString = rekapData
         .map(item => {
              // Handle the "TOTAL" rows which have an empty segmen
@@ -49,5 +44,4 @@ GRAND TOTAL: Rp ${grandTotalFormatted}
     `;
     
     return `<pre>${message.trim()}</pre>`;
-  }
-);
+}

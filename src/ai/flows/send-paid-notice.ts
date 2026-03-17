@@ -1,6 +1,5 @@
 'use server';
 
-import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
 const rekapDataItemSchema = z.object({
@@ -19,13 +18,8 @@ const sendPaidNoticeInputSchema = z.object({
   paidDate: z.string(),
 });
 
-const sendPaidNoticeFlow = ai.defineFlow(
-  {
-    name: 'sendPaidNoticeFlow',
-    inputSchema: sendPaidNoticeInputSchema,
-    outputSchema: z.string(),
-  },
-  async ({ paidData, grandTotal, paidDate }) => {
+export async function sendPaidNotice(input: z.infer<typeof sendPaidNoticeInputSchema>): Promise<string> {
+    const { paidData, grandTotal, paidDate } = input;
     const rekapString = paidData
       .map(item => {
           if (item.segmen === '') { // Handle total rows
@@ -52,9 +46,4 @@ Terima kasih atas kerja keras rekan-rekan semua. Tetap jaga kesehatan dan kesela
     `;
 
     return `<pre>${message.trim()}</pre>`;
-  }
-);
-
-export async function sendPaidNotice(input: z.infer<typeof sendPaidNoticeInputSchema>): Promise<string> {
-  return sendPaidNoticeFlow(input);
 }

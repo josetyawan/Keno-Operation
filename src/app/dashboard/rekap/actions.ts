@@ -1,6 +1,6 @@
 'use server';
 
-import { sendTelegramReportFlow } from '@/ai/flows/send-telegram-report';
+import { sendTelegramReport } from '@/ai/flows/send-telegram-report';
 import { sendPaidNotice } from '@/ai/flows/send-paid-notice';
 import { sendTelegramMessage } from '@/lib/telegram';
 import { doc, updateDoc, Timestamp, addDoc, collection } from 'firebase/firestore';
@@ -17,7 +17,7 @@ interface SendRekapPayload {
 
 export async function sendRekapAction(payload: SendRekapPayload): Promise<{ success: boolean; message?: string }> {
     try {
-        const reportText = await sendTelegramReportFlow(payload);
+        const reportText = await sendTelegramReport(payload);
 
         if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID_FINANCE) {
             throw new Error('Konfigurasi Telegram untuk Finance tidak ditemukan.');

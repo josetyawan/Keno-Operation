@@ -1,6 +1,5 @@
 'use server';
 
-import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
 const summaryDataItemSchema = z.object({
@@ -26,14 +25,10 @@ const sendProductivityRekapInputSchema = z.object({
   detailData: z.array(detailDataItemSchema),
 });
 
-const sendProductivityRekapFlow = ai.defineFlow(
-  {
-    name: 'sendProductivityRekapFlow',
-    inputSchema: sendProductivityRekapInputSchema,
-    outputSchema: z.string(),
-  },
-  async (input) => {
-    // Manually format the message to match the desired output, bypassing the AI for now.
+export async function sendProductivityRekap(
+  input: z.infer<typeof sendProductivityRekapInputSchema>
+): Promise<string> {
+    // Manually format the message to match the desired output.
     let message = `Rekap Produktivitas Teknisi\n`;
     message += `Unit: ${input.unit}\n`;
     message += `Tanggal: ${input.date}\n`;
@@ -85,11 +80,4 @@ const sendProductivityRekapFlow = ai.defineFlow(
     }
 
     return `<pre>${message.trim()}</pre>`;
-  }
-);
-
-export async function sendProductivityRekap(
-  input: z.infer<typeof sendProductivityRekapInputSchema>
-): Promise<string> {
-  return sendProductivityRekapFlow(input);
 }
