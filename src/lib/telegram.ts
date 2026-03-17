@@ -22,6 +22,36 @@ export async function sendTelegramMessage({
     return;
   }
 
+  const sendRequest = async (url: string, body: object) => {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    // Check for non-2xx HTTP status codes
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Telegram API HTTP error:', response.status, response.statusText, errorText);
+        throw new Error(`Telegram API Error: Server responded with status ${response.status}.`);
+    }
+
+    try {
+        const result = await response.json();
+        if (!result.ok) {
+            console.error('Telegram API business logic error:', result);
+            throw new Error(`Telegram API Error: ${result.description}`);
+        }
+        return result;
+    } catch (e) {
+        // This catches errors if response.json() fails (e.g., empty or non-JSON response)
+        console.error('Failed to parse Telegram API response:', e);
+        // We can consider this a success if HTTP status was OK but body was weird,
+        // as the message was likely delivered. Or throw an error. Let's throw.
+        throw new Error('Telegram API returned an invalid response.');
+    }
+  };
+
   if (photoUrls.length > 1) {
     // Send as a media group
     const media = photoUrls.map((url, index) => ({
@@ -30,68 +60,28 @@ export async function sendTelegramMessage({
       caption: index === 0 ? (photoCaption || text) : '',
     }));
     
-    // Split media into chunks of 10
     for (let i = 0; i < media.length; i += 10) {
         const chunk = media.slice(i, i + 10);
-        const url = `https://api.telegram.org/bot${botToken}/sendMediaGroup`;
-        const body = {
+        await sendRequest(`https://api.telegram.org/bot${botToken}/sendMediaGroup`, {
           chat_id: chatId,
           media: chunk,
-        };
-        
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
         });
-        
-        const result = await response.json();
-        if (!result.ok) {
-          console.error('Telegram API error (sendMediaGroup):', result);
-          throw new Error(`Telegram API Error: ${result.description}`);
-        }
     }
 
   } else if (photoUrls.length === 1 && photoUrls[0]) {
       // Send a single photo
-      const url = `https://api.telegram.org/bot${botToken}/sendPhoto`;
-      const body = {
+      await sendRequest(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
         chat_id: chatId,
         photo: photoUrls[0],
         caption: photoCaption || text,
-      };
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
       });
-      const result = await response.json();
-      if (!result.ok) {
-        console.error('Telegram API error (sendPhoto):', result);
-        throw new Error(`Telegram API Error: ${result.description}`);
-      }
-      return result;
 
   } else if (text) {
     if (text.length <= TELEGRAM_MAX_MESSAGE_LENGTH) {
-        // If the message is short enough, send it as is.
-        const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
-        const body = {
+        await sendRequest(`https://api.telegram.org/bot${botToken}/sendMessage`, {
           chat_id: chatId,
           text: text,
-        };
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
         });
-        
-        const result = await response.json();
-        if (!result.ok) {
-          console.error('Telegram API error (sendMessage):', result);
-          throw new Error(`Telegram API Error: ${result.description}`);
-        }
-        return result;
     } else {
         // If the message is too long, split it into chunks.
         const chunks: string[] = [];
@@ -103,47 +93,23 @@ export async function sendTelegramMessage({
                 break;
             }
 
-            // Find the last newline within the character limit
             let splitPos = remainingText.lastIndexOf('\n', TELEGRAM_MAX_MESSAGE_LENGTH);
-
-            // If no newline is found within the limit, we have to split mid-word.
-            if (splitPos === -1) {
-                splitPos = TELEGRAM_MAX_MESSAGE_LENGTH;
-            }
-
-            // If the last newline is at the very beginning, it means the first line is too long.
-            // In this case, we have no choice but to split by the max length.
-            if (splitPos === 0) {
+            if (splitPos === -1 || splitPos === 0) {
                 splitPos = TELEGRAM_MAX_MESSAGE_LENGTH;
             }
 
             chunks.push(remainingText.substring(0, splitPos));
-            // The +1 skips the newline character for the next chunk.
             remainingText = remainingText.substring(splitPos + 1);
         }
 
         // Send each chunk as a separate message.
         for (const chunk of chunks) {
-            if (!chunk.trim()) continue; // Don't send empty chunks.
-
-            const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
-            const body = {
+            if (!chunk.trim()) continue;
+            await sendRequest(`https://api.telegram.org/bot${botToken}/sendMessage`, {
                 chat_id: chatId,
                 text: chunk,
-            };
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body),
             });
-            const result = await response.json();
-
-            if (!result.ok) {
-                console.error('Telegram API error (sendMessage chunk):', result);
-                throw new Error(`Telegram API Error on chunk: ${result.description}`);
-            }
-            // Add a small delay between messages to avoid rate-limiting.
-            await new Promise(resolve => setTimeout(resolve, 300));
+            await new Promise(resolve => setTimeout(resolve, 300)); // Delay to avoid rate-limiting
         }
     }
   }
