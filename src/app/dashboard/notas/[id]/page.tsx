@@ -1,4 +1,3 @@
-
 'use client';
 
 import { notFound, useRouter, useParams } from 'next/navigation';
@@ -164,20 +163,22 @@ export default function NotaDetailPage() {
           description: 'Status laporan telah diperbarui menjadi "rejected".',
         });
 
-        // Send Telegram Notification
-        sendRejectionNotice({
-          picName: nota.namaPic,
-          notaDate: format(notaDate, 'dd MMM yyyy', { locale: idLocale }),
-          segment: nota.segmen,
-          reason: reason,
-        }).catch(err => {
+        // Send Telegram Notification and wait for it
+        try {
+            await sendRejectionNotice({
+              picName: nota.namaPic,
+              notaDate: format(notaDate, 'dd MMM yyyy', { locale: idLocale }),
+              segment: nota.segmen,
+              reason: reason,
+            });
+        } catch (err: any) {
             console.error("Failed to send rejection notification:", err);
             toast({
                 variant: 'destructive',
                 title: 'Notifikasi Gagal Terkirim',
-                description: 'Gagal mengirim notifikasi penolakan ke Telegram.',
+                description: `Laporan berhasil ditolak, tapi notifikasi ke Telegram gagal. Error: ${err.message}`,
             });
-        });
+        }
     } catch(e) {
         toast({ variant: 'destructive', title: 'Gagal Menolak' });
     }

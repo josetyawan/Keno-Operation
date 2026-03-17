@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
@@ -349,11 +347,11 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished, userProfile, can
                 const swapTargetName = targetUser?.displayName || manualSwapName.trim();
                 const notificationReason = `Ingin tukar jadwal tanggal ${format(swapDate, 'dd MMM yyyy', {locale: idLocale})} dengan: ${swapTargetName}.\nAlasan: ${reason}`;
                 
-                sendAttendanceNotice({
+                await sendAttendanceNotice({
                     userName: userProfile.displayName || user.email,
                     status: 'Request Tukar Jaga',
                     reason: notificationReason,
-                }).catch(err => console.error("Telegram notification failed:", err));
+                });
 
                 toast({ title: 'Pengajuan Terkirim', description: 'Permintaan tukar jaga Anda telah dikirim untuk persetujuan atasan.' });
                 onFinished();
@@ -381,12 +379,12 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished, userProfile, can
                 };
                 await setDoc(scheduleDocRef, scheduleData, { merge: true });
 
-                sendAttendanceNotice({
+                await sendAttendanceNotice({
                     userName: userProfile.displayName || user.email,
                     status: leaveType === 'sick-leave' ? 'Izin Sakit/Mendesak' : 'Cuti',
                     reason: reason,
                     photoUrl: evidenceUrl,
-                }).catch(err => console.error("Telegram notification failed:", err));
+                });
 
                 toast({ title: 'Pengajuan Terkirim', description: 'Status jadwal Anda telah diperbarui.' });
                 onFinished();
@@ -423,13 +421,13 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished, userProfile, can
                 };
                 await addDoc(collection(firestore, 'attendances'), attendanceData);
 
-                sendAttendanceNotice({
+                await sendAttendanceNotice({
                     userName: userProfile.displayName || user.email,
                     status: leaveType === 'late' ? 'Izin Terlambat' : 'Izin Langsung Progres',
                     reason: reason,
                     photoUrl: photoUrl,
                     coordinates: coordinates,
-                }).catch(err => console.error("Telegram notification failed:", err));
+                });
 
                 router.push('/dashboard/hr/attendance/goodbye');
             }
@@ -729,13 +727,13 @@ export default function AttendancePage() {
             
             await addDoc(collection(firestore, 'attendances'), newAttendance);
 
-            sendAttendanceNotice({
+            await sendAttendanceNotice({
                 userName: userProfile.displayName || user.email!,
                 status: noticeStatus,
                 photoUrl: photoUrl,
                 coordinates: coordinates,
                 reason: attendanceReason,
-            }).catch(err => console.error("Telegram notification failed:", err));
+            });
 
             router.push('/dashboard/hr/attendance/goodbye');
 
@@ -813,4 +811,3 @@ export default function AttendancePage() {
         </div>
     );
 }
-

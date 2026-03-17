@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -375,7 +373,7 @@ export default function AdminSchedulesPage() {
         }
     };
 
-    const handleFormSubmit = (data: Partial<Schedule>) => {
+    const handleFormSubmit = async (data: Partial<Schedule>) => {
         if (!firestore || !data.userId || !data.date) {
             toast({ variant: 'destructive', title: 'Data tidak lengkap' });
             return;
@@ -385,7 +383,7 @@ export default function AdminSchedulesPage() {
         const scheduleId = `${data.userId}_${format(scheduleDate, 'yyyy-MM-dd')}`;
         const scheduleDocRef = doc(firestore, 'schedules', scheduleId);
     
-        const performWrite = async () => {
+        const writePromise = (() => {
             if (swapSourceSchedule) {
                 const batch = writeBatch(firestore);
                 // Create new schedule for replacement
@@ -393,7 +391,7 @@ export default function AdminSchedulesPage() {
                 // Update original requester's schedule to 'libur'
                 const originalRequestRef = doc(firestore, 'schedules', swapSourceSchedule.id);
                 const replacementUser = activeUsers.find(u => u.id === data.userId);
-                batch.update(originalRequestRef, { 
+                batch.update(originalRequestRef, {
                     shiftType: 'libur-dijadwalkan',
                     notes: `Tukar jaga disetujui, digantikan oleh ${replacementUser?.displayName || data.userEmail}`
                 });
@@ -413,44 +411,51 @@ export default function AdminSchedulesPage() {
                     return setDoc(scheduleDocRef, { ...data, id: scheduleId, createdAt: Timestamp.now() }, { merge: true });
                 }
             }
-        };
-    
-        performWrite()
-            .then(() => {
-                let toastTitle = 'Jadwal Ditambahkan';
-                let toastDescription = '';
-    
-                if (swapSourceSchedule) {
-                    const replacementUser = activeUsers.find(u => u.id === data.userId);
-                    const requesterName = userMap.get(swapSourceSchedule.userId!) || swapSourceSchedule.userEmail;
+        })();
 
-                    toastTitle = 'Tukar Jaga Berhasil Disetujui';
-                    toastDescription = `Jadwal baru untuk ${replacementUser?.displayName} telah dibuat. Jadwal ${requesterName} telah diubah menjadi libur.`;
-                    
-                    // SEND NOTIFICATION
-                    sendSwapApprovalNotice({
+        try {
+            await writePromise;
+    
+            let toastTitle = 'Jadwal Ditambahkan';
+            let toastDescription = '';
+    
+            if (swapSourceSchedule) {
+                const replacementUser = activeUsers.find(u => u.id === data.userId);
+                const requesterName = userMap.get(swapSourceSchedule.userId!) || swapSourceSchedule.userEmail;
+    
+                toastTitle = 'Tukar Jaga Berhasil Disetujui';
+                toastDescription = `Jadwal baru untuk ${replacementUser?.displayName} telah dibuat. Jadwal ${requesterName} telah diubah menjadi libur.`;
+    
+                // SEND NOTIFICATION
+                try {
+                    await sendSwapApprovalNotice({
                         requesterName: requesterName || 'N/A',
                         replacementName: replacementUser?.displayName || 'N/A',
                         swapDate: format(scheduleDate, 'eeee, dd MMMM yyyy', { locale: idLocale }),
-                    }).catch(err => {
-                        console.error("Telegram notification for swap approval failed:", err);
                     });
-
-                } else if (scheduleToEdit?.id) {
-                    toastTitle = 'Jadwal Diperbarui';
+                } catch (err: any) {
+                    console.error("Telegram notification for swap approval failed:", err);
+                    toast({
+                      variant: 'destructive',
+                      title: 'Notifikasi Gagal Terkirim',
+                      description: `Persetujuan berhasil, tapi notifikasi ke Telegram gagal. Error: ${err.message}`
+                    });
                 }
     
-                toast({ title: toastTitle, description: toastDescription, duration: 7000 });
-                
-                // Reset states after successful operation
-                setIsFormDialogOpen(false);
-                setScheduleToEdit(null);
-                setSwapSourceSchedule(null);
-            })
-            .catch((error) => {
-                console.error("Failed to save schedule:", error);
-                toast({ variant: 'destructive', title: 'Gagal Menyimpan' });
-            });
+            } else if (scheduleToEdit?.id) {
+                toastTitle = 'Jadwal Diperbarui';
+            }
+    
+            toast({ title: toastTitle, description: toastDescription, duration: 7000 });
+    
+            // Reset states after successful operation
+            setIsFormDialogOpen(false);
+            setScheduleToEdit(null);
+            setSwapSourceSchedule(null);
+        } catch (error) {
+            console.error("Failed to save schedule:", error);
+            toast({ variant: 'destructive', title: 'Gagal Menyimpan' });
+        }
     };
     
 

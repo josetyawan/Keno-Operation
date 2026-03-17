@@ -129,21 +129,21 @@ export default function GamasApprovalDetailPage() {
       await updateDoc(reportRef, { evidences: newEvidences });
       toast({ title: `Designator ${designatorCode} ${newStatus === 'approved' ? 'Disetujui' : 'Ditolak'}` });
       
-      // NEW: Send notification on rejection
       if (newStatus === 'rejected' && reason) {
-        sendGamasDesignatorNotice({
-          userName: report.userName,
-          noTiket: report.noTiket,
-          designator: designatorCode,
-          rejectionReason: reason,
-        }).catch(err => {
-          console.error("Telegram notification for designator rejection failed:", err);
-          toast({
-            variant: 'destructive',
-            title: 'Gagal Mengirim Notifikasi',
-            description: 'Status berhasil diubah, tetapi notifikasi ke Telegram gagal dikirim.'
-          });
-        });
+        try {
+            await sendGamasDesignatorNotice({
+              userName: report.userName,
+              noTiket: report.noTiket,
+              designator: designatorCode,
+              rejectionReason: reason,
+            });
+        } catch (err: any) {
+             toast({
+                variant: 'destructive',
+                title: 'Gagal Mengirim Notifikasi',
+                description: `Status berhasil diubah, tetapi notifikasi ke Telegram gagal dikirim. Error: ${err.message}`
+              });
+        }
       }
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'Gagal Memperbarui', description: e.message });
@@ -160,11 +160,21 @@ export default function GamasApprovalDetailPage() {
     try {
         await updateDoc(reportRef, { status: 'approved' });
         
-        sendGamasReportNotice({
-            userName: report.userName,
-            noTiket: report.noTiket,
-            status: 'Disetujui',
-        }).catch(err => console.error("Telegram notification for approval failed:", err));
+        try {
+            await sendGamasReportNotice({
+                userName: report.userName,
+                noTiket: report.noTiket,
+                status: 'Disetujui',
+            });
+        } catch (err: any) {
+            console.error("Telegram notification for approval failed:", err);
+            // Non-blocking error, just log and maybe show a silent toast
+             toast({
+                variant: 'destructive',
+                title: 'Notifikasi Gagal Terkirim',
+                description: `Laporan berhasil disetujui, tapi notifikasi ke Telegram gagal. Error: ${err.message}`
+            });
+        }
 
         toast({ title: 'Laporan Disetujui', description: 'Keseluruhan laporan telah ditandai sebagai disetujui.' });
         router.push('/dashboard/admin/gamas-approval');
@@ -185,12 +195,21 @@ export default function GamasApprovalDetailPage() {
     try {
         await updateDoc(reportRef, { status: 'rejected', rejectionReason: reason });
         
-        sendGamasReportNotice({
-            userName: report.userName,
-            noTiket: report.noTiket,
-            status: 'Ditolak',
-            rejectionReason: reason,
-        }).catch(err => console.error("Telegram notification for rejection failed:", err));
+        try {
+            await sendGamasReportNotice({
+                userName: report.userName,
+                noTiket: report.noTiket,
+                status: 'Ditolak',
+                rejectionReason: reason,
+            });
+        } catch(err: any) {
+            console.error("Telegram notification for rejection failed:", err);
+             toast({
+                variant: 'destructive',
+                title: 'Notifikasi Gagal Terkirim',
+                description: `Laporan berhasil ditolak, tapi notifikasi ke Telegram gagal. Error: ${err.message}`
+            });
+        }
 
         toast({ title: 'Laporan Ditolak', description: 'Keseluruhan laporan telah ditandai sebagai ditolak.' });
         router.push('/dashboard/admin/gamas-approval');
