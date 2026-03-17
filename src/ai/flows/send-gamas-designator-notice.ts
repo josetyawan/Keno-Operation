@@ -20,7 +20,7 @@ const gamasDesignatorNoticeTextFlow = ai.defineFlow(
   async ({ userName, noTiket, designator, rejectionReason }) => {
     const { text } = await ai.generate({
       model: 'googleai/gemini-pro',
-      prompt: `Buat notifikasi Telegram dalam format Markdown untuk memberitahu teknisi bahwa salah satu eviden gamas mereka ditolak.
+      prompt: `Buat notifikasi Telegram dalam format teks biasa (plain text), tanpa Markdown, untuk memberitahu teknisi bahwa salah satu eviden gamas mereka ditolak.
       
       Data:
       - Teknisi: ${userName}

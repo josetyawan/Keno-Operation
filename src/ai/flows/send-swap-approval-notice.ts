@@ -19,7 +19,7 @@ const swapApprovalNoticeTextFlow = ai.defineFlow(
   async ({ requesterName, replacementName, swapDate }) => {
     const { text } = await ai.generate({
       model: 'googleai/gemini-pro',
-      prompt: `Buat notifikasi persetujuan tukar jadwal jaga untuk Telegram. Gunakan format Markdown.
+      prompt: `Buat notifikasi persetujuan tukar jadwal jaga untuk Telegram dalam format teks biasa (plain text), tanpa Markdown.
       
       - Tanggal: ${swapDate}
       - Teknisi Awal: ${requesterName}

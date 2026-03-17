@@ -20,7 +20,7 @@ const rejectionNoticeTextFlow = ai.defineFlow(
   async (input) => {
     const { text } = await ai.generate({
       model: 'googleai/gemini-pro',
-      prompt: `Buat notifikasi penolakan laporan nota untuk Telegram. Gunakan format Markdown.
+      prompt: `Buat notifikasi penolakan laporan nota untuk Telegram dalam format teks biasa (plain text), tanpa menggunakan Markdown.
       
       - PIC: ${input.picName}
       - Tanggal Nota: ${input.notaDate}

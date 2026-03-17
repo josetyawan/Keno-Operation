@@ -20,7 +20,7 @@ const gamasReportNoticeTextFlow = ai.defineFlow(
   async ({ userName, noTiket, status, rejectionReason }) => {
     const { text } = await ai.generate({
       model: 'googleai/gemini-pro',
-      prompt: `Buat notifikasi status Laporan Gamas untuk Telegram. Gunakan format Markdown.
+      prompt: `Buat notifikasi status Laporan Gamas untuk Telegram dalam format teks biasa (plain text), tanpa Markdown.
       - No. Tiket: ${noTiket}
       - Teknisi: ${userName}
       - Status Baru: ${status}
