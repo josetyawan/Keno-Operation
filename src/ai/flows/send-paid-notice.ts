@@ -49,9 +49,9 @@ ${rekapString}
 GRAND TOTAL LUNAS: Rp ${grandTotalFormatted}
 
 Terima kasih atas kerja keras rekan-rekan semua. Tetap jaga kesehatan dan keselamatan kerja. 💪
-    `.trim();
+    `;
 
-    return message;
+    return `<pre>${message.trim()}</pre>`;
   }
 );
 

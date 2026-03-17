@@ -23,19 +23,19 @@ const attendanceNoticeTextFlow = ai.defineFlow(
     // 1. Generate the base message
     const { text } = await ai.generate({
       model: 'googleai/gemini-pro',
-      prompt: `Buat notifikasi singkat untuk Telegram dalam format teks biasa (plain text), tanpa Markdown. Mulai dengan emoji yang sesuai.
+      prompt: `Buat notifikasi singkat untuk Telegram dalam format HTML sederhana (hanya gunakan tag <b> dan <i>). Mulai dengan emoji yang sesuai.
       
-      Data:
-      - Status: ${input.status}
-      - Nama: ${input.userName}
-      - Alasan: ${input.reason || 'Tidak ada'}
+      <b>Data:</b>
+      - <b>Status:</b> ${input.status}
+      - <b>Nama:</b> ${input.userName}
+      - <b>Alasan:</b> ${input.reason || 'Tidak ada'}
       `,
     });
     
     // 2. Compose the final message with optional links
     let message = text;
     if (input.coordinates && input.coordinates !== 'N/A') {
-      message += `\n- Lokasi: https://www.google.com/maps/search/?api=1&query=${input.coordinates}`;
+      message += `\n- <b>Lokasi:</b> <a href="https://www.google.com/maps/search/?api=1&query=${input.coordinates}">Lihat di Peta</a>`;
     }
 
     return message;

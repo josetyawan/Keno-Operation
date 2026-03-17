@@ -84,7 +84,7 @@ const sendProductivityRekapFlow = ai.defineFlow(
       message += `Tidak ada detail pekerjaan untuk dilaporkan.\n`;
     }
 
-    return message.trim();
+    return `<pre>${message.trim()}</pre>`;
   }
 );
 

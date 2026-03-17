@@ -46,8 +46,8 @@ Tanggal Rekap: ${rekapDate}
 ${rekapString}
 
 GRAND TOTAL: Rp ${grandTotalFormatted}
-    `.trim();
+    `;
     
-    return message;
+    return `<pre>${message.trim()}</pre>`;
   }
 );

@@ -35,20 +35,15 @@ export async function sendTelegramMessage({
         throw new Error(`Telegram API Error: ${errorBody}`);
     }
 
-    // A 200 OK response from Telegram with an empty body is a success.
-    // If there is a body, we can try to parse it for more details, but success is assumed unless explicitly told otherwise.
     const responseText = await response.text();
     if (responseText) {
         try {
             const result = JSON.parse(responseText);
-            // If Telegram explicitly says it's not OK in the JSON body, we should treat it as an error.
             if (!result.ok) {
                 console.error('Telegram API business logic error:', result);
                 throw new Error(`Telegram API Error: ${result.description || 'Unknown error'}`);
             }
         } catch (e) {
-            // This can happen if Telegram sends a 200 OK with a non-JSON body.
-            // Since the HTTP status was success, we can log it but not fail the operation.
             console.warn('Could not parse successful Telegram API response, but assuming message was sent.', responseText);
         }
     }
@@ -60,6 +55,7 @@ export async function sendTelegramMessage({
       type: 'photo',
       media: url,
       caption: index === 0 ? (photoCaption || text) : '',
+      parse_mode: 'HTML',
     }));
     
     for (let i = 0; i < media.length; i += 10) {
@@ -76,6 +72,7 @@ export async function sendTelegramMessage({
         chat_id: chatId,
         photo: photoUrls[0],
         caption: photoCaption || text,
+        parse_mode: 'HTML',
       });
 
   } else if (text) {
@@ -83,6 +80,7 @@ export async function sendTelegramMessage({
         await sendRequest(`https://api.telegram.org/bot${botToken}/sendMessage`, {
           chat_id: chatId,
           text: text,
+          parse_mode: 'HTML',
         });
     } else {
         // If the message is too long, split it into chunks.
@@ -110,6 +108,7 @@ export async function sendTelegramMessage({
             await sendRequest(`https://api.telegram.org/bot${botToken}/sendMessage`, {
                 chat_id: chatId,
                 text: chunk,
+                parse_mode: 'HTML',
             });
             await new Promise(resolve => setTimeout(resolve, 300)); // Delay to avoid rate-limiting
         }

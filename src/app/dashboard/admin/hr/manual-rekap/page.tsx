@@ -36,7 +36,7 @@ function generateRekapString(userInfos: UserDailyInfo[], title: string, dateHead
     
     const persenHadir = total > 0 ? ((hadir.length / total) * 100).toFixed(1) : '0.0';
 
-    let rekap = `📊 ${title}\n`;
+    let rekap = `<pre>📊 ${title}\n`;
     rekap += `SA KUDUS ${dateHeader}\n`;
     rekap += `PT TELKOM AKSES\n`;
     rekap += `=============================\n`;
@@ -60,6 +60,7 @@ function generateRekapString(userInfos: UserDailyInfo[], title: string, dateHead
 
     rekap += `🌙 SHIFT MALAM\n`;
     rekap += shiftMalam.length > 0 ? shiftMalam.map(u => `🌙 ▸ ${u.user.displayName} (${u.sto})`).join('\n') : '-';
+    rekap += `</pre>`;
 
     return rekap;
 }
