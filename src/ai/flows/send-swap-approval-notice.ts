@@ -10,6 +10,14 @@ const swapApprovalNoticeSchema = z.object({
   swapDate: z.string(),
 });
 
+function escapeHtml(text: string) {
+  if (!text) return '';
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 const swapApprovalNoticeTextFlow = ai.defineFlow(
   {
     name: 'swapApprovalNoticeTextFlow',
@@ -22,8 +30,8 @@ const swapApprovalNoticeTextFlow = ai.defineFlow(
       prompt: `Buat notifikasi persetujuan tukar jadwal jaga untuk Telegram dalam format HTML (hanya gunakan tag <b> dan <i>).
       
       - <b>Tanggal:</b> ${swapDate}
-      - <b>Teknisi Awal:</b> ${requesterName}
-      - <b>Teknisi Pengganti:</b> ${replacementName}
+      - <b>Teknisi Awal:</b> ${escapeHtml(requesterName)}
+      - <b>Teknisi Pengganti:</b> ${escapeHtml(replacementName)}
       
       Gunakan emoji ✅🤝 dan ucapkan terima kasih kepada teknisi pengganti.`,
     });

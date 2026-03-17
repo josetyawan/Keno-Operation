@@ -11,6 +11,14 @@ const gamasDesignatorNoticeSchema = z.object({
   rejectionReason: z.string(),
 });
 
+function escapeHtml(text: string) {
+  if (!text) return '';
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 const gamasDesignatorNoticeTextFlow = ai.defineFlow(
   {
     name: 'gamasDesignatorNoticeTextFlow',
@@ -23,12 +31,12 @@ const gamasDesignatorNoticeTextFlow = ai.defineFlow(
       prompt: `Buat notifikasi Telegram dalam format HTML (hanya gunakan tag <b>, <i>, dan <code>) untuk memberitahu teknisi bahwa salah satu eviden gamas mereka ditolak.
       
       <b>Data Laporan:</b>
-      - Teknisi: ${userName}
-      - No. Tiket: <code>${noTiket}</code>
-      - Designator Ditolak: <code>${designator}</code>
-      - Alasan Penolakan: <b>${rejectionReason}</b>
+      - Teknisi: ${escapeHtml(userName)}
+      - No. Tiket: <code>${escapeHtml(noTiket)}</code>
+      - Designator Ditolak: <code>${escapeHtml(designator)}</code>
+      - Alasan Penolakan: <b>${escapeHtml(rejectionReason)}</b>
       
-      Gunakan emoji peringatan ⚠️ dan minta teknisi untuk segera memperbaikinya.`,
+      Gunakan emoji ⚠️ dan minta teknisi untuk segera memperbaikinya.`,
     });
     return text;
   }

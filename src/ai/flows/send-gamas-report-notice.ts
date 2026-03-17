@@ -11,6 +11,14 @@ const gamasReportNoticeSchema = z.object({
   rejectionReason: z.string().optional(),
 });
 
+function escapeHtml(text: string) {
+  if (!text) return '';
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 const gamasReportNoticeTextFlow = ai.defineFlow(
   {
     name: 'gamasReportNoticeTextFlow',
@@ -21,10 +29,10 @@ const gamasReportNoticeTextFlow = ai.defineFlow(
     const { text } = await ai.generate({
       model: 'googleai/gemini-pro',
       prompt: `Buat notifikasi status Laporan Gamas untuk Telegram dalam format HTML (hanya gunakan tag <b>, <i>, dan <code>).
-      - No. Tiket: <code>${noTiket}</code>
-      - Teknisi: ${userName}
-      - Status Baru: <b>${status}</b>
-      ${rejectionReason ? `- Alasan Penolakan: <i>${rejectionReason}</i>` : ''}
+      - No. Tiket: <code>${escapeHtml(noTiket)}</code>
+      - Teknisi: ${escapeHtml(userName)}
+      - Status Baru: <b>${escapeHtml(status)}</b>
+      ${rejectionReason ? `- Alasan Penolakan: <i>${escapeHtml(rejectionReason)}</i>` : ''}
       
       Gunakan emoji ✅ untuk 'Disetujui' dan ❌ untuk 'Ditolak'.`,
     });

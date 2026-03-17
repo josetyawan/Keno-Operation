@@ -11,6 +11,14 @@ const rejectionNoticeSchema = z.object({
   reason: z.string(),
 });
 
+function escapeHtml(text: string) {
+  if (!text) return '';
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 const rejectionNoticeTextFlow = ai.defineFlow(
   {
     name: 'rejectionNoticeTextFlow',
@@ -22,10 +30,10 @@ const rejectionNoticeTextFlow = ai.defineFlow(
       model: 'googleai/gemini-pro',
       prompt: `Buat notifikasi penolakan laporan nota untuk Telegram dalam format HTML (hanya gunakan tag <b>, <i>, dan <code>).
       
-      - <b>PIC:</b> ${input.picName}
+      - <b>PIC:</b> ${escapeHtml(input.picName)}
       - <b>Tanggal Nota:</b> ${input.notaDate}
-      - <b>Segmen:</b> ${input.segment}
-      - <b>Alasan Penolakan:</b> <i>${input.reason}</i>
+      - <b>Segmen:</b> ${escapeHtml(input.segment)}
+      - <b>Alasan Penolakan:</b> <i>${escapeHtml(input.reason)}</i>
       
       Gunakan emoji ❌ dan instruksikan pengguna untuk memeriksa aplikasi dan mengirim ulang.`,
     });

@@ -12,6 +12,14 @@ const attendanceNoticeSchema = z.object({
   coordinates: z.string().optional(),
 });
 
+function escapeHtml(text: string) {
+  if (!text) return '';
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 // This flow now ONLY generates the message text
 const attendanceNoticeTextFlow = ai.defineFlow(
   {
@@ -26,9 +34,9 @@ const attendanceNoticeTextFlow = ai.defineFlow(
       prompt: `Buat notifikasi singkat untuk Telegram dalam format HTML sederhana (hanya gunakan tag <b> dan <i>). Mulai dengan emoji yang sesuai.
       
       <b>Data:</b>
-      - <b>Status:</b> ${input.status}
-      - <b>Nama:</b> ${input.userName}
-      - <b>Alasan:</b> ${input.reason || 'Tidak ada'}
+      - <b>Status:</b> ${escapeHtml(input.status)}
+      - <b>Nama:</b> ${escapeHtml(input.userName)}
+      - <b>Alasan:</b> ${escapeHtml(input.reason || 'Tidak ada')}
       `,
     });
     
