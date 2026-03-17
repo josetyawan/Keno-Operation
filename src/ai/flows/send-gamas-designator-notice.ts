@@ -27,7 +27,7 @@ const gamasDesignatorNoticeTextFlow = ai.defineFlow(
   },
   async ({ userName, noTiket, designator, rejectionReason }) => {
     const { text } = await ai.generate({
-      model: 'googleai/gemini-pro',
+      model: 'googleai/gemini-1.5-flash-latest',
       prompt: `Buat notifikasi Telegram dalam format HTML (hanya gunakan tag <b>, <i>, dan <code>) untuk memberitahu teknisi bahwa salah satu eviden gamas mereka ditolak.
       
       <b>Data Laporan:</b>

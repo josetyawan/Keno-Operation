@@ -27,7 +27,7 @@ const gamasReportNoticeTextFlow = ai.defineFlow(
   },
   async ({ userName, noTiket, status, rejectionReason }) => {
     const { text } = await ai.generate({
-      model: 'googleai/gemini-pro',
+      model: 'googleai/gemini-1.5-flash-latest',
       prompt: `Buat notifikasi status Laporan Gamas untuk Telegram dalam format HTML (hanya gunakan tag <b>, <i>, dan <code>).
       - No. Tiket: <code>${escapeHtml(noTiket)}</code>
       - Teknisi: ${escapeHtml(userName)}

@@ -19,7 +19,7 @@ const summarizeNotaFlow = ai.defineFlow(
   },
   async ({ notaContent }) => {
     const { output } = await ai.generate({
-      model: 'googleai/gemini-pro',
+      model: 'googleai/gemini-1.5-flash-latest',
       prompt: `Ringkas konten nota berikut menjadi satu paragraf singkat yang informatif:
 
       ---

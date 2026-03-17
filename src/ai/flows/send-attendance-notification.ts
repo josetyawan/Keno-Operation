@@ -30,7 +30,7 @@ const attendanceNoticeTextFlow = ai.defineFlow(
   async (input) => {
     // 1. Generate the base message
     const { text } = await ai.generate({
-      model: 'googleai/gemini-pro',
+      model: 'googleai/gemini-1.5-flash-latest',
       prompt: `Buat notifikasi singkat untuk Telegram dalam format HTML sederhana (hanya gunakan tag <b> dan <i>). Mulai dengan emoji yang sesuai.
       
       <b>Data:</b>
