@@ -2,6 +2,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
+import { sendTelegramMessage } from '@/lib/telegram';
 
 const rejectionNoticeSchema = z.object({
   picName: z.string(),
@@ -28,6 +29,22 @@ const rejectionNoticeFlow = ai.defineFlow(
       
       Gunakan emoji ❌ dan instruksikan pengguna untuk memeriksa aplikasi dan mengirim ulang.`,
     });
+
+    if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID_FINANCE) {
+        try {
+            await sendTelegramMessage({
+                botToken: process.env.TELEGRAM_BOT_TOKEN,
+                chatId: process.env.TELEGRAM_CHAT_ID_FINANCE,
+                text: text,
+            });
+        } catch (error) {
+            console.error('Failed to send rejection notice to Telegram:', error);
+            // We don't re-throw so the UI flow doesn't break. The error is logged.
+        }
+    } else {
+        console.warn('Telegram token/chat ID for Finance is not set. Skipping notification.');
+    }
+
     return text;
   }
 );
