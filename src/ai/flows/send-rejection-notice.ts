@@ -1,7 +1,6 @@
 
 'use server';
 
-import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { sendTelegramMessage } from '@/lib/telegram';
 
@@ -20,13 +19,8 @@ function escapeHtml(text: string) {
     .replace(/>/g, "&gt;");
 }
 
-const rejectionNoticeTextFlow = ai.defineFlow(
-  {
-    name: 'rejectionNoticeTextFlow',
-    inputSchema: rejectionNoticeSchema,
-    outputSchema: z.string(),
-  },
-  async (input) => {
+// This flow now ONLY generates the message text
+const rejectionNoticeTextFlow = async (input: z.infer<typeof rejectionNoticeSchema>): Promise<string> => {
     let message = `❌ <b>Laporan Nota Ditolak</b> ❌\n\n`;
     message += `Laporan nota dari <b>${escapeHtml(input.picName)}</b> telah ditolak.\n\n`;
     message += `- <b>Tanggal Nota:</b> ${input.notaDate}\n`;
@@ -34,34 +28,23 @@ const rejectionNoticeTextFlow = ai.defineFlow(
     message += `- <b>Alasan Penolakan:</b> <i>${escapeHtml(input.reason)}</i>\n\n`;
     message += `Mohon untuk memeriksa kembali laporan di aplikasi dan mengirim ulang jika diperlukan.`;
     return message;
-  }
-);
+}
 
+// This exported function now handles the sending
 export async function sendRejectionNotice(
   input: z.infer<typeof rejectionNoticeSchema>
 ): Promise<void> {
-  let messageText;
-  try {
-      messageText = await rejectionNoticeTextFlow(input);
-  } catch (e: any) {
-      console.error("AI flow for rejection notice failed:", e);
-      throw new Error(`Gagal membuat teks notifikasi AI: ${e.message}`);
-  }
+  const messageText = await rejectionNoticeTextFlow(input);
   
-  if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID_ABSENSI) {
-    const errorMessage = 'Konfigurasi Telegram untuk Absensi (TELEGRAM_BOT_TOKEN atau TELEGRAM_CHAT_ID_ABSENSI) tidak diatur.';
+  if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID_FINANCE) {
+    const errorMessage = 'Konfigurasi Telegram untuk Finance (TELEGRAM_BOT_TOKEN atau TELEGRAM_CHAT_ID_FINANCE) tidak diatur.';
     console.error(errorMessage);
     throw new Error(errorMessage);
   }
 
-  try {
-      await sendTelegramMessage({
-          botToken: process.env.TELEGRAM_BOT_TOKEN,
-          chatId: process.env.TELEGRAM_CHAT_ID_ABSENSI,
-          text: messageText,
-      });
-  } catch(e: any) {
-      console.error("Telegram message sending failed:", e);
-      throw new Error(`Gagal mengirim notifikasi ke Telegram: ${e.message}`);
-  }
+  await sendTelegramMessage({
+      botToken: process.env.TELEGRAM_BOT_TOKEN,
+      chatId: process.env.TELEGRAM_CHAT_ID_FINANCE,
+      text: messageText,
+  });
 }

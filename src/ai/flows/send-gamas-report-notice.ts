@@ -1,7 +1,6 @@
 
 'use server';
 
-import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { sendTelegramMessage } from '@/lib/telegram';
 
@@ -20,13 +19,8 @@ function escapeHtml(text: string) {
     .replace(/>/g, "&gt;");
 }
 
-const gamasReportNoticeTextFlow = ai.defineFlow(
-  {
-    name: 'gamasReportNoticeTextFlow',
-    inputSchema: gamasReportNoticeSchema,
-    outputSchema: z.string(),
-  },
-  async ({ userName, noTiket, status, rejectionReason }) => {
+// This flow now ONLY generates the message text
+const gamasReportNoticeTextFlow = async ({ userName, noTiket, status, rejectionReason }: z.infer<typeof gamasReportNoticeSchema>): Promise<string> => {
     const isApproved = status.toLowerCase() === 'disetujui';
     const emoji = isApproved ? '✅' : '❌';
     let message = `${emoji} <b>Update Status Laporan Gamas</b> ${emoji}\n\n`;
@@ -37,34 +31,23 @@ const gamasReportNoticeTextFlow = ai.defineFlow(
       message += `- Alasan Penolakan: <i>${escapeHtml(rejectionReason)}</i>\n`;
     }
     return message;
-  }
-);
+}
 
+// This exported function now handles the sending
 export async function sendGamasReportNotice(
   input: z.infer<typeof gamasReportNoticeSchema>
 ): Promise<void> {
-  let messageText;
-  try {
-    messageText = await gamasReportNoticeTextFlow(input);
-  } catch(e: any) {
-    console.error("AI flow for Gamas report notice failed:", e);
-    throw new Error(`Gagal membuat teks notifikasi AI: ${e.message}`);
-  }
+  const messageText = await gamasReportNoticeTextFlow(input);
   
-  if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID_ABSENSI) {
-      const errorMessage = 'Konfigurasi Telegram untuk Absensi (TELEGRAM_BOT_TOKEN atau TELEGRAM_CHAT_ID_ABSENSI) tidak diatur.';
+  if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID_GAMAS) {
+      const errorMessage = 'Konfigurasi Telegram untuk Gamas (TELEGRAM_BOT_TOKEN atau TELEGRAM_CHAT_ID_GAMAS) tidak diatur.';
       console.error(errorMessage);
       throw new Error(errorMessage);
   }
 
-  try {
-    await sendTelegramMessage({
-        botToken: process.env.TELEGRAM_BOT_TOKEN,
-        chatId: process.env.TELEGRAM_CHAT_ID_ABSENSI,
-        text: messageText,
-    });
-  } catch (e: any) {
-    console.error("Telegram message sending failed:", e);
-    throw new Error(`Gagal mengirim notifikasi ke Telegram: ${e.message}`);
-  }
+  await sendTelegramMessage({
+      botToken: process.env.TELEGRAM_BOT_TOKEN,
+      chatId: process.env.TELEGRAM_CHAT_ID_GAMAS,
+      text: messageText,
+  });
 }
