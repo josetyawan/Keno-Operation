@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -152,7 +151,7 @@ export default function AdminPerformancePage() {
 
         workItems.forEach(item => {
             let userId: string | undefined;
-            if ('assignedTo_userId' in item) { // ProvisioningRecord
+            if ('workorder' in item) { // ProvisioningRecord
                 userId = item.assignedTo_userId;
             } else { // RiwayatGangguan or OtherWork
                 userId = item.userId;
@@ -697,4 +696,3 @@ export default function AdminPerformancePage() {
         </div>
     );
 }
-
