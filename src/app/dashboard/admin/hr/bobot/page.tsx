@@ -25,6 +25,7 @@ import {
     AccordionTrigger,
   } from "@/components/ui/accordion"
 import { Shield } from 'lucide-react';
+import { Adsense } from '@/components/adsense';
 
 export default function BobotProduktivitasPage() {
   return (
@@ -73,6 +74,15 @@ export default function BobotProduktivitasPage() {
           </AccordionItem>
         ))}
       </Accordion>
+      <div className="mt-8 w-full overflow-hidden">
+        <Adsense
+          data-ad-client="ca-pub-6478281232505590"
+          data-ad-slot="YOUR_AD_SLOT_ID_BOBOT"
+          data-ad-format="auto"
+          className="block"
+          data-full-width-responsive="true"
+        />
+      </div>
     </div>
   );
 }

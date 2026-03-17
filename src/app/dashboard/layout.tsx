@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -37,6 +36,7 @@ const navLinks = [
   { href: '/dashboard/hr/attendance', label: 'Absensi Jaga', icon: ClipboardCheck, access: 'allpro' },
   { href: '/dashboard/alker', label: 'Daftar Pengecekan', icon: ClipboardCheck, access: 'allpro' },
   { href: '/dashboard/alker/new', label: 'Input Pengecekan Alker', icon: Wrench, access: 'allpro' },
+  { href: '/dashboard/admin/hr/bobot', label: 'Manajemen Bobot', icon: Weight, access: 'public' },
   { href: '/dashboard/bots', label: 'Daftar Bot', icon: Bot, access: 'public' },
 ];
 
@@ -360,5 +360,3 @@ export default function DashboardLayout({
     </div>
   );
 }
-
-    

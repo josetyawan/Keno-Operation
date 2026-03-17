@@ -8,18 +8,10 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { BookCopy, BarChart3, Search, ClipboardCheck, Wrench, Bot, Contact, MessageSquare, Component } from 'lucide-react';
-import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
-import { doc, collection, query, orderBy } from 'firebase/firestore';
-import type { UserProfile, OrbitInventory } from '@/lib/types';
+import { BookCopy, BarChart3, Search, ClipboardCheck, Wrench, Bot, Contact, MessageSquare, Component, LayoutGrid, Truck, FileWarning, Briefcase, CalendarDays, Weight } from 'lucide-react';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import type { UserProfile } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Adsense } from '@/components/adsense';
 
@@ -35,9 +27,27 @@ export default function DashboardSelectorPage() {
 
   const isLoading = isAuthLoading || isProfileLoading;
   
-  const canAccessNota = !isLoading && (userProfile?.role === 'admin' || userProfile?.appAccess === 'nota' || userProfile?.appAccess === 'all');
-  const canAccessAllpro = !isLoading && (userProfile?.role === 'admin' || userProfile?.appAccess === 'allpro' || userProfile?.appAccess === 'all' || userProfile?.role === 'korlap');
+  const isAdmin = !isLoading && userProfile?.role === 'admin';
+  const isKorlap = !isLoading && userProfile?.role === 'korlap';
+  const canAccessNota = !isLoading && (isAdmin || userProfile?.appAccess === 'nota' || userProfile?.appAccess === 'all');
+  const canAccessAllpro = !isLoading && (isAdmin || isKorlap || userProfile?.appAccess === 'allpro' || userProfile?.appAccess === 'all');
 
+  const menuItems = [
+    { href: '/dashboard/chat', label: 'Chat', icon: MessageSquare, description: 'Komunikasi tim secara real-time.', access: 'public' },
+    { href: '/dashboard/provi-orders', label: 'Order Provi', icon: Truck, description: 'Lihat daftar pekerjaan provisioning yang ditugaskan.', access: 'allpro' },
+    { href: '/dashboard/nota', label: 'Laporan Nota', icon: LayoutGrid, description: 'Buat, edit, dan kelola semua laporan nota Anda.', access: 'nota' },
+    { href: '/dashboard/gamas', label: 'Laporan Gamas', icon: FileWarning, description: 'Buat & lihat laporan untuk gangguan massal.', access: 'allpro' },
+    { href: '/dashboard/other-works/new', label: 'Input Pekerjaan Lain', icon: Briefcase, description: 'Catat pekerjaan yang tidak memiliki nomor service.', access: 'allpro' },
+    { href: '/dashboard/search-assets', label: 'Network Cek', icon: Search, description: 'Cari aset jaringan publik di semua Service Area.', access: 'allpro' },
+    { href: '/dashboard/allpro', label: 'Network Service Area', icon: BarChart3, description: 'Ringkasan data OLT, ODC, ODP, dan FTM.', access: 'allpro' },
+    { href: '/dashboard/hr/performance', label: 'Performa Teknisi', icon: BarChart3, description: 'Lihat laporan performa bulanan Anda.', access: 'public' },
+    { href: '/dashboard/hr/work-schedule', label: 'Jadwal Kerja', icon: CalendarDays, description: 'Lihat jadwal kerja bulanan untuk semua teknisi.', access: 'public' },
+    { href: '/dashboard/hr/attendance', label: 'Absensi Jaga', icon: ClipboardCheck, description: 'Lakukan absensi untuk jadwal jaga Anda hari ini.', access: 'allpro' },
+    { href: '/dashboard/alker', label: 'Daftar Pengecekan', icon: ClipboardCheck, description: 'Lihat riwayat laporan pengecekan alat kerja.', access: 'allpro' },
+    { href: '/dashboard/alker/new', label: 'Input Pengecekan Alker', icon: Wrench, description: 'Buat laporan baru untuk kondisi alat kerja.', access: 'allpro' },
+    { href: '/dashboard/admin/hr/bobot', label: 'Manajemen Bobot', icon: Weight, description: 'Lihat tabel acuan bobot produktivitas.', access: 'public' },
+    { href: '/dashboard/bots', label: 'Daftar Bot', icon: Bot, description: 'Kumpulan bot Telegram untuk alur kerja.', access: 'public' },
+  ];
 
    if (isLoading) {
     return (
@@ -46,20 +56,24 @@ export default function DashboardSelectorPage() {
           <Skeleton className="h-8 w-64" />
           <Skeleton className="h-4 w-96 mt-2" />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader><Skeleton className="h-6 w-32" /></CardHeader>
-            <CardContent><Skeleton className="h-4 w-full" /></CardContent>
-          </Card>
-          <Card>
-            <CardHeader><Skeleton className="h-6 w-32" /></CardHeader>
-            <CardContent><Skeleton className="h-4 w-full" /></CardContent>
-          </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 9 }).map((_, i) => (
+            <Card key={i}>
+              <CardHeader><Skeleton className="h-6 w-32" /></CardHeader>
+              <CardContent><Skeleton className="h-4 w-full" /></CardContent>
+            </Card>
+          ))}
         </div>
       </>
     );
   }
 
+  const filteredMenuItems = menuItems.filter(item => {
+    if (item.access === 'public') return true;
+    if (item.access === 'nota') return canAccessNota;
+    if (item.access === 'allpro') return canAccessAllpro;
+    return false;
+  });
 
   return (
     <>
@@ -72,228 +86,25 @@ export default function DashboardSelectorPage() {
         </p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {canAccessNota && (
-            <Link href="/dashboard/nota">
-            <Card className="hover:border-primary hover:shadow-lg transition-all duration-200 h-full">
-                <CardHeader className="flex flex-row items-center gap-4">
-                <div className="p-3 rounded-full bg-primary/10 text-primary">
-                    <BookCopy className="h-8 w-8" />
-                </div>
-                <div>
-                    <CardTitle>Aplikasi Nota</CardTitle>
-                    <CardDescription>Manajemen dan pelaporan nota.</CardDescription>
-                </div>
-                </CardHeader>
-                <CardContent>
-                <p className="text-sm text-muted-foreground">
-                    Buat, edit, dan kelola semua laporan nota Anda.
-                </p>
-                </CardContent>
-            </Card>
-            </Link>
-        )}
-        
-        <Link href="/dashboard/hr/performance">
-            <Card className="hover:border-primary hover:shadow-lg transition-all duration-200 h-full">
-                <CardHeader className="flex flex-row items-center gap-4">
-                <div className="p-3 rounded-full bg-primary/10 text-primary">
-                    <BarChart3 className="h-8 w-8" />
-                </div>
-                <div>
-                    <CardTitle>Performa Teknisi</CardTitle>
-                    <CardDescription>Lihat laporan performa bulanan.</CardDescription>
-                </div>
-                </CardHeader>
-                <CardContent>
-                <p className="text-sm text-muted-foreground">
-                    Analisis rincian performa kualitas, kontribusi, dan kedisiplinan Anda.
-                </p>
-                </CardContent>
-            </Card>
-        </Link>
-
-        {canAccessAllpro && (
-           <Link href="/dashboard/search-assets">
+        {filteredMenuItems.map(item => (
+          <Link href={item.href} key={item.href}>
             <Card className="hover:border-primary hover:shadow-lg transition-all duration-200 h-full">
               <CardHeader className="flex flex-row items-center gap-4">
                 <div className="p-3 rounded-full bg-primary/10 text-primary">
-                  <Search className="h-8 w-8" />
+                  <item.icon className="h-8 w-8" />
                 </div>
                 <div>
-                  <CardTitle>Network Cek</CardTitle>
-                  <CardDescription>Cari aset jaringan publik.</CardDescription>
+                  <CardTitle>{item.label}</CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
-                  Temukan detail aset jaringan di semua Service Area.
+                  {item.description}
                 </p>
               </CardContent>
             </Card>
           </Link>
-        )}
-
-        {canAccessAllpro && (
-            <Link href="/dashboard/allpro">
-            <Card className="hover:border-primary hover:shadow-lg transition-all duration-200 h-full">
-                <CardHeader className="flex flex-row items-center gap-4">
-                <div className="p-3 rounded-full bg-primary/10 text-primary">
-                    <BarChart3 className="h-8 w-8" />
-                </div>
-                <div>
-                    <CardTitle>Network Service Area</CardTitle>
-                    <CardDescription>Ringkasan data jaringan.</CardDescription>
-                </div>
-                </CardHeader>
-                <CardContent>
-                <p className="text-sm text-muted-foreground">
-                    Lihat ringkasan data OLT, ODC, ODP, dan FTM.
-                </p>
-                </CardContent>
-            </Card>
-            </Link>
-        )}
-        
-        {canAccessAllpro && (
-            <Link href="/dashboard/admin/pelanggan">
-            <Card className="hover:border-primary hover:shadow-lg transition-all duration-200 h-full">
-                <CardHeader className="flex flex-row items-center gap-4">
-                <div className="p-3 rounded-full bg-primary/10 text-primary">
-                    <Contact className="h-8 w-8" />
-                </div>
-                <div>
-                    <CardTitle>Data Pelanggan</CardTitle>
-                    <CardDescription>Input dan kelola data pelanggan.</CardDescription>
-                </div>
-                </CardHeader>
-                <CardContent>
-                <p className="text-sm text-muted-foreground">
-                    Simpan informasi lokasi, kontak, dan foto untuk pelanggan baru.
-                </p>
-                </CardContent>
-            </Card>
-            </Link>
-        )}
-
-        {canAccessAllpro && (
-            <Link href="/dashboard/hr/attendance">
-            <Card className="hover:border-primary hover:shadow-lg transition-all duration-200 h-full">
-                <CardHeader className="flex flex-row items-center gap-4">
-                <div className="p-3 rounded-full bg-primary/10 text-primary">
-                    <ClipboardCheck className="h-8 w-8" />
-                </div>
-                <div>
-                    <CardTitle>Absensi Jaga</CardTitle>
-                    <CardDescription>Lakukan absensi untuk jadwal jaga.</CardDescription>
-                </div>
-                </CardHeader>
-                <CardContent>
-                <p className="text-sm text-muted-foreground">
-                    Ambil foto dan catat kehadiran Anda untuk shift jaga hari ini.
-                </p>
-                </CardContent>
-            </Card>
-            </Link>
-        )}
-
-        {canAccessAllpro && (
-            <Link href="/dashboard/alker">
-            <Card className="hover:border-primary hover:shadow-lg transition-all duration-200 h-full">
-                <CardHeader className="flex flex-row items-center gap-4">
-                <div className="p-3 rounded-full bg-primary/10 text-primary">
-                    <ClipboardCheck className="h-8 w-8" />
-                </div>
-                <div>
-                    <CardTitle>Daftar Pengecekan Alker</CardTitle>
-                    <CardDescription>Lihat riwayat pengecekan alat kerja.</CardDescription>
-                </div>
-                </CardHeader>
-                <CardContent>
-                <p className="text-sm text-muted-foreground">
-                    Tampilkan semua laporan pengecekan alat kerja yang telah dikirim.
-                </p>
-                </CardContent>
-            </Card>
-            </Link>
-        )}
-
-        {canAccessAllpro && (
-            <Link href="/dashboard/alker/new">
-            <Card className="hover:border-primary hover:shadow-lg transition-all duration-200 h-full">
-                <CardHeader className="flex flex-row items-center gap-4">
-                <div className="p-3 rounded-full bg-primary/10 text-primary">
-                    <Wrench className="h-8 w-8" />
-                </div>
-                <div>
-                    <CardTitle>Input Pengecekan Alker</CardTitle>
-                    <CardDescription>Buat laporan pengecekan alat kerja baru.</CardDescription>
-                </div>
-                </CardHeader>
-                <CardContent>
-                <p className="text-sm text-muted-foreground">
-                    Isi formulir untuk melaporkan kondisi alat kerja Anda saat ini.
-                </p>
-                </CardContent>
-            </Card>
-            </Link>
-        )}
-
-        <Link href="/dashboard/chat">
-            <Card className="hover:border-primary hover:shadow-lg transition-all duration-200 h-full">
-                <CardHeader className="flex flex-row items-center gap-4">
-                <div className="p-3 rounded-full bg-primary/10 text-primary">
-                    <MessageSquare className="h-8 w-8" />
-                </div>
-                <div>
-                    <CardTitle>Chat</CardTitle>
-                    <CardDescription>Komunikasi tim secara real-time.</CardDescription>
-                </div>
-                </CardHeader>
-                <CardContent>
-                <p className="text-sm text-muted-foreground">
-                    Kirim pesan ke grup atau secara pribadi ke pengguna lain.
-                </p>
-                </CardContent>
-            </Card>
-        </Link>
-        
-        <Link href="/dashboard/inventory/orbit">
-          <Card className="hover:border-primary hover:shadow-lg transition-all duration-200 h-full">
-              <CardHeader className="flex flex-row items-center gap-4">
-              <div className="p-3 rounded-full bg-primary/10 text-primary">
-                  <Component className="h-8 w-8" />
-              </div>
-              <div>
-                  <CardTitle>Inventaris Orbit</CardTitle>
-                  <CardDescription>Lihat data inventaris Orbit & Mikrotik.</CardDescription>
-              </div>
-              </CardHeader>
-              <CardContent>
-              <p className="text-sm text-muted-foreground">
-                  Lihat daftar SN Orbit, SN Mikrotik, dan nomor SIM card yang terdaftar.
-              </p>
-              </CardContent>
-          </Card>
-        </Link>
-
-        <Link href="/dashboard/bots">
-            <Card className="hover:border-primary hover:shadow-lg transition-all duration-200 h-full">
-                <CardHeader className="flex flex-row items-center gap-4">
-                <div className="p-3 rounded-full bg-primary/10 text-primary">
-                    <Bot className="h-8 w-8" />
-                </div>
-                <div>
-                    <CardTitle>Daftar Bot</CardTitle>
-                    <CardDescription>Kumpulan bot Telegram yang digunakan.</CardDescription>
-                </div>
-                </CardHeader>
-                <CardContent>
-                <p className="text-sm text-muted-foreground">
-                    Akses cepat ke bot-bot penting untuk alur kerja harian Anda.
-                </p>
-                </CardContent>
-            </Card>
-        </Link>
+        ))}
       </div>
 
       <div className="mt-8 w-full overflow-hidden">
