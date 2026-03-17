@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
@@ -14,7 +15,6 @@ import type { RiwayatGangguan, UserProfile, MaterialEvidence, Pelanggan } from '
 import { Calendar as CalendarIcon, Download, Loader2, Files } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { DateRange } from 'react-day-picker';
-import * as XLSX from 'xlsx';
 import { useRouter } from 'next/navigation';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -183,7 +183,7 @@ export default function AssuranceRekapPage() {
         }
     }, [riwayatList, handleSelectAll]);
 
-    const handleExportExcel = () => {
+    const handleExportExcel = async () => {
         const reportsToExport = riwayatList?.filter(r => selectedIds.includes(r.id)) || [];
         if (reportsToExport.length === 0) {
             toast({ variant: 'destructive', title: 'Tidak ada data dipilih untuk diekspor.' });
@@ -193,6 +193,7 @@ export default function AssuranceRekapPage() {
         setIsLoadingExcel(true);
 
         try {
+            const XLSX = await import('xlsx');
             const dataToExport = reportsToExport.map((riwayat, index) => {
                 const row: { [key: string]: any } = {};
                 
@@ -498,3 +499,5 @@ export default function AssuranceRekapPage() {
         </>
     );
 }
+
+  

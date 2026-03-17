@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import {
@@ -64,7 +63,6 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { DatePickerDropdowns } from '@/components/ui/date-picker-dropdowns';
-import * as XLSX from 'xlsx';
 import { format, isValid } from 'date-fns';
 
 
@@ -568,7 +566,7 @@ export default function AdminUsersPage() {
     setCurrentPage(1);
   }, [searchQuery]);
 
-  const handleExportToExcel = () => {
+  const handleExportToExcel = async () => {
     if (!users || users.length === 0) {
       toast({
         variant: "destructive",
@@ -577,6 +575,8 @@ export default function AdminUsersPage() {
       });
       return;
     }
+
+    const XLSX = await import('xlsx');
 
     const safeFormatDate = (timestamp: any): string => {
       if (!timestamp) return '';
@@ -684,31 +684,29 @@ export default function AdminUsersPage() {
     setUserToEdit(user);
   };
   
-  const handleFormSubmit = (data: Partial<UserProfile>) => {
+  const handleFormSubmit = async (data: Partial<UserProfile>) => {
     if (!userToEdit) return;
     setIsSaving(true);
     
     const userDocRef = doc(firestore, 'users', userToEdit.id);
     
-    updateDoc(userDocRef, data)
-      .then(() => {
+    try {
+        await updateDoc(userDocRef, data);
         toast({
           title: 'User Data Updated',
           description: `Data untuk ${userToEdit.email} telah diperbarui.`,
         });
         setUserToEdit(null);
-      })
-      .catch((error) => {
+    } catch (error) {
         console.error("Failed to update user data:", error);
         toast({
             variant: "destructive",
             title: "Update Failed",
             description: "Could not save user data."
         });
-      })
-      .finally(() => {
+    } finally {
         setIsSaving(false);
-      });
+    }
   };
 
   const isLoading = isUserLoading || isProfileLoading || areUsersLoading;
@@ -877,3 +875,5 @@ export default function AdminUsersPage() {
     </>
   );
 }
+
+  

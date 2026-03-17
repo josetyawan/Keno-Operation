@@ -3,7 +3,6 @@
 
 import * as React from 'react';
 import { useState, useMemo, useEffect } from 'react';
-import * as XLSX from 'xlsx';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -408,6 +407,7 @@ export default function ProvisioningDashboardPage() {
     const reader = new FileReader();
     reader.onload = async (e) => {
       try {
+        const XLSX = await import('xlsx');
         const existingRecordsSnap = await getDocs(collection(firestore, 'provisioning-records'));
         const existingScOrders = new Set(existingRecordsSnap.docs.map(doc => doc.id));
         
@@ -891,3 +891,5 @@ export default function ProvisioningDashboardPage() {
     </div>
   );
 }
+
+  

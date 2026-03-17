@@ -49,7 +49,9 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { PlusCircle, MapPin, Loader2, Search, History, Phone, Pencil, Wrench, QrCode, FileSpreadsheet, AlertCircle, Info, Upload, Trash2, Bot, CalendarIcon, MessageSquare, AlertTriangle, Image as ImageIcon } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 import { useStorage } from '@/firebase/provider';
 import { collection, query, doc, serverTimestamp, where, getDocs, limit, orderBy, Timestamp, writeBatch, deleteDoc, addDoc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -1471,7 +1473,7 @@ export default function AdminPelangganPage() {
                                                             <AlertDialogFooter>
                                                                 <AlertDialogCancel>Batal</AlertDialogCancel>
                                                                 <AlertDialogAction onClick={() => handleDeleteRiwayat(item.id)} disabled={isDeletingRiwayat} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-                                                                     {isDeletingRiwayat ? <Loader2 className="animate-spin" /> : 'Hapus'}
+                                                                     {isDeletingRiwayat ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Hapus'}
                                                                 </AlertDialogAction>
                                                             </AlertDialogFooter>
                                                         </AlertDialogContent>
@@ -1568,4 +1570,5 @@ export default function AdminPelangganPage() {
     
 
     
+
 

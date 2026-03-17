@@ -29,7 +29,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
-import { toJpeg } from 'html-to-image';
 
 
 export default function AttendanceRekapPage() {
@@ -97,6 +96,7 @@ export default function AttendanceRekapPage() {
     }, [users]);
     
     const handleDownloadJpg = async () => {
+        const { toJpeg } = await import('html-to-image');
         const printableArea = document.getElementById('printable-area');
         if (!printableArea) {
             toast({
@@ -163,6 +163,7 @@ export default function AttendanceRekapPage() {
             });
         }
     };
+
 
     const handleDeleteAll = async () => {
         if (!attendances || attendances.length === 0) {
@@ -283,7 +284,14 @@ export default function AttendanceRekapPage() {
                         {attendances.map(att => (
                             <Card key={att.id} className="overflow-hidden break-inside-avoid group relative">
                                 <div className="relative aspect-square w-full">
-                                    <Image src={att.checkInPhotoUrl} alt={`Foto absen ${userMap.get(att.userId)}`} fill className="object-cover" />
+                                    <Image 
+                                      src={att.checkInPhotoUrl} 
+                                      alt={`Foto absen ${userMap.get(att.userId)}`} 
+                                      fill 
+                                      className="object-cover" 
+                                      unoptimized
+                                      crossOrigin="anonymous"
+                                    />
                                 </div>
                                 <CardContent className="p-3 text-sm">
                                     <p className="font-semibold truncate">{userMap.get(att.userId) || 'Memuat...'}</p>
@@ -307,4 +315,5 @@ export default function AttendanceRekapPage() {
         </div>
     );
 }
-    
+
+  
