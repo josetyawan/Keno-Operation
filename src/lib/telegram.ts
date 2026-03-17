@@ -99,7 +99,7 @@ export async function sendTelegramMessage({
                 break;
             }
 
-            let splitPos = remainingText.lastIndexOf('\\n', TELEGRAM_MAX_MESSAGE_LENGTH);
+            let splitPos = remainingText.lastIndexOf('\n', TELEGRAM_MAX_MESSAGE_LENGTH);
             if (splitPos === -1 || splitPos === 0) {
                 splitPos = TELEGRAM_MAX_MESSAGE_LENGTH;
             }
