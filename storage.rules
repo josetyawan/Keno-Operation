@@ -1,5 +1,4 @@
 
-      
 rules_version = '2';
 
 service firebase.storage {
@@ -51,11 +50,11 @@ service firebase.storage {
     }
 
     match /pelanggan_photos/{userId}/{allPaths=**} {
-      allow write: if isApproved() && isOwner(userId);
+      allow write: if isApproved() && (isOwner(userId) || isAdmin() || isKorlap());
     }
     
     match /gangguan_evidence/{userId}/{allPaths=**} {
-      allow write: if isApproved() && isOwner(userId);
+      allow write: if isApproved() && (isOwner(userId) || isAdmin() || isKorlap());
     }
 
     match /hr_attendance/{userId}/{allPaths=**} {
@@ -71,4 +70,3 @@ service firebase.storage {
     }
   }
 }
-    

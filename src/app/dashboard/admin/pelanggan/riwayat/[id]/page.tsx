@@ -147,18 +147,15 @@ export default function RiwayatDetailPage() {
   const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
   
   const canView = useMemo(() => {
-    // If the data is loading, we can't determine access yet.
     if (!userProfile || !riwayat) return false;
-    // The main layout already checks for 'approved' status.
-    // The new Firestore security rule `allow get: if isApproved()` handles the permission.
-    // Therefore, if we have the `riwayat` data, the user is authorized to view it.
-    return true;
-  }, [userProfile, riwayat]);
+    if(userProfile.role === 'admin' || userProfile.role === 'korlap') return true;
+    return riwayat.userId === user?.uid;
+  }, [userProfile, riwayat, user]);
 
   const canModify = useMemo(() => {
     if (!userProfile || !riwayat) return false;
     if (userProfile.role === 'admin' || userProfile.role === 'korlap') return true;
-    return riwayat.userId === user?.uid; // Only allow modification for original creator
+    return riwayat.userId === user?.uid;
   }, [userProfile, riwayat, user]);
 
   
@@ -229,6 +226,13 @@ export default function RiwayatDetailPage() {
           <h1 className="text-xl font-bold tracking-tight">Detail Laporan Gangguan</h1>
           <p className="text-muted-foreground text-sm">No. Service: {riwayat.noService}</p>
         </div>
+        {canModify && (
+            <Link href={`/dashboard/admin/pelanggan/riwayat/${id}/edit`} className="ml-auto">
+                <Button variant="outline">
+                    <Edit className="mr-2 h-4 w-4" /> Edit
+                </Button>
+            </Link>
+        )}
       </div>
       
       <Card>
