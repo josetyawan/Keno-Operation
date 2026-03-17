@@ -1,3 +1,4 @@
+
 'use server';
 
 import { ai } from '@/ai/genkit';
@@ -30,7 +31,7 @@ const attendanceNoticeTextFlow = ai.defineFlow(
   async (input) => {
     // 1. Generate the base message
     const { text } = await ai.generate({
-      model: 'googleai/gemini-1.5-flash-latest',
+      model: 'googleai/gemini-pro',
       prompt: `Buat notifikasi singkat untuk Telegram dalam format HTML sederhana (hanya gunakan tag <b> dan <i>). Mulai dengan emoji yang sesuai.
       
       <b>Data:</b>
@@ -51,22 +52,31 @@ const attendanceNoticeTextFlow = ai.defineFlow(
 );
 
 // This exported function now handles the sending
-export async function sendAttendanceNotice(input: z.infer<typeof attendanceNoticeSchema>): Promise<string> {
-  const messageText = await attendanceNoticeTextFlow(input);
-
+export async function sendAttendanceNotice(input: z.infer<typeof attendanceNoticeSchema>): Promise<void> {
+  let messageText;
+  try {
+    messageText = await attendanceNoticeTextFlow(input);
+  } catch (e: any) {
+    console.error("AI flow for attendance notice failed:", e);
+    throw new Error(`Gagal membuat teks notifikasi AI: ${e.message}`);
+  }
+  
   if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID_ABSENSI) {
       const errorMessage = 'Konfigurasi Telegram untuk Absensi (TELEGRAM_BOT_TOKEN atau TELEGRAM_CHAT_ID_ABSENSI) tidak diatur.';
       console.error(errorMessage);
       throw new Error(errorMessage);
   }
   
-  await sendTelegramMessage({
-    botToken: process.env.TELEGRAM_BOT_TOKEN,
-    chatId: process.env.TELEGRAM_CHAT_ID_ABSENSI,
-    text: messageText,
-    photoUrls: input.photoUrl ? [input.photoUrl] : [],
-    photoCaption: messageText // Use the same text for caption if there is a photo
-  });
-
-  return messageText;
+  try {
+    await sendTelegramMessage({
+      botToken: process.env.TELEGRAM_BOT_TOKEN,
+      chatId: process.env.TELEGRAM_CHAT_ID_ABSENSI,
+      text: messageText,
+      photoUrls: input.photoUrl ? [input.photoUrl] : [],
+      photoCaption: messageText // Use the same text for caption if there is a photo
+    });
+  } catch (e: any) {
+    console.error("Telegram message sending failed:", e);
+    throw new Error(`Gagal mengirim notifikasi ke Telegram: ${e.message}`);
+  }
 }

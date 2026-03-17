@@ -1,3 +1,4 @@
+
 'use server';
 
 import { ai } from '@/ai/genkit';
@@ -27,7 +28,7 @@ const gamasDesignatorNoticeTextFlow = ai.defineFlow(
   },
   async ({ userName, noTiket, designator, rejectionReason }) => {
     const { text } = await ai.generate({
-      model: 'googleai/gemini-1.5-flash-latest',
+      model: 'googleai/gemini-pro',
       prompt: `Buat notifikasi Telegram dalam format HTML (hanya gunakan tag <b>, <i>, dan <code>) untuk memberitahu teknisi bahwa salah satu eviden gamas mereka ditolak.
       
       <b>Data Laporan:</b>
@@ -44,8 +45,14 @@ const gamasDesignatorNoticeTextFlow = ai.defineFlow(
 
 export async function sendGamasDesignatorNotice(
   input: z.infer<typeof gamasDesignatorNoticeSchema>
-): Promise<string> {
-  const messageText = await gamasDesignatorNoticeTextFlow(input);
+): Promise<void> {
+  let messageText;
+  try {
+    messageText = await gamasDesignatorNoticeTextFlow(input);
+  } catch (e: any) {
+    console.error("AI flow for Gamas designator notice failed:", e);
+    throw new Error(`Gagal membuat teks notifikasi AI: ${e.message}`);
+  }
   
   if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID_GAMAS) {
       const errorMessage = 'Konfigurasi Telegram untuk Gamas (TELEGRAM_BOT_TOKEN atau TELEGRAM_CHAT_ID_GAMAS) tidak diatur.';
@@ -53,11 +60,14 @@ export async function sendGamasDesignatorNotice(
       throw new Error(errorMessage);
   }
   
-  await sendTelegramMessage({
-      botToken: process.env.TELEGRAM_BOT_TOKEN,
-      chatId: process.env.TELEGRAM_CHAT_ID_GAMAS,
-      text: messageText,
-  });
-  
-  return messageText;
+  try {
+    await sendTelegramMessage({
+        botToken: process.env.TELEGRAM_BOT_TOKEN,
+        chatId: process.env.TELEGRAM_CHAT_ID_GAMAS,
+        text: messageText,
+    });
+  } catch (e: any) {
+    console.error("Telegram message sending failed:", e);
+    throw new Error(`Gagal mengirim notifikasi ke Telegram: ${e.message}`);
+  }
 }

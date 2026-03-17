@@ -1,3 +1,4 @@
+
 'use server';
 
 import { ai } from '@/ai/genkit';
@@ -27,7 +28,7 @@ const rejectionNoticeTextFlow = ai.defineFlow(
   },
   async (input) => {
     const { text } = await ai.generate({
-      model: 'googleai/gemini-1.5-flash-latest',
+      model: 'googleai/gemini-pro',
       prompt: `Buat notifikasi penolakan laporan nota untuk Telegram dalam format HTML (hanya gunakan tag <b>, <i>, dan <code>).
       
       - <b>PIC:</b> ${escapeHtml(input.picName)}
@@ -43,8 +44,14 @@ const rejectionNoticeTextFlow = ai.defineFlow(
 
 export async function sendRejectionNotice(
   input: z.infer<typeof rejectionNoticeSchema>
-): Promise<string> {
-  const messageText = await rejectionNoticeTextFlow(input);
+): Promise<void> {
+  let messageText;
+  try {
+      messageText = await rejectionNoticeTextFlow(input);
+  } catch (e: any) {
+      console.error("AI flow for rejection notice failed:", e);
+      throw new Error(`Gagal membuat teks notifikasi AI: ${e.message}`);
+  }
   
   if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID_FINANCE) {
     const errorMessage = 'Konfigurasi Telegram untuk Finance (TELEGRAM_BOT_TOKEN atau TELEGRAM_CHAT_ID_FINANCE) tidak diatur.';
@@ -52,11 +59,14 @@ export async function sendRejectionNotice(
     throw new Error(errorMessage);
   }
 
-  await sendTelegramMessage({
-      botToken: process.env.TELEGRAM_BOT_TOKEN,
-      chatId: process.env.TELEGRAM_CHAT_ID_FINANCE,
-      text: messageText,
-  });
-
-  return messageText;
+  try {
+      await sendTelegramMessage({
+          botToken: process.env.TELEGRAM_BOT_TOKEN,
+          chatId: process.env.TELEGRAM_CHAT_ID_FINANCE,
+          text: messageText,
+      });
+  } catch(e: any) {
+      console.error("Telegram message sending failed:", e);
+      throw new Error(`Gagal mengirim notifikasi ke Telegram: ${e.message}`);
+  }
 }

@@ -1,3 +1,4 @@
+
 'use server';
 
 import { ai } from '@/ai/genkit';
@@ -26,7 +27,7 @@ const swapApprovalNoticeTextFlow = ai.defineFlow(
   },
   async ({ requesterName, replacementName, swapDate }) => {
     const { text } = await ai.generate({
-      model: 'googleai/gemini-1.5-flash-latest',
+      model: 'googleai/gemini-pro',
       prompt: `Buat notifikasi persetujuan tukar jadwal jaga untuk Telegram dalam format HTML (hanya gunakan tag <b> dan <i>).
       
       - <b>Tanggal:</b> ${swapDate}
@@ -41,8 +42,14 @@ const swapApprovalNoticeTextFlow = ai.defineFlow(
 
 export async function sendSwapApprovalNotice(
   input: z.infer<typeof swapApprovalNoticeSchema>
-): Promise<string> {
-  const messageText = await swapApprovalNoticeTextFlow(input);
+): Promise<void> {
+  let messageText;
+  try {
+    messageText = await swapApprovalNoticeTextFlow(input);
+  } catch (e: any) {
+     console.error("AI flow for swap approval notice failed:", e);
+     throw new Error(`Gagal membuat teks notifikasi AI: ${e.message}`);
+  }
   
   if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID_ABSENSI) {
     const errorMessage = 'Konfigurasi Telegram untuk Absensi (TELEGRAM_BOT_TOKEN atau TELEGRAM_CHAT_ID_ABSENSI) tidak diatur.';
@@ -50,11 +57,14 @@ export async function sendSwapApprovalNotice(
     throw new Error(errorMessage);
   }
 
-  await sendTelegramMessage({
-    botToken: process.env.TELEGRAM_BOT_TOKEN,
-    chatId: process.env.TELEGRAM_CHAT_ID_ABSENSI,
-    text: messageText,
-  });
-
-  return messageText;
+  try {
+    await sendTelegramMessage({
+      botToken: process.env.TELEGRAM_BOT_TOKEN,
+      chatId: process.env.TELEGRAM_CHAT_ID_ABSENSI,
+      text: messageText,
+    });
+  } catch (e: any) {
+    console.error("Telegram message sending failed:", e);
+    throw new Error(`Gagal mengirim notifikasi ke Telegram: ${e.message}`);
+  }
 }
