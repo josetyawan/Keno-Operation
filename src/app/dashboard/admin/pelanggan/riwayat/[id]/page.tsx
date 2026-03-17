@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -18,11 +17,11 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, CheckCircle, Edit, Trash, X, ShieldX, Image as ImageIcon, AlertTriangle, Info, Trash2 } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Image as ImageIcon, AlertTriangle, Info } from 'lucide-react';
 import type { RiwayatGangguan, UserProfile, MaterialEvidence } from '@/lib/types';
 import { useMemo, useState } from 'react';
 import Image from 'next/image';
-import { Badge, badgeVariants } from '@/components/ui/badge';
+import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import {
   AlertDialog,
@@ -36,11 +35,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
-import type { VariantProps } from 'class-variance-authority';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { sendRejectionNotice } from '@/ai/flows/send-rejection-notice';
 
 const safeToDate = (timestamp: any): Date | null => {
   if (!timestamp) return null;
@@ -105,31 +100,6 @@ function PhotoViewer({ url, label, onDelete, canDelete }: PhotoViewerProps) {
   );
 }
 
-
-const getStatusVariant = (status: RiwayatGangguan['status']): VariantProps<typeof badgeVariants>['variant'] => {
-    switch (status) {
-        case 'verified':
-        case 'verified-tif':
-            return 'outline';
-        case 'rejected':
-            return 'destructive';
-        case 'paid':
-            return 'default';
-        case 'pending':
-        default:
-            return 'secondary';
-    }
-};
-
-const statusLabels: Record<string, string> = {
-  pending: 'Pending',
-  verified: 'Verified',
-  'verified-tif': 'Verified (TIF)',
-  rejected: 'Rejected',
-  paid: 'Paid',
-};
-
-
 export default function RiwayatDetailPage() {
   const params = useParams();
   const id = params.id as string;
@@ -148,7 +118,7 @@ export default function RiwayatDetailPage() {
   
   const canView = useMemo(() => {
     if (!userProfile || !riwayat) return false;
-    // Any approved user can now view. The security rule is the final check.
+    // Any approved user can now view.
     return userProfile.registrationStatus === 'approved';
   }, [userProfile, riwayat]);
 
@@ -164,11 +134,9 @@ export default function RiwayatDetailPage() {
     setIsDeletingPhoto(true);
 
     try {
-        // 1. Delete from Storage
         const photoRef = ref(storage, photoUrl);
         await deleteObject(photoRef);
 
-        // 2. Delete from Firestore
         let updatedData: Partial<RiwayatGangguan>;
         
         if (riwayat.evidenSccUrl === photoUrl) {

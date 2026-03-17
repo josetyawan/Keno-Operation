@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -234,45 +235,35 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
         <Card><CardHeader><CardTitle>Data Kepegawaian</CardTitle></CardHeader>
           <CardContent className="space-y-6">
             <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid gap-2"><Label htmlFor="email">Email Login</Label><Input id="email" value={user.email || ''} readOnly disabled /></div>
               <div className="grid gap-2"><Label htmlFor="emailCorporate">Email Coorporate</Label><Input id="emailCorporate" type="email" value={emailCorporate} onChange={e => setEmailCorporate(e.target.value)} /></div>
-               <div className="grid gap-2"><Label htmlFor="nikKaryawan">NIK Karyawan</Label><Input id="nikKaryawan" value={nikKaryawan} onChange={e => setNikKaryawan(e.target.value)} /></div>
             </div>
              <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid gap-2"><Label htmlFor="nikKaryawan">NIK Karyawan</Label><Input id="nikKaryawan" value={nikKaryawan} onChange={e => setNikKaryawan(e.target.value)} /></div>
                 <div className="grid gap-2"><Label htmlFor="noHpTsel">No. HP Aktif TSEL</Label><Input id="noHpTsel" value={noHpTsel} onChange={e => setNoHpTsel(e.target.value)} /></div>
-                <div className="grid gap-2"><Label htmlFor="tanggalMasukKerja">Tanggal Masuk Kerja</Label>
-                    <DatePickerDropdowns
-                        value={tanggalMasukKerja}
-                        onChange={setTanggalMasukKerja}
-                        fromYear={2000}
-                        toYear={new Date().getFullYear()}
-                    />
-                </div>
             </div>
             <div className="grid md:grid-cols-2 gap-4">
               <div className="grid gap-2"><Label htmlFor="telegramId">ID Telegram</Label><Input id="telegramId" value={telegramId} onChange={e => setTelegramId(e.target.value)} placeholder="Contoh: 123456789" /></div>
               <div className="grid gap-2"><Label htmlFor="telegramUsername">Username Telegram</Label><Input id="telegramUsername" value={telegramUsername} onChange={e => setTelegramUsername(e.target.value)} placeholder="Contoh: @username" /></div>
             </div>
             <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid gap-2"><Label htmlFor="tanggalMasukKerja">Tanggal Masuk Kerja</Label>
+                 <DatePickerDropdowns
+                    value={tanggalMasukKerja}
+                    onChange={setTanggalMasukKerja}
+                    fromYear={2000}
+                    toYear={new Date().getFullYear()}
+                  />
+              </div>
               <div className="grid gap-2"><Label htmlFor="jabatan">Jabatan</Label><Input id="jabatan" value={jabatan} onChange={e => setJabatan(e.target.value)} /></div>
-              <div className="grid gap-2"><Label htmlFor="labor">Labor</Label><Input id="labor" value={labor} onChange={e => setLabor(e.target.value)} /></div>
-            </div>
-             <div className="grid md:grid-cols-3 gap-4">
-                <div className="grid gap-2"><Label htmlFor="devisi-admin">DEVISI</Label><Input id="devisi-admin" value={devisi} onChange={e => setDevisi(e.target.value)} /></div>
-                <div className="grid gap-2"><Label htmlFor="unit-admin">UNIT</Label><Input id="unit-admin" value={unit} onChange={e => setUnit(e.target.value)} /></div>
-                <div className="grid gap-2"><Label htmlFor="psa-admin">PSA</Label><Input id="psa-admin" value={psa} onChange={e => setPsa(e.target.value)} /></div>
             </div>
             <div className="grid gap-2"><Label htmlFor="jobDescHrmista">Job Desk di HRMISTA</Label><Textarea id="jobDescHrmista" value={jobDescHrmista} onChange={e => setJobDescHrmista(e.target.value)} /></div>
             <div className="grid gap-2"><Label htmlFor="jobDescLapangan">Job Desk Lapangan</Label><Textarea id="jobDescLapangan" value={jobDescLapangan} onChange={e => setJobDescLapangan(e.target.value)} /></div>
-          </CardContent>
-        </Card>
-
-         {/* Pendidikan */}
-        <Card><CardHeader><CardTitle>Pendidikan Terakhir</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-2"><Label htmlFor="institusi">Nama Institusi/Sekolah</Label><Input id="institusi" value={pendidikanTerakhir.institusi} onChange={e => setPendidikanTerakhir(p => ({...p, institusi: e.target.value}))} /></div>
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="grid gap-2"><Label htmlFor="jurusan">Jurusan</Label><Input id="jurusan" value={pendidikanTerakhir.jurusan} onChange={e => setPendidikanTerakhir(p => ({...p, jurusan: e.target.value}))} /></div>
-              <div className="grid gap-2"><Label htmlFor="tahunLulus">Tahun Lulus</Label><Input id="tahunLulus" value={pendidikanTerakhir.tahunLulus} onChange={e => setPendidikanTerakhir(p => ({...p, tahunLulus: e.target.value}))} /></div>
+            <div className="grid gap-2"><Label htmlFor="labor">Labor</Label><Input id="labor" value={labor} onChange={e => setLabor(e.target.value)} /></div>
+             <div className="grid md:grid-cols-3 gap-4">
+                <div className="grid gap-2"><Label htmlFor="devisi">DEVISI</Label><Input id="devisi" value={devisi} onChange={e => setDevisi(e.target.value)} /></div>
+                <div className="grid gap-2"><Label htmlFor="unit">UNIT</Label><Input id="unit" value={unit} onChange={e => setUnit(e.target.value)} /></div>
+                <div className="grid gap-2"><Label htmlFor="psa">PSA</Label><Input id="psa" value={psa} onChange={e => setPsa(e.target.value)} /></div>
             </div>
           </CardContent>
         </Card>
@@ -280,7 +271,7 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
         {/* Data Pelengkap */}
         <Card><CardHeader><CardTitle>Data Pelengkap</CardTitle></CardHeader>
           <CardContent className="space-y-6">
-             <div className="grid gap-2">
+            <div className="grid gap-2">
                 <Label htmlFor="paymentInfo">No. Pembayaran (Gaji)</Label>
                 <Input id="paymentInfo" value={paymentInfo} onChange={e => setPaymentInfo(e.target.value)} placeholder="e.g., OVO 0812... / BCA 123..." />
             </div>
@@ -328,6 +319,20 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
             </div>
           </CardContent>
         </Card>
+        
+        {/* Pendidikan */}
+        <Card>
+          <CardHeader><CardTitle>Pendidikan Terakhir</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-2"><Label htmlFor="institusi">Nama Institusi/Sekolah</Label><Input id="institusi" value={pendidikanTerakhir.institusi} onChange={e => setPendidikanTerakhir(p => ({...p, institusi: e.target.value}))} /></div>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid gap-2"><Label htmlFor="jurusan">Jurusan</Label><Input id="jurusan" value={pendidikanTerakhir.jurusan} onChange={e => setPendidikanTerakhir(p => ({...p, jurusan: e.target.value}))} /></div>
+              <div className="grid gap-2"><Label htmlFor="tahunLulus">Tahun Lulus</Label><Input id="tahunLulus" value={pendidikanTerakhir.tahunLulus} onChange={e => setPendidikanTerakhir(p => ({...p, tahunLulus: e.target.value}))} /></div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <DialogFooter>
         <DialogClose asChild><Button type="button" variant="secondary">Batal</Button></DialogClose>
         <Button type="submit" disabled={isSaving}>
@@ -567,6 +572,7 @@ export default function AdminUsersPage() {
   }, [searchQuery]);
 
   const handleExportToExcel = async () => {
+    const XLSX = await import('xlsx');
     if (!users || users.length === 0) {
       toast({
         variant: "destructive",
@@ -575,8 +581,6 @@ export default function AdminUsersPage() {
       });
       return;
     }
-
-    const XLSX = await import('xlsx');
 
     const safeFormatDate = (timestamp: any): string => {
       if (!timestamp) return '';
@@ -876,4 +880,3 @@ export default function AdminUsersPage() {
   );
 }
 
-  

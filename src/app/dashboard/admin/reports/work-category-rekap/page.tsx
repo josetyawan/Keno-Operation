@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -16,7 +17,6 @@ import { id as idLocale } from 'date-fns/locale';
 import type { RiwayatGangguan, OtherWork, ProvisioningRecord } from '@/lib/types';
 import { productivityWeights } from '@/lib/bobot-produktivitas';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import * as XLSX from 'xlsx';
 
 const workCategories = Object.keys(productivityWeights);
 
@@ -134,13 +134,14 @@ export default function WorkCategoryRekapPage() {
 
     }, [riwayatList, otherWorksList, provisioningList, selectedCategory]);
 
-    const handleExportExcel = () => {
+    const handleExportExcel = async () => {
         if (filteredData.length === 0) {
             toast({ variant: 'destructive', title: 'Tidak ada data untuk diekspor.' });
             return;
         }
 
         setIsLoading(true);
+        const XLSX = await import('xlsx');
 
         const dataToExport = filteredData.map((item, index) => {
             const isProvisioning = 'crmOrder' in item;
