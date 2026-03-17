@@ -12,16 +12,15 @@ const attendanceNoticeSchema = z.object({
   coordinates: z.string().optional(),
 });
 
-const attendanceNoticeFlow = ai.defineFlow(
+// This flow now ONLY generates the message text
+const attendanceNoticeTextFlow = ai.defineFlow(
   {
-    name: 'attendanceNoticeFlow',
+    name: 'attendanceNoticeTextFlow',
     inputSchema: attendanceNoticeSchema,
     outputSchema: z.string(),
   },
   async (input) => {
-    // This flow now also sends the message directly to Telegram.
-    
-    // 1. Generate the base message (still using AI for now, can be changed to simple string later)
+    // 1. Generate the base message
     const { text } = await ai.generate({
       model: 'googleai/gemini-pro',
       prompt: `Buat notifikasi singkat untuk Telegram dalam format Markdown. Mulai dengan emoji yang sesuai.
@@ -39,25 +38,27 @@ const attendanceNoticeFlow = ai.defineFlow(
       message += `\n- *Lokasi:* https://www.google.com/maps/search/?api=1&query=${input.coordinates}`;
     }
 
-    // 3. Send to Telegram using the specific Absensi bot
-    if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID_ABSENSI) {
-        const errorMessage = 'Konfigurasi Telegram untuk Absensi (TELEGRAM_BOT_TOKEN atau TELEGRAM_CHAT_ID_ABSENSI) tidak diatur.';
-        console.error(errorMessage);
-        throw new Error(errorMessage);
-    }
-    
-    await sendTelegramMessage({
-      botToken: process.env.TELEGRAM_BOT_TOKEN,
-      chatId: process.env.TELEGRAM_CHAT_ID_ABSENSI,
-      text: message,
-      photoUrls: input.photoUrl ? [input.photoUrl] : [],
-      photoCaption: message // Use the same text for caption if there is a photo
-    });
-
     return message;
   }
 );
 
+// This exported function now handles the sending
 export async function sendAttendanceNotice(input: z.infer<typeof attendanceNoticeSchema>): Promise<string> {
-  return attendanceNoticeFlow(input);
+  const messageText = await attendanceNoticeTextFlow(input);
+
+  if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID_ABSENSI) {
+      const errorMessage = 'Konfigurasi Telegram untuk Absensi (TELEGRAM_BOT_TOKEN atau TELEGRAM_CHAT_ID_ABSENSI) tidak diatur.';
+      console.error(errorMessage);
+      throw new Error(errorMessage);
+  }
+  
+  await sendTelegramMessage({
+    botToken: process.env.TELEGRAM_BOT_TOKEN,
+    chatId: process.env.TELEGRAM_CHAT_ID_ABSENSI,
+    text: messageText,
+    photoUrls: input.photoUrl ? [input.photoUrl] : [],
+    photoCaption: messageText // Use the same text for caption if there is a photo
+  });
+
+  return messageText;
 }

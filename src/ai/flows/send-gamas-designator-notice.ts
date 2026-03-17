@@ -11,9 +11,9 @@ const gamasDesignatorNoticeSchema = z.object({
   rejectionReason: z.string(),
 });
 
-const gamasDesignatorNoticeFlow = ai.defineFlow(
+const gamasDesignatorNoticeTextFlow = ai.defineFlow(
   {
-    name: 'gamasDesignatorNoticeFlow',
+    name: 'gamasDesignatorNoticeTextFlow',
     inputSchema: gamasDesignatorNoticeSchema,
     outputSchema: z.string(),
   },
@@ -30,19 +30,6 @@ const gamasDesignatorNoticeFlow = ai.defineFlow(
       
       Gunakan emoji peringatan ⚠️ dan minta teknisi untuk segera memperbaikinya.`,
     });
-
-    if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID_GAMAS) {
-        const errorMessage = 'Konfigurasi Telegram untuk Gamas (TELEGRAM_BOT_TOKEN atau TELEGRAM_CHAT_ID_GAMAS) tidak diatur.';
-        console.error(errorMessage);
-        throw new Error(errorMessage);
-    }
-    
-    await sendTelegramMessage({
-        botToken: process.env.TELEGRAM_BOT_TOKEN,
-        chatId: process.env.TELEGRAM_CHAT_ID_GAMAS,
-        text: text,
-    });
-    
     return text;
   }
 );
@@ -50,5 +37,19 @@ const gamasDesignatorNoticeFlow = ai.defineFlow(
 export async function sendGamasDesignatorNotice(
   input: z.infer<typeof gamasDesignatorNoticeSchema>
 ): Promise<string> {
-  return gamasDesignatorNoticeFlow(input);
+  const messageText = await gamasDesignatorNoticeTextFlow(input);
+  
+  if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID_GAMAS) {
+      const errorMessage = 'Konfigurasi Telegram untuk Gamas (TELEGRAM_BOT_TOKEN atau TELEGRAM_CHAT_ID_GAMAS) tidak diatur.';
+      console.error(errorMessage);
+      throw new Error(errorMessage);
+  }
+  
+  await sendTelegramMessage({
+      botToken: process.env.TELEGRAM_BOT_TOKEN,
+      chatId: process.env.TELEGRAM_CHAT_ID_GAMAS,
+      text: messageText,
+  });
+  
+  return messageText;
 }

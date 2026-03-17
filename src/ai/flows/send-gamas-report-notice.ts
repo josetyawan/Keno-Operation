@@ -11,9 +11,9 @@ const gamasReportNoticeSchema = z.object({
   rejectionReason: z.string().optional(),
 });
 
-const gamasReportNoticeFlow = ai.defineFlow(
+const gamasReportNoticeTextFlow = ai.defineFlow(
   {
-    name: 'gamasReportNoticeFlow',
+    name: 'gamasReportNoticeTextFlow',
     inputSchema: gamasReportNoticeSchema,
     outputSchema: z.string(),
   },
@@ -28,19 +28,6 @@ const gamasReportNoticeFlow = ai.defineFlow(
       
       Gunakan emoji ✅ untuk 'Disetujui' dan ❌ untuk 'Ditolak'.`,
     });
-    
-    if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID_GAMAS) {
-        const errorMessage = 'Konfigurasi Telegram untuk Gamas (TELEGRAM_BOT_TOKEN atau TELEGRAM_CHAT_ID_GAMAS) tidak diatur.';
-        console.error(errorMessage);
-        throw new Error(errorMessage);
-    }
-
-    await sendTelegramMessage({
-        botToken: process.env.TELEGRAM_BOT_TOKEN,
-        chatId: process.env.TELEGRAM_CHAT_ID_GAMAS,
-        text: text,
-    });
-
     return text;
   }
 );
@@ -48,5 +35,19 @@ const gamasReportNoticeFlow = ai.defineFlow(
 export async function sendGamasReportNotice(
   input: z.infer<typeof gamasReportNoticeSchema>
 ): Promise<string> {
-  return gamasReportNoticeFlow(input);
+  const messageText = await gamasReportNoticeTextFlow(input);
+  
+  if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID_GAMAS) {
+      const errorMessage = 'Konfigurasi Telegram untuk Gamas (TELEGRAM_BOT_TOKEN atau TELEGRAM_CHAT_ID_GAMAS) tidak diatur.';
+      console.error(errorMessage);
+      throw new Error(errorMessage);
+  }
+
+  await sendTelegramMessage({
+      botToken: process.env.TELEGRAM_BOT_TOKEN,
+      chatId: process.env.TELEGRAM_CHAT_ID_GAMAS,
+      text: messageText,
+  });
+
+  return messageText;
 }
