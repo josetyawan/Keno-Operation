@@ -34,6 +34,7 @@ export default function DashboardSelectorPage() {
 
   const menuItems = [
     { href: '/dashboard/chat', label: 'Chat', icon: MessageSquare, description: 'Komunikasi tim secara real-time.', access: 'public' },
+    { href: '/dashboard/admin/pelanggan', label: 'Data Pelanggan', icon: Contact, description: 'Cari, tambah, dan kelola data pelanggan.', access: 'allpro' },
     { href: '/dashboard/provi-orders', label: 'Order Provi', icon: Truck, description: 'Lihat daftar pekerjaan provisioning yang ditugaskan.', access: 'allpro' },
     { href: '/dashboard/nota', label: 'Laporan Nota', icon: LayoutGrid, description: 'Buat, edit, dan kelola semua laporan nota Anda.', access: 'nota' },
     { href: '/dashboard/gamas', label: 'Laporan Gamas', icon: FileWarning, description: 'Buat & lihat laporan untuk gangguan massal.', access: 'allpro' },

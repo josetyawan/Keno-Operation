@@ -25,6 +25,7 @@ import { cn } from '@/lib/utils';
 const navLinks = [
   { href: '/dashboard', label: 'Home', icon: Home, access: 'public' },
   { href: '/dashboard/chat', label: 'Chat', icon: MessageSquare, access: 'public' },
+  { href: '/dashboard/admin/pelanggan', label: 'Data Pelanggan', icon: Contact, access: 'allpro' },
   { href: '/dashboard/provi-orders', label: 'Order Provi', icon: Truck, access: 'allpro' },
   { href: '/dashboard/nota', label: 'Laporan Nota', icon: LayoutGrid, access: 'nota' },
   { href: '/dashboard/gamas', label: 'Laporan Gamas', icon: FileWarning, access: 'allpro' },
@@ -80,7 +81,6 @@ const adminNavGroups = [
     title: 'OPERATION',
     icon: Building,
     links: [
-      { href: '/dashboard/admin/pelanggan', label: 'Data Pelanggan', icon: Contact, access: 'korlap' },
       { href: '/dashboard/admin/other-works', label: 'Pekerjaan Lain-lain', icon: Briefcase, access: 'korlap' },
       { href: '/dashboard/admin/gamas-approval', label: 'Persetujuan Gamas', icon: ClipboardCheck, access: 'korlap' },
       { href: '/dashboard/admin/provisioning', label: 'Dashboard Provisioning', icon: FileSpreadsheet, access: 'korlap' },
