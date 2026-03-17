@@ -1,9 +1,8 @@
-
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
-import { collection, query, where, Timestamp, doc } from 'firebase/firestore';
+import { collection, query, where, Timestamp } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -21,6 +20,8 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Image from 'next/image';
+import { productivityWeights } from '@/lib/bobot-produktivitas';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const excelHeaders = [
     "NO", "WITEL", "NO TIKET", "HASIL CEK WEB", "ACTUAL SOLUTION", "ACTUAL SOLUTION vs LAPANGAN",
@@ -31,6 +32,26 @@ const excelHeaders = [
     "Termovit (cm)", "Adapter SC", "RJ45", "Protection Sleeve", "Splice on Connector",
     "Penarikan Kabel UTP (Mtr)"
 ];
+
+const getAssuranceCategory = (item: RiwayatGangguan): 'B2C' | 'B2B' | null => {
+    const { jenisOrder, typeOrder } = item;
+
+    const isInB2C = productivityWeights["ASSURANCE B2C"]?.some(w =>
+        w.jenis_order_name === jenisOrder && (!w.order_type || w.order_type === typeOrder)
+    );
+    if (isInB2C) return 'B2C';
+
+    const isInB2B = [
+        ...productivityWeights["ASSURANCE B2B EXTERNAL"],
+        ...productivityWeights["ASSURANCE B2B INTERNAL"]
+    ].some(w =>
+        w.jenis_order_name === jenisOrder && (!w.order_type || w.order_type === typeOrder)
+    );
+    if (isInB2B) return 'B2B';
+
+    return null;
+};
+
 
 function ReportPreview({
     htmlContent,
@@ -99,6 +120,7 @@ export default function AssuranceRekapPage() {
     const [isLoadingExcel, setIsLoadingExcel] = useState(false);
     const [previewHtml, setPreviewHtml] = useState<string | null>(null);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [selectedCategory, setSelectedCategory] = useState('all');
 
     const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
         useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
@@ -123,7 +145,7 @@ export default function AssuranceRekapPage() {
         );
     }, [firestore, dateRange]);
 
-    const { data: riwayatList, isLoading: isRiwayatLoading } = useCollection<RiwayatGangguan>(riwayatQuery);
+    const { data: riwayatListFromQuery, isLoading: isRiwayatLoading } = useCollection<RiwayatGangguan>(riwayatQuery);
     
     // Fetch all customers to get their addresses
     const pelangganQuery = useMemoFirebase(() => {
@@ -135,6 +157,16 @@ export default function AssuranceRekapPage() {
         if (!allPelanggan) return new Map<string, string>();
         return new Map(allPelanggan.map(p => [p.noService, p.alamat || '']));
     }, [allPelanggan]);
+
+    const riwayatList = useMemo(() => {
+        if (!riwayatListFromQuery) return [];
+        if (selectedCategory === 'all') return riwayatListFromQuery;
+
+        return riwayatListFromQuery.filter(item => {
+            const category = getAssuranceCategory(item);
+            return category === selectedCategory;
+        });
+    }, [riwayatListFromQuery, selectedCategory]);
 
 
     const handleSelect = (id: string, checked: boolean) => {
@@ -372,8 +404,11 @@ export default function AssuranceRekapPage() {
             <p className="text-muted-foreground">Buat file Excel rekapitulasi data gangguan atau pratinjau dokumen untuk eviden.</p>
 
              <Card>
-                <CardHeader><CardTitle>Filter Laporan</CardTitle><CardDescription>Pilih rentang tanggal laporan gangguan untuk diekspor.</CardDescription></CardHeader>
-                <CardContent>
+                <CardHeader>
+                    <CardTitle>Filter Laporan</CardTitle>
+                    <CardDescription>Pilih rentang tanggal dan kategori laporan gangguan untuk diekspor.</CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-wrap items-end gap-4">
                      <div className="grid gap-2">
                         <Label>Rentang Tanggal Lapor</Label>
                          <Popover>
@@ -387,6 +422,19 @@ export default function AssuranceRekapPage() {
                                 <Calendar initialFocus mode="range" defaultMonth={dateRange?.from} selected={dateRange} onSelect={setDateRange} numberOfMonths={2} />
                             </PopoverContent>
                         </Popover>
+                    </div>
+                    <div className="grid gap-2">
+                        <Label>Kategori Assurance</Label>
+                        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                            <SelectTrigger className="w-[280px]">
+                                <SelectValue placeholder="Pilih kategori..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Semua Kategori</SelectItem>
+                                <SelectItem value="B2C">Assurance B2C</SelectItem>
+                                <SelectItem value="B2B">Assurance B2B</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                 </CardContent>
             </Card>
