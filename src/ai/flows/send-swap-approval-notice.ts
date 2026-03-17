@@ -31,20 +31,16 @@ const swapApprovalNoticeFlow = ai.defineFlow(
     
     // 2. Send the message to the Absensi group
     if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID_ABSENSI) {
-      console.error('TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID_ABSENSI is not set.');
-      return text; // Return the generated text even if sending fails
+      const errorMessage = 'Konfigurasi Telegram untuk Absensi (TELEGRAM_BOT_TOKEN atau TELEGRAM_CHAT_ID_ABSENSI) tidak diatur.';
+      console.error(errorMessage);
+      throw new Error(errorMessage);
     }
 
-    try {
-      await sendTelegramMessage({
-        botToken: process.env.TELEGRAM_BOT_TOKEN,
-        chatId: process.env.TELEGRAM_CHAT_ID_ABSENSI,
-        text: text,
-      });
-    } catch (error) {
-      console.error('Failed to send swap approval notice to Telegram:', error);
-      // Don't re-throw, just log the error.
-    }
+    await sendTelegramMessage({
+      botToken: process.env.TELEGRAM_BOT_TOKEN,
+      chatId: process.env.TELEGRAM_CHAT_ID_ABSENSI,
+      text: text,
+    });
 
     // 3. Return the generated text as before
     return text;

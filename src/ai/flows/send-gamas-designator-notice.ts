@@ -31,19 +31,17 @@ const gamasDesignatorNoticeFlow = ai.defineFlow(
       Gunakan emoji peringatan ⚠️ dan minta teknisi untuk segera memperbaikinya.`,
     });
 
-    if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID_GAMAS) {
-        try {
-            await sendTelegramMessage({
-                botToken: process.env.TELEGRAM_BOT_TOKEN,
-                chatId: process.env.TELEGRAM_CHAT_ID_GAMAS,
-                text: text,
-            });
-        } catch (error) {
-            console.error('Failed to send Gamas designator notice to Telegram:', error);
-        }
-    } else {
-        console.warn('Telegram token/chat ID for Gamas is not set. Skipping notification.');
+    if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID_GAMAS) {
+        const errorMessage = 'Konfigurasi Telegram untuk Gamas (TELEGRAM_BOT_TOKEN atau TELEGRAM_CHAT_ID_GAMAS) tidak diatur.';
+        console.error(errorMessage);
+        throw new Error(errorMessage);
     }
+    
+    await sendTelegramMessage({
+        botToken: process.env.TELEGRAM_BOT_TOKEN,
+        chatId: process.env.TELEGRAM_CHAT_ID_GAMAS,
+        text: text,
+    });
     
     return text;
   }

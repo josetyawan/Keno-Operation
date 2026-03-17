@@ -41,23 +41,18 @@ const attendanceNoticeFlow = ai.defineFlow(
 
     // 3. Send to Telegram using the specific Absensi bot
     if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID_ABSENSI) {
-      console.error('TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID_ABSENSI is not set.');
-      // Still return the message so the UI can proceed, but log the error.
-      return message;
+        const errorMessage = 'Konfigurasi Telegram untuk Absensi (TELEGRAM_BOT_TOKEN atau TELEGRAM_CHAT_ID_ABSENSI) tidak diatur.';
+        console.error(errorMessage);
+        throw new Error(errorMessage);
     }
     
-    try {
-       await sendTelegramMessage({
-        botToken: process.env.TELEGRAM_BOT_TOKEN,
-        chatId: process.env.TELEGRAM_CHAT_ID_ABSENSI,
-        text: message,
-        photoUrls: input.photoUrl ? [input.photoUrl] : [],
-        photoCaption: message // Use the same text for caption if there is a photo
-      });
-    } catch (telegramError) {
-       console.error("Failed to send attendance notification to Telegram:", telegramError);
-       // We don't re-throw, to avoid breaking the UI flow. The error is logged.
-    }
+    await sendTelegramMessage({
+      botToken: process.env.TELEGRAM_BOT_TOKEN,
+      chatId: process.env.TELEGRAM_CHAT_ID_ABSENSI,
+      text: message,
+      photoUrls: input.photoUrl ? [input.photoUrl] : [],
+      photoCaption: message // Use the same text for caption if there is a photo
+    });
 
     return message;
   }
