@@ -56,6 +56,8 @@ export async function sendTelegramMessage({
     const media = photoUrls.map((url, index) => ({
       type: 'photo',
       media: url,
+      // Note: parse_mode is not reliably supported for captions in media groups across all clients.
+      // It's safer to send plain text or pre-formatted text.
       caption: index === 0 ? (photoCaption || text) : '',
     }));
     
@@ -73,6 +75,7 @@ export async function sendTelegramMessage({
         chat_id: chatId,
         photo: photoUrls[0],
         caption: photoCaption || text,
+        parse_mode: 'Markdown',
       });
 
   } else if (text) {
@@ -80,6 +83,7 @@ export async function sendTelegramMessage({
         await sendRequest(`https://api.telegram.org/bot${botToken}/sendMessage`, {
           chat_id: chatId,
           text: text,
+          parse_mode: 'Markdown',
         });
     } else {
         // If the message is too long, split it into chunks.
@@ -107,6 +111,7 @@ export async function sendTelegramMessage({
             await sendRequest(`https://api.telegram.org/bot${botToken}/sendMessage`, {
                 chat_id: chatId,
                 text: chunk,
+                parse_mode: 'Markdown',
             });
             await new Promise(resolve => setTimeout(resolve, 300)); // Delay to avoid rate-limiting
         }
