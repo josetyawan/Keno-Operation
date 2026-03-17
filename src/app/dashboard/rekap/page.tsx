@@ -32,15 +32,15 @@ import {
 } from "@/components/ui/alert-dialog"
 import { ArrowLeft, Calendar as CalendarIcon, Loader2, Bot, Wallet, CheckCircle } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
-import { collection, query, where, Timestamp, doc } from 'firebase/firestore';
+import { collection, query, where, Timestamp, doc, updateDoc, addDoc } from 'firebase/firestore';
 import { format, startOfDay, endOfDay, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
-import type { Nota, UserProfile, RekapDataItem } from '@/lib/types';
+import type { Nota, UserProfile, RekapDataItem, CashTransaction } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { sendLinkAjaPayment } from '@/ai/flows/send-linkaja-payment';
-import { markAsPaidAction, sendRekapAction } from './actions';
+import { sendRekapAction, sendPaidNotificationAction } from './actions';
 import type { DateRange } from 'react-day-picker';
 import { useRouter } from 'next/navigation';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -230,61 +230,96 @@ export default function RekapPage() {
             return;
         }
         setIsMarkingAsPaid(true);
-
-        const userMap = new Map(users.map(u => [u.id, u]));
-        const selectedNotas = notas.filter(n => selectedNotaIds.includes(n.id));
-        const groupedByUser = selectedNotas.reduce((acc, nota) => {
-            const userId = nota.userId;
-            if (!acc[userId]) acc[userId] = [];
-            acc[userId].push(nota);
-            return acc;
-        }, {} as Record<string, Nota[]>);
-        
-        const paidNoticeData: RekapDataItem[] = [];
-        const sortedUserIds = Object.keys(groupedByUser).sort((a, b) => (userMap.get(a)?.displayName || '').localeCompare(userMap.get(b)?.displayName || ''));
-
-        for (const userId of sortedUserIds) {
-            const userNotas = groupedByUser[userId].sort((a, b) => (safeToDate(a.tanggal)?.getTime() ?? 0) - (safeToDate(b.tanggal)?.getTime() ?? 0));
-            const user = userMap.get(userId);
-            let userSubtotal = 0;
-            const userName = (user?.displayName || 'Unknown').replace(/\s/g, '');
-            const paymentNumber = user?.paymentInfo || (user as any)?.phone || 'No-Pembayaran';
-
-            userNotas.forEach(nota => {
-                paidNoticeData.push({
-                    phone: paymentNumber, name: userName, segmen: nota.segmen,
-                    tanggal: nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd/MM/yy') : '??/??/??',
-                    nominal: nota.nominal, userId: userId,
-                });
-                userSubtotal += nota.nominal;
-            });
-            if (userNotas.length > 0) {
-                 paidNoticeData.push({
-                    phone: paymentNumber, name: `TOTAL ${userName}`, segmen: '',
-                    tanggal: '', nominal: userSubtotal, userId: userId,
+    
+        const paymentDate = new Date();
+    
+        try {
+            for (const notaId of selectedNotaIds) {
+                const notaDocRef = doc(firestore, 'notas', notaId);
+                await updateDoc(notaDocRef, {
+                    status: 'paid',
+                    tanggalPembayaran: paymentDate
                 });
             }
-        }
-    
-        const result = await markAsPaidAction({
-            selectedNotaIds,
-            selectedTotal,
-            paymentType,
-            paidData: paidNoticeData,
-            userEmail: user.email,
-        });
 
-        if (result.success) {
-            toast({ 
-                title: 'Laporan Telah Ditandai Lunas', 
-                description: result.message,
-                duration: 5000,
+            if (paymentType === 'kasbon') {
+                const cashTransaction: Omit<CashTransaction, 'id'> = {
+                    type: 'out',
+                    amount: selectedTotal,
+                    date: Timestamp.fromDate(paymentDate),
+                    description: `Pembayaran ${selectedNotaIds.length} nota via kasbon`,
+                    notaIds: selectedNotaIds,
+                    createdBy: user.email,
+                    createdAt: Timestamp.now()
+                };
+                await addDoc(collection(firestore, 'cashbook'), cashTransaction);
+            }
+            
+            const userMap = new Map(users.map(u => [u.id, u]));
+            const selectedNotas = notas.filter(n => selectedNotaIds.includes(n.id));
+            const groupedByUser = selectedNotas.reduce((acc, nota) => {
+                const userId = nota.userId;
+                if (!acc[userId]) acc[userId] = [];
+                acc[userId].push(nota);
+                return acc;
+            }, {} as Record<string, Nota[]>);
+            
+            const paidNoticeData: RekapDataItem[] = [];
+            const sortedUserIds = Object.keys(groupedByUser).sort((a, b) => (userMap.get(a)?.displayName || '').localeCompare(userMap.get(b)?.displayName || ''));
+    
+            for (const userId of sortedUserIds) {
+                const userNotas = groupedByUser[userId].sort((a, b) => (safeToDate(a.tanggal)?.getTime() ?? 0) - (safeToDate(b.tanggal)?.getTime() ?? 0));
+                const user = userMap.get(userId);
+                let userSubtotal = 0;
+                const userName = (user?.displayName || 'Unknown').replace(/\s/g, '');
+                const paymentNumber = user?.paymentInfo || (user as any)?.phone || 'No-Pembayaran';
+    
+                userNotas.forEach(nota => {
+                    paidNoticeData.push({
+                        phone: paymentNumber,
+                        name: userName,
+                        segmen: nota.segmen,
+                        tanggal: nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd/MM/yy') : '??/??/??',
+                        nominal: nota.nominal,
+                        userId: userId,
+                    });
+                    userSubtotal += nota.nominal;
+                });
+                if (userNotas.length > 0) {
+                     paidNoticeData.push({
+                        phone: paymentNumber,
+                        name: `TOTAL ${userName}`,
+                        segmen: '',
+                        tanggal: '',
+                        nominal: userSubtotal,
+                        userId: userId,
+                    });
+                }
+            }
+    
+            const result = await sendPaidNotificationAction({
+                paidData: paidNoticeData,
+                grandTotal: selectedTotal,
+                paidDate: format(paymentDate, 'dd MMMM yyyy', { locale: idLocale }),
             });
-            setIsManualPayDialogOpen(false);
-        } else {
-             toast({ variant: 'destructive', title: 'Gagal Memperbarui Status', description: result.message });
+    
+            if (result.success) {
+                toast({ 
+                    title: 'Laporan Telah Ditandai Lunas', 
+                    description: `Status telah diperbarui dan notifikasi telah dikirim.`,
+                    duration: 5000,
+                });
+                setIsManualPayDialogOpen(false);
+            } else {
+                 toast({ variant: 'destructive', title: 'Gagal Mengirim Notifikasi', description: result.message });
+            }
+    
+        } catch (error: any) {
+            console.error('Manual payment error:', error);
+            toast({ variant: 'destructive', title: 'Gagal Memperbarui Status', description: error.message });
+        } finally {
+            setIsMarkingAsPaid(false);
         }
-        setIsMarkingAsPaid(false);
     };
 
 
@@ -350,14 +385,14 @@ export default function RekapPage() {
         
         const telegramRekapData: RekapDataItem[] = [];
         const sortedUserIds = Object.keys(groupedByUser).sort((a,b) => (userMap.get(a)?.displayName || '').localeCompare(userMap.get(b)?.displayName || ''));
-
+    
         for (const userId of sortedUserIds) {
             const userNotas = groupedByUser[userId].sort((a,b) => (safeToDate(a.tanggal)?.getTime() ?? 0) - (safeToDate(b.tanggal)?.getTime() ?? 0));
             const user = userMap.get(userId);
             let userSubtotal = 0;
             const userName = (user?.displayName || 'Unknown').replace(/\s/g, '');
             const paymentNumber = user?.paymentInfo || (user as any)?.phone || 'No-Pembayaran';
-
+    
             userNotas.forEach(nota => {
                 telegramRekapData.push({
                     phone: paymentNumber, name: userName, segmen: nota.segmen,
@@ -607,4 +642,3 @@ export default function RekapPage() {
         </div>
     );
 }
-

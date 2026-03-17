@@ -1,10 +1,9 @@
+
 'use server';
 
 import { sendTelegramReport } from '@/ai/flows/send-telegram-report';
 import { sendPaidNotice } from '@/ai/flows/send-paid-notice';
 import { sendTelegramMessage } from '@/lib/telegram';
-import { doc, updateDoc, Timestamp, addDoc, collection } from 'firebase/firestore';
-import { initializeFirebase } from '@/firebase/init';
 import type { RekapDataItem, CashTransaction } from '@/lib/types';
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
@@ -37,44 +36,18 @@ export async function sendRekapAction(payload: SendRekapPayload): Promise<{ succ
     }
 }
 
-interface MarkAsPaidPayload {
-    selectedNotaIds: string[];
-    selectedTotal: number;
-    paymentType: 'rembes' | 'kasbon';
+interface SendPaidNoticePayload {
     paidData: RekapDataItem[];
-    userEmail: string;
+    grandTotal: number;
+    paidDate: string;
 }
 
-export async function markAsPaidAction(payload: MarkAsPaidPayload): Promise<{ success: boolean; message?: string }> {
-    const { firestore } = initializeFirebase();
-    const paymentDate = new Date();
-
+export async function sendPaidNotificationAction(payload: SendPaidNoticePayload): Promise<{ success: boolean; message?: string }> {
     try {
-        for (const notaId of payload.selectedNotaIds) {
-            const notaDocRef = doc(firestore, 'notas', notaId);
-            await updateDoc(notaDocRef, {
-                status: 'paid',
-                tanggalPembayaran: paymentDate
-            });
-        }
-
-        if (payload.paymentType === 'kasbon') {
-            const cashTransaction: Omit<CashTransaction, 'id'> = {
-                type: 'out',
-                amount: payload.selectedTotal,
-                date: Timestamp.fromDate(paymentDate),
-                description: `Pembayaran ${payload.selectedNotaIds.length} nota via kasbon`,
-                notaIds: payload.selectedNotaIds,
-                createdBy: payload.userEmail,
-                createdAt: Timestamp.now()
-            };
-            await addDoc(collection(firestore, 'cashbook'), cashTransaction);
-        }
-
         const paidNoticeText = await sendPaidNotice({
             paidData: payload.paidData,
-            grandTotal: payload.selectedTotal,
-            paidDate: format(paymentDate, 'dd MMMM yyyy', { locale: idLocale }),
+            grandTotal: payload.grandTotal,
+            paidDate: payload.paidDate,
         });
 
         if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID_FINANCE) {
@@ -87,10 +60,9 @@ export async function markAsPaidAction(payload: MarkAsPaidPayload): Promise<{ su
             text: paidNoticeText,
         });
         
-        return { success: true, message: `${payload.selectedNotaIds.length} laporan telah diperbarui menjadi "paid" dan notifikasi telah dikirim.` };
-
+        return { success: true };
     } catch (error: any) {
-        console.error('markAsPaidAction Error:', error);
+        console.error('sendPaidNotificationAction Error:', error);
         return { success: false, message: error.message };
     }
 }
