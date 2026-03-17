@@ -113,15 +113,13 @@ service cloud.firestore {
 
     match /riwayat-gangguan/{riwayatId} {
       allow create: if isApproved() && isCreatingOwn('userId');
-      allow get: if isAdmin() || isKorlap() || (isApproved() && resource.data.userId == request.auth.uid);
-      allow list: if isApproved();
+      allow get, list: if true;
       allow update, delete: if isAdmin() || isKorlap() || (isApproved() && isUpdatingOwn('userId'));
     }
     
     match /other-works/{workId} {
       allow create: if isApproved() && isCreatingOwn('userId');
-      allow get: if isApproved();
-      allow list: if isApproved();
+      allow get, list: if isApproved();
       allow update, delete: if (isAdmin() || isKorlap()) || (isApproved() && isUpdatingOwn('userId'));
     }
 
@@ -222,3 +220,5 @@ service cloud.firestore {
     }
   }
 }
+
+    
