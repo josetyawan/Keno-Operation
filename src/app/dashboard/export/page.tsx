@@ -638,7 +638,7 @@ const generateEvidenReport = (notas: Nota[], title: string): string => {
 
     return `
     <div style="font-family: Arial, sans-serif; color: black; font-size: 9pt; background-color: white; page-break-inside: avoid;">
-        <div style="font-size: 12pt; margin: 0; font-weight: bold; text-align: left; line-height: 1.2;">${title}</div>
+        <div style="font-size: 12pt; margin: 0; font-weight: bold; text-align: left;">${title}</div>
         <br/>
         <table style="width: 100%; border-collapse: collapse; border: 1px solid black; font-size: 8pt;">
             <thead style="background-color: #DDEEFF; font-weight: bold; text-align: center; print-color-adjust: exact; -webkit-print-color-adjust: exact;">
@@ -1151,6 +1151,16 @@ export default function ExportPage() {
     
             const wb = XLSX.utils.book_new();
 
+            // --- Common Info for Titles ---
+            let dateFilterString = '';
+            if (filterType === 'monthly' && selectedMonth) {
+                dateFilterString = `Bulan: ${format(new Date(selectedMonth + '-02'), 'MMMM yyyy', { locale: idLocale })}`;
+            } else if (filterType === 'range' && dateRange?.from) {
+                dateFilterString = `Rentang Tanggal: ${format(dateRange.from, 'dd MMM yyyy')} - ${dateRange.to ? format(dateRange.to, 'dd MMM yyyy') : format(dateRange.from, 'dd MMM yyyy')}`;
+            } else if (filterType === 'verified' && verifiedDateRange?.from) {
+                dateFilterString = `Tanggal Verifikasi: ${format(verifiedDateRange.from, 'dd MMM yyyy')} - ${verifiedDateRange.to ? format(verifiedDateRange.to, 'dd MMM yyyy') : format(verifiedDateRange.from, 'dd MMM yyyy')}`;
+            }
+
             // --- Sheet 1: Rekapitulasi Rincian ---
             const groupedBySegmenForRekap = sortedNotas.reduce((acc, nota) => {
                 const reportName = getGeneralReportName(nota.segmen);
@@ -1159,66 +1169,91 @@ export default function ExportPage() {
                 return acc;
             }, {} as Record<string, number>);
 
-            const rekapData = Object.entries(groupedBySegmenForRekap).map(([keterangan, jumlah], index) => ({
-                'No': index + 1,
-                'Keterangan': keterangan,
-                'Jumlah': jumlah
-            }));
+            const rekapDataRows = Object.entries(groupedBySegmenForRekap).map(([keterangan, jumlah], index) => [
+                index + 1,
+                keterangan,
+                jumlah
+            ]);
 
-            if (rekapData.length > 0) {
-                const wsRekap = XLSX.utils.json_to_sheet(rekapData);
-                const totalRekap = rekapData.reduce((sum, item) => sum + item.Jumlah, 0);
-                XLSX.utils.sheet_add_aoa(wsRekap, [['', 'GRAND TOTAL', totalRekap]], { origin: -1 });
+            if (rekapDataRows.length > 0) {
+                const totalRekap = rekapDataRows.reduce((sum, item) => sum + (item[2] as number), 0);
+
+                const rekapSheetData = [
+                    ['REKAPITULASI RINCIAN NOTA'],
+                    [dateFilterString],
+                    [`Service Area: ${selectedSA === 'all' ? 'Semua' : selectedSA}`],
+                    [`Status: ${selectedStatus === 'all' ? 'Semua' : statusLabels[selectedStatus] || 'Semua'}`],
+                    [], // empty row
+                    ['No', 'Keterangan', 'Jumlah'],
+                    ...rekapDataRows,
+                    [], // empty row
+                    ['', 'GRAND TOTAL', totalRekap]
+                ];
+
+                const wsRekap = XLSX.utils.aoa_to_sheet(rekapSheetData);
+                wsRekap['!cols'] = [{ wch: 5 }, { wch: 50 }, { wch: 15 }];
+                
+                // Apply number format for currency
+                rekapDataRows.forEach((_, index) => {
+                    const cellRef = XLSX.utils.encode_cell({c: 2, r: 6 + index});
+                    if (wsRekap[cellRef]) wsRekap[cellRef].z = '#,##0';
+                });
+                const totalCellRef = XLSX.utils.encode_cell({c: 2, r: 6 + rekapDataRows.length + 2});
+                if(wsRekap[totalCellRef]) wsRekap[totalCellRef].z = '#,##0';
+
                 XLSX.utils.book_append_sheet(wb, wsRekap, 'Rekapitulasi');
             }
 
             // --- Sheet 2: Data Mentah (Raw Data) ---
-            const allData = sortedNotas.map(nota => {
+            const rawHeaders = [
+                'ID Laporan', 'Tanggal Laporan', 'Service Area', 'Segmen', 'Jenis Proyek',
+                'Project ID', 'Nama PIC', 'Email PIC', 'Nominal (Rp)', 'Status',
+                'Tanggal Verifikasi', 'Tanggal Pembayaran', 'Alasan Penolakan',
+                'No Plat Kendaraan', 'KM Awal', 'KM Akhir', 'Nama Toko/Warung (Uraian)',
+                'Keterangan (Nama Barang)', 'Foto 1', 'Foto 2', 'Foto 3', 'Foto 4',
+                'Foto KM Awal Bulan', 'Foto KM Awal', 'Foto KM Akhir'
+            ];
+            
+            const rawDataRows = sortedNotas.map(nota => {
                 const pType = getProjectType(nota.segmen);
                 const pidValue = pids?.find(p => p.projectType.toLowerCase() === pType.toLowerCase())?.pid || '-';
                 const fotoUrls = nota.fotoEvidenUrls || [];
-    
-                return {
-                    'ID Laporan': nota.id,
-                    'Tanggal Laporan': safeToDate(nota.tanggal) ? format(safeToDate(nota.tanggal)!, 'yyyy-MM-dd') : '-',
-                    'Service Area': nota.serviceArea,
-                    'Segmen': nota.segmen,
-                    'Jenis Proyek': pType,
-                    'Project ID': pidValue,
-                    'Nama PIC': nota.namaPic,
-                    'Email PIC': nota.userEmail,
-                    'Nominal (Rp)': nota.nominal,
-                    'Status': nota.status,
-                    'Tanggal Verifikasi': safeToDate(nota.tanggalVerifikasi) ? format(safeToDate(nota.tanggalVerifikasi)!, 'yyyy-MM-dd HH:mm') : '-',
-                    'Tanggal Pembayaran': safeToDate(nota.tanggalPembayaran) ? format(safeToDate(nota.tanggalPembayaran)!, 'yyyy-MM-dd HH:mm') : '-',
-                    'Alasan Penolakan': nota.rejectionReason || '-',
-                    'No Plat Kendaraan': nota.noPlatKendaraan || '-',
-                    'KM Awal': nota.kmAwal || '-',
-                    'KM Akhir': nota.kmAkhir || '-',
-                    'Nama Toko/Warung (Uraian)': nota.namaBarang || '-',
-                    'Keterangan (Nama Barang)': nota.keterangan || '-',
-                    'Foto 1': fotoUrls[0] || '-',
-                    'Foto 2': fotoUrls[1] || '-',
-                    'Foto 3': fotoUrls[2] || '-',
-                    'Foto 4': fotoUrls[3] || '-',
-                    'Foto KM Awal Bulan': fotoUrls[4] || '-',
-                    'Foto KM Awal': fotoUrls[5] || '-',
-                    'Foto KM Akhir': fotoUrls[6] || '-',
-                };
-            });
-            const wsAllData = XLSX.utils.json_to_sheet(allData);
-            
-            // Auto-fit columns
-            const objectMaxLength: any[] = [];
-            allData.forEach(row => {
-                Object.entries(row).forEach(([key, value], colIndex) => {
-                    const headerLength = key.length;
-                    const cellLength = value ? String(value).length : 0;
-                    objectMaxLength[colIndex] = Math.max(objectMaxLength[colIndex] || headerLength, cellLength);
-                });
-            });
-            wsAllData['!cols'] = objectMaxLength.map(w => ({ width: w + 2 }));
 
+                return [
+                    nota.id,
+                    safeToDate(nota.tanggal) ? format(safeToDate(nota.tanggal)!, 'yyyy-MM-dd') : '-',
+                    nota.serviceArea, nota.segmen, pType, pidValue, nota.namaPic, nota.userEmail,
+                    nota.nominal, nota.status,
+                    safeToDate(nota.tanggalVerifikasi) ? format(safeToDate(nota.tanggalVerifikasi)!, 'yyyy-MM-dd HH:mm') : '-',
+                    safeToDate(nota.tanggalPembayaran) ? format(safeToDate(nota.tanggalPembayaran)!, 'yyyy-MM-dd HH:mm') : '-',
+                    nota.rejectionReason || '-', nota.noPlatKendaraan || '-', nota.kmAwal || '-', nota.kmAkhir || '-',
+                    nota.namaBarang || '-', nota.keterangan || '-',
+                    fotoUrls[0] || '-', fotoUrls[1] || '-', fotoUrls[2] || '-', fotoUrls[3] || '-',
+                    fotoUrls[4] || '-', fotoUrls[5] || '-', fotoUrls[6] || '-'
+                ];
+            });
+
+            const rawSheetData = [
+                ['DATA MENTAH LAPORAN NOTA'],
+                [dateFilterString],
+                [`Service Area: ${selectedSA === 'all' ? 'Semua' : selectedSA}`],
+                [`Status: ${selectedStatus === 'all' ? 'Semua' : statusLabels[selectedStatus] || 'Semua'}`],
+                [],
+                rawHeaders,
+                ...rawDataRows
+            ];
+
+            const wsAllData = XLSX.utils.aoa_to_sheet(rawSheetData);
+            
+            const objectMaxLength: any[] = rawHeaders.map(h => ({wch: h.length > 20 ? 30 : h.length + 5}));
+            wsAllData['!cols'] = objectMaxLength;
+
+            // Apply number format for currency
+            rawDataRows.forEach((_, index) => {
+                const cellRef = XLSX.utils.encode_cell({c: 8, r: 5 + index});
+                if (wsAllData[cellRef]) wsAllData[cellRef].z = '#,##0';
+            });
+            
             XLSX.utils.book_append_sheet(wb, wsAllData, 'Data Mentah');
     
             XLSX.writeFile(wb, `Laporan Nota - ${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
@@ -1599,7 +1634,7 @@ export default function ExportPage() {
                                     <AlertDialogHeader>
                                     <AlertDialogTitle>Anda benar-benar yakin?</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                        Tindakan ini akan menghapus ${'${selectedNotaIds.length}'} laporan yang dipilih secara permanen. Tindakan ini tidak dapat dibatalkan.
+                                        Tindakan ini akan menghapus {selectedNotaIds.length} laporan yang dipilih secara permanen. Tindakan ini tidak dapat dibatalkan.
                                     </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
@@ -1609,7 +1644,7 @@ export default function ExportPage() {
                                         disabled={isDeleting}
                                         className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                                     >
-                                        {isDeleting ? 'Menghapus...' : `Ya, Hapus (${'${selectedNotaIds.length}'})`}
+                                        {isDeleting ? 'Menghapus...' : `Ya, Hapus (${selectedNotaIds.length})`}
                                     </AlertDialogAction>
                                     </AlertDialogFooter>
                                 </AlertDialogContent>
