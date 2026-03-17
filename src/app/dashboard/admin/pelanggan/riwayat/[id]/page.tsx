@@ -148,9 +148,9 @@ export default function RiwayatDetailPage() {
   
   const canView = useMemo(() => {
     if (!userProfile || !riwayat) return false;
-    if(userProfile.role === 'admin' || userProfile.role === 'korlap') return true;
-    return riwayat.userId === user?.uid;
-  }, [userProfile, riwayat, user]);
+    // Any approved user can now view. The security rule is the final check.
+    return userProfile.registrationStatus === 'approved';
+  }, [userProfile, riwayat]);
 
   const canModify = useMemo(() => {
     if (!userProfile || !riwayat) return false;

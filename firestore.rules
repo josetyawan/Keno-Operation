@@ -113,7 +113,8 @@ service cloud.firestore {
 
     match /riwayat-gangguan/{riwayatId} {
       allow create: if isApproved() && isCreatingOwn('userId');
-      allow get, list: if true;
+      allow get: if isApproved();
+      allow list: if isApproved();
       allow update, delete: if isAdmin() || isKorlap() || (isApproved() && isUpdatingOwn('userId'));
     }
     
@@ -220,5 +221,4 @@ service cloud.firestore {
     }
   }
 }
-
     
