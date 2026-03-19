@@ -62,7 +62,7 @@ export default function WorkCategoryRekapPage() {
     const firestore = useFirestore();
     const { toast } = useToast();
     
-    const [selectedMonth, setSelectedMonth] = useState<string>(format(new Date(), 'yyyy-MM'));
+    const [selectedMonth, setSelectedMonth] = useState<string>('');
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
     const [isLoading, setIsLoading] = useState(false);
 
@@ -78,6 +78,12 @@ export default function WorkCategoryRekapPage() {
         }
         return options;
     }, []);
+
+    useEffect(() => {
+        if (!selectedMonth) {
+            setSelectedMonth(format(new Date(), 'yyyy-MM'));
+        }
+    }, [selectedMonth]);
 
     const dateRange = useMemo(() => {
         if (!selectedMonth) return null;

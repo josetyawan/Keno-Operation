@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
@@ -47,10 +48,14 @@ export default function ProduktivitasHarianPage() {
     const [isSending, setIsSending] = useState(false);
     const [summaryData, setSummaryData] = useState<SummaryData[]>([]);
     const [detailData, setDetailData] = useState<DetailData[]>([]);
-    const [dateRange, setDateRange] = useState<DateRange | undefined>({
-        from: new Date(),
-        to: new Date(),
-    });
+    const [dateRange, setDateRange] = useState<DateRange | undefined>();
+
+    useEffect(() => {
+        setDateRange({
+            from: new Date(),
+            to: new Date(),
+        });
+    }, []);
 
     const fetchProductivityData = useCallback(async () => {
         if (!selectedUnit || !dateRange?.from) return;
