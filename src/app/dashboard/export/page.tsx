@@ -864,7 +864,6 @@ const generateMaterialReport = (notas: Nota[], title: string): string => {
     </div>`;
 };
 
-
 const generateSimpleEvidenReport = (notas: Nota[], title: string): string => {
     const tableRows = notas.map((nota, index) => {
         const notaDate = safeToDate(nota.tanggal);
