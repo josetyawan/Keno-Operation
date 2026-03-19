@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -822,12 +823,21 @@ export default function PelangganAdminPage() {
 
 
     function RiwayatCard({ pelanggan }: { pelanggan: Pelanggan }) {
-        const { data: riwayat, isLoading } = useCollection<RiwayatGangguan>(
+        const { data, isLoading } = useCollection<RiwayatGangguan>(
             useMemoFirebase(() => {
                 if (!pelanggan) return null;
-                return query(collection(firestore, 'riwayat-gangguan'), where('pelangganId', '==', pelanggan.id), orderBy('tanggalLapor', 'desc'));
+                return query(collection(firestore, 'riwayat-gangguan'), where('pelangganId', '==', pelanggan.id));
             }, [pelanggan])
         );
+
+        const riwayat = useMemo(() => {
+            if (!data) return [];
+            return [...data].sort((a,b) => {
+                const timeA = safeToDate(a.tanggalLapor)?.getTime() ?? 0;
+                const timeB = safeToDate(b.tanggalLapor)?.getTime() ?? 0;
+                return timeB - timeA;
+            });
+        }, [data]);
 
         return (
             <Card>

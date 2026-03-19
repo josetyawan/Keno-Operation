@@ -86,31 +86,37 @@ export function useCollection<T = any>(
         setIsLoading(false);
       },
       (error: FirestoreError) => {
-        const internalQuery = (memoizedTargetRefOrQuery as unknown as InternalQuery)?._query;
-        let path: string;
-
-        if (internalQuery?.collectionGroup) {
-          // For collection group queries, the 'path' is not a specific document path but the group itself.
-          path = `(collectionGroup: ${internalQuery.collectionGroup})`;
-        } else if (memoizedTargetRefOrQuery.type === 'collection') {
-          path = (memoizedTargetRefOrQuery as CollectionReference).path;
-        } else if (internalQuery?.path) {
-          path = internalQuery.path.canonicalString();
+        // Only wrap the error if it's a permission-denied error.
+        // Other errors, like 'failed-precondition' for missing indexes,
+        // should be surfaced directly.
+        if (error.code === 'permission-denied') {
+            const internalQuery = (memoizedTargetRefOrQuery as unknown as InternalQuery)?._query;
+            let path: string;
+    
+            if (internalQuery?.collectionGroup) {
+              path = `(collectionGroup: ${internalQuery.collectionGroup})`;
+            } else if (memoizedTargetRefOrQuery.type === 'collection') {
+              path = (memoizedTargetRefOrQuery as CollectionReference).path;
+            } else if (internalQuery?.path) {
+              path = internalQuery.path.canonicalString();
+            } else {
+              path = '(unknown path)';
+            }
+    
+            const contextualError = new FirestorePermissionError({
+              operation: 'list',
+              path,
+            }, error);
+    
+            setError(contextualError);
+            errorEmitter.emit('permission-error', contextualError);
         } else {
-          path = '(unknown path)';
+            // It's another type of error (like a missing index), so just set it directly.
+            setError(error);
         }
-
-        const contextualError = new FirestorePermissionError({
-          operation: 'list',
-          path,
-        }, error)
-
-        setError(contextualError)
-        setData(null)
-        setIsLoading(false)
-
-        // trigger global error propagation
-        errorEmitter.emit('permission-error', contextualError);
+        
+        setData(null);
+        setIsLoading(false);
       }
     );
 
