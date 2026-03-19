@@ -667,14 +667,79 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
     );
 }
 
-// ... rest of the file remains the same ...
+function RiwayatCard({ pelanggan, onAddRiwayat }: { pelanggan: Pelanggan, onAddRiwayat: () => void }) {
+    const firestore = useFirestore();
+    const { toast } = useToast();
+    const { data, isLoading } = useCollection<RiwayatGangguan>(
+        useMemoFirebase(() => {
+            if (!pelanggan) return null;
+            return query(
+                collection(firestore, 'riwayat-gangguan'), 
+                where('pelangganId', '==', pelanggan.id),
+                orderBy('tanggalLapor', 'desc')
+            );
+        }, [pelanggan])
+    );
+    
+    const handleDeleteRiwayat = async (riwayatId: string) => {
+        try {
+            if (!window.confirm("Anda yakin ingin menghapus riwayat ini?")) return;
+            await deleteDoc(doc(firestore, 'riwayat-gangguan', riwayatId));
+            toast({ title: "Riwayat Dihapus" });
+        } catch (err: any) {
+            console.error("Error deleting riwayat: ", err);
+            toast({ variant: 'destructive', title: 'Gagal Menghapus', description: 'Terjadi kesalahan lain.' });
+        }
+    };
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Riwayat Gangguan</CardTitle>
+                <CardDescription>Untuk {pelanggan.namaPelanggan}</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Table>
+                    <TableHeader>
+                        <TableRow><TableHead>Tanggal Lapor</TableHead><TableHead>Petugas</TableHead><TableHead>Jenis Order</TableHead><TableHead>Keterangan</TableHead><TableHead className="text-right">Aksi</TableHead></TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {isLoading ? <TableRow><TableCell colSpan={5} className="text-center"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow>
+                         : data && data.length > 0 ? (
+                            data.map(item => (
+                                <TableRow key={item.id}>
+                                    <TableCell>{safeToDate(item.tanggalLapor) ? format(safeToDate(item.tanggalLapor)!, 'dd MMM yyyy') : '-'}</TableCell>
+                                    <TableCell>{item.namaPetugas}</TableCell>
+                                    <TableCell><Badge variant="secondary">{item.jenisOrder}</Badge></TableCell>
+                                    <TableCell className="max-w-[200px] truncate">{item.keterangan}</TableCell>
+                                    <TableCell className="text-right">
+                                        <div className="flex items-center justify-end">
+                                            <Button asChild variant="ghost" size="sm"><Link href={`/dashboard/admin/pelanggan/riwayat/${item.id}`}><Pencil className="h-4 w-4" /></Link></Button>
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild><Button variant="ghost" size="sm" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader><AlertDialogTitle>Hapus Riwayat?</AlertDialogTitle><AlertDialogDescription>Tindakan ini akan menghapus riwayat gangguan ini secara permanen.</AlertDialogDescription></AlertDialogHeader>
+                                                    <AlertDialogFooter><AlertDialogCancel>Batal</AlertDialogCancel><AlertDialogAction onClick={() => handleDeleteRiwayat(item.id)} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Hapus</AlertDialogAction></AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                         ) : <TableRow><TableCell colSpan={5} className="text-center h-24">Belum ada riwayat gangguan.</TableCell></TableRow>}
+                    </TableBody>
+                </Table>
+            </CardContent>
+        </Card>
+    );
+}
 
 export default function PelangganAdminPage() {
     const firestore = useFirestore();
     const { toast } = useToast();
     const router = useRouter();
 
-    const [searchType, setSearchType] = useState('nama');
+    const [searchType, setSearchType] = useState('noService');
     const [searchQuery, setSearchQuery] = useState('');
     const [isSearching, setIsSearching] = useState(false);
     const [searchResults, setSearchResults] = useState<Pelanggan[]>([]);
@@ -718,32 +783,20 @@ export default function PelangganAdminPage() {
     };
     
     const handleNewRiwayat = () => {
-        // This will trigger a re-fetch in the RiwayatCard component
-        // To force it, we can temporarily set selectedPelanggan to null and then back
         const current = selectedPelanggan;
         setSelectedPelanggan(null);
         setTimeout(() => setSelectedPelanggan(current), 0);
         setIsNewRiwayatOpen(false);
     }
     
-    const handleDeleteRiwayat = async (riwayatId: string) => {
-        try {
-            if (!window.confirm("Anda yakin ingin menghapus riwayat ini?")) return;
-            await deleteDoc(doc(firestore, 'riwayat-gangguan', riwayatId));
-            handleNewRiwayat(); // Force refresh
-            toast({ title: "Riwayat Dihapus" });
-        } catch (err: any) {
-            console.error("Error deleting riwayat: ", err);
-            toast({ variant: 'destructive', title: 'Gagal Menghapus', description: 'Terjadi kesalahan lain.' });
-        }
-    };
-    
     const handleDeletePelanggan = async (pelanggan: Pelanggan) => {
         try {
             if (!window.confirm(`Anda yakin ingin menghapus pelanggan ${pelanggan.namaPelanggan}? Semua riwayat terkait akan tetap ada, tetapi tidak tertaut.`)) return;
             await deleteDoc(doc(firestore, 'pelanggan', pelanggan.id));
             setSearchResults(prev => prev.filter(p => p.id !== pelanggan.id));
-            setSelectedPelanggan(null);
+            if (selectedPelanggan?.id === pelanggan.id) {
+                setSelectedPelanggan(null);
+            }
             toast({ title: "Pelanggan Dihapus" });
         } catch (err: any) {
              console.error("Error deleting pelanggan: ", err);
@@ -821,169 +874,128 @@ export default function PelangganAdminPage() {
         }
     };
 
-
-    function RiwayatCard({ pelanggan }: { pelanggan: Pelanggan }) {
-        const { data, isLoading } = useCollection<RiwayatGangguan>(
-            useMemoFirebase(() => {
-                if (!pelanggan) return null;
-                return query(
-                    collection(firestore, 'riwayat-gangguan'), 
-                    where('pelangganId', '==', pelanggan.id),
-                    orderBy('tanggalLapor', 'desc')
-                );
-            }, [pelanggan])
-        );
-
-        return (
-            <Card>
-                <CardHeader>
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <CardTitle>Riwayat Gangguan</CardTitle>
-                            <CardDescription>Untuk {pelanggan.namaPelanggan}</CardDescription>
-                        </div>
-                         <div className="flex gap-2">
-                             <Button onClick={() => setIsNewRiwayatOpen(true)}>
-                                <PlusCircle className="mr-2 h-4 w-4" /> Tambah Riwayat
-                             </Button>
-                             <AlertDialog>
-                                 <AlertDialogTrigger asChild>
-                                     <Button variant="destructive"><Trash2 className="h-4 w-4"/></Button>
-                                 </AlertDialogTrigger>
-                                 <AlertDialogContent>
-                                     <AlertDialogHeader>
-                                         <AlertDialogTitle>Hapus Pelanggan?</AlertDialogTitle>
-                                         <AlertDialogDescription>Tindakan ini akan menghapus data pelanggan <strong>{pelanggan.namaPelanggan}</strong> secara permanen. Riwayat gangguan tidak akan terhapus tetapi tidak akan lagi tertaut.</AlertDialogDescription>
-                                     </AlertDialogHeader>
-                                     <AlertDialogFooter>
-                                         <AlertDialogCancel>Batal</AlertDialogCancel>
-                                         <AlertDialogAction onClick={() => handleDeletePelanggan(pelanggan)} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Hapus Pelanggan</AlertDialogAction>
-                                     </AlertDialogFooter>
-                                 </AlertDialogContent>
-                             </AlertDialog>
-                         </div>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow><TableHead>Tanggal Lapor</TableHead><TableHead>Petugas</TableHead><TableHead>Jenis Order</TableHead><TableHead>Keterangan</TableHead><TableHead className="text-right">Aksi</TableHead></TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {isLoading ? <TableRow><TableCell colSpan={5} className="text-center"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow>
-                             : data && data.length > 0 ? (
-                                data.map(item => (
-                                    <TableRow key={item.id}>
-                                        <TableCell>{safeToDate(item.tanggalLapor) ? format(safeToDate(item.tanggalLapor)!, 'dd MMM yyyy') : '-'}</TableCell>
-                                        <TableCell>{item.namaPetugas}</TableCell>
-                                        <TableCell><Badge variant="secondary">{item.jenisOrder}</Badge></TableCell>
-                                        <TableCell className="max-w-[200px] truncate">{item.keterangan}</TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex items-center justify-end">
-                                                <Button asChild variant="ghost" size="sm"><Link href={`/dashboard/admin/pelanggan/riwayat/${item.id}`}><Pencil className="h-4 w-4" /></Link></Button>
-                                                <AlertDialog>
-                                                    <AlertDialogTrigger asChild><Button variant="ghost" size="sm" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
-                                                    <AlertDialogContent>
-                                                        <AlertDialogHeader><AlertDialogTitle>Hapus Riwayat?</AlertDialogTitle><AlertDialogDescription>Tindakan ini akan menghapus riwayat gangguan ini secara permanen.</AlertDialogDescription></AlertDialogHeader>
-                                                        <AlertDialogFooter><AlertDialogCancel>Batal</AlertDialogCancel><AlertDialogAction onClick={() => handleDeleteRiwayat(item.id)} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Hapus</AlertDialogAction></AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                             ) : <TableRow><TableCell colSpan={5} className="text-center h-24">Belum ada riwayat gangguan.</TableCell></TableRow>}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-        );
-    }
-    
     return (
         <div className="space-y-6">
-            <h1 className="text-3xl font-bold tracking-tight">Manajemen Data Pelanggan</h1>
-            
-            <div className="grid lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-1 space-y-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2"><Search /> Cari Pelanggan</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <form onSubmit={handleSearch} className="space-y-4">
-                                <Select value={searchType} onValueChange={(val: 'nama' | 'noService') => setSearchType(val)}>
-                                    <SelectTrigger><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="nama">Cari berdasarkan Nama</SelectItem>
-                                        <SelectItem value="noService">Cari berdasarkan No. Service</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <Input 
-                                    placeholder={searchType === 'nama' ? "Ketik nama pelanggan..." : "Ketik nomor service..."}
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                />
-                                <Button type="submit" className="w-full" disabled={isSearching}>
-                                    {isSearching && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                                    Cari
-                                </Button>
-                            </form>
-                        </CardContent>
-                    </Card>
-                    
-                    <Card>
-                        <CardHeader><CardTitle>Tambah Data</CardTitle></CardHeader>
-                        <CardContent className="space-y-4">
-                             <Button className="w-full" onClick={() => setIsNewPelangganOpen(true)}>
-                                <PlusCircle className="mr-2 h-4 w-4" /> Tambah Pelanggan Baru
-                            </Button>
-                            <div className="grid gap-2">
-                                <Label htmlFor="import-riwayat">Import Riwayat dari Excel</Label>
-                                <Input id="import-riwayat" type="file" accept=".xlsx, .xls" onChange={handleImportRiwayat} disabled={isImporting}/>
-                                {isImporting && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="animate-spin"/> Mengimpor...</div>}
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {searchResults.length > 0 && (
-                        <Card>
-                            <CardHeader><CardTitle>Hasil Pencarian</CardTitle></CardHeader>
-                            <CardContent>
-                               <ul className="space-y-2">
-                                    {searchResults.map(p => (
-                                        <li key={p.id}>
-                                            <button onClick={() => setSelectedPelanggan(p)} className={cn("w-full text-left p-3 rounded-md border hover:bg-muted", selectedPelanggan?.id === p.id && "bg-muted border-primary")}>
-                                                <p className="font-semibold">{p.namaPelanggan}</p>
-                                                <p className="text-sm text-muted-foreground">{p.noService}</p>
-                                                <div className="mt-2 pt-2 border-t text-xs text-muted-foreground space-y-1">
-                                                    <p><strong>Alamat:</strong> {p.alamat || '-'}</p>
-                                                    <p><strong>Telp:</strong> {Array.isArray(p.nomorTelepon) ? p.nomorTelepon.join(', ') : (p.nomorTelepon || '-')}</p>
-                                                    <p><strong>ODP:</strong> {p.odpName || '-'} (Port: {p.odpPort || '-'})</p>
-                                                    <p><strong>STO:</strong> {p.sto || '-'}</p>
-                                                </div>
-                                            </button>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </CardContent>
-                        </Card>
-                    )}
-                </div>
-
-                <div className="lg:col-span-2">
-                    {selectedPelanggan ? (
-                        <RiwayatCard pelanggan={selectedPelanggan} />
-                    ) : (
-                        <Card className="h-full flex items-center justify-center">
-                            <div className="text-center p-8">
-                                <Contact className="mx-auto h-12 w-12 text-muted-foreground" />
-                                <p className="mt-4 text-muted-foreground">Silakan cari dan pilih pelanggan untuk melihat riwayatnya.</p>
-                            </div>
-                        </Card>
-                    )}
+            <div className='flex justify-between items-center'>
+                <h1 className="text-3xl font-bold tracking-tight">Data Pelanggan & Riwayat Gangguan</h1>
+                <div className='flex gap-2'>
+                    <Button variant="outline"><FileSpreadsheet className='mr-2 h-4 w-4' /> Import Riwayat</Button>
+                    <Button variant="outline"><FileSpreadsheet className='mr-2 h-4 w-4' /> Export Data Pelanggan</Button>
                 </div>
             </div>
+            
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Search /> Cari Pelanggan (Database Aplikasi)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <form onSubmit={handleSearch} className="flex items-end gap-4">
+                        <div className="grid gap-2 flex-1">
+                            <Label htmlFor="search-query">{searchType === 'nama' ? 'Nama Pelanggan' : 'Nomor Service'}</Label>
+                            <Input 
+                                id="search-query"
+                                placeholder={searchType === 'nama' ? "Ketik nama pelanggan..." : "Ketik nomor service..."}
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+                        <Select value={searchType} onValueChange={(val: 'nama' | 'noService') => setSearchType(val)}>
+                            <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="nama">Berdasarkan Nama</SelectItem>
+                                <SelectItem value="noService">Berdasarkan No. Service</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Button type="submit" disabled={isSearching}>
+                            {isSearching ? <Loader2 className="animate-spin"/> : 'Cari'}
+                        </Button>
+                        <Button type="button" onClick={() => setIsNewPelangganOpen(true)} variant="outline"><PlusCircle className='mr-2 h-4 w-4' /> Tambah Baru</Button>
+                    </form>
+                </CardContent>
+            </Card>
+
+            {searchResults.length > 0 && !selectedPelanggan && (
+                <Card>
+                    <CardHeader><CardTitle>Hasil Pencarian</CardTitle></CardHeader>
+                    <CardContent>
+                       <ul className="space-y-2">
+                            {searchResults.map(p => (
+                                <li key={p.id}>
+                                    <button onClick={() => setSelectedPelanggan(p)} className="w-full text-left p-3 rounded-md border hover:bg-muted">
+                                        <p className="font-semibold">{p.namaPelanggan}</p>
+                                        <p className="text-sm text-muted-foreground">{p.noService}</p>
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                    </CardContent>
+                </Card>
+            )}
+
+            {selectedPelanggan && (
+                <div className="space-y-6">
+                    <Card>
+                        <CardHeader>
+                            <div className="flex justify-between items-start flex-wrap gap-2">
+                                <div>
+                                    <CardTitle>Detail Pelanggan</CardTitle>
+                                    <CardDescription>Data pelanggan yang tersimpan di database aplikasi.</CardDescription>
+                                </div>
+                                <div className="flex gap-2 flex-wrap">
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="destructive" size="sm"><Trash2 /> Hapus</Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Hapus Pelanggan?</AlertDialogTitle>
+                                                <AlertDialogDescription>Tindakan ini akan menghapus data pelanggan <strong>{selectedPelanggan.namaPelanggan}</strong> secara permanen. Riwayat gangguan tidak akan terhapus tetapi tidak akan lagi tertaut.</AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Batal</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleDeletePelanggan(selectedPelanggan)} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Hapus Pelanggan</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                    <Button size="sm" onClick={() => setIsNewRiwayatOpen(true)}><Wrench /> Input Laporan Gangguan</Button>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid md:grid-cols-3 gap-6">
+                                <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6 text-sm">
+                                    <div><Label className="text-muted-foreground">No. Service</Label><p className="font-semibold">{selectedPelanggan.noService}</p></div>
+                                    <div><Label className="text-muted-foreground">Nama</Label><p className="font-semibold">{selectedPelanggan.namaPelanggan}</p></div>
+                                    <div><Label className="text-muted-foreground">Service Area</Label><p>{selectedPelanggan.serviceArea}</p></div>
+                                    <div><Label className="text-muted-foreground">STO</Label><p>{selectedPelanggan.sto}</p></div>
+                                    <div className="col-span-2"><Label className="text-muted-foreground">Alamat</Label><p>{selectedPelanggan.alamat}</p></div>
+                                    <div><Label className="text-muted-foreground">No. Telepon</Label>
+                                        {(Array.isArray(selectedPelanggan.nomorTelepon) ? selectedPelanggan.nomorTelepon : [selectedPelanggan.nomorTelepon]).map((phone, i) => (
+                                            <a key={i} href={formatWaNumber(phone || '')} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1"><Phone className="h-3 w-3"/>{phone}</a>
+                                        ))}
+                                    </div>
+                                    <div><Label className="text-muted-foreground">Koordinat</Label><a href={`https://www.google.com/maps/search/?api=1&query=${selectedPelanggan.koordinat}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1"><MapPin className="h-3 w-3"/>{selectedPelanggan.koordinat}</a></div>
+                                    <div><Label className="text-muted-foreground">ODP Terhubung</Label><p>{selectedPelanggan.odpName}</p></div>
+                                    <div><Label className="text-muted-foreground">Port ODP</Label><p>{selectedPelanggan.odpPort}</p></div>
+                                </div>
+                                <div className="md:col-span-1 space-y-2">
+                                    <Label>Foto Lokasi</Label>
+                                    <div className="relative aspect-square w-full bg-muted rounded-md overflow-hidden">
+                                        {selectedPelanggan.fotoCpUrl ? <Image src={selectedPelanggan.fotoCpUrl} alt="Foto Lokasi" fill className="object-cover"/> : <div className="flex items-center justify-center h-full text-muted-foreground text-sm">Tidak ada foto</div>}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="mt-6 border-t pt-4 flex flex-wrap gap-2">
+                                <Button variant="outline" size="sm" disabled><Phone className="mr-2 h-4 w-4"/> Tambah Kontak</Button>
+                                <Button variant="outline" size="sm" disabled><MapPin className="mr-2 h-4 w-4"/> Ubah Lokasi</Button>
+                                <Button variant="outline" size="sm" disabled><Pencil className="mr-2 h-4 w-4"/> Ubah Info Aset</Button>
+                                <Button variant="outline" size="sm" disabled><ImageIcon className="mr-2 h-4 w-4"/> Ubah Foto</Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                    <RiwayatCard pelanggan={selectedPelanggan} onAddRiwayat={handleNewRiwayat} />
+                </div>
+            )}
             
             <NewPelangganDialog 
                 isOpen={isNewPelangganOpen} 
@@ -1003,3 +1015,4 @@ export default function PelangganAdminPage() {
         </div>
     );
 }
+
