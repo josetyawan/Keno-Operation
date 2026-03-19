@@ -41,6 +41,7 @@ export default function AttendanceRekapPage() {
     const [isDeletingAll, setIsDeletingAll] = useState(false);
 
     useEffect(() => {
+        // Initialize date on the client to avoid hydration errors
         setSelectedDate(new Date());
     }, []);
 
