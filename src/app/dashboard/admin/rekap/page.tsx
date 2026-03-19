@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -47,15 +46,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
-type RekapDataItem = {
-    phone: string;
-    name: string;
-    segmen: string;
-    tanggal: string;
-    nominal: number;
-    userId: string;
-    notaId?: string;
-};
 
 const safeToDate = (timestamp: any): Date | null => {
     if (!timestamp) return null;
@@ -334,7 +324,6 @@ export default function RekapPage() {
 
 
     const handleLinkAjaPayment = async () => {
-        // This function can remain on the client for now as it doesn't access process.env directly.
         if (selectedNotaIds.length === 0 || selectedTotal <= 0) {
             toast({ variant: 'destructive', title: 'Tidak ada data pembayaran', description: 'Pilih laporan dengan total lebih dari nol.' });
             return;
@@ -360,8 +349,6 @@ export default function RekapPage() {
                     duration: 5000,
                 });
                 window.open(result.redirectUrl, '_blank');
-                // The status update logic for 'paid' on the client side after redirection is complex
-                // and better handled by a webhook or manual confirmation. For now, we just redirect.
             } else {
                 throw new Error(result.message || 'Pembayaran LinkAja/Finpay gagal karena alasan yang tidak diketahui.');
             }
@@ -658,3 +645,4 @@ export default function RekapPage() {
     );
 }
 
+    
