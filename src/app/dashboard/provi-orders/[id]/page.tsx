@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, Loader2, PackageOpen, Truck, MapPin, PackageCheck, Phone, AlertTriangle, Send, Camera, Upload, Wrench, Check, Circle, Calendar as CalendarIcon, FileUp, Save, RefreshCw } from 'lucide-react';
-import type { ProvisioningRecord, ProvisioningMaterial, Pelanggan, RiwayatGangguan, UserProfile } from '@/lib/types';
+import type { ProvisioningRecord, ProvisioningMaterial, Pelanggan, RiwayatGangguan, UserProfile, MaterialEvidence } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
@@ -353,7 +353,12 @@ export default function OrderDetailPage() {
         };
         await setDoc(pelangganDocRef, pelangganData, { merge: true });
 
-        // Step 2: Create Riwayat Gangguan (History) Document
+        // Step 2: Transform materials and create Riwayat Gangguan Document
+        const materialsForRiwayat: MaterialEvidence[] = (orderToSync.materials || []).map(mat => ({
+            materialName: mat.name,
+            quantity: mat.quantity,
+        }));
+
         const riwayatData: Omit<RiwayatGangguan, 'id'> = {
             pelangganId: orderToSync.serviceNo,
             userId: user.uid,
@@ -367,7 +372,7 @@ export default function OrderDetailPage() {
             tanggalOpen: orderToSync.assignedAt || Timestamp.now(),
             tanggalClose: orderToSync.completedAt || Timestamp.now(),
             layanan: [orderToSync.productName],
-            materials: orderToSync.materials || [],
+            materials: materialsForRiwayat,
             sto: orderToSync.workzone,
             noTiket: orderToSync.workorder,
             dorongClose: false,
