@@ -670,16 +670,22 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
 function RiwayatCard({ pelanggan, onAddRiwayat }: { pelanggan: Pelanggan, onAddRiwayat: () => void }) {
     const firestore = useFirestore();
     const { toast } = useToast();
-    const { data, isLoading } = useCollection<RiwayatGangguan>(
-        useMemoFirebase(() => {
-            if (!pelanggan) return null;
-            return query(
-                collection(firestore, 'riwayat-gangguan'), 
-                where('pelangganId', '==', pelanggan.id),
-                orderBy('tanggalLapor', 'desc')
-            );
-        }, [pelanggan])
-    );
+    
+    // This query now has an orderBy which requires an index.
+    const riwayatQuery = useMemoFirebase(() => {
+        if (!pelanggan) return null;
+        return query(
+            collection(firestore, 'riwayat-gangguan'), 
+            where('pelangganId', '==', pelanggan.id),
+            orderBy('tanggalLapor', 'desc')
+        );
+    }, [firestore, pelanggan]);
+
+    const { data, isLoading, error } = useCollection<RiwayatGangguan>(riwayatQuery);
+
+    if (error) {
+        console.error("Firestore error in RiwayatCard:", error);
+    }
     
     const handleDeleteRiwayat = async (riwayatId: string) => {
         try {
@@ -742,7 +748,6 @@ export default function PelangganAdminPage() {
     const [searchType, setSearchType] = useState('noService');
     const [searchQuery, setSearchQuery] = useState('');
     const [isSearching, setIsSearching] = useState(false);
-    const [searchResults, setSearchResults] = useState<Pelanggan[]>([]);
     
     const [selectedPelanggan, setSelectedPelanggan] = useState<Pelanggan | null>(null);
     const [isNewPelangganOpen, setIsNewPelangganOpen] = useState(false);
@@ -755,29 +760,45 @@ export default function PelangganAdminPage() {
     
     const [isImporting, setIsImporting] = useState(false);
 
-    const handleSearch = async (e: React.FormEvent) => {
+    // --- Client-side Search Implementation ---
+    const { data: allPelanggan, isLoading: arePelangganLoading } = useCollection<Pelanggan>(
+        useMemoFirebase(() => query(collection(firestore, 'pelanggan')), [firestore])
+    );
+
+    const searchResults = useMemo(() => {
+        if (!allPelanggan) return [];
+        const lowercasedQuery = searchQuery.trim().toLowerCase();
+        if (!lowercasedQuery) return [];
+
+        return allPelanggan.filter(p => {
+            if (searchType === 'noService') {
+                return p.noService.toLowerCase().includes(lowercasedQuery);
+            }
+            if (searchType === 'nama') {
+                return p.namaPelanggan.toLowerCase().includes(lowercasedQuery);
+            }
+            return false;
+        }).slice(0, 20); // Limit results for performance on the client
+    }, [allPelanggan, searchQuery, searchType]);
+
+    const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!searchQuery.trim()) return;
-        setIsSearching(true);
-        setSelectedPelanggan(null);
-
-        const field = searchType === 'nama' ? 'namaPelanggan' : 'noService';
-        const q = query(
-            collection(firestore, 'pelanggan'),
-            where(field, '>=', searchQuery.trim()),
-            where(field, '<=', searchQuery.trim() + '\uf8ff'),
-            limit(20)
-        );
-
-        const querySnapshot = await getDocs(q);
-        const results = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Pelanggan));
-        setSearchResults(results);
-        setIsSearching(false);
+        // The search is now reactive based on `searchQuery` state,
+        // so this button click doesn't need to trigger a new fetch.
+        // It's here for user experience.
+        if (searchResults.length === 0 && searchQuery.trim()) {
+            toast({
+                title: "Tidak Ada Hasil",
+                description: "Tidak ada pelanggan yang cocok dengan pencarian Anda.",
+                variant: "destructive"
+            });
+        }
     };
+
 
     const handleNewPelanggan = (newPelanggan: Pelanggan) => {
         setIsNewPelangganOpen(false);
-        setSearchResults([newPelanggan, ...searchResults].slice(0, 20));
+        // Client-side filtering will automatically pick this up, but for immediate feedback:
         setSelectedPelanggan(newPelanggan);
         toast({ title: "Pelanggan Baru Disimpan", description: `${newPelanggan.namaPelanggan} telah ditambahkan.` });
     };
@@ -793,7 +814,6 @@ export default function PelangganAdminPage() {
         try {
             if (!window.confirm(`Anda yakin ingin menghapus pelanggan ${pelanggan.namaPelanggan}? Semua riwayat terkait akan tetap ada, tetapi tidak tertaut.`)) return;
             await deleteDoc(doc(firestore, 'pelanggan', pelanggan.id));
-            setSearchResults(prev => prev.filter(p => p.id !== pelanggan.id));
             if (selectedPelanggan?.id === pelanggan.id) {
                 setSelectedPelanggan(null);
             }
@@ -906,28 +926,47 @@ export default function PelangganAdminPage() {
                                 <SelectItem value="noService">Berdasarkan No. Service</SelectItem>
                             </SelectContent>
                         </Select>
-                        <Button type="submit" disabled={isSearching}>
-                            {isSearching ? <Loader2 className="animate-spin"/> : 'Cari'}
+                        <Button type="submit" disabled={arePelangganLoading}>
+                            {arePelangganLoading ? <Loader2 className="animate-spin"/> : 'Cari'}
                         </Button>
                         <Button type="button" onClick={() => setIsNewPelangganOpen(true)} variant="outline"><PlusCircle className='mr-2 h-4 w-4' /> Tambah Baru</Button>
                     </form>
                 </CardContent>
             </Card>
 
-            {searchResults.length > 0 && !selectedPelanggan && (
+            {searchQuery.trim() && (
                 <Card>
-                    <CardHeader><CardTitle>Hasil Pencarian</CardTitle></CardHeader>
+                    <CardHeader>
+                        <CardTitle>Hasil Pencarian</CardTitle>
+                        <CardDescription>Menampilkan {searchResults.length} hasil untuk &quot;{searchQuery}&quot;</CardDescription>
+                    </CardHeader>
                     <CardContent>
-                       <ul className="space-y-2">
-                            {searchResults.map(p => (
-                                <li key={p.id}>
-                                    <button onClick={() => setSelectedPelanggan(p)} className="w-full text-left p-3 rounded-md border hover:bg-muted">
-                                        <p className="font-semibold">{p.namaPelanggan}</p>
-                                        <p className="text-sm text-muted-foreground">{p.noService}</p>
-                                    </button>
-                                </li>
-                            ))}
-                        </ul>
+                       {arePelangganLoading ? (
+                           <div className="text-center"><Loader2 className="animate-spin mx-auto text-primary" /></div>
+                       ) : searchResults.length > 0 ? (
+                           <ul className="space-y-3">
+                                {searchResults.map(p => (
+                                    <li key={p.id}>
+                                        <button onClick={() => setSelectedPelanggan(p)} className="w-full text-left p-4 rounded-lg border hover:bg-muted transition-all">
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <p className="font-semibold">{p.namaPelanggan}</p>
+                                                    <p className="text-sm text-muted-foreground font-mono">{p.noService}</p>
+                                                </div>
+                                                <Badge variant="secondary">{p.sto}</Badge>
+                                            </div>
+                                            <div className="mt-2 text-sm text-muted-foreground space-y-1">
+                                                <p className="truncate">Alamat: {p.alamat || 'N/A'}</p>
+                                                <p>Telp: {(Array.isArray(p.nomorTelepon) ? p.nomorTelepon.join(', ') : p.nomorTelepon) || 'N/A'}</p>
+                                                <p>ODP: {p.odpName || 'N/A'} {p.odpPort && ` / Port ${p.odpPort}`}</p>
+                                            </div>
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                       ) : (
+                           <p className="text-center text-muted-foreground py-8">Tidak ada pelanggan yang ditemukan.</p>
+                       )}
                     </CardContent>
                 </Card>
             )}
