@@ -826,18 +826,13 @@ export default function PelangganAdminPage() {
         const { data, isLoading } = useCollection<RiwayatGangguan>(
             useMemoFirebase(() => {
                 if (!pelanggan) return null;
-                return query(collection(firestore, 'riwayat-gangguan'), where('pelangganId', '==', pelanggan.id));
+                return query(
+                    collection(firestore, 'riwayat-gangguan'), 
+                    where('pelangganId', '==', pelanggan.id),
+                    orderBy('tanggalLapor', 'desc')
+                );
             }, [pelanggan])
         );
-
-        const riwayat = useMemo(() => {
-            if (!data) return [];
-            return [...data].sort((a,b) => {
-                const timeA = safeToDate(a.tanggalLapor)?.getTime() ?? 0;
-                const timeB = safeToDate(b.tanggalLapor)?.getTime() ?? 0;
-                return timeB - timeA;
-            });
-        }, [data]);
 
         return (
             <Card>
@@ -876,8 +871,8 @@ export default function PelangganAdminPage() {
                         </TableHeader>
                         <TableBody>
                             {isLoading ? <TableRow><TableCell colSpan={5} className="text-center"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow>
-                             : riwayat && riwayat.length > 0 ? (
-                                riwayat.map(item => (
+                             : data && data.length > 0 ? (
+                                data.map(item => (
                                     <TableRow key={item.id}>
                                         <TableCell>{safeToDate(item.tanggalLapor) ? format(safeToDate(item.tanggalLapor)!, 'dd MMM yyyy') : '-'}</TableCell>
                                         <TableCell>{item.namaPetugas}</TableCell>
