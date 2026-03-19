@@ -50,8 +50,6 @@ import { Calendar } from '@/components/ui/calendar';
 import { PlusCircle, MapPin, Loader2, Search, History, Phone, Pencil, Wrench, QrCode, FileSpreadsheet, AlertCircle, Info, Upload, Trash2, Bot, CalendarIcon, MessageSquare, AlertTriangle, Image as ImageIcon } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 import { useStorage } from '@/firebase/provider';
 import { collection, query, doc, serverTimestamp, where, getDocs, limit, orderBy, Timestamp, writeBatch, deleteDoc, addDoc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -72,6 +70,44 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 
 const serviceAreas = ['SA KUDUS', 'SA PATI', 'SA JEPARA', 'SA PURWODADI', 'SA BLORA', 'SA REMBANG'];
+const layananOptions = ["INTERNET", "VOICE", "USEETV", "WIFI MESH", "WIFI AP", "WIFI-LITE", "OLO", "METRO", "ASTINET", "VPNIP", "DATIN"];
+
+const jenisOrderOptions = [
+  "Aktivasi Cross Connect TDE", "Aktivasi/Migrasi/Dismantel DCS", "Aktivasi/Migrasi/Dismantel Digiserve", "Aktivasi/Migrasi/Dismantel Hypernet", "Corrective Akses Tower CENTRATAMA", "Corrective Akses Tower Lintasarta", "Corrective Akses Tower UMT", "Corrective Cross Connect TDE", "Corrective CSA", "Corrective DCS", "Corrective Digiserve", "Corrective Hypernet", "Corrective MMP", "Corrective MyRep", "Corrective NuTech", "Corrective SNT", "Corrective SPBU", "Corrective TBG", "Corrective Tower POLARIS", "Corrective Tower TIS", "DISMANTLING FWA", "DISMANTLING ONT", "DISMANTLING PLC", "DISMANTLING STB", "DISMANTLING WIFI EXTENDER", "Dismantling DC Infracare", "Dismantling NTE B2B", "EXPAND ODP", "Inventory SPBU", "IXSA FTM", "IXSA ODC", "IXSA OLT", "Lapsung (Laporan Langsung)", "MO/DO Indibiz / Datin", "MO/DO Indihome", "PDA PSB Indihome", "PSB DATIN", "PSB INDIBIZ", "PSB OLO", "PSB MyRep", "PSB Surge", "PSB WIFI", "PT2 Simple", "Patroli Akses", "Preventif MMP", "Preventive Akses Tower CENTRATAMA", "Preventive Akses Tower Lintasarta", "Preventive Akses Tower UMT", "Preventive Asianet", "Preventive CSA", "Preventive FIberisasi", "Preventive NuTech", "Preventive SPBU", "Preventive TBG", "Preventive Tower POLARIS", "Preventive Tower TIS", "REPLACEMENT ONT Premium/Dual Band", "REPLACEMENT STB", "Relokasi DCS", "Relokasi Digiserve", "Relokasi Hypernet", "Reseller", "SQM Reguler", "Tangible ODP HSI Indihome", "Tangible ODP Tiket Datin Kategori 1", "Tiket Datin Kategori 2", "Tiket Datin Kategori 3", "Tiket FFG DATIN", "Tiket FFG HSI", "Tiket FFG WIFI", "Tiket GAMAS", "Tiket HSI Indibiz", "Tiket NodeB CNQ (Preventive/Quality)", "Tiket NodeB Critical", "Tiket NodeB Low", "Tiket NodeB Major", "Tiket NodeB Minor", "Tiket NodeB Premium", "Tiket NodeB Premium Preventive", "Tiket OLO Datin Gamas", "Tiket OLO Datin Non Gamas", "Tiket OLO Datin Quality", "Tiket OLO SL WDM", "Tiket OLO SL WDM Quality", "Tiket Pra SQM Gaul HSI", "Tiket Reguler", "Tiket SIP Trunk", "Tiket SQM Datin", "Tiket SQM HSI", "Tiket WIFI ID", "Tiket Wifi Logic", "UNLOCK ODP", "Unspec DATIN", "Unspec HSI", "Unspec SITE/NODE-B", "Unspec WIFI", "Unspec Reguler", "Validasi Data EBIS", "Validasi Data WIFI", "Validasi Tiang", "Valins FTM", "Valins ODC", "Valins Regular", "WFM", "Corrective Mitratel",
+].sort();
+
+const typeOrderOptions: Record<string, string[]> = {
+    'Tiket Reguler': ['VVIP', 'Diamond', 'Platinum', 'Gold', 'NonHVC', 'HVC_Diamond', 'HVC_Gold', 'HVC_Platinum', 'Reguler'],
+    'SQM Reguler': ['Workhours', 'NonWorkhours'],
+    'Tiket GAMAS': ['DISTRIBUSI', 'FEEDER', 'ODC', 'ODP'],
+    'DISMANTLING EBIS': ['ONT', 'STB', 'AP', 'IP CAMERA'],
+    'REPLACEMENT': ['ONT', 'STB'],
+};
+
+const materialEvidenMap: Record<string, { evidences?: string[], quantity?: boolean, default?: number, inputs?: string[] }> = {
+  "DROPCORE BARU": { evidences: ["eviden marking awal", "eviden marking akhir", "eviden dc", "eviden progres"], quantity: true },
+  "DROPCORE REFURBISH": { evidences: ["eviden marking awal", "eviden marking akhir", "eviden dc", "eviden progres"], quantity: true },
+  "ROSET": { evidences: ["eviden foto roset baru", "eviden roset lama", "eviden progres", "eviden saat terpasang"], quantity: true },
+  "PIGTAIL SC": { evidences: ["eviden foto pigtail baru", "eviden pigtail lama", "eviden progres", "eviden saat terpasang"], quantity: true },
+  "PATCHCORE 15": { evidences: ["eviden foto pathcore baru", "eviden pathcore lama", "eviden progres", "eviden saat terpasang"], quantity: true },
+  "PATCHCORE 2 MTR": { evidences: ["eviden foto pathcore baru", "eviden pathcore lama", "eviden progres", "eviden saat terpasang"], quantity: true },
+  "PATCHCORE 1 MTR": { evidences: ["eviden foto pathcore baru", "eviden pathcore lama", "eviden progres", "eviden saat terpasang"], quantity: true },
+  "SPLITER 1:2": { evidences: ["eviden foto spliter baru", "eviden spliter lama", "eviden progres", "eviden saat terpasang"], quantity: true },
+  "SPLITER 1:4": { evidences: ["eviden foto spliter baru", "eviden spliter lama", "eviden progres", "eviden saat terpasang"], quantity: true },
+  "SPLITER 1:8": { evidences: ["eviden foto spliter baru", "eviden spliter lama", "eviden progres", "eviden saat terpasang"], quantity: true },
+  "SPLITER 1:16": { evidences: ["eviden foto spliter baru", "eviden spliter lama", "eviden progres", "eviden saat terpasang"], quantity: true },
+  "Termovit (cm)": { evidences: [], quantity: true, default: 15 },
+  "Adapter SC": { evidences: ["eviden foto adaptor baru", "eviden adaptor lama", "eviden progres", "eviden saat terpasang"], quantity: true },
+  "RJ45": { evidences: ["eviden foto rj45 baru", "eviden rj45 lama", "eviden progres", "eviden saat terpasang"], quantity: true },
+  "Protection Sleeve": { evidences: ["eviden foto sambung"], quantity: true },
+  "Splice on Connector": { evidences: ["eviden SOC baru", "eviden progres", "eviden saat terpasang"], quantity: true },
+  "Penarikan Kabel UTP (Mtr)": { evidences: ["eviden marking awal", "eviden marking akhir", "eviden dc", "eviden progres"], quantity: true },
+  "ONT": { inputs: ['SN ONT', 'Valins ID'] },
+  "STB": { inputs: ['STB ID'] },
+  "AP": { inputs: ['SN AP', 'MAC AP'] },
+  "PoE AP": { inputs: ['SN PoE'] },
+  "AP Mesh": { inputs: ['SN'] }
+};
 
 // --- Helper Functions ---
 
@@ -326,7 +362,7 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [materialQuantities['Protection Sleeve']]);
 
-    const showTypeOrder = useMemo(() => Object.keys(typeOrderOptions).includes(jenisOrder), [jenisOrder]);
+    const showOrderType = useMemo(() => Object.keys(typeOrderOptions).includes(jenisOrder), [jenisOrder]);
     
     useEffect(() => {
         if (isOpen) {
@@ -351,8 +387,8 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
     }, [isOpen]);
 
     useEffect(() => {
-        if (!showTypeOrder) setTypeOrder('');
-    }, [jenisOrder, showTypeOrder]);
+        if (!showOrderType) setTypeOrder('');
+    }, [jenisOrder, showOrderType]);
 
     const handleLayananChange = (layanan: string, checked: boolean) => {
         setSelectedLayanan(prev => checked ? [...prev, layanan] : prev.filter(l => l !== layanan));
@@ -472,7 +508,7 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
             
             const dataToSave: any = { ...newRiwayatData };
 
-            if (showTypeOrder && typeOrder) {
+            if (showOrderType && typeOrder) {
                 dataToSave.typeOrder = typeOrder;
             }
             if (evidenSccUrl) {
@@ -539,7 +575,7 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
                                 <SelectContent><ScrollArea className="h-72">{jenisOrderOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</ScrollArea></SelectContent>
                             </Select>
                         </div>
-                        {showTypeOrder && (
+                        {showOrderType && (
                             <div className="grid gap-2">
                                 <Label htmlFor="type-order">Type Order *</Label>
                                 <Select value={typeOrder} onValueChange={setTypeOrder} required>
@@ -631,3 +667,329 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
 }
 
 // ... rest of the file remains the same ...
+
+export default function PelangganAdminPage() {
+    const firestore = useFirestore();
+    const { toast } = useToast();
+    const router = useRouter();
+
+    const [searchType, setSearchType] = useState('nama');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isSearching, setIsSearching] = useState(false);
+    const [searchResults, setSearchResults] = useState<Pelanggan[]>([]);
+    
+    const [selectedPelanggan, setSelectedPelanggan] = useState<Pelanggan | null>(null);
+    const [isNewPelangganOpen, setIsNewPelangganOpen] = useState(false);
+    const [isNewRiwayatOpen, setIsNewRiwayatOpen] = useState(false);
+    
+    const { user } = useUser();
+    const { data: currentUserProfile } = useDoc<UserProfile>(
+        useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
+    );
+    
+    const [isImporting, setIsImporting] = useState(false);
+
+    const handleSearch = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!searchQuery.trim()) return;
+        setIsSearching(true);
+        setSelectedPelanggan(null);
+
+        const field = searchType === 'nama' ? 'namaPelanggan' : 'noService';
+        const q = query(
+            collection(firestore, 'pelanggan'),
+            where(field, '>=', searchQuery.trim().toUpperCase()),
+            where(field, '<=', searchQuery.trim().toUpperCase() + '\uf8ff'),
+            limit(20)
+        );
+
+        const querySnapshot = await getDocs(q);
+        const results = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Pelanggan));
+        setSearchResults(results);
+        setIsSearching(false);
+    };
+
+    const handleNewPelanggan = (newPelanggan: Pelanggan) => {
+        setIsNewPelangganOpen(false);
+        setSearchResults([newPelanggan, ...searchResults].slice(0, 20));
+        setSelectedPelanggan(newPelanggan);
+        toast({ title: "Pelanggan Baru Disimpan", description: `${newPelanggan.namaPelanggan} telah ditambahkan.` });
+    };
+    
+    const handleNewRiwayat = () => {
+        // This will trigger a re-fetch in the RiwayatCard component
+        // To force it, we can temporarily set selectedPelanggan to null and then back
+        const current = selectedPelanggan;
+        setSelectedPelanggan(null);
+        setTimeout(() => setSelectedPelanggan(current), 0);
+        setIsNewRiwayatOpen(false);
+    }
+    
+    const handleDeleteRiwayat = async (riwayatId: string) => {
+        if (!window.confirm("Anda yakin ingin menghapus riwayat ini?")) return;
+        try {
+            await deleteDoc(doc(firestore, 'riwayat-gangguan', riwayatId));
+            handleNewRiwayat(); // Force refresh
+            toast({ title: "Riwayat Dihapus" });
+        } catch (err: any) {
+            console.error("Error deleting riwayat: ", err);
+            toast({ variant: 'destructive', title: 'Gagal Menghapus', description: 'Anda tidak memiliki izin atau terjadi kesalahan lain.' });
+        }
+    };
+    
+    const handleDeletePelanggan = async (pelanggan: Pelanggan) => {
+        if (!window.confirm(`Anda yakin ingin menghapus pelanggan ${pelanggan.namaPelanggan}? Semua riwayat terkait akan tetap ada, tetapi tidak tertaut.`)) return;
+        try {
+            await deleteDoc(doc(firestore, 'pelanggan', pelanggan.id));
+            setSearchResults(prev => prev.filter(p => p.id !== pelanggan.id));
+            setSelectedPelanggan(null);
+            toast({ title: "Pelanggan Dihapus" });
+        } catch (err: any) {
+             console.error("Error deleting pelanggan: ", err);
+            toast({ variant: 'destructive', title: 'Gagal Menghapus', description: 'Anda tidak memiliki izin atau terjadi kesalahan lain.' });
+        }
+    };
+    
+    const handleImportRiwayat = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (!user) return;
+        setIsImporting(true);
+        const file = event.target.files?.[0];
+        if (!file) {
+            setIsImporting(false);
+            return;
+        }
+
+        try {
+            const XLSX = await import('xlsx');
+            const data = await file.arrayBuffer();
+            const workbook = XLSX.read(data);
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            const json: any[] = XLSX.utils.sheet_to_json(worksheet);
+
+            let successCount = 0;
+            const batch = writeBatch(firestore);
+
+            for (const row of json) {
+                const noService = String(row['No. Layanan'] || row['Nomor Service'] || '').trim();
+                if (!noService) continue;
+
+                const tanggalLapor = parse(String(row['Tanggal Lapor']), 'dd-MMM-yyyy', new Date());
+
+                if (!isValid(tanggalLapor)) {
+                     console.warn(`Skipping row for ${noService} due to invalid date:`, row['Tanggal Lapor']);
+                     continue;
+                }
+                
+                const newRiwayat: Omit<RiwayatGangguan, 'id'> = {
+                    pelangganId: noService,
+                    noService,
+                    userId: user.uid,
+                    tanggalLapor: Timestamp.fromDate(tanggalLapor),
+                    namaPetugas: String(row['Nama Petugas'] || userProfile?.displayName || ''),
+                    nik: String(row['NIK'] || userProfile?.nik || ''),
+                    jenisOrder: String(row['Jenis Order'] || ''),
+                    keterangan: String(row['Keterangan'] || ''),
+                    noTiket: String(row['No. Tiket'] || ''),
+                    sto: String(row['STO'] || ''),
+                    tanggalOpen: Timestamp.fromDate(tanggalLapor),
+                    tanggalClose: null,
+                    layanan: [],
+                };
+                
+                const docRef = doc(collection(firestore, 'riwayat-gangguan'));
+                batch.set(docRef, newRiwayat);
+                successCount++;
+            }
+            
+            await batch.commit();
+
+            toast({
+                title: 'Impor Selesai',
+                description: `${successCount} dari ${json.length} baris berhasil diimpor.`,
+            });
+
+        } catch (error: any) {
+            toast({
+                variant: 'destructive',
+                title: 'Gagal Mengimpor',
+                description: `Terjadi kesalahan saat membaca file. ${error.message}`,
+            });
+        } finally {
+            setIsImporting(false);
+        }
+    };
+
+
+    function RiwayatCard({ pelanggan }: { pelanggan: Pelanggan }) {
+        const { data: riwayat, isLoading } = useCollection<RiwayatGangguan>(
+            useMemoFirebase(() => {
+                if (!pelanggan) return null;
+                return query(collection(firestore, 'riwayat-gangguan'), where('pelangganId', '==', pelanggan.id), orderBy('tanggalLapor', 'desc'));
+            }, [pelanggan])
+        );
+
+        return (
+            <Card>
+                <CardHeader>
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <CardTitle>Riwayat Gangguan</CardTitle>
+                            <CardDescription>Untuk {pelanggan.namaPelanggan}</CardDescription>
+                        </div>
+                         <div className="flex gap-2">
+                             <Button onClick={() => setIsNewRiwayatOpen(true)}>
+                                <PlusCircle className="mr-2 h-4 w-4" /> Tambah Riwayat
+                             </Button>
+                             <AlertDialog>
+                                 <AlertDialogTrigger asChild>
+                                     <Button variant="destructive"><Trash2 className="h-4 w-4"/></Button>
+                                 </AlertDialogTrigger>
+                                 <AlertDialogContent>
+                                     <AlertDialogHeader>
+                                         <AlertDialogTitle>Hapus Pelanggan?</AlertDialogTitle>
+                                         <AlertDialogDescription>Tindakan ini akan menghapus data pelanggan <strong>{pelanggan.namaPelanggan}</strong> secara permanen. Riwayat gangguan tidak akan terhapus tetapi tidak akan lagi tertaut.</AlertDialogDescription>
+                                     </AlertDialogHeader>
+                                     <AlertDialogFooter>
+                                         <AlertDialogCancel>Batal</AlertDialogCancel>
+                                         <AlertDialogAction onClick={() => handleDeletePelanggan(pelanggan)} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Hapus Pelanggan</AlertDialogAction>
+                                     </AlertDialogFooter>
+                                 </AlertDialogContent>
+                             </AlertDialog>
+                         </div>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow><TableHead>Tanggal Lapor</TableHead><TableHead>Petugas</TableHead><TableHead>Jenis Order</TableHead><TableHead>Keterangan</TableHead><TableHead className="text-right">Aksi</TableHead></TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {isLoading ? <TableRow><TableCell colSpan={5} className="text-center"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow>
+                             : riwayat && riwayat.length > 0 ? (
+                                riwayat.map(item => (
+                                    <TableRow key={item.id}>
+                                        <TableCell>{safeToDate(item.tanggalLapor) ? format(safeToDate(item.tanggalLapor)!, 'dd MMM yyyy') : '-'}</TableCell>
+                                        <TableCell>{item.namaPetugas}</TableCell>
+                                        <TableCell><Badge variant="secondary">{item.jenisOrder}</Badge></TableCell>
+                                        <TableCell className="max-w-[200px] truncate">{item.keterangan}</TableCell>
+                                        <TableCell className="text-right">
+                                            <div className="flex items-center justify-end">
+                                                <Button asChild variant="ghost" size="sm"><Link href={`/dashboard/admin/pelanggan/riwayat/${item.id}`}><Pencil className="h-4 w-4" /></Link></Button>
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild><Button variant="ghost" size="sm" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader><AlertDialogTitle>Hapus Riwayat?</AlertDialogTitle><AlertDialogDescription>Tindakan ini akan menghapus riwayat gangguan ini secara permanen.</AlertDialogDescription></AlertDialogHeader>
+                                                        <AlertDialogFooter><AlertDialogCancel>Batal</AlertDialogCancel><AlertDialogAction onClick={() => handleDeleteRiwayat(item.id)} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Hapus</AlertDialogAction></AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                             ) : <TableRow><TableCell colSpan={5} className="text-center h-24">Belum ada riwayat gangguan.</TableCell></TableRow>}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+        );
+    }
+    
+    return (
+        <div className="space-y-6">
+            <h1 className="text-3xl font-bold tracking-tight">Manajemen Data Pelanggan</h1>
+            
+            <div className="grid lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-1 space-y-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2"><Search /> Cari Pelanggan</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <form onSubmit={handleSearch} className="space-y-4">
+                                <Select value={searchType} onValueChange={(val: 'nama' | 'noService') => setSearchType(val)}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="nama">Cari berdasarkan Nama</SelectItem>
+                                        <SelectItem value="noService">Cari berdasarkan No. Service</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Input 
+                                    placeholder={searchType === 'nama' ? "Ketik nama pelanggan..." : "Ketik nomor service..."}
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                                <Button type="submit" className="w-full" disabled={isSearching}>
+                                    {isSearching && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                                    Cari
+                                </Button>
+                            </form>
+                        </CardContent>
+                    </Card>
+                    
+                    <Card>
+                        <CardHeader><CardTitle>Tambah Data</CardTitle></CardHeader>
+                        <CardContent className="space-y-4">
+                             <Button className="w-full" onClick={() => setIsNewPelangganOpen(true)}>
+                                <PlusCircle className="mr-2 h-4 w-4" /> Tambah Pelanggan Baru
+                            </Button>
+                            <div className="grid gap-2">
+                                <Label htmlFor="import-riwayat">Import Riwayat dari Excel</Label>
+                                <Input id="import-riwayat" type="file" accept=".xlsx, .xls" onChange={handleImportRiwayat} disabled={isImporting}/>
+                                {isImporting && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="animate-spin"/> Mengimpor...</div>}
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {searchResults.length > 0 && (
+                        <Card>
+                            <CardHeader><CardTitle>Hasil Pencarian</CardTitle></CardHeader>
+                            <CardContent>
+                                <ul className="space-y-2">
+                                    {searchResults.map(p => (
+                                        <li key={p.id}>
+                                            <button onClick={() => setSelectedPelanggan(p)} className={cn("w-full text-left p-2 rounded-md hover:bg-muted", selectedPelanggan?.id === p.id && "bg-muted")}>
+                                                <p className="font-semibold">{p.namaPelanggan}</p>
+                                                <p className="text-sm text-muted-foreground">{p.noService}</p>
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </CardContent>
+                        </Card>
+                    )}
+                </div>
+
+                <div className="lg:col-span-2">
+                    {selectedPelanggan ? (
+                        <RiwayatCard pelanggan={selectedPelanggan} />
+                    ) : (
+                        <Card className="h-full flex items-center justify-center">
+                            <div className="text-center p-8">
+                                <Contact className="mx-auto h-12 w-12 text-muted-foreground" />
+                                <p className="mt-4 text-muted-foreground">Silakan cari dan pilih pelanggan untuk melihat riwayatnya.</p>
+                            </div>
+                        </Card>
+                    )}
+                </div>
+            </div>
+            
+            <NewPelangganDialog 
+                isOpen={isNewPelangganOpen} 
+                onOpenChange={setIsNewPelangganOpen}
+                onFinished={handleNewPelanggan}
+            />
+
+            {selectedPelanggan && (
+                <NewRiwayatDialog 
+                    pelanggan={selectedPelanggan}
+                    isOpen={isNewRiwayatOpen}
+                    onOpenChange={setIsNewRiwayatOpen}
+                    onFinished={handleNewRiwayat}
+                    currentUserProfile={currentUserProfile}
+                />
+            )}
+        </div>
+    );
+}
+
