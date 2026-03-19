@@ -1,6 +1,7 @@
 
 'use client';
 
+import * as React from 'react';
 import {
   Card,
   CardContent,
@@ -113,9 +114,9 @@ const materialEvidenMap: Record<string, { evidences?: string[], quantity?: boole
 const safeToDate = (timestamp: any): Date | null => {
     if (!timestamp) return null;
     if (timestamp.toDate) return timestamp.toDate();
-    if (timestamp instanceof Date && isValid(timestamp)) return timestamp;
+    if (timestamp instanceof Date) return timestamp;
     const d = new Date(timestamp);
-    return isValid(d) ? d : null;
+    return d instanceof Date && !isNaN(d.getTime()) ? d : null;
 };
 
 const formatWaNumber = (phone: string) => {
@@ -693,7 +694,7 @@ function RiwayatCard({ pelanggan, onAddRiwayat }: { pelanggan: Pelanggan, onAddR
             await deleteDoc(doc(firestore, 'riwayat-gangguan', riwayatId));
             toast({ title: "Riwayat Dihapus" });
         } catch (err: any) {
-            console.error("Error deleting riwayat: ", err);
+             console.error("Error deleting riwayat: ", err);
             toast({ variant: 'destructive', title: 'Gagal Menghapus', description: 'Terjadi kesalahan lain.' });
         }
     };
