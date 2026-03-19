@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import {
@@ -49,10 +48,9 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { PlusCircle, MapPin, Loader2, Search, History, Phone, Pencil, Wrench, QrCode, FileSpreadsheet, AlertCircle, Info, Upload, Trash2, Bot, CalendarIcon, MessageSquare, AlertTriangle, Image as ImageIcon, Contact } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { useStorage } from '@/firebase/provider';
-import { collection, query, doc, serverTimestamp, where, getDocs, limit, orderBy, Timestamp, writeBatch, deleteDoc, addDoc, updateDoc } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, useStorage } from '@/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { collection, query, doc, serverTimestamp, where, getDocs, limit, orderBy, Timestamp, writeBatch, deleteDoc, addDoc, updateDoc } from 'firebase/firestore';
 import type { UserProfile, Pelanggan, RiwayatGangguan, MaterialEvidence } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -121,6 +119,7 @@ const safeToDate = (timestamp: any): Date | null => {
 };
 
 const formatWaNumber = (phone: string) => {
+    if (!phone) return '#';
     let cleanPhone = phone.replace(/\D/g, '');
     if (cleanPhone.startsWith('0')) {
         cleanPhone = '62' + cleanPhone.substring(1);
@@ -216,7 +215,7 @@ function NewPelangganDialog({ isOpen, onOpenChange, onFinished }: { isOpen: bool
         try {
             let fotoCpUrl: string | undefined = undefined;
             if (fotoCp) {
-                const filePath = `notas/${user.uid}/pelanggan_photo_${Date.now()}-${fotoCp.name}`;
+                const filePath = `pelanggan_photos/${user.uid}/cp_${Date.now()}-${fotoCp.name}`;
                 const storageRef = ref(storage, filePath);
                 await uploadBytes(storageRef, fotoCp);
                 fotoCpUrl = await getDownloadURL(storageRef);
@@ -347,12 +346,10 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
     useEffect(() => {
         const protectionSleeveQty = materialQuantities['Protection Sleeve'];
         if (protectionSleeveQty && protectionSleeveQty > 0) {
-            // Auto-calculate and set Termovit quantity
             setMaterialQuantities(prev => ({
                 ...prev,
                 'Termovit (cm)': protectionSleeveQty * 15,
             }));
-            // Auto-select Termovit if Protection Sleeve is used and it's not already selected
             if (!selectedMaterials['Termovit (cm)']) {
                 setSelectedMaterials(prev => ({
                     ...prev,
@@ -367,10 +364,8 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
     
     useEffect(() => {
         if (isOpen) {
-            // Set default to current date and time when dialog opens
             setTanggalOpen(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
         } else {
-            // Reset all state when dialog closes
             setTanggalOpen('');
             setTanggalClose('');
             setNoTiket('');
@@ -454,7 +449,7 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
                     const evidenceUploadPromises = Object.entries(evidenceFiles)
                         .filter(([, file]) => file)
                         .map(async ([evidenceName, file]) => {
-                            const filePath = `notas/${user.uid}/${Date.now()}-${file!.name}`;
+                            const filePath = `gangguan_evidence/${user.uid}/${Date.now()}-${file!.name}`;
                             const storageRef = ref(storage, filePath);
                             await uploadBytes(storageRef, file!);
                             const photoUrl = await getDownloadURL(storageRef);
@@ -481,7 +476,7 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
 
             let evidenSccUrl: string | undefined;
             if (evidenScc) {
-                const filePath = `notas/${user.uid}/scc_${Date.now()}-${evidenScc.name}`;
+                const filePath = `gangguan_evidence/${user.uid}/scc_${Date.now()}-${evidenScc.name}`;
                 const storageRef = ref(storage, filePath);
                 await uploadBytes(storageRef, evidenScc);
                 evidenSccUrl = await getDownloadURL(storageRef);
@@ -676,12 +671,17 @@ function RiwayatCard({ pelanggan, onAddRiwayat }: { pelanggan: Pelanggan, onAddR
         if (!pelanggan) return null;
         return query(
             collection(firestore, 'riwayat-gangguan'), 
-            where('pelangganId', '==', pelanggan.id),
-            orderBy('tanggalLapor', 'desc')
+            where('pelangganId', '==', pelanggan.id)
         );
     }, [firestore, pelanggan]);
 
     const { data, isLoading, error } = useCollection<RiwayatGangguan>(riwayatQuery);
+    
+    // Client-side sorting to avoid composite index
+    const sortedData = useMemo(() => {
+        if (!data) return [];
+        return [...data].sort((a,b) => (b.tanggalLapor.toDate()?.getTime() || 0) - (a.tanggalLapor.toDate()?.getTime() || 0));
+    }, [data]);
 
     if (error) {
         console.error("Firestore error in RiwayatCard:", error);
@@ -711,8 +711,8 @@ function RiwayatCard({ pelanggan, onAddRiwayat }: { pelanggan: Pelanggan, onAddR
                     </TableHeader>
                     <TableBody>
                         {isLoading ? <TableRow><TableCell colSpan={5} className="text-center"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow>
-                         : data && data.length > 0 ? (
-                            data.map(item => (
+                         : sortedData && sortedData.length > 0 ? (
+                            sortedData.map(item => (
                                 <TableRow key={item.id}>
                                     <TableCell>{safeToDate(item.tanggalLapor) ? format(safeToDate(item.tanggalLapor)!, 'dd MMM yyyy') : '-'}</TableCell>
                                     <TableCell>{item.namaPetugas}</TableCell>
@@ -744,23 +744,17 @@ export default function PelangganAdminPage() {
     const firestore = useFirestore();
     const { toast } = useToast();
     const router = useRouter();
-
-    const [searchType, setSearchType] = useState('noService');
     const [searchQuery, setSearchQuery] = useState('');
-    const [isSearching, setIsSearching] = useState(false);
-    
     const [selectedPelanggan, setSelectedPelanggan] = useState<Pelanggan | null>(null);
     const [isNewPelangganOpen, setIsNewPelangganOpen] = useState(false);
     const [isNewRiwayatOpen, setIsNewRiwayatOpen] = useState(false);
-    
     const { user } = useUser();
     const { data: currentUserProfile } = useDoc<UserProfile>(
         useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
     );
-    
     const [isImporting, setIsImporting] = useState(false);
+    const importFileRef = React.useRef<HTMLInputElement>(null);
 
-    // --- Client-side Search Implementation ---
     const { data: allPelanggan, isLoading: arePelangganLoading } = useCollection<Pelanggan>(
         useMemoFirebase(() => query(collection(firestore, 'pelanggan')), [firestore])
     );
@@ -769,36 +763,11 @@ export default function PelangganAdminPage() {
         if (!allPelanggan) return [];
         const lowercasedQuery = searchQuery.trim().toLowerCase();
         if (!lowercasedQuery) return [];
-
-        return allPelanggan.filter(p => {
-            if (searchType === 'noService') {
-                return p.noService.toLowerCase().includes(lowercasedQuery);
-            }
-            if (searchType === 'nama') {
-                return p.namaPelanggan.toLowerCase().includes(lowercasedQuery);
-            }
-            return false;
-        }).slice(0, 20); // Limit results for performance on the client
-    }, [allPelanggan, searchQuery, searchType]);
-
-    const handleSearch = (e: React.FormEvent) => {
-        e.preventDefault();
-        // The search is now reactive based on `searchQuery` state,
-        // so this button click doesn't need to trigger a new fetch.
-        // It's here for user experience.
-        if (searchResults.length === 0 && searchQuery.trim()) {
-            toast({
-                title: "Tidak Ada Hasil",
-                description: "Tidak ada pelanggan yang cocok dengan pencarian Anda.",
-                variant: "destructive"
-            });
-        }
-    };
-
+        return allPelanggan.filter(p => p.noService.toLowerCase().includes(lowercasedQuery));
+    }, [allPelanggan, searchQuery]);
 
     const handleNewPelanggan = (newPelanggan: Pelanggan) => {
         setIsNewPelangganOpen(false);
-        // Client-side filtering will automatically pick this up, but for immediate feedback:
         setSelectedPelanggan(newPelanggan);
         toast({ title: "Pelanggan Baru Disimpan", description: `${newPelanggan.namaPelanggan} telah ditambahkan.` });
     };
@@ -823,16 +792,48 @@ export default function PelangganAdminPage() {
             toast({ variant: 'destructive', title: 'Gagal Menghapus', description: 'Terjadi kesalahan lain.' });
         }
     };
-    
-    const handleImportRiwayat = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        if (!user || !currentUserProfile) return;
-        setIsImporting(true);
-        const file = event.target.files?.[0];
-        if (!file) {
-            setIsImporting(false);
+
+    const handleExportData = async () => {
+        if (!allPelanggan || allPelanggan.length === 0) {
+            toast({ variant: "destructive", title: "Tidak ada data untuk diekspor" });
             return;
         }
+        setIsImporting(true); // Using same loading state
+        try {
+            const XLSX = await import('xlsx');
+            const dataToExport = allPelanggan.map(p => ({
+                'No Service': p.noService,
+                'Nama Pelanggan': p.namaPelanggan,
+                'Alamat': p.alamat,
+                'Nomor Telepon': Array.isArray(p.nomorTelepon) ? p.nomorTelepon.join(', ') : p.nomorTelepon,
+                'Koordinat': p.koordinat,
+                'Service Area': p.serviceArea,
+                'STO': p.sto,
+                'ODP Name': p.odpName,
+                'ODP Port': p.odpPort,
+                'ODP QR URL': p.odpQRCodeUrl,
+                'Foto URL': p.fotoCpUrl,
+                'Ditambahkan Oleh': p.userEmail,
+                'Tanggal Ditambahkan': p.dateAdded?.toDate ? format(p.dateAdded.toDate(), 'yyyy-MM-dd HH:mm') : '',
+            }));
+            const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Data Pelanggan");
+            XLSX.writeFile(workbook, `Data_Pelanggan_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+            toast({ title: "Ekspor Berhasil", description: "Data pelanggan telah diunduh." });
+        } catch (error) {
+            toast({ variant: "destructive", title: "Gagal Mengekspor", description: "Terjadi kesalahan saat membuat file Excel." });
+        } finally {
+            setIsImporting(false);
+        }
+    }
+    
+    const handleImportRiwayat = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (!user || !currentUserProfile || !allPelanggan) return;
+        const file = event.target.files?.[0];
+        if (!file) return;
 
+        setIsImporting(true);
         try {
             const XLSX = await import('xlsx');
             const data = await file.arrayBuffer();
@@ -842,21 +843,26 @@ export default function PelangganAdminPage() {
             const json: any[] = XLSX.utils.sheet_to_json(worksheet);
 
             let successCount = 0;
+            let skippedCount = 0;
             const batch = writeBatch(firestore);
+            
+            const pelangganMap = new Map(allPelanggan.map(p => [p.noService, p.id]));
 
             for (const row of json) {
                 const noService = String(row['No. Layanan'] || row['Nomor Service'] || '').trim();
                 if (!noService) continue;
 
-                const tanggalLapor = parse(String(row['Tanggal Lapor']), 'dd-MMM-yyyy', new Date());
-
-                if (!isValid(tanggalLapor)) {
-                     console.warn(`Skipping row for ${noService} due to invalid date:`, row['Tanggal Lapor']);
-                     continue;
+                const pelangganId = pelangganMap.get(noService);
+                if (!pelangganId) {
+                    skippedCount++;
+                    continue;
                 }
+
+                const tanggalLapor = parse(String(row['Tanggal Lapor']), 'dd-MMM-yyyy', new Date());
+                if (!isValid(tanggalLapor)) continue;
                 
                 const newRiwayat: Omit<RiwayatGangguan, 'id'> = {
-                    pelangganId: noService,
+                    pelangganId: pelangganId,
                     noService,
                     userId: user.uid,
                     tanggalLapor: Timestamp.fromDate(tanggalLapor),
@@ -880,57 +886,53 @@ export default function PelangganAdminPage() {
 
             toast({
                 title: 'Impor Selesai',
-                description: `${successCount} dari ${json.length} baris berhasil diimpor.`,
+                description: `${successCount} riwayat berhasil diimpor. ${skippedCount > 0 ? `${skippedCount} baris dilewati karena No. Service tidak ditemukan.` : ''}`,
             });
 
         } catch (error: any) {
-            toast({
-                variant: 'destructive',
-                title: 'Gagal Mengimpor',
-                description: `Terjadi kesalahan saat membaca file. ${error.message}`,
-            });
+            toast({ variant: 'destructive', title: 'Gagal Mengimpor', description: `Terjadi kesalahan. ${error.message}` });
         } finally {
             setIsImporting(false);
+            if (importFileRef.current) importFileRef.current.value = '';
         }
     };
+
 
     return (
         <div className="space-y-6">
             <div className='flex justify-between items-center'>
                 <h1 className="text-3xl font-bold tracking-tight">Data Pelanggan & Riwayat Gangguan</h1>
                 <div className='flex gap-2'>
-                    <Button variant="outline"><FileSpreadsheet className='mr-2 h-4 w-4' /> Import Riwayat</Button>
-                    <Button variant="outline"><FileSpreadsheet className='mr-2 h-4 w-4' /> Export Data Pelanggan</Button>
+                    <input type="file" ref={importFileRef} onChange={handleImportRiwayat} style={{ display: 'none' }} accept=".xlsx, .xls" />
+                    <Button variant="outline" onClick={() => importFileRef.current?.click()} disabled={isImporting}>
+                        {isImporting ? <Loader2 className='mr-2 h-4 w-4 animate-spin'/> : <Upload className='mr-2 h-4 w-4' />}
+                        Import Riwayat
+                    </Button>
+                    <Button variant="outline" onClick={handleExportData} disabled={arePelangganLoading || isImporting}><FileSpreadsheet className='mr-2 h-4 w-4' /> Export Data Pelanggan</Button>
+                    <Button onClick={() => setIsNewPelangganOpen(true)}><PlusCircle className='mr-2 h-4 w-4' /> Tambah Pelanggan</Button>
                 </div>
             </div>
             
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><Search /> Cari Pelanggan (Database Aplikasi)</CardTitle>
+                    <CardDescription>Cari pelanggan berdasarkan No. Service untuk melihat riwayat atau menambah data.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <form onSubmit={handleSearch} className="flex items-end gap-4">
+                    <div className="flex items-end gap-4">
                         <div className="grid gap-2 flex-1">
-                            <Label htmlFor="search-query">{searchType === 'nama' ? 'Nama Pelanggan' : 'Nomor Service'}</Label>
+                            <Label htmlFor="search-query">Nomor Service</Label>
                             <Input 
                                 id="search-query"
-                                placeholder={searchType === 'nama' ? "Ketik nama pelanggan..." : "Ketik nomor service..."}
+                                placeholder="Masukkan No. Service..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
                         </div>
-                        <Select value={searchType} onValueChange={(val: 'nama' | 'noService') => setSearchType(val)}>
-                            <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="nama">Berdasarkan Nama</SelectItem>
-                                <SelectItem value="noService">Berdasarkan No. Service</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <Button type="submit" disabled={arePelangganLoading}>
+                        <Button type="button" disabled={arePelangganLoading}>
                             {arePelangganLoading ? <Loader2 className="animate-spin"/> : 'Cari'}
                         </Button>
-                        <Button type="button" onClick={() => setIsNewPelangganOpen(true)} variant="outline"><PlusCircle className='mr-2 h-4 w-4' /> Tambah Baru</Button>
-                    </form>
+                    </div>
                 </CardContent>
             </Card>
 
@@ -1024,12 +1026,6 @@ export default function PelangganAdminPage() {
                                     </div>
                                 </div>
                             </div>
-                            <div className="mt-6 border-t pt-4 flex flex-wrap gap-2">
-                                <Button variant="outline" size="sm" disabled><Phone className="mr-2 h-4 w-4"/> Tambah Kontak</Button>
-                                <Button variant="outline" size="sm" disabled><MapPin className="mr-2 h-4 w-4"/> Ubah Lokasi</Button>
-                                <Button variant="outline" size="sm" disabled><Pencil className="mr-2 h-4 w-4"/> Ubah Info Aset</Button>
-                                <Button variant="outline" size="sm" disabled><ImageIcon className="mr-2 h-4 w-4"/> Ubah Foto</Button>
-                            </div>
                         </CardContent>
                     </Card>
                     <RiwayatCard pelanggan={selectedPelanggan} onAddRiwayat={handleNewRiwayat} />
@@ -1054,4 +1050,3 @@ export default function PelangganAdminPage() {
         </div>
     );
 }
-
