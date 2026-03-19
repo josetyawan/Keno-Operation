@@ -53,8 +53,13 @@ export default function WorkSchedulePage() {
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const router = useRouter();
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState<Date | null>(null);
   const [selectedUnit, setSelectedUnit] = useState('ALL');
+  
+  useEffect(() => {
+    // Set date on client side to avoid hydration mismatch
+    setCurrentDate(new Date());
+  }, []);
 
   // --- Data Fetching & Auth ---
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
@@ -109,11 +114,10 @@ export default function WorkSchedulePage() {
   }, [allHolidays]);
 
   // --- Calendar Logic ---
-  const monthStart = startOfMonth(currentDate);
-  const daysInMonth = getDaysInMonth(currentDate);
-  const daysArray = Array.from({ length: daysInMonth }, (_, i) => new Date(monthStart.getFullYear(), monthStart.getMonth(), i + 1));
+  const monthStart = currentDate ? startOfMonth(currentDate) : new Date();
+  const daysInMonth = currentDate ? getDaysInMonth(currentDate) : 30;
+  const daysArray = currentDate ? Array.from({ length: daysInMonth }, (_, i) => new Date(monthStart.getFullYear(), monthStart.getMonth(), i + 1)) : [];
 
-  // This is the final, corrected logic. It prioritizes the imported Excel data above all else.
   const getDayStatus = (user: UserProfile, day: Date): DayStatusInfo => {
     const dateKey = format(day, 'yyyy-MM-dd');
     const scheduleFromImport = schedulesMap.get(`${user.id}-${dateKey}`);
@@ -132,7 +136,6 @@ export default function WorkSchedulePage() {
         'h': 'H', 'pu': 'PU', 'pb': 'PB', 'ptm': 'PTM', 'pt/bd': 'PT/BD', 'l': 'L'
     };
 
-    // Priority 1: Always show the data from the schedule import first.
     if (scheduleFromImport) {
         const lowerShift = scheduleFromImport.toLowerCase();
         const displayStatus = shiftMapping[lowerShift] || scheduleFromImport.toUpperCase();
@@ -142,21 +145,19 @@ export default function WorkSchedulePage() {
         return { status: displayStatus, isJaga: isJagaShift };
     }
 
-    // Priority 2: If no imported schedule, it's a default off day.
     if (isOffDay) {
         return { status: 'L', isJaga: false };
     }
 
-    // Priority 3: Default to 'H' for a regular workday with no schedule.
     return { status: 'H', isJaga: false };
   };
 
 
   const changeMonth = (amount: number) => {
-    setCurrentDate(prev => amount > 0 ? addMonths(prev, 1) : subMonths(prev, 1));
+    setCurrentDate(prev => prev ? (amount > 0 ? addMonths(prev, 1) : subMonths(prev, 1)) : new Date());
   };
   
-  const isLoading = isUserLoading || isProfileLoading || areUsersLoading || areSchedulesLoading || areHolidaysLoading;
+  const isLoading = isUserLoading || isProfileLoading || areUsersLoading || areSchedulesLoading || areHolidaysLoading || !currentDate;
 
   return (
     <div className="space-y-6">
@@ -186,7 +187,13 @@ export default function WorkSchedulePage() {
             </Select>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="icon" onClick={() => changeMonth(-1)}><ChevronLeft className="h-4 w-4" /></Button>
-              <span className="w-40 text-center font-semibold">{format(currentDate, 'MMMM yyyy', { locale: idLocale })}</span>
+              <div className="w-40 text-center font-semibold">
+                {currentDate ? (
+                  format(currentDate, 'MMMM yyyy', { locale: idLocale })
+                ) : (
+                  <Skeleton className="h-6 w-24 mx-auto" />
+                )}
+              </div>
               <Button variant="outline" size="icon" onClick={() => changeMonth(1)}><ChevronRight className="h-4 w-4" /></Button>
             </div>
           </div>

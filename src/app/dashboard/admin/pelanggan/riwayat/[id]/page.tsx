@@ -125,8 +125,8 @@ export default function RiwayatDetailPage() {
   const canModify = useMemo(() => {
     if (!userProfile || !riwayat) return false;
     if (userProfile.role === 'admin' || userProfile.role === 'korlap') return true;
-    return riwayat.userId === user?.uid;
-  }, [userProfile, riwayat, user]);
+    return false;
+  }, [userProfile, riwayat]);
 
   
   const handleDeletePhoto = async (photoUrl: string) => {
