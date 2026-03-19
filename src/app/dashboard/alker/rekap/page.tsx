@@ -15,7 +15,6 @@ import { FileSpreadsheet } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import type { AlkerChecklist, UserProfile } from '@/lib/types';
-import * as XLSX from 'xlsx';
 import { useRouter } from 'next/navigation';
 
 const toolBenchmarks = [
@@ -171,7 +170,8 @@ export default function AlkerRekapPage() {
     const nilaiKelengkapan = totalTarget > 0 ? (totalPemenuhan / totalTarget) * 100 : 0;
 
 
-    const handleExport = () => {
+    const handleExport = async () => {
+        const XLSX = await import('xlsx');
         const teknisiCountForExport = manualTeknisiCount || numTeknisi;
         const bulanPekerjaan = selectedMonth ? format(new Date(selectedMonth + '-02'), 'MMMM yyyy', {locale: idLocale}) : 'SEMUA';
 
