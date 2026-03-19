@@ -734,7 +734,7 @@ export default function PelangganAdminPage() {
             toast({ title: "Riwayat Dihapus" });
         } catch (err: any) {
             console.error("Error deleting riwayat: ", err);
-            toast({ variant: 'destructive', title: 'Gagal Menghapus', description: 'Anda tidak memiliki izin atau terjadi kesalahan lain.' });
+            toast({ variant: 'destructive', title: 'Gagal Menghapus', description: 'Terjadi kesalahan lain.' });
         }
     };
     
@@ -747,7 +747,7 @@ export default function PelangganAdminPage() {
             toast({ title: "Pelanggan Dihapus" });
         } catch (err: any) {
              console.error("Error deleting pelanggan: ", err);
-            toast({ variant: 'destructive', title: 'Gagal Menghapus', description: 'Anda tidak memiliki izin atau terjadi kesalahan lain.' });
+            toast({ variant: 'destructive', title: 'Gagal Menghapus', description: 'Terjadi kesalahan lain.' });
         }
     };
     
@@ -955,12 +955,18 @@ export default function PelangganAdminPage() {
                         <Card>
                             <CardHeader><CardTitle>Hasil Pencarian</CardTitle></CardHeader>
                             <CardContent>
-                                <ul className="space-y-2">
+                               <ul className="space-y-2">
                                     {searchResults.map(p => (
                                         <li key={p.id}>
-                                            <button onClick={() => setSelectedPelanggan(p)} className={cn("w-full text-left p-2 rounded-md hover:bg-muted", selectedPelanggan?.id === p.id && "bg-muted")}>
+                                            <button onClick={() => setSelectedPelanggan(p)} className={cn("w-full text-left p-3 rounded-md border hover:bg-muted", selectedPelanggan?.id === p.id && "bg-muted border-primary")}>
                                                 <p className="font-semibold">{p.namaPelanggan}</p>
                                                 <p className="text-sm text-muted-foreground">{p.noService}</p>
+                                                <div className="mt-2 pt-2 border-t text-xs text-muted-foreground space-y-1">
+                                                    <p><strong>Alamat:</strong> {p.alamat || '-'}</p>
+                                                    <p><strong>Telp:</strong> {Array.isArray(p.nomorTelepon) ? p.nomorTelepon.join(', ') : (p.nomorTelepon || '-')}</p>
+                                                    <p><strong>ODP:</strong> {p.odpName || '-'} (Port: {p.odpPort || '-'})</p>
+                                                    <p><strong>STO:</strong> {p.sto || '-'}</p>
+                                                </div>
                                             </button>
                                         </li>
                                     ))}
