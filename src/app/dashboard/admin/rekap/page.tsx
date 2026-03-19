@@ -35,13 +35,12 @@ import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@
 import { collection, query, where, Timestamp, doc, updateDoc, addDoc } from 'firebase/firestore';
 import { format, startOfDay, endOfDay, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
-import type { Nota, UserProfile, CashTransaction } from '@/lib/types';
+import type { Nota, UserProfile, RekapDataItem, CashTransaction } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { sendTelegramReport } from '@/ai/flows/send-telegram-report';
 import { sendLinkAjaPayment } from '@/ai/flows/send-linkaja-payment';
-import { sendPaidNotice } from '@/ai/flows/send-paid-notice';
+import { sendRekapAction, sendPaidNotificationAction } from '@/app/dashboard/rekap/actions';
 import type { DateRange } from 'react-day-picker';
 import { useRouter } from 'next/navigation';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -236,19 +235,15 @@ export default function RekapPage() {
             toast({ variant: 'destructive', title: 'Tidak ada data untuk ditandai lunas', description: 'Pilih setidaknya satu laporan untuk ditandai lunas.' });
             return;
         }
-        if (!user?.email) {
-            toast({ variant: 'destructive', title: 'Error', description: 'User tidak ditemukan.' });
-            return;
-        }
-        if (!users) {
-            toast({ variant: 'destructive', title: 'Data Pengguna Belum Siap', description: 'Tidak dapat memproses karena data pengguna belum termuat. Coba lagi sesaat.' });
+        if (!user?.email || !users || !notas) {
+            toast({ variant: 'destructive', title: 'Data belum siap', description: 'Coba lagi sesaat.' });
             return;
         }
         setIsMarkingAsPaid(true);
     
-        try {
-            const paymentDate = new Date();
+        const paymentDate = new Date();
     
+        try {
             for (const notaId of selectedNotaIds) {
                 const notaDocRef = doc(firestore, 'notas', notaId);
                 await updateDoc(notaDocRef, {
@@ -257,7 +252,6 @@ export default function RekapPage() {
                 });
             }
 
-            // If payment is kasbon, create a transaction in cashbook
             if (paymentType === 'kasbon') {
                 const cashTransaction: Omit<CashTransaction, 'id'> = {
                     type: 'out',
@@ -270,10 +264,9 @@ export default function RekapPage() {
                 };
                 await addDoc(collection(firestore, 'cashbook'), cashTransaction);
             }
-    
-            const selectedNotas = notas.filter(n => selectedNotaIds.includes(n.id));
+            
             const userMap = new Map(users.map(u => [u.id, u]));
-    
+            const selectedNotas = notas.filter(n => selectedNotaIds.includes(n.id));
             const groupedByUser = selectedNotas.reduce((acc, nota) => {
                 const userId = nota.userId;
                 if (!acc[userId]) acc[userId] = [];
@@ -314,22 +307,25 @@ export default function RekapPage() {
                 }
             }
     
-            await sendPaidNotice({
+            const result = await sendPaidNotificationAction({
                 paidData: paidNoticeData,
                 grandTotal: selectedTotal,
                 paidDate: format(paymentDate, 'dd MMMM yyyy', { locale: idLocale }),
             });
     
-            toast({ 
-                title: 'Laporan Telah Ditandai Lunas', 
-                description: `${selectedNotaIds.length} laporan telah diperbarui menjadi "paid" dan notifikasi telah dikirim.`,
-                duration: 5000,
-            });
-            
-            setIsManualPayDialogOpen(false);
+            if (result.success) {
+                toast({ 
+                    title: 'Laporan Telah Ditandai Lunas', 
+                    description: `Status telah diperbarui dan notifikasi telah dikirim.`,
+                    duration: 5000,
+                });
+                setIsManualPayDialogOpen(false);
+            } else {
+                 toast({ variant: 'destructive', title: 'Gagal Mengirim Notifikasi', description: result.message });
+            }
     
         } catch (error: any) {
-            console.error('Manual payment marking error:', error);
+            console.error('Manual payment error:', error);
             toast({ variant: 'destructive', title: 'Gagal Memperbarui Status', description: error.message });
         } finally {
             setIsMarkingAsPaid(false);
@@ -338,12 +334,13 @@ export default function RekapPage() {
 
 
     const handleLinkAjaPayment = async () => {
+        // This function can remain on the client for now as it doesn't access process.env directly.
         if (selectedNotaIds.length === 0 || selectedTotal <= 0) {
             toast({ variant: 'destructive', title: 'Tidak ada data pembayaran', description: 'Pilih laporan dengan total lebih dari nol.' });
             return;
         }
-         if (!users) {
-            toast({ variant: 'destructive', title: 'Data Pengguna Belum Siap', description: 'Tidak dapat memproses karena data pengguna belum termuat. Coba lagi sesaat.' });
+         if (!users || !notas) {
+            toast({ variant: 'destructive', title: 'Data Pengguna Belum Siap', description: 'Tidak dapat memproses karena data pengguna atau nota belum termuat. Coba lagi sesaat.' });
             return;
         }
         setIsPaying(true);
@@ -356,70 +353,15 @@ export default function RekapPage() {
                 invoiceId: uniqueInvoiceId,
             });
 
-            if (result.success) {
-                const paymentDate = new Date();
-
+            if (result.success && result.redirectUrl) {
                 toast({ 
                     title: 'Permintaan Pembayaran Diproses', 
-                    description: result.redirectUrl ? 'Anda akan diarahkan untuk konfirmasi.' : (result.message || 'Berhasil. Memperbarui status laporan...'),
+                    description: 'Anda akan diarahkan untuk konfirmasi.',
                     duration: 5000,
                 });
-                
-                for (const notaId of selectedNotaIds) {
-                    const notaDocRef = doc(firestore, 'notas', notaId);
-                    updateDoc(notaDocRef, {
-                        status: 'paid',
-                        tanggalPembayaran: paymentDate
-                    });
-                }
-
-                const selectedNotas = notas.filter(n => selectedNotaIds.includes(n.id));
-                const userMap = new Map(users.map(u => [u.id, u]));
-
-                const groupedByUser = selectedNotas.reduce((acc, nota) => {
-                    const userId = nota.userId;
-                    if (!acc[userId]) acc[userId] = [];
-                    acc[userId].push(nota);
-                    return acc;
-                }, {} as Record<string, Nota[]>);
-                
-                const paidNoticeData: RekapDataItem[] = [];
-                const sortedUserIds = Object.keys(groupedByUser).sort((a,b) => (userMap.get(a)?.displayName || '').localeCompare(userMap.get(b)?.displayName || ''));
-        
-                for (const userId of sortedUserIds) {
-                    const userNotas = groupedByUser[userId].sort((a,b) => (safeToDate(a.tanggal)?.getTime() ?? 0) - (safeToDate(b.tanggal)?.getTime() ?? 0));
-                    const user = userMap.get(userId);
-                    let userSubtotal = 0;
-                    const userName = (user?.displayName || 'Unknown').replace(/\s/g, '');
-                    const paymentNumber = user?.paymentInfo || (user as any)?.phone || 'No-Pembayaran';
-        
-                    userNotas.forEach(nota => {
-                        paidNoticeData.push({
-                            phone: paymentNumber, name: userName, segmen: nota.segmen,
-                            tanggal: nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd/MM/yy') : '??/??/??',
-                            nominal: nota.nominal, userId: userId
-                        });
-                        userSubtotal += nota.nominal;
-                    });
-                    if (userNotas.length > 0) {
-                         paidNoticeData.push({
-                            phone: paymentNumber, name: `TOTAL ${userName}`, segmen: '',
-                            tanggal: '', nominal: userSubtotal, userId: userId
-                        });
-                    }
-                }
-                
-                sendPaidNotice({
-                    paidData: paidNoticeData,
-                    grandTotal: selectedTotal,
-                    paidDate: format(paymentDate, 'dd MMMM yyyy', { locale: idLocale }),
-                }).catch(err => {
-                    console.error("Failed to send paid notification:", err);
-                });
-                
-                if (result.redirectUrl) {
-                    window.open(result.redirectUrl, '_blank');
-                }
+                window.open(result.redirectUrl, '_blank');
+                // The status update logic for 'paid' on the client side after redirection is complex
+                // and better handled by a webhook or manual confirmation. For now, we just redirect.
             } else {
                 throw new Error(result.message || 'Pembayaran LinkAja/Finpay gagal karena alasan yang tidak diketahui.');
             }
@@ -436,49 +378,49 @@ export default function RekapPage() {
             toast({ variant: 'destructive', title: 'Tidak ada data', description: 'Pilih setidaknya satu laporan untuk dikirim.' });
             return;
         }
-         if (!users) {
-            toast({ variant: 'destructive', title: 'Data Pengguna Belum Siap', description: 'Tidak dapat memproses karena data pengguna belum termuat. Coba lagi sesaat.' });
+         if (!users || !notas) {
+            toast({ variant: 'destructive', title: 'Data Pengguna Belum Siap', description: 'Tidak dapat memproses karena data pengguna atau nota belum termuat. Coba lagi sesaat.' });
             return;
         }
         setIsSending(true);
-        try {
-            const selectedNotas = notas.filter(n => selectedNotaIds.includes(n.id));
-            const userMap = new Map(users.map(u => [u.id, u]));
-    
-            const groupedByUser = selectedNotas.reduce((acc, nota) => {
-                const userId = nota.userId;
-                if (!acc[userId]) acc[userId] = [];
-                acc[userId].push(nota);
-                return acc;
-            }, {} as Record<string, Nota[]>);
-            
-            const telegramRekapData: RekapDataItem[] = [];
-            const sortedUserIds = Object.keys(groupedByUser).sort((a,b) => (userMap.get(a)?.displayName || '').localeCompare(userMap.get(b)?.displayName || ''));
-    
-            for (const userId of sortedUserIds) {
-                const userNotas = groupedByUser[userId].sort((a,b) => (safeToDate(a.tanggal)?.getTime() ?? 0) - (safeToDate(b.tanggal)?.getTime() ?? 0));
-                const user = userMap.get(userId);
-                let userSubtotal = 0;
-                const userName = (user?.displayName || 'Unknown').replace(/\s/g, '');
-                const paymentNumber = user?.paymentInfo || (user as any)?.phone || 'No-Pembayaran';
-    
-                userNotas.forEach(nota => {
-                    telegramRekapData.push({
-                        phone: paymentNumber, name: userName, segmen: nota.segmen,
-                        tanggal: nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd/MM/yy') : '??/??/??',
-                        nominal: nota.nominal, userId: userId
-                    });
-                    userSubtotal += nota.nominal;
-                });
-                if (userNotas.length > 0) {
-                     telegramRekapData.push({
-                        phone: paymentNumber, name: `TOTAL ${userName}`, segmen: '',
-                        tanggal: '', nominal: userSubtotal, userId: userId
-                    });
-                }
-            }
 
-            const result = await sendTelegramReport({ 
+        const userMap = new Map(users.map(u => [u.id, u]));
+        const selectedNotas = notas.filter(n => selectedNotaIds.includes(n.id));
+        const groupedByUser = selectedNotas.reduce((acc, nota) => {
+            const userId = nota.userId;
+            if (!acc[userId]) acc[userId] = [];
+            acc[userId].push(nota);
+            return acc;
+        }, {} as Record<string, Nota[]>);
+        
+        const telegramRekapData: RekapDataItem[] = [];
+        const sortedUserIds = Object.keys(groupedByUser).sort((a,b) => (userMap.get(a)?.displayName || '').localeCompare(userMap.get(b)?.displayName || ''));
+    
+        for (const userId of sortedUserIds) {
+            const userNotas = groupedByUser[userId].sort((a,b) => (safeToDate(a.tanggal)?.getTime() ?? 0) - (safeToDate(b.tanggal)?.getTime() ?? 0));
+            const user = userMap.get(userId);
+            let userSubtotal = 0;
+            const userName = (user?.displayName || 'Unknown').replace(/\s/g, '');
+            const paymentNumber = user?.paymentInfo || (user as any)?.phone || 'No-Pembayaran';
+    
+            userNotas.forEach(nota => {
+                telegramRekapData.push({
+                    phone: paymentNumber, name: userName, segmen: nota.segmen,
+                    tanggal: nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd/MM/yy') : '??/??/??',
+                    nominal: nota.nominal, userId: userId
+                });
+                userSubtotal += nota.nominal;
+            });
+            if (userNotas.length > 0) {
+                 telegramRekapData.push({
+                    phone: paymentNumber, name: `TOTAL ${userName}`, segmen: '',
+                    tanggal: '', nominal: userSubtotal, userId: userId
+                });
+            }
+        }
+
+        try {
+            const result = await sendRekapAction({ 
                 rekapData: telegramRekapData,
                 grandTotal: selectedTotal,
                 rekapDate: rekapDateString
@@ -486,7 +428,7 @@ export default function RekapPage() {
             if (result.success) {
                 toast({ title: 'Terkirim!', description: 'Rekap item terpilih berhasil dikirim ke Telegram.' });
             } else {
-                throw new Error(result.error || 'Unknown error');
+                throw new Error(result.message || 'Unknown error');
             }
         } catch (error: any) {
             console.error('Telegram send error:', error);

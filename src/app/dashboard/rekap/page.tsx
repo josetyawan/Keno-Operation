@@ -324,7 +324,6 @@ export default function RekapPage() {
 
 
     const handleLinkAjaPayment = async () => {
-        // This function can remain on the client for now as it doesn't access process.env directly.
         if (selectedNotaIds.length === 0 || selectedTotal <= 0) {
             toast({ variant: 'destructive', title: 'Tidak ada data pembayaran', description: 'Pilih laporan dengan total lebih dari nol.' });
             return;
@@ -350,8 +349,6 @@ export default function RekapPage() {
                     duration: 5000,
                 });
                 window.open(result.redirectUrl, '_blank');
-                // The status update logic for 'paid' on the client side after redirection is complex
-                // and better handled by a webhook or manual confirmation. For now, we just redirect.
             } else {
                 throw new Error(result.message || 'Pembayaran LinkAja/Finpay gagal karena alasan yang tidak diketahui.');
             }
@@ -409,18 +406,23 @@ export default function RekapPage() {
             }
         }
 
-        const result = await sendRekapAction({ 
-            rekapData: telegramRekapData,
-            grandTotal: selectedTotal,
-            rekapDate: rekapDateString
-         });
-
-        if (result.success) {
-            toast({ title: 'Terkirim!', description: 'Rekap item terpilih berhasil dikirim ke Telegram.' });
-        } else {
-             toast({ variant: 'destructive', title: 'Gagal Mengirim', description: result.message });
+        try {
+            const result = await sendRekapAction({ 
+                rekapData: telegramRekapData,
+                grandTotal: selectedTotal,
+                rekapDate: rekapDateString
+             });
+            if (result.success) {
+                toast({ title: 'Terkirim!', description: 'Rekap item terpilih berhasil dikirim ke Telegram.' });
+            } else {
+                throw new Error(result.message || 'Unknown error');
+            }
+        } catch (error: any) {
+            console.error('Telegram send error:', error);
+            toast({ variant: 'destructive', title: 'Gagal Mengirim', description: error.message });
+        } finally {
+            setIsSending(false);
         }
-        setIsSending(false);
     };
     
     const isLoading = isUserLoading || isProfileLoading || isNotasLoading || isUsersLoading;
@@ -642,3 +644,4 @@ export default function RekapPage() {
         </div>
     );
 }
+
