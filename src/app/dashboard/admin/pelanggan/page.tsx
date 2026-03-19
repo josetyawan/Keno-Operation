@@ -698,8 +698,8 @@ export default function PelangganAdminPage() {
         const field = searchType === 'nama' ? 'namaPelanggan' : 'noService';
         const q = query(
             collection(firestore, 'pelanggan'),
-            where(field, '>=', searchQuery.trim().toUpperCase()),
-            where(field, '<=', searchQuery.trim().toUpperCase() + '\uf8ff'),
+            where(field, '>=', searchQuery.trim()),
+            where(field, '<=', searchQuery.trim() + '\uf8ff'),
             limit(20)
         );
 
