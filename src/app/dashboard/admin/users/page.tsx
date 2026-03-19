@@ -331,8 +331,7 @@ function UserEditForm({ user, onFormSubmit, isSaving }: { user: UserProfile, onF
             </div>
           </CardContent>
         </Card>
-      </div>
-
+      
       <DialogFooter>
         <DialogClose asChild><Button type="button" variant="secondary">Batal</Button></DialogClose>
         <Button type="submit" disabled={isSaving}>
@@ -879,4 +878,5 @@ export default function AdminUsersPage() {
     </>
   );
 }
+
 
