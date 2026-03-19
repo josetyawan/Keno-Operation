@@ -26,7 +26,11 @@ import Link from 'next/link';
 function TransactionForm({ type, onFormSubmit, isSaving, userEmail }: { type: 'in' | 'out', onFormSubmit: (data: Omit<CashTransaction, 'id' | 'createdAt'>) => void, isSaving: boolean, userEmail: string }) {
     const [amount, setAmount] = useState('');
     const [description, setDescription] = useState('');
-    const [date, setDate] = useState<Date | undefined>(new Date());
+    const [date, setDate] = useState<Date | undefined>();
+
+    useEffect(() => {
+        setDate(new Date());
+    }, []);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();

@@ -37,9 +37,13 @@ export default function AttendanceRekapPage() {
     const router = useRouter();
     const { toast } = useToast();
 
-    const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+    const [selectedDate, setSelectedDate] = useState<Date | undefined>();
     const [isDeleteAllDialogOpen, setIsDeleteAllDialogOpen] = useState(false);
     const [isDeletingAll, setIsDeletingAll] = useState(false);
+
+    useEffect(() => {
+        setSelectedDate(new Date());
+    }, []);
 
     const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
         useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
@@ -96,58 +100,56 @@ export default function AttendanceRekapPage() {
     }, [users]);
     
     const handleDownloadJpg = async () => {
-        const { toJpeg } = await import('html-to-image');
-        const printableArea = document.getElementById('printable-area');
-        if (!printableArea) {
+        const recordsToDownload = attendances?.filter(att => att.checkInPhotoUrl);
+        if (!recordsToDownload || recordsToDownload.length === 0) {
             toast({
                 variant: 'destructive',
-                title: 'Elemen tidak ditemukan',
-                description: 'Tidak dapat menemukan area untuk diunduh.',
+                title: 'Tidak ada gambar',
+                description: 'Tidak ada foto absensi untuk diunduh pada tanggal yang dipilih.',
             });
             return;
         }
 
         toast({
             title: 'Mempersiapkan unduhan...',
-            description: 'Memuat semua gambar sebelum membuat kolase.',
-        });
-
-        const images = Array.from(printableArea.getElementsByTagName('img'));
-        const imageLoadPromises = images.map(img => {
-            if (img.complete && img.naturalHeight !== 0) {
-                return Promise.resolve();
-            }
-            return new Promise<void>((resolve) => {
-                img.onload = () => resolve();
-                img.onerror = () => {
-                    console.warn(`Could not load image for download: ${img.src}`);
-                    resolve(); 
-                };
-            });
+            description: `Memuat ${recordsToDownload.length} gambar untuk membuat kolase. Ini mungkin butuh waktu.`,
         });
 
         try {
-            await Promise.all(imageLoadPromises);
+            const { toJpeg } = await import('html-to-image');
+            const printableArea = document.getElementById('printable-area');
+            if (!printableArea) {
+                throw new Error('Gagal menemukan area untuk diunduh.');
+            }
             
+            const images = Array.from(printableArea.getElementsByTagName('img'));
+            const imageLoadPromises = images.map(img => {
+                if (img.complete && img.naturalHeight !== 0) {
+                    return Promise.resolve();
+                }
+                return new Promise<void>((resolve) => {
+                    img.onload = () => resolve();
+                    img.onerror = () => {
+                        console.warn(`Could not load image for download: ${img.src}`);
+                        resolve(); 
+                    };
+                });
+            });
+
+            await Promise.all(imageLoadPromises);
+
             toast({
                 title: 'Membuat kolase...',
                 description: 'Semua gambar telah dimuat, proses pembuatan file JPG dimulai.',
             });
-            
-            const filter = (node: HTMLElement): boolean => {
-              if (node instanceof HTMLLinkElement && node.href.includes('fonts.googleapis.com')) {
-                return false;
-              }
-              return true;
-            };
 
-            const dataUrl = await toJpeg(printableArea, { 
+            const dataUrl = await toJpeg(printableArea, {
                 quality: 0.95,
                 backgroundColor: '#ffffff',
                 pixelRatio: 2,
                 cacheBust: true,
-                filter,
-             });
+            });
+
             const link = document.createElement('a');
             const dateString = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : 'rekap';
             link.download = `rekap-absensi-${dateString}.jpg`;
@@ -315,5 +317,4 @@ export default function AttendanceRekapPage() {
         </div>
     );
 }
-
-  
+    

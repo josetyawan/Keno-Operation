@@ -183,7 +183,11 @@ export default function OrderDetailPage() {
   const [baPhoto, setBaPhoto] = useState<File | null>(null);
   const [valinsId, setValinsId] = useState('');
   const [usedMaterials, setUsedMaterials] = useState<Record<string, { used: boolean, quantity: number }>>({});
-  const [psDate, setPsDate] = useState<Date | undefined>(new Date());
+  const [psDate, setPsDate] = useState<Date | undefined>();
+
+    useEffect(() => {
+        setPsDate(new Date());
+    }, []);
 
   const userDocRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
