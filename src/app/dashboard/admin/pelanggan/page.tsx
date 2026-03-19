@@ -52,7 +52,6 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { useStorage } from '@/firebase/provider';
 import { collection, query, doc, serverTimestamp, where, getDocs, limit, orderBy, Timestamp, writeBatch, deleteDoc, addDoc, updateDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { UserProfile, Pelanggan, RiwayatGangguan, MaterialEvidence } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -726,8 +725,8 @@ export default function PelangganAdminPage() {
     }
     
     const handleDeleteRiwayat = async (riwayatId: string) => {
-        if (!window.confirm("Anda yakin ingin menghapus riwayat ini?")) return;
         try {
+            if (!window.confirm("Anda yakin ingin menghapus riwayat ini?")) return;
             await deleteDoc(doc(firestore, 'riwayat-gangguan', riwayatId));
             handleNewRiwayat(); // Force refresh
             toast({ title: "Riwayat Dihapus" });
@@ -738,8 +737,8 @@ export default function PelangganAdminPage() {
     };
     
     const handleDeletePelanggan = async (pelanggan: Pelanggan) => {
-        if (!window.confirm(`Anda yakin ingin menghapus pelanggan ${pelanggan.namaPelanggan}? Semua riwayat terkait akan tetap ada, tetapi tidak tertaut.`)) return;
         try {
+            if (!window.confirm(`Anda yakin ingin menghapus pelanggan ${pelanggan.namaPelanggan}? Semua riwayat terkait akan tetap ada, tetapi tidak tertaut.`)) return;
             await deleteDoc(doc(firestore, 'pelanggan', pelanggan.id));
             setSearchResults(prev => prev.filter(p => p.id !== pelanggan.id));
             setSelectedPelanggan(null);
@@ -786,8 +785,8 @@ export default function PelangganAdminPage() {
                     noService,
                     userId: user.uid,
                     tanggalLapor: Timestamp.fromDate(tanggalLapor),
-                    namaPetugas: String(row['Nama Petugas'] || userProfile?.displayName || ''),
-                    nik: String(row['NIK'] || userProfile?.nik || ''),
+                    namaPetugas: String(row['Nama Petugas'] || currentUserProfile?.displayName || ''),
+                    nik: String(row['NIK'] || currentUserProfile?.nik || ''),
                     jenisOrder: String(row['Jenis Order'] || ''),
                     keterangan: String(row['Keterangan'] || ''),
                     noTiket: String(row['No. Tiket'] || ''),
@@ -992,4 +991,5 @@ export default function PelangganAdminPage() {
         </div>
     );
 }
+
 

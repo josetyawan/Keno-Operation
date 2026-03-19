@@ -107,21 +107,20 @@ service cloud.firestore {
     match /pelanggan/{pelangganId} {
       allow read: if isApproved();
       allow create: if isApproved() && isCreatingOwn('userId');
-      allow update: if isKorlap() || (hasAllProAccess() && isUpdatingOwn('userId')) || isAdmin();
+      allow update: if isAdmin() || isKorlap() || (isApproved() && isUpdatingOwn('userId'));
       allow delete: if isAdmin() || isKorlap();
     }
 
     match /riwayat-gangguan/{riwayatId} {
       allow create: if isApproved() && isCreatingOwn('userId');
-      allow get: if isAdmin() || isKorlap() || (isApproved() && resource.data.userId == request.auth.uid);
+      allow get: if isApproved();
       allow list: if isApproved();
       allow update, delete: if isAdmin() || isKorlap();
     }
     
     match /other-works/{workId} {
       allow create: if isApproved() && isCreatingOwn('userId');
-      allow get: if isApproved();
-      allow list: if isAdmin() || isKorlap();
+      allow get, list: if isAdmin() || isKorlap();
       allow update, delete: if isAdmin() || isKorlap();
     }
 
@@ -214,5 +213,12 @@ service cloud.firestore {
        allow list: if isApproved();
        allow write: if isAdmin() || isKorlap();
     }
+
+    match /provisioning-records/{recordId} {
+      allow read: if isAdmin() || isKorlap() || (isApproved() && resource.data.assignedTo_userId == request.auth.uid);
+      allow create: if isAdmin() || isKorlap();
+      allow update: if (isAdmin() || isKorlap()) || (isApproved() && resource.data.assignedTo_userId == request.auth.uid);
+    }
   }
 }
+    
