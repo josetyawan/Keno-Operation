@@ -107,7 +107,8 @@ service cloud.firestore {
     match /pelanggan/{pelangganId} {
       allow read: if isApproved();
       allow create: if isApproved() && isCreatingOwn('userId');
-      allow update: if isAdmin() || isKorlap() || (isApproved() && isUpdatingOwn('userId'));
+      // Any approved user can now update a customer record.
+      allow update: if isApproved();
       allow delete: if isAdmin() || isKorlap();
     }
 

@@ -849,7 +849,7 @@ function RiwayatCard({ pelanggan, onAddRiwayat }: { pelanggan: Pelanggan, onAddR
     const firestore = useFirestore();
     const { toast } = useToast();
     
-    // This query now has an orderBy which requires an index.
+    // The query now only filters, no longer orders.
     const riwayatQuery = useMemoFirebase(() => {
         if (!pelanggan) return null;
         return query(
@@ -860,13 +860,14 @@ function RiwayatCard({ pelanggan, onAddRiwayat }: { pelanggan: Pelanggan, onAddR
 
     const { data, isLoading, error } = useCollection<RiwayatGangguan>(riwayatQuery);
     
-    // Client-side sorting to avoid composite index
+    // Sorting is now done on the client-side to avoid index requirement.
     const sortedData = useMemo(() => {
         if (!data) return [];
         return [...data].sort((a,b) => (b.tanggalLapor.toDate()?.getTime() || 0) - (a.tanggalLapor.toDate()?.getTime() || 0));
     }, [data]);
 
     if (error) {
+        // We don't throw the error, but we can log it for debugging.
         console.error("Firestore error in RiwayatCard:", error);
     }
     
@@ -947,7 +948,10 @@ export default function PelangganAdminPage() {
         if (!allPelanggan) return [];
         const lowercasedQuery = searchQuery.trim().toLowerCase();
         if (!lowercasedQuery) return [];
-        return allPelanggan.filter(p => p.noService.toLowerCase().includes(lowercasedQuery));
+        return allPelanggan.filter(p => 
+            p.noService.toLowerCase().includes(lowercasedQuery) ||
+            p.namaPelanggan.toLowerCase().includes(lowercasedQuery)
+        );
     }, [allPelanggan, searchQuery]);
 
     const handleNewPelanggan = (newPelanggan: Pelanggan) => {
@@ -1099,15 +1103,15 @@ export default function PelangganAdminPage() {
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><Search /> Cari Pelanggan (Database Aplikasi)</CardTitle>
-                    <CardDescription>Cari pelanggan berdasarkan No. Service untuk melihat riwayat atau menambah data.</CardDescription>
+                    <CardDescription>Cari pelanggan berdasarkan No. Service atau Nama untuk melihat riwayat atau menambah data.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="flex items-end gap-4">
                         <div className="grid gap-2 flex-1">
-                            <Label htmlFor="search-query">Nomor Service</Label>
+                            <Label htmlFor="search-query">Nomor Service atau Nama</Label>
                             <Input 
                                 id="search-query"
-                                placeholder="Masukkan No. Service..."
+                                placeholder="Masukkan No. Service atau Nama Pelanggan..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
