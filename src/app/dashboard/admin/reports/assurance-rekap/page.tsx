@@ -455,12 +455,13 @@ export default function AssuranceRekapPage() {
                                     <TableHead>No Service</TableHead>
                                     <TableHead>Petugas</TableHead>
                                     <TableHead>Jenis Order</TableHead>
+                                    <TableHead>Keterangan</TableHead>
                                     <TableHead>Tanggal Lapor</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {isRiwayatLoading ? (
-                                    <TableRow><TableCell colSpan={6} className="text-center h-24">Memuat data...</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={7} className="text-center h-24">Memuat data...</TableCell></TableRow>
                                 ) : riwayatList && riwayatList.length > 0 ? (
                                     riwayatList.map(item => (
                                         <TableRow key={item.id} data-state={selectedIds.includes(item.id) && "selected"}>
@@ -469,11 +470,12 @@ export default function AssuranceRekapPage() {
                                             <TableCell>{item.noService}</TableCell>
                                             <TableCell>{item.namaPetugas}</TableCell>
                                             <TableCell>{item.jenisOrder}</TableCell>
+                                            <TableCell className="text-sm text-muted-foreground max-w-xs truncate">{item.keterangan || '-'}</TableCell>
                                             <TableCell>{format(item.tanggalLapor.toDate(), 'dd MMM yyyy')}</TableCell>
                                         </TableRow>
                                     ))
                                 ) : (
-                                     <TableRow><TableCell colSpan={6} className="text-center h-24">{dateRange ? 'Tidak ada data untuk rentang tanggal yang dipilih.' : 'Pilih rentang tanggal untuk menampilkan data.'}</TableCell></TableRow>
+                                     <TableRow><TableCell colSpan={7} className="text-center h-24">{dateRange ? 'Tidak ada data untuk rentang tanggal yang dipilih.' : 'Pilih rentang tanggal untuk menampilkan data.'}</TableCell></TableRow>
                                 )}
                             </TableBody>
                         </Table>
@@ -500,4 +502,3 @@ export default function AssuranceRekapPage() {
     );
 }
 
-  
