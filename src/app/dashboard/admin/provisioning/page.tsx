@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -30,6 +31,7 @@ import { triggerProvisioningRekapAction } from '@/app/actions/triggerProvisionin
 const ITEMS_PER_PAGE = 5;
 
 const formatWaNumber = (phone: string) => {
+    if (!phone) return '#';
     let cleanPhone = phone.replace(/\D/g, '');
     if (cleanPhone.startsWith('0')) {
         cleanPhone = '62' + cleanPhone.substring(1);
@@ -183,12 +185,12 @@ function AssignTechnicianDialog({ order, users, isOpen, onOpenChange, onAssign, 
               {users.map(u => <SelectItem key={u.id} value={u.id}>{u.displayName}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Select value={selectedCrew} onValueChange={setSelectedCrew}>
+          <Select value={selectedCrew} onValueChange={(value) => setSelectedCrew(value === 'none' ? '' : value)}>
             <SelectTrigger>
               <SelectValue placeholder="Pilih rekan crew (opsional)..." />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Tidak Ada Rekan</SelectItem>
+              <SelectItem value="none">Tidak Ada Rekan</SelectItem>
               {availableCrew.map(u => <SelectItem key={u.id} value={u.id}>{u.displayName}</SelectItem>)}
             </SelectContent>
           </Select>
