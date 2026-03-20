@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
@@ -372,7 +373,7 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished, userProfile, can
             return;
         }
         if (leaveType === 'tukar-jaga' && !subIsTukarJagaAllowed) {
-            toast({ variant: 'destructive', title: 'Waktu Habis', description: 'Request tukar jaga hanya bisa dilakukan sebelum jam 08:00 pada hari H.' });
+            toast({ variant: 'destructive', title: 'Waktu Habis', description: 'Request tukar jaga hanya bisa dilakukan sebelum hari H, atau pada hari H sebelum jam 08:00.' });
             return;
         }
         if (leaveType === 'late' && subIsMalamShift) {
