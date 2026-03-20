@@ -143,7 +143,6 @@ export default function AdminCashbookPage() {
 
     const [isFormInOpen, setIsFormInOpen] = useState(false);
     const [isFormOutOpen, setIsFormOutOpen] = useState(false);
-    const [isEditOpen, setIsEditOpen] = useState(false);
     const [transactionToEdit, setTransactionToEdit] = useState<CashTransaction | null>(null);
     const [transactionToDelete, setTransactionToDelete] = useState<CashTransaction | null>(null);
     const [isSaving, setIsSaving] = useState(false);
@@ -207,7 +206,6 @@ export default function AdminCashbookPage() {
             const docRef = doc(firestore, 'cashbook', transactionToEdit.id);
             await updateDoc(docRef, data);
             toast({ title: 'Transaksi Diperbarui' });
-            setIsEditOpen(false);
             setTransactionToEdit(null);
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Gagal Memperbarui', description: error.message });
@@ -231,110 +229,105 @@ export default function AdminCashbookPage() {
     const isLoading = isUserLoading || isProfileLoading || areTransactionsLoading;
 
     return (
-        <>
-            <div className="space-y-6">
-                <div className="flex items-center justify-between flex-wrap gap-4">
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Buku Kas Operasional</h1>
-                        <p className="text-muted-foreground mt-1">Catat dan lacak semua pemasukan dan pengeluaran kas.</p>
-                    </div>
-                    <div className="flex gap-2">
-                        <Dialog open={isFormOutOpen} onOpenChange={setIsFormOutOpen} modal={false}>
-                            <DialogTrigger asChild><Button variant="destructive"><ArrowDownCircle className="mr-2"/>Tambah Pengeluaran</Button></DialogTrigger>
-                            <DialogContent><DialogHeader><DialogTitle>Catat Pengeluaran Manual</DialogTitle></DialogHeader><TransactionForm type="out" onFormSubmit={handleCreateSubmit} isSaving={isSaving} userEmail={user?.email || ''} /></DialogContent>
-                        </Dialog>
-                        <Dialog open={isFormInOpen} onOpenChange={setIsFormInOpen} modal={false}>
-                            <DialogTrigger asChild><Button><ArrowUpCircle className="mr-2"/>Tambah Pemasukan</Button></DialogTrigger>
-                            <DialogContent><DialogHeader><DialogTitle>Catat Pemasukan Kas</DialogTitle></DialogHeader><TransactionForm type="in" onFormSubmit={handleCreateSubmit} isSaving={isSaving} userEmail={user?.email || ''} /></DialogContent>
-                        </Dialog>
-                    </div>
+        <div className="space-y-6">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">Buku Kas Operasional</h1>
+                    <p className="text-muted-foreground mt-1">Catat dan lacak semua pemasukan dan pengeluaran kas.</p>
                 </div>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Saldo Akhir</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        {isLoading ? <Skeleton className="h-12 w-64" /> : <p className="text-4xl font-bold">Rp {finalBalance.toLocaleString('id-ID')}</p>}
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader><CardTitle>Riwayat Transaksi</CardTitle><CardDescription>Semua transaksi kas diurutkan dari yang terbaru.</CardDescription></CardHeader>
-                    <CardContent>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Tanggal</TableHead>
-                                    <TableHead>Keterangan</TableHead>
-                                    <TableHead className="text-right">Pemasukan (Rp)</TableHead>
-                                    <TableHead className="text-right">Pengeluaran (Rp)</TableHead>
-                                    <TableHead className="text-right">Saldo (Rp)</TableHead>
-                                    <TableHead className="text-right">Aksi</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                 {isLoading ? (
-                                    Array.from({ length: 5 }).map((_, i) => (
-                                        <TableRow key={i}><TableCell colSpan={6}><Skeleton className="h-6 w-full" /></TableCell></TableRow>
-                                    ))
-                                ) : transactionsWithBalance.length > 0 ? (
-                                    transactionsWithBalance.map(tx => (
-                                        <TableRow key={tx.id}>
-                                            <TableCell>{format(tx.date.toDate(), 'dd MMM yyyy', { locale: idLocale })}</TableCell>
-                                            <TableCell>
-                                                <p>{tx.description}</p>
-                                                {tx.notaIds && tx.notaIds.length > 0 && (
-                                                    <p className="text-xs text-muted-foreground">
-                                                        Terkait {tx.notaIds.length} nota.
-                                                    </p>
-                                                )}
-                                            </TableCell>
-                                            <TableCell className="text-right font-medium text-green-600">
-                                                {tx.type === 'in' ? tx.amount.toLocaleString('id-ID') : '-'}
-                                            </TableCell>
-                                            <TableCell className="text-right font-medium text-red-600">
-                                                {tx.type === 'out' ? tx.amount.toLocaleString('id-ID') : '-'}
-                                            </TableCell>
-                                            <TableCell className="text-right font-bold">{tx.balance.toLocaleString('id-ID')}</TableCell>
-                                            <TableCell className="text-right">
-                                                <Button variant="ghost" size="icon" onClick={() => { setTransactionToEdit(tx); setIsEditOpen(true); }}><Edit className="h-4 w-4" /></Button>
-                                                <AlertDialog open={transactionToDelete?.id === tx.id} onOpenChange={(open) => !open && setTransactionToDelete(null)}>
-                                                    <AlertDialogTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => setTransactionToDelete(tx)}><Trash2 className="h-4 w-4" /></Button>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent>
-                                                        <AlertDialogHeader><AlertDialogTitle>Anda Yakin?</AlertDialogTitle><AlertDialogDescription>Tindakan ini akan menghapus transaksi "{tx.description}" secara permanen.</AlertDialogDescription></AlertDialogHeader>
-                                                        <AlertDialogFooter><AlertDialogCancel>Batal</AlertDialogCancel><AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Hapus</AlertDialogAction></AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
-                                ) : (
-                                    <TableRow>
-                                        <TableCell colSpan={6} className="h-24 text-center">Belum ada transaksi.</TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    </CardContent>
-                </Card>
+                <div className="flex gap-2">
+                    <Dialog open={isFormOutOpen} onOpenChange={setIsFormOutOpen}>
+                        <DialogTrigger asChild><Button variant="destructive"><ArrowDownCircle className="mr-2"/>Tambah Pengeluaran</Button></DialogTrigger>
+                        <DialogContent><DialogHeader><DialogTitle>Catat Pengeluaran Manual</DialogTitle></DialogHeader><TransactionForm type="out" onFormSubmit={handleCreateSubmit} isSaving={isSaving} userEmail={user?.email || ''} /></DialogContent>
+                    </Dialog>
+                    <Dialog open={isFormInOpen} onOpenChange={setIsFormInOpen}>
+                        <DialogTrigger asChild><Button><ArrowUpCircle className="mr-2"/>Tambah Pemasukan</Button></DialogTrigger>
+                        <DialogContent><DialogHeader><DialogTitle>Catat Pemasukan Kas</DialogTitle></DialogHeader><TransactionForm type="in" onFormSubmit={handleCreateSubmit} isSaving={isSaving} userEmail={user?.email || ''} /></DialogContent>
+                    </Dialog>
+                </div>
             </div>
-            
-            {transactionToEdit && (
-                 <Dialog open={isEditOpen} onOpenChange={setIsEditOpen} modal={false}>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Edit Transaksi</DialogTitle>
-                            <DialogDescription>
-                                Perbarui detail transaksi di bawah ini. Tipe transaksi tidak dapat diubah.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <EditTransactionForm transaction={transactionToEdit} onFormSubmit={handleUpdateSubmit} isSaving={isSaving} />
-                    </DialogContent>
-                </Dialog>
-            )}
-        </>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Saldo Akhir</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {isLoading ? <Skeleton className="h-12 w-64" /> : <p className="text-4xl font-bold">Rp {finalBalance.toLocaleString('id-ID')}</p>}
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader><CardTitle>Riwayat Transaksi</CardTitle><CardDescription>Semua transaksi kas diurutkan dari yang terbaru.</CardDescription></CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Tanggal</TableHead>
+                                <TableHead>Keterangan</TableHead>
+                                <TableHead className="text-right">Pemasukan (Rp)</TableHead>
+                                <TableHead className="text-right">Pengeluaran (Rp)</TableHead>
+                                <TableHead className="text-right">Saldo (Rp)</TableHead>
+                                <TableHead className="text-right">Aksi</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                             {isLoading ? (
+                                Array.from({ length: 5 }).map((_, i) => (
+                                    <TableRow key={i}><TableCell colSpan={6}><Skeleton className="h-6 w-full" /></TableCell></TableRow>
+                                ))
+                            ) : transactionsWithBalance.length > 0 ? (
+                                transactionsWithBalance.map(tx => (
+                                    <TableRow key={tx.id}>
+                                        <TableCell>{format(tx.date.toDate(), 'dd MMM yyyy', { locale: idLocale })}</TableCell>
+                                        <TableCell>
+                                            <p>{tx.description}</p>
+                                            {tx.notaIds && tx.notaIds.length > 0 && (
+                                                <p className="text-xs text-muted-foreground">
+                                                    Terkait {tx.notaIds.length} nota.
+                                                </p>
+                                            )}
+                                        </TableCell>
+                                        <TableCell className="text-right font-medium text-green-600">
+                                            {tx.type === 'in' ? tx.amount.toLocaleString('id-ID') : '-'}
+                                        </TableCell>
+                                        <TableCell className="text-right font-medium text-red-600">
+                                            {tx.type === 'out' ? tx.amount.toLocaleString('id-ID') : '-'}
+                                        </TableCell>
+                                        <TableCell className="text-right font-bold">{tx.balance.toLocaleString('id-ID')}</TableCell>
+                                        <TableCell className="text-right">
+                                            <Dialog open={transactionToEdit?.id === tx.id} onOpenChange={(open) => !open && setTransactionToEdit(null)}>
+                                                <DialogTrigger asChild>
+                                                    <Button variant="ghost" size="icon" onClick={() => setTransactionToEdit(tx)}><Edit className="h-4 w-4" /></Button>
+                                                </DialogTrigger>
+                                                <DialogContent>
+                                                    <DialogHeader>
+                                                        <DialogTitle>Edit Transaksi</DialogTitle>
+                                                        <DialogDescription>Perbarui detail transaksi di bawah ini. Tipe transaksi tidak dapat diubah.</DialogDescription>
+                                                    </DialogHeader>
+                                                    {transactionToEdit && <EditTransactionForm transaction={transactionToEdit} onFormSubmit={handleUpdateSubmit} isSaving={isSaving} />}
+                                                </DialogContent>
+                                            </Dialog>
+                                            <AlertDialog open={transactionToDelete?.id === tx.id} onOpenChange={(open) => !open && setTransactionToDelete(null)}>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => setTransactionToDelete(tx)}><Trash2 className="h-4 w-4" /></Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader><AlertDialogTitle>Anda Yakin?</AlertDialogTitle><AlertDialogDescription>Tindakan ini akan menghapus transaksi "{tx.description}" secara permanen.</AlertDialogDescription></AlertDialogHeader>
+                                                    <AlertDialogFooter><AlertDialogCancel>Batal</AlertDialogCancel><AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Hapus</AlertDialogAction></AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="h-24 text-center">Belum ada transaksi.</TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+        </div>
     );
 }
