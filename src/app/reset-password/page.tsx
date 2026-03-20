@@ -9,6 +9,7 @@ import AuthLayout from '@/components/auth-layout';
 import { useAuth, confirmPasswordResetWithCode } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { FirebaseError } from 'firebase/app';
+import Link from 'next/link';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -118,6 +119,9 @@ export default function ResetPasswordPage() {
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? 'Menyimpan...' : 'Set Password Baru'}
+            </Button>
+             <Button variant="outline" asChild>
+                <Link href="/login">Kembali ke Halaman Masuk</Link>
             </Button>
         </div>
         </form>

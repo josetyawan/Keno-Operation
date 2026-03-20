@@ -126,14 +126,14 @@ export default function SignupPage() {
             <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? 'Mendaftarkan...' : 'Daftar Akun'}
+            {isLoading ? 'Mendaftarkan...' : 'Buat Akun'}
           </Button>
         </div>
       </form>
       <div className="mt-4 text-center text-sm">
         Sudah punya akun?{' '}
         <Link href="/login" className="underline">
-          Login
+          Masuk
         </Link>
       </div>
     </AuthLayout>

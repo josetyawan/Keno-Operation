@@ -10,7 +10,6 @@ import { useRouter } from 'next/navigation';
 import { useAuth, useUser, signInWithEmail } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { FirebaseError } from 'firebase/app';
-import { ToastAction } from '@/components/ui/toast';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -91,7 +90,7 @@ export default function LoginPage() {
             <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
           <Button type="submit" className="w-full" disabled={isUserLoading || isLoading}>
-            {isLoading ? 'Masuk...' : 'Login'}
+            {isLoading ? 'Masuk...' : 'Masuk'}
           </Button>
         </div>
       </form>

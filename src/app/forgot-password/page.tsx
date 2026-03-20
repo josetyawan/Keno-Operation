@@ -101,7 +101,7 @@ export default function ForgotPasswordPage() {
               {isLoading ? 'Mengirim...' : 'Kirim Tautan Reset'}
             </Button>
              <Button variant="outline" asChild>
-                <Link href="/login">Kembali ke Login</Link>
+                <Link href="/login">Kembali ke Halaman Masuk</Link>
             </Button>
           </div>
         </form>
