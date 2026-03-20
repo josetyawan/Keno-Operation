@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
@@ -55,7 +56,7 @@ const shiftTypeLabels: Record<string, string> = {
 
 const attendanceStatusLabels: Record<string, string> = {
     'present': 'Hadir Tepat Waktu',
-    'late': 'Izin Terlambat',
+    'late': 'Terlambat',
     'remote-progress': 'Izin Langsung Progres',
 }
 
