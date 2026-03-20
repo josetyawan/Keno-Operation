@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -655,21 +656,32 @@ export default function ProvisioningDashboardPage() {
     return pivot;
   }, [data]);
   
-  const { antrianCount, selesaiCount } = useMemo(() => {
-    return {
-        antrianCount: (unassignedOrders?.length || 0) + (inProgressOrders?.length || 0),
-        selesaiCount: completedOrders?.length || 0,
-    }
-  }, [unassignedOrders, inProgressOrders, completedOrders]);
-
   const handleSendRekap = async () => {
       setIsSendingRekap(true);
       try {
-          const result = await triggerProvisioningRekapAction({
-              antrianCount,
-              selesaiCount,
-              kendalaCount: kendalaOrders?.length || 0,
-          });
+          if (!kendalaOrders || !inProgressOrders || !completedOrders) {
+            throw new Error("Data rekap belum siap.");
+          }
+          
+          const payload = {
+              kendalaOrders: kendalaOrders.map(o => ({
+                  scOrder: o.scOrder,
+                  customerName: o.customerName,
+                  assignedTo_userName: o.assignedTo_userName,
+              })),
+              inProgressOrders: inProgressOrders.map(o => ({
+                  scOrder: o.scOrder,
+                  customerName: o.customerName,
+                  assignedTo_userName: o.assignedTo_userName,
+              })),
+              selesaiOrders: completedOrders.map(o => ({
+                  scOrder: o.scOrder,
+                  customerName: o.customerName,
+                  assignedTo_userName: o.assignedTo_userName,
+              })),
+          };
+
+          const result = await triggerProvisioningRekapAction(payload);
 
           if (result.success) {
               toast({ title: "Sukses", description: result.message });
@@ -932,4 +944,3 @@ export default function ProvisioningDashboardPage() {
     </div>
   );
 }
-    

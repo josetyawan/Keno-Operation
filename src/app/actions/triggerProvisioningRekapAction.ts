@@ -1,12 +1,20 @@
+
 'use server';
 
 import { sendProvisioningRekap } from '@/ai/flows/send-provisioning-rekap';
 import { sendTelegramMessage } from '@/lib/telegram';
 
+// Define a more detailed payload structure
+interface OrderDetail {
+  scOrder: string;
+  customerName: string;
+  assignedTo_userName?: string;
+}
+
 interface RekapPayload {
-  antrianCount: number;
-  selesaiCount: number;
-  kendalaCount: number;
+  kendalaOrders: OrderDetail[];
+  inProgressOrders: OrderDetail[];
+  selesaiOrders: OrderDetail[];
 }
 
 export async function triggerProvisioningRekapAction(
