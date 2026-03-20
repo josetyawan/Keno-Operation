@@ -35,6 +35,7 @@ const navLinks = [
   { href: '/dashboard/hr/performance', label: 'Performa Teknisi', icon: BarChart3, access: 'public' },
   { href: '/dashboard/hr/work-schedule', label: 'Jadwal Kerja', icon: CalendarDays, access: 'public' },
   { href: '/dashboard/hr/attendance', label: 'Absensi Jaga', icon: ClipboardCheck, access: 'allpro' },
+  { href: '/dashboard/inventory/orbit', label: 'Pinjam Orbit', icon: Component, access: 'public' },
   { href: '/dashboard/alker', label: 'Daftar Pengecekan', icon: ClipboardCheck, access: 'allpro' },
   { href: '/dashboard/alker/new', label: 'Input Pengecekan Alker', icon: Wrench, access: 'allpro' },
   { href: '/dashboard/admin/hr/bobot', label: 'Manajemen Bobot', icon: Weight, access: 'public' },

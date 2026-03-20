@@ -45,6 +45,7 @@ export default function DashboardSelectorPage() {
     { href: '/dashboard/hr/performance', label: 'Performa Teknisi', icon: BarChart3, description: 'Lihat laporan performa bulanan Anda.', access: 'public' },
     { href: '/dashboard/hr/work-schedule', label: 'Jadwal Kerja', icon: CalendarDays, description: 'Lihat jadwal kerja bulanan untuk semua teknisi.', access: 'public' },
     { href: '/dashboard/hr/attendance', label: 'Absensi Jaga', icon: ClipboardCheck, description: 'Lakukan absensi untuk jadwal jaga Anda hari ini.', access: 'allpro' },
+    { href: '/dashboard/inventory/orbit', label: 'Pinjam Orbit', icon: Component, description: 'Pinjam atau kembalikan perangkat Orbit.', access: 'public' },
     { href: '/dashboard/alker', label: 'Daftar Pengecekan', icon: ClipboardCheck, description: 'Lihat riwayat laporan pengecekan alat kerja.', access: 'allpro' },
     { href: '/dashboard/alker/new', label: 'Input Pengecekan Alker', icon: Wrench, description: 'Buat laporan baru untuk kondisi alat kerja.', access: 'allpro' },
     { href: '/dashboard/admin/hr/bobot', label: 'Manajemen Bobot', icon: Weight, description: 'Lihat tabel acuan bobot produktivitas.', access: 'public' },
