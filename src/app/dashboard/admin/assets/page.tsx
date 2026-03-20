@@ -2,6 +2,7 @@
 
 'use client';
 
+import * as React from 'react';
 import {
   Card,
   CardContent,
@@ -316,7 +317,7 @@ export default function AdminAssetsPage() {
 
     } catch (error) {
         console.error("Failed to delete all assets: ", error);
-        toast({ variant: "destructive", title: "Gagal Menghapus Aset", description: "Terjadi kesalahan saat proses penghapusan massal. Silakan coba lagi."});
+        toast({ variant: "destructive", title: "Gagal Menghapus Aset", description: "Terjadi kesalahan saat proses penghapusan massal."});
         setIsDeletingAll(false);
     }
   };
