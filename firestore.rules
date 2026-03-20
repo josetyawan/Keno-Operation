@@ -121,7 +121,7 @@ service cloud.firestore {
     match /other-works/{workId} {
       allow create: if isApproved() && isCreatingOwn('userId');
       allow get: if isApproved();
-      allow list: if isApproved();
+      allow list: if isSignedIn();
       allow update, delete: if (isAdmin() || isKorlap()) || (isApproved() && isUpdatingOwn('userId'));
     }
 
