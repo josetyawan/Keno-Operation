@@ -107,7 +107,6 @@ service cloud.firestore {
     match /pelanggan/{pelangganId} {
       allow read: if isApproved();
       allow create: if isApproved() && isCreatingOwn('userId');
-      // Any approved user can now update a customer record.
       allow update: if isApproved();
       allow delete: if isAdmin() || isKorlap();
     }
@@ -116,7 +115,7 @@ service cloud.firestore {
       allow create: if isApproved() && isCreatingOwn('userId');
       allow get: if isApproved();
       allow list: if isApproved();
-      allow update, delete: if isAdmin() || isKorlap();
+      allow update, delete: if (isAdmin() || isKorlap()) || (isApproved() && isUpdatingOwn('userId'));
     }
     
     match /other-works/{workId} {

@@ -123,10 +123,10 @@ export default function RiwayatDetailPage() {
   }, [userProfile, riwayat]);
 
   const canModify = useMemo(() => {
-    if (!userProfile || !riwayat) return false;
+    if (!userProfile || !riwayat || !user) return false;
     if (userProfile.role === 'admin' || userProfile.role === 'korlap') return true;
-    return false;
-  }, [userProfile, riwayat]);
+    return riwayat.userId === user.uid;
+  }, [userProfile, riwayat, user]);
 
   
   const handleDeletePhoto = async (photoUrl: string) => {
