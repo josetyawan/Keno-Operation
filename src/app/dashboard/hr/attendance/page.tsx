@@ -62,8 +62,7 @@ const attendanceStatusLabels: Record<string, string> = {
 
 const getCheckInWindow = (shiftType: Schedule['shiftType']): { start: Date, end: Date, target: Date } | null => {
     const now = new Date();
-    let targetHour: number;
-
+    
     switch (shiftType) {
         case 'h':
         case 'pu':
@@ -72,24 +71,27 @@ const getCheckInWindow = (shiftType: Schedule['shiftType']): { start: Date, end:
         case 'pt/bd':
         case 'piket-demak':
         case 'weekend-duty':
-        case 'holiday-duty':
-            targetHour = 8;
-            break;
-        case 'siang-malam':
-            targetHour = 14;
-            break;
-        case 'malam':
-            targetHour = 22;
-            break;
+        case 'holiday-duty': {
+            const targetTime = set(now, { hours: 8, minutes: 0, seconds: 0, milliseconds: 0 });
+            const startTime = sub(targetTime, { hours: 1 }); // 07:00
+            const endTime = add(targetTime, { hours: 1 });   // 09:00
+            return { start: startTime, end: endTime, target: targetTime };
+        }
+        case 'siang-malam': {
+            const targetTime = set(now, { hours: 14, minutes: 0, seconds: 0, milliseconds: 0 });
+            const startTime = sub(targetTime, { hours: 1 }); // 13:00
+            const endTime = add(targetTime, { hours: 1 });   // 15:00
+            return { start: startTime, end: endTime, target: targetTime };
+        }
+        case 'malam': {
+            const targetTime = set(now, { hours: 22, minutes: 0, seconds: 0, milliseconds: 0 });
+            const startTime = sub(targetTime, { hours: 1 });   // 21:00
+            const endTime = add(targetTime, { minutes: 30 });  // 22:30
+            return { start: startTime, end: endTime, target: targetTime };
+        }
         default:
             return null;
     }
-
-    const targetTime = set(now, { hours: targetHour, minutes: 0, seconds: 0, milliseconds: 0 });
-    const startTime = sub(targetTime, { hours: 1 });
-    const endTime = add(targetTime, { hours: 6 });
-
-    return { start: startTime, end: endTime, target: targetTime };
 };
 
 // --- Child Component for Check-in UI ---
