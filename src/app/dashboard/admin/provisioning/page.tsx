@@ -48,7 +48,7 @@ function EditOrderForm({ order, onSave, onCancel, isSaving }: { order: Provision
     const [address, setAddress] = useState('');
     const [productName, setProductName] = useState('');
     const [crmOrder, setCrmOrder] = useState('');
-    const [description, setDescription] = useState('');
+    const [description, setDescription] = useState(''); // This will be our "Order Type"
 
     const jenisOrderOptions = [
       "PSB DATIN", "PSB OLO", "PSB WIFI", "PDA DATIN", "PDA WIFI",
@@ -659,26 +659,13 @@ export default function ProvisioningDashboardPage() {
   const handleSendRekap = async () => {
       setIsSendingRekap(true);
       try {
-          if (!kendalaOrders || !inProgressOrders || !completedOrders) {
+          if (!data) { // Use all data for the rekap
             throw new Error("Data rekap belum siap.");
           }
           
           const payload = {
-              kendalaOrders: kendalaOrders.map(o => ({
-                  scOrder: o.scOrder,
-                  customerName: o.customerName,
-                  assignedTo_userName: o.assignedTo_userName,
-              })),
-              inProgressOrders: inProgressOrders.map(o => ({
-                  scOrder: o.scOrder,
-                  customerName: o.customerName,
-                  assignedTo_userName: o.assignedTo_userName,
-              })),
-              selesaiOrders: completedOrders.map(o => ({
-                  scOrder: o.scOrder,
-                  customerName: o.customerName,
-                  assignedTo_userName: o.assignedTo_userName,
-              })),
+              allOrders: data,
+              sektor: selectedWorkzone === 'all' ? 'KUDUS' : selectedWorkzone,
           };
 
           const result = await triggerProvisioningRekapAction(payload);
