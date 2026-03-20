@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
@@ -244,7 +243,7 @@ function CheckInUI({
 }
 
 // --- Dialog Component for Leave/Late/Remote ---
-function LeaveRequestDialog({ todaySchedule, today, onFinished, userProfile, canListUsers, allUsers }: { todaySchedule: Schedule | null; today: Date; onFinished: () => void; userProfile: UserProfile | null; canListUsers: boolean; allUsers: UserProfile[] }) {
+function LeaveRequestDialog({ todaySchedule, today, onFinished, userProfile, canListUsers, allUsers, isOpen }: { todaySchedule: Schedule | null; today: Date; onFinished: () => void; userProfile: UserProfile | null; canListUsers: boolean; allUsers: UserProfile[]; isOpen: boolean; }) {
     const { user } = useUser();
     const firestore = useFirestore();
     const storage = useStorage();
@@ -273,10 +272,47 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished, userProfile, can
     const [selfie, setSelfie] = useState<string | null>(null);
 
     const needsCamera = leaveType === 'late' || leaveType === 'remote-progress';
+    
+    // Reset state when dialog is opened
+    useEffect(() => {
+        if (isOpen) {
+            setLeaveType('sick-leave');
+            setReason('');
+            setEvidenceFile(null);
+            setSwapTargetUserId('');
+            setManualSwapName('');
+            setSwapDate(today);
+            setSelfie(null);
+        }
+    }, [isOpen, today]);
+
+    // --- Time-based rule calculation ---
+    const now = useMemo(() => new Date(), [isOpen]); // Recalculate 'now' every time dialog opens
+    const shiftType = todaySchedule?.shiftType;
+
+    const isPagiShift = useMemo(() => ['h', 'pu', 'pb', 'ptm', 'pt/bd', 'piket-demak', 'weekend-duty', 'holiday-duty'].includes(shiftType || ''), [shiftType]);
+    const isAfterPagiCutoff = useMemo(() => now.getHours() >= 8 && new Date(now.toDateString()).getTime() === new Date(today.toDateString()).getTime(), [now, today]);
+    const isMangkir = isPagiShift && isAfterPagiCutoff;
+    
+    const isSmcShift = shiftType === 'siang-malam';
+    const isAfterSmcCutoff = useMemo(() => now.getHours() >= 14 && new Date(now.toDateString()).getTime() === new Date(today.toDateString()).getTime(), [now, today]);
+    
+    const isMalamShift = shiftType === 'malam';
+
+    const isTukarJagaAllowed = useMemo(() => {
+        const shiftDate = today;
+        const startOfShiftDay = new Date(shiftDate.getFullYear(), shiftDate.getMonth(), shiftDate.getDate());
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+        if (startOfShiftDay > startOfToday) return true;
+        if (startOfShiftDay.getTime() === startOfToday.getTime()) return now.getHours() < 8;
+        return false;
+    }, [today, now]);
+    // --- End of time-based rules ---
 
     useEffect(() => {
         async function setupCamera() {
-            if (needsCamera) {
+            if (isOpen && needsCamera) {
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                     setDialogStream(stream);
@@ -297,7 +333,7 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished, userProfile, can
             dialogStream?.getTracks().forEach(track => track.stop());
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [leaveType]);
+    }, [isOpen, leaveType]);
 
     const handleTakePhoto = () => {
         if (!dialogVideoRef.current || !dialogCanvasRef.current) return;
@@ -312,6 +348,45 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished, userProfile, can
 
     const handleSubmit = async () => {
         if (!user || !user.email || !userProfile) return;
+
+        // Re-validate rules on submit
+        const submissionTime = new Date();
+        const subIsPagiShift = isPagiShift;
+        const subIsAfterPagiCutoff = submissionTime.getHours() >= 8 && new Date(submissionTime.toDateString()).getTime() === new Date(today.toDateString()).getTime();
+        const subIsSmcShift = isSmcShift;
+        const subIsAfterSmcCutoff = submissionTime.getHours() >= 14 && new Date(submissionTime.toDateString()).getTime() === new Date(today.toDateString()).getTime();
+        const subIsMalamShift = isMalamShift;
+        const subIsTukarJagaAllowed = (() => {
+            const shiftDate = swapDate || today;
+            const startOfShiftDay = new Date(shiftDate.getFullYear(), shiftDate.getMonth(), shiftDate.getDate());
+            const startOfToday = new Date(submissionTime.getFullYear(), submissionTime.getMonth(), submissionTime.getDate());
+            if (startOfShiftDay > startOfToday) return true;
+            if (startOfShiftDay.getTime() === startOfToday.getTime()) return submissionTime.getHours() < 8;
+            return false;
+        })();
+        
+        if (
+            (leaveType === 'sick-leave' || leaveType === 'cuti') && subIsPagiShift && subIsAfterPagiCutoff
+        ) {
+            toast({ variant: 'destructive', title: 'Waktu Habis', description: 'Waktu untuk mengajukan izin/cuti shift pagi sudah lewat (batas jam 08:00).' });
+            return;
+        }
+        if (leaveType === 'tukar-jaga' && !subIsTukarJagaAllowed) {
+            toast({ variant: 'destructive', title: 'Waktu Habis', description: 'Request tukar jaga hanya bisa dilakukan sebelum jam 08:00 pada hari H.' });
+            return;
+        }
+        if (leaveType === 'late' && subIsMalamShift) {
+             toast({ variant: 'destructive', title: 'Opsi Tidak Tersedia', description: 'Izin terlambat tidak tersedia untuk shift malam.' });
+             return;
+        }
+         if (
+            (leaveType === 'late' || leaveType === 'remote-progress') && 
+            ((subIsPagiShift && subIsAfterPagiCutoff) || (subIsSmcShift && subIsAfterSmcCutoff))
+        ) {
+            toast({ variant: 'destructive', title: 'Waktu Habis', description: 'Waktu untuk izin progres/terlambat sudah lewat.' });
+            return;
+        }
+
         setIsSubmitting(true);
         
         try {
@@ -384,7 +459,7 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished, userProfile, can
 
                 await sendAttendanceNotice({
                     userName: userProfile.displayName || user.email,
-                    status: leaveType === 'sick-leave' ? 'Izin Sakit/Mendesak' : 'Cuti',
+                    status: leaveType === 'sick-leave' ? 'Izin Sakit / Mendesak' : 'Cuti',
                     reason: reason,
                     photoUrl: evidenceUrl,
                 });
@@ -457,11 +532,19 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished, userProfile, can
                     <Select value={leaveType} onValueChange={(v: any) => { setLeaveType(v); setSelfie(null); }}>
                         <SelectTrigger id="leave-type"><SelectValue placeholder="Pilih jenis..." /></SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="sick-leave">Izin Sakit / Keperluan Mendesak</SelectItem>
-                            <SelectItem value="cuti">Cuti</SelectItem>
-                            <SelectItem value="tukar-jaga">Request Tukar Jaga</SelectItem>
-                            <SelectItem value="late">Izin Datang Terlambat</SelectItem>
-                            <SelectItem value="remote-progress">Izin Langsung Progres</SelectItem>
+                           {isMangkir ? (
+                                <div className="p-4 text-center text-sm font-medium text-destructive-foreground bg-destructive">
+                                    Anda sudah dianggap mangkir untuk shift pagi ini (lewat dari jam 08:00).
+                                </div>
+                            ) : (
+                                <>
+                                    <SelectItem value="sick-leave" disabled={isAfterPagiCutoff && isPagiShift}>Izin Sakit / Keperluan Mendesak</SelectItem>
+                                    <SelectItem value="cuti" disabled={isAfterPagiCutoff && isPagiShift}>Cuti</SelectItem>
+                                    <SelectItem value="tukar-jaga" disabled={!isTukarJagaAllowed}>Request Tukar Jaga</SelectItem>
+                                    <SelectItem value="late" disabled={(isAfterPagiCutoff && isPagiShift) || isMalamShift || (isAfterSmcCutoff && isSmcShift)}>Izin Datang Terlambat</SelectItem>
+                                    <SelectItem value="remote-progress" disabled={(isAfterPagiCutoff && isPagiShift) || (isAfterSmcCutoff && isSmcShift)}>Izin Langsung Progres</SelectItem>
+                                </>
+                            )}
                         </SelectContent>
                     </Select>
                 </div>
@@ -800,6 +883,7 @@ export default function AttendancePage() {
                                 </Button>
                             </DialogTrigger>
                             <LeaveRequestDialog 
+                                isOpen={isLeaveDialogOpen}
                                 todaySchedule={todaySchedule}
                                 today={today}
                                 onFinished={() => setIsLeaveDialogOpen(false)}
