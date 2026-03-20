@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -322,7 +323,8 @@ function NewPelangganDialog({ isOpen, onOpenChange, onFinished }: { isOpen: bool
     );
 }
 
-function EditPelangganDialog({ pelanggan, isOpen, onOpenChange, onFinished, user }: { pelanggan: Pelanggan; isOpen: boolean; onOpenChange: (open: boolean) => void; onFinished: () => void; user: UserProfile | null; }) {
+function EditPelangganDialog({ pelanggan, isOpen, onOpenChange, onFinished }: { pelanggan: Pelanggan; isOpen: boolean; onOpenChange: (open: boolean) => void; onFinished: () => void; }) {
+    const { user: authUser } = useUser();
     const firestore = useFirestore();
     const storage = useStorage();
     const { toast } = useToast();
@@ -392,12 +394,12 @@ function EditPelangganDialog({ pelanggan, isOpen, onOpenChange, onFinished, user
     
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!user || !user.email) return;
+        if (!authUser || !authUser.email) return;
         setIsSaving(true);
         try {
             let fotoUrl = pelanggan.fotoCpUrl;
             if (fotoCp) {
-                const filePath = `pelanggan_photos/${user.uid}/cp_${Date.now()}-${fotoCp.name}`;
+                const filePath = `pelanggan_photos/${authUser.uid}/cp_${Date.now()}-${fotoCp.name}`;
                 const storageRef = ref(storage, filePath);
                 await uploadBytes(storageRef, fotoCp);
                 fotoUrl = await getDownloadURL(storageRef);
@@ -414,7 +416,7 @@ function EditPelangganDialog({ pelanggan, isOpen, onOpenChange, onFinished, user
                 odpPort,
                 odpQRCodeUrl,
                 fotoCpUrl: fotoUrl,
-                lastEditedBy: user.email,
+                lastEditedBy: authUser.email,
                 lastEditedDate: serverTimestamp(),
             };
 
@@ -1237,7 +1239,6 @@ export default function PelangganAdminPage() {
                         setTimeout(() => setSelectedPelanggan(current), 0);
                         setIsEditOpen(false);
                     }}
-                    user={currentUserProfile}
                 />
             )}
 
