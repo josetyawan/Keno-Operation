@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -10,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Upload, FileSpreadsheet, ChevronLeft, ChevronRight, Trash2, ChevronRightIcon, User, AlertTriangle, Phone, MoreHorizontal, Edit, Save, Package, Truck, PackageCheck } from 'lucide-react';
+import { Loader2, Upload, FileSpreadsheet, ChevronLeft, ChevronRight, Trash2, ChevronRightIcon, User, AlertTriangle, Phone, MoreHorizontal, Edit, Save, Package, Truck, PackageCheck, Send } from 'lucide-react';
 import { format } from 'date-fns';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, doc, writeBatch, orderBy, getDocs, setDoc, updateDoc, serverTimestamp, where } from 'firebase/firestore';
@@ -25,6 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { triggerProvisioningRekapAction } from '@/app/actions/triggerProvisioningRekapAction';
 
 const ITEMS_PER_PAGE = 5;
 
@@ -181,14 +181,7 @@ function AssignTechnicianDialog({ order, users, isOpen, onOpenChange, onAssign, 
   );
 }
 
-function KendalaCard() {
-    const firestore = useFirestore();
-    const kendalaQuery = useMemoFirebase(() => {
-        return query(collection(firestore, 'provisioning-records'), where('provisioningStatus', '==', 'kendala'));
-    }, [firestore]);
-
-    const { data: kendalaOrders, isLoading } = useCollection<ProvisioningRecord>(kendalaQuery);
-
+function KendalaCard({ kendalaOrders, isLoading }: { kendalaOrders: ProvisioningRecord[], isLoading: boolean }) {
     return (
         <Card className="border-destructive">
             <CardHeader>
@@ -324,6 +317,8 @@ export default function ProvisioningDashboardPage() {
   
   const [orderToEdit, setOrderToEdit] = useState<ProvisioningRecord | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  
+  const [isSendingRekap, setIsSendingRekap] = useState(false);
 
   // Data fetching
   const recordsQuery = useMemoFirebase(() => query(collection(firestore, 'provisioning-records'), orderBy('dateCreated', 'desc')), [firestore]);
@@ -331,6 +326,11 @@ export default function ProvisioningDashboardPage() {
   
   const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users'), where('role', '==', 'teknisi'), where('registrationStatus', '==', 'approved')), [firestore]);
   const { data: technicians, isLoading: areTechniciansLoading } = useCollection<UserProfile>(usersQuery);
+
+  const kendalaQuery = useMemoFirebase(() => {
+    return query(collection(firestore, 'provisioning-records'), where('provisioningStatus', '==', 'kendala'));
+  }, [firestore]);
+  const { data: kendalaOrders, isLoading: areKendalaLoading } = useCollection<ProvisioningRecord>(kendalaQuery);
 
   const [workzones, setWorkzones] = useState<string[]>([]);
   const [selectedWorkzone, setSelectedWorkzone] = useState('all');
@@ -655,6 +655,38 @@ export default function ProvisioningDashboardPage() {
     return pivot;
   }, [data]);
   
+  const { antrianCount, selesaiCount } = useMemo(() => {
+    return {
+        antrianCount: (unassignedOrders?.length || 0) + (inProgressOrders?.length || 0),
+        selesaiCount: completedOrders?.length || 0,
+    }
+  }, [unassignedOrders, inProgressOrders, completedOrders]);
+
+  const handleSendRekap = async () => {
+      setIsSendingRekap(true);
+      try {
+          const result = await triggerProvisioningRekapAction({
+              antrianCount,
+              selesaiCount,
+              kendalaCount: kendalaOrders?.length || 0,
+          });
+
+          if (result.success) {
+              toast({ title: "Sukses", description: result.message });
+          } else {
+              throw new Error(result.message);
+          }
+      } catch (error: any) {
+          toast({
+              variant: "destructive",
+              title: "Gagal Mengirim Rekap",
+              description: error.message || "Terjadi kesalahan saat mengirim laporan.",
+          });
+      } finally {
+          setIsSendingRekap(false);
+      }
+  };
+
 
   const paginatedUnassigned = useMemo(() => {
     const startIndex = (unassignedPage - 1) * ITEMS_PER_PAGE;
@@ -687,12 +719,21 @@ export default function ProvisioningDashboardPage() {
         setActiveTab('unassigned');
       }
   }, [unassignedOrders.length, inProgressOrders.length, completedOrders.length]);
+  
+  const isDataLoading = areRecordsLoading || areTechniciansLoading || areKendalaLoading;
+
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight">Dashboard Provisioning</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold tracking-tight">Dashboard Provisioning</h1>
+        <Button onClick={handleSendRekap} disabled={isSendingRekap}>
+            {isSendingRekap ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+            Kirim Rekap Harian
+        </Button>
+      </div>
       
-      <KendalaCard />
+      <KendalaCard kendalaOrders={kendalaOrders || []} isLoading={isDataLoading} />
       
       <Card>
         <CardHeader>
@@ -756,7 +797,7 @@ export default function ProvisioningDashboardPage() {
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="unassigned">
             <Package className="mr-2" />
-            Order Baru ({unassignedOrders.length})
+            Antrian ({unassignedOrders.length})
           </TabsTrigger>
           <TabsTrigger value="in-progress">
             <Truck className="mr-2" />
@@ -891,4 +932,4 @@ export default function ProvisioningDashboardPage() {
     </div>
   );
 }
-
+    
