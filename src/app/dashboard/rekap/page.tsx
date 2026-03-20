@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -31,7 +30,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { ArrowLeft, Calendar as CalendarIcon, Loader2, Bot, Wallet, CheckCircle } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
-import { collection, query, where, Timestamp, doc, updateDoc, addDoc } from 'firebase/firestore';
+import { collection, query, where, Timestamp, doc, updateDoc, addDoc, writeBatch } from 'firebase/firestore';
 import { format, startOfDay, endOfDay, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import type { Nota, UserProfile, RekapDataItem, CashTransaction } from '@/lib/types';
@@ -232,11 +231,12 @@ export default function RekapPage() {
         setIsMarkingAsPaid(true);
     
         const paymentDate = new Date();
+        const batch = writeBatch(firestore);
     
         try {
             for (const notaId of selectedNotaIds) {
                 const notaDocRef = doc(firestore, 'notas', notaId);
-                await updateDoc(notaDocRef, {
+                batch.update(notaDocRef, {
                     status: 'paid',
                     tanggalPembayaran: paymentDate
                 });
@@ -252,8 +252,11 @@ export default function RekapPage() {
                     createdBy: user.email,
                     createdAt: Timestamp.now()
                 };
-                await addDoc(collection(firestore, 'cashbook'), cashTransaction);
+                const cashbookDocRef = doc(collection(firestore, 'cashbook'));
+                batch.set(cashbookDocRef, cashTransaction);
             }
+            
+            await batch.commit();
             
             const userMap = new Map(users.map(u => [u.id, u]));
             const selectedNotas = notas.filter(n => selectedNotaIds.includes(n.id));
@@ -644,5 +647,3 @@ export default function RekapPage() {
         </div>
     );
 }
-
-    
