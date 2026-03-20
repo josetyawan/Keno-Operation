@@ -115,13 +115,14 @@ service cloud.firestore {
       allow create: if isApproved() && isCreatingOwn('userId');
       allow get: if isApproved();
       allow list: if isApproved();
-      allow update, delete: if isAdmin() || isKorlap();
+      allow update, delete: if (isAdmin() || isKorlap()) || (isApproved() && isUpdatingOwn('userId'));
     }
     
     match /other-works/{workId} {
       allow create: if isApproved() && isCreatingOwn('userId');
-      allow get, list: if isAdmin() || isKorlap();
-      allow update, delete: if isAdmin() || isKorlap();
+      allow get: if isApproved();
+      allow list: if isApproved();
+      allow update, delete: if (isAdmin() || isKorlap()) || (isApproved() && isUpdatingOwn('userId'));
     }
 
     match /map-links/{mapLinkId} {
