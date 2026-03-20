@@ -151,8 +151,13 @@ export default function AdminPerformancePage() {
 
         workItems.forEach(item => {
             let userId: string | undefined;
+            let crewUserId: string | undefined;
+            let isCrewJob = false;
+
             if ('workorder' in item) { // ProvisioningRecord
                 userId = item.assignedTo_userId;
+                crewUserId = item.assignedTo_crew_userId;
+                isCrewJob = !!crewUserId;
             } else { // RiwayatGangguan or OtherWork
                 userId = item.userId;
             }
@@ -182,7 +187,13 @@ export default function AdminPerformancePage() {
                 bobot = parseBobot(weightItem.bobot);
             }
             
-            bobotByUser.set(userId, (bobotByUser.get(userId) || 0) + bobot);
+            if (isCrewJob && crewUserId && bobot > 0) {
+                const splitBobot = bobot / 2;
+                bobotByUser.set(userId, (bobotByUser.get(userId) || 0) + splitBobot);
+                bobotByUser.set(crewUserId, (bobotByUser.get(crewUserId) || 0) + splitBobot);
+            } else {
+                bobotByUser.set(userId, (bobotByUser.get(userId) || 0) + bobot);
+            }
         });
 
         const activeTeknisi = allUsers.filter(u => u.role === 'teknisi' && u.registrationStatus === 'approved');

@@ -47,10 +47,14 @@ export default function ProduktivitasHarianPage() {
     const [isSending, setIsSending] = useState(false);
     const [summaryData, setSummaryData] = useState<SummaryData[]>([]);
     const [detailData, setDetailData] = useState<DetailData[]>([]);
-    const [dateRange, setDateRange] = useState<DateRange | undefined>({
-        from: new Date(),
-        to: new Date(),
-    });
+    const [dateRange, setDateRange] = useState<DateRange | undefined>();
+
+    useEffect(() => {
+        setDateRange({
+            from: new Date(),
+            to: new Date(),
+        });
+    }, []);
 
     const fetchProductivityData = useCallback(async () => {
         if (!selectedUnit || !dateRange?.from) return;
@@ -78,8 +82,8 @@ export default function ProduktivitasHarianPage() {
                 ]);
             }
             
-            const [unitUsers, riwayatList, otherWorks, provisioningList] = await Promise.all([
-                fetchCollection<UserProfile>('users', [where('unit', '==', selectedUnit), where('registrationStatus', '==', 'approved')]),
+            const [allApprovedUsers, riwayatList, otherWorks, provisioningList] = await Promise.all([
+                fetchCollection<UserProfile>('users', [where('registrationStatus', '==', 'approved')]),
                 fetchCollection<RiwayatGangguan>('riwayat-gangguan', [
                     where('tanggalClose', '>=', Timestamp.fromDate(startDate)),
                     where('tanggalClose', '<=', Timestamp.fromDate(endDate))
@@ -93,6 +97,8 @@ export default function ProduktivitasHarianPage() {
                     where('completedAt', '<=', Timestamp.fromDate(endDate))
                 ])
             ]);
+            
+            const unitUsers = allApprovedUsers.filter(u => u.unit?.trim().toUpperCase() === selectedUnit.toUpperCase());
 
             const scheduleMap = new Map(schedules.map(s => [s.userId, s.shiftType]));
             const productivityMap = new Map<string, number>();
@@ -111,12 +117,26 @@ export default function ProduktivitasHarianPage() {
                 }
             });
 
-            // Process Provisioning using userId as before
+            // Process Provisioning using userId, with CREW logic
             provisioningList.forEach(item => {
-                if (item.assignedTo_userId) {
-                    const user = unitUsers.find(u => u.id === item.assignedTo_userId);
-                    if (user) {
-                        productivityMap.set(item.assignedTo_userId, (productivityMap.get(item.assignedTo_userId) || 0) + 1);
+                const mainTechId = item.assignedTo_userId;
+                const crewTechId = item.assignedTo_crew_userId;
+                
+                const mainTechInUnit = unitUsers.some(u => u.id === mainTechId);
+
+                if (mainTechId && mainTechInUnit) {
+                    if (crewTechId) {
+                        // Split productivity 0.5 for each
+                        productivityMap.set(mainTechId, (productivityMap.get(mainTechId) || 0) + 0.5);
+                        
+                        // Check if crew member is also in the selected unit before adding score
+                        const crewTechInUnit = unitUsers.some(u => u.id === crewTechId);
+                        if (crewTechInUnit) {
+                            productivityMap.set(crewTechId, (productivityMap.get(crewTechId) || 0) + 0.5);
+                        }
+                    } else {
+                        // Solo job, full point
+                        productivityMap.set(mainTechId, (productivityMap.get(mainTechId) || 0) + 1);
                     }
                 }
             });
@@ -146,11 +166,11 @@ export default function ProduktivitasHarianPage() {
             const productiveUsers = unitUsers.filter(user => (productivityMap.get(user.id) || 0) > 0);
             
             const newDetailData = productiveUsers.map(user => {
-                // --- REVISED LOGIC: Filter by NIK ---
+                // --- REVISED LOGIC: Filter by NIK for non-provisioning ---
                 const userRiwayat = riwayatList.filter(r => r.nik === user.nik);
                 const userOtherWorks = otherWorks.filter(w => w.nik === user.nik);
-                // --- END REVISED LOGIC ---
-                const userProvisioning = provisioningList.filter(p => p.assignedTo_userId === user.id);
+                // --- NEW CREW LOGIC for provisioning detail ---
+                const userProvisioning = provisioningList.filter(p => p.assignedTo_userId === user.id || p.assignedTo_crew_userId === user.id);
                 
                 const tickets = [
                     ...userRiwayat.map(r => ({ id: r.id, ticket: r.noTiket || '', service: r.noService || '', segment: r.jenisOrder })),

@@ -65,11 +65,25 @@ export async function GET(request: NextRequest) {
                 }
             });
 
-            // Provisioning still uses userId
+            // Provisioning with CREW logic
             const userIdsInUnit = new Set(unitUsers.map(u => u.id));
             allProvisioning.forEach(item => {
-                if (item.assignedTo_userId && userIdsInUnit.has(item.assignedTo_userId)) {
-                    productivityMap.set(item.assignedTo_userId, (productivityMap.get(item.assignedTo_userId) || 0) + 1);
+                const mainTechId = item.assignedTo_userId;
+                const crewTechId = item.assignedTo_crew_userId;
+
+                if (mainTechId && userIdsInUnit.has(mainTechId)) {
+                    if (crewTechId) {
+                         // Split productivity 0.5 for each
+                        productivityMap.set(mainTechId, (productivityMap.get(mainTechId) || 0) + 0.5);
+
+                        // Check if crew member is also in the selected unit before adding score
+                        if (userIdsInUnit.has(crewTechId)) {
+                             productivityMap.set(crewTechId, (productivityMap.get(crewTechId) || 0) + 0.5);
+                        }
+                    } else {
+                        // Solo job, full point
+                        productivityMap.set(mainTechId, (productivityMap.get(mainTechId) || 0) + 1);
+                    }
                 }
             });
             // --- END REVISED LOGIC ---
@@ -94,11 +108,11 @@ export async function GET(request: NextRequest) {
             const productiveUsers = unitUsers.filter(user => (productivityMap.get(user.id) || 0) > 0);
 
             const detailData = productiveUsers.map(user => {
-                // --- REVISED LOGIC: Filter by NIK ---
+                // --- REVISED LOGIC: Filter by NIK for non-provisioning ---
                 const userRiwayat = allRiwayat.filter(r => r.nik === user.nik);
                 const userOtherWorks = allOtherWorks.filter(w => w.nik === user.nik);
-                // --- END REVISED LOGIC ---
-                const userProvisioning = allProvisioning.filter(p => p.assignedTo_userId === user.id);
+                // --- NEW CREW LOGIC for provisioning detail ---
+                const userProvisioning = allProvisioning.filter(p => p.assignedTo_userId === user.id || p.assignedTo_crew_userId === user.id);
             
                 const tickets = [
                     ...userRiwayat.map(r => ({ id: r.id, ticket: r.noTiket || '', service: r.noService || '', segment: r.jenisOrder })),
