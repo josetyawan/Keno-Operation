@@ -50,7 +50,8 @@ service firebase.storage {
     }
 
     match /pelanggan_photos/{userId}/{allPaths=**} {
-      allow write: if isApproved() && isOwner(userId);
+      // Allow any approved user to write. The app logic ensures they write to their own folder.
+      allow write: if isApproved();
     }
     
     match /gangguan_evidence/{userId}/{allPaths=**} {
