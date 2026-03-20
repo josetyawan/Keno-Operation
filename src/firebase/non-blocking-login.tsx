@@ -7,6 +7,8 @@ import {
   UserCredential,
   confirmPasswordReset,
   ActionCodeSettings,
+  GoogleAuthProvider,
+  signInWithPopup,
 } from 'firebase/auth';
 
 interface SignUpDetails {
@@ -28,6 +30,14 @@ export async function signUpWithEmail(auth: Auth, password: string, details: Sig
  */
 export async function signInWithEmail(auth: Auth, email: string, password: string): Promise<UserCredential> {
   return signInWithEmailAndPassword(auth, email, password);
+}
+
+/**
+ * Signs in a user with Google.
+ */
+export async function signInWithGoogle(auth: Auth): Promise<UserCredential> {
+  const provider = new GoogleAuthProvider();
+  return signInWithPopup(auth, provider);
 }
 
 /**

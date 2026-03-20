@@ -552,7 +552,7 @@
       "required": ["id", "workorder", "scOrder", "serviceNo"]
     }
   },
-  "auth": { "providers": ["password", "anonymous"] },
+  "auth": { "providers": ["password", "anonymous", "google.com"] },
   "firestore": {
     "structure": [
       { "path": "/users/{userId}", "definition": { "entityName": "User", "schema": { "$ref": "#/backend/entities/User" }, "description": "Stores user profiles. The 'userId' parameter corresponds to the Firebase Auth UID.", "params": [{ "name": "userId", "description": "The unique identifier for the user, matching the Firebase Auth UID." }] } },
@@ -592,3 +592,4 @@
 
 
     
+
