@@ -851,7 +851,6 @@ function RiwayatCard({ pelanggan, onAddRiwayat }: { pelanggan: Pelanggan, onAddR
     const firestore = useFirestore();
     const { toast } = useToast();
     
-    // The query now only filters, no longer orders.
     const riwayatQuery = useMemoFirebase(() => {
         if (!pelanggan) return null;
         return query(
@@ -865,7 +864,7 @@ function RiwayatCard({ pelanggan, onAddRiwayat }: { pelanggan: Pelanggan, onAddR
     // Sorting is now done on the client-side to avoid index requirement.
     const sortedData = useMemo(() => {
         if (!data) return [];
-        return [...data].sort((a,b) => (b.tanggalLapor.toDate()?.getTime() || 0) - (a.tanggalLapor.toDate()?.getTime() || 0));
+        return [...data].sort((a,b) => (b.tanggalLapor?.toDate()?.getTime() || 0) - (a.tanggalLapor?.toDate()?.getTime() || 0));
     }, [data]);
 
     if (error) {
@@ -1254,3 +1253,4 @@ export default function PelangganAdminPage() {
         </div>
     );
 }
+
