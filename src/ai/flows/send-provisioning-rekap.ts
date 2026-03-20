@@ -1,3 +1,4 @@
+
 'use server';
 
 import { z } from 'zod';
@@ -5,25 +6,25 @@ import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 
 type ProvisioningRecord = any;
+type ProvisioningCategory = 'IH' | 'ORBIT' | 'MO' | 'INDBZ' | 'MIGR' | 'DATIN/WIFI';
 
 const provisioningRekapSchema = z.object({
   allOrders: z.array(z.any()),
   sektor: z.string(),
 });
 
-const getProductCategory = (order: ProvisioningRecord): 'IH' | 'ORBIT' | 'MO' | 'INDBZ' | 'MIGR' => {
+const getProductCategory = (order: ProvisioningRecord): ProvisioningCategory => {
     const crmOrder = (order.crmOrder || '').toLowerCase();
     const productName = (order.productName || '').toLowerCase();
     const scOrder = (order.scOrder || '').toLowerCase();
 
-    if (crmOrder.includes('indibiz')) return 'INDBZ';
-    if (crmOrder.includes('indihome')) return 'IH';
-    if (crmOrder.includes('migrasi')) return 'MIGR';
-    if (productName.includes('orbit')) return 'ORBIT';
+    if (crmOrder.includes('indihome') || scOrder.startsWith('ao')) return 'IH';
     if (scOrder.startsWith('mo')) return 'MO';
-    if (crmOrder.startsWith('mo/do')) return 'MO';
-
-    return 'IH'; // Default fallback
+    if (scOrder.startsWith('sc')) return 'INDBZ';
+    if (scOrder.startsWith('pda')) return 'MIGR';
+    if (productName.includes('orbit')) return 'ORBIT';
+    
+    return 'DATIN/WIFI';
 };
 
 export async function sendProvisioningRekap(
@@ -37,13 +38,13 @@ export async function sendProvisioningRekap(
     message += `📍 SEKTOR: ${input.sektor.toUpperCase()}\n\n`;
     message += `📆 ${dateHeader}\n`;
 
-    const summary: Record<string, Record<'IH' | 'ORBIT' | 'MO' | 'INDBZ' | 'MIGR', number>> = {
-        '✅ PS CLOSE         ': { IH: 0, ORBIT: 0, MO: 0, INDBZ: 0, MIGR: 0 },
-        '✳️ AKTIVASI         ': { IH: 0, ORBIT: 0, MO: 0, INDBZ: 0, MIGR: 0 },
-        '❌ BATAL            ': { IH: 0, ORBIT: 0, MO: 0, INDBZ: 0, MIGR: 0 },
-        '👫 KENDALA PELANGGAN': { IH: 0, ORBIT: 0, MO: 0, INDBZ: 0, MIGR: 0 },
-        '🛠 KENDALA TEKNIS   ': { IH: 0, ORBIT: 0, MO: 0, INDBZ: 0, MIGR: 0 },
-        '🕗 SISA ORDER       ': { IH: 0, ORBIT: 0, MO: 0, INDBZ: 0, MIGR: 0 },
+    const summary: Record<string, Record<ProvisioningCategory, number>> = {
+        '✅ PS CLOSE         ': { IH: 0, ORBIT: 0, MO: 0, INDBZ: 0, MIGR: 0, 'DATIN/WIFI': 0 },
+        '✳️ AKTIVASI         ': { IH: 0, ORBIT: 0, MO: 0, INDBZ: 0, MIGR: 0, 'DATIN/WIFI': 0 },
+        '❌ BATAL            ': { IH: 0, ORBIT: 0, MO: 0, INDBZ: 0, MIGR: 0, 'DATIN/WIFI': 0 },
+        '👫 KENDALA PELANGGAN': { IH: 0, ORBIT: 0, MO: 0, INDBZ: 0, MIGR: 0, 'DATIN/WIFI': 0 },
+        '🛠 KENDALA TEKNIS   ': { IH: 0, ORBIT: 0, MO: 0, INDBZ: 0, MIGR: 0, 'DATIN/WIFI': 0 },
+        '🕗 SISA ORDER       ': { IH: 0, ORBIT: 0, MO: 0, INDBZ: 0, MIGR: 0, 'DATIN/WIFI': 0 },
     };
 
     const detailRows: { emoji: string; scOrder: string; ket: string; status: ProvisioningRecord['provisioningStatus'] }[] = [];
@@ -87,10 +88,11 @@ export async function sendProvisioningRekap(
     }
 
     // Format Summary Table
-    message += 'STATUS           |  IH | ORBIT | MO | INDBZ | MIGR\n';
+    message += 'STATUS           |  IH | ORBIT | MO | INDBZ | MIGR | DATIN/WIFI\n';
     for (const [status, counts] of Object.entries(summary)) {
         const { IH, ORBIT, MO, INDBZ, MIGR } = counts;
-        message += `${status}| ${String(IH).padStart(3, ' ')} | ${String(ORBIT).padStart(5, ' ')} | ${String(MO).padStart(3, ' ')} | ${String(INDBZ).padStart(5, ' ')} | ${String(MIGR).padStart(4, ' ')}\n`;
+        const DATIN_WIFI = counts['DATIN/WIFI'];
+        message += `${status}| ${String(IH).padStart(3, ' ')} | ${String(ORBIT).padStart(5, ' ')} | ${String(MO).padStart(3, ' ')} | ${String(INDBZ).padStart(5, ' ')} | ${String(MIGR).padStart(4, ' ')} | ${String(DATIN_WIFI).padStart(10, ' ')}\n`;
     }
     
     // Format Detail List

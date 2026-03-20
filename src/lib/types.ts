@@ -383,6 +383,8 @@ export type ProvisioningRecord = {
   // New fields for provisioning workflow
   assignedTo_userId?: string;
   assignedTo_userName?: string;
+  assignedTo_crew_userId?: string;
+  assignedTo_crew_userName?: string;
   assignedAt?: any; // Timestamp
   provisioningStatus?: 'unassigned' | 'assigned' | 'picked_up' | 'departed' | 'arrived' | 'kendala' | 'wip_odp_done' | 'completed';
   pickupAt?: any; // Timestamp

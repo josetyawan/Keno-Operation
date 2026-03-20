@@ -149,8 +149,22 @@ function EditOrderForm({ order, onSave, onCancel, isSaving }: { order: Provision
     );
 }
 
-function AssignTechnicianDialog({ order, users, isOpen, onOpenChange, onAssign, isAssigning }: { order: ProvisioningRecord; users: UserProfile[]; isOpen: boolean; onOpenChange: (open: boolean) => void; onAssign: (techId: string) => void; isAssigning: boolean; }) {
+function AssignTechnicianDialog({ order, users, isOpen, onOpenChange, onAssign, isAssigning }: { order: ProvisioningRecord; users: UserProfile[]; isOpen: boolean; onOpenChange: (open: boolean) => void; onAssign: (techId: string, crewId: string) => void; isAssigning: boolean; }) {
   const [selectedTechnician, setSelectedTechnician] = useState('');
+  const [selectedCrew, setSelectedCrew] = useState('');
+
+  const availableCrew = useMemo(() => {
+      if (!users || !selectedTechnician) return users;
+      return users.filter(u => u.id !== selectedTechnician);
+  }, [users, selectedTechnician]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setSelectedTechnician('');
+      setSelectedCrew('');
+    }
+  }, [isOpen]);
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -160,19 +174,28 @@ function AssignTechnicianDialog({ order, users, isOpen, onOpenChange, onAssign, 
             Pilih teknisi untuk menangani order WO: {order.workorder}
           </DialogDescription>
         </DialogHeader>
-        <div className="py-4">
+        <div className="py-4 space-y-4">
           <Select value={selectedTechnician} onValueChange={setSelectedTechnician}>
             <SelectTrigger>
-              <SelectValue placeholder="Pilih seorang teknisi..." />
+              <SelectValue placeholder="Pilih teknisi utama..." />
             </SelectTrigger>
             <SelectContent>
               {users.map(u => <SelectItem key={u.id} value={u.id}>{u.displayName}</SelectItem>)}
             </SelectContent>
           </Select>
+          <Select value={selectedCrew} onValueChange={setSelectedCrew}>
+            <SelectTrigger>
+              <SelectValue placeholder="Pilih rekan crew (opsional)..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Tidak Ada Rekan</SelectItem>
+              {availableCrew.map(u => <SelectItem key={u.id} value={u.id}>{u.displayName}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
         <DialogFooter>
           <DialogClose asChild><Button variant="ghost" disabled={isAssigning}>Batal</Button></DialogClose>
-          <Button onClick={() => onAssign(selectedTechnician)} disabled={!selectedTechnician || isAssigning}>
+          <Button onClick={() => onAssign(selectedTechnician, selectedCrew)} disabled={!selectedTechnician || isAssigning}>
             {isAssigning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             {isAssigning ? 'Menugaskan...' : 'Tugaskan'}
           </Button>
@@ -562,7 +585,7 @@ export default function ProvisioningDashboardPage() {
     reader.readAsArrayBuffer(file);
   };
 
-  const handleAssign = async (technicianId: string) => {
+  const handleAssign = async (technicianId: string, crewId: string) => {
     if (!orderToAssign || !technicianId) return;
     setIsAssigning(true);
 
@@ -571,16 +594,26 @@ export default function ProvisioningDashboardPage() {
         setIsAssigning(false);
         return;
     };
+    
+    const crewMember = crewId ? technicians?.find(t => t.id === crewId) : null;
 
     const docRef = doc(firestore, 'provisioning-records', orderToAssign.id);
     try {
-        await updateDoc(docRef, {
+        const updateData: Partial<ProvisioningRecord> = {
             assignedTo_userId: technician.id,
             assignedTo_userName: technician.displayName,
             assignedAt: serverTimestamp(),
             provisioningStatus: 'assigned',
-        });
-        toast({ title: 'Sukses', description: `Order ditugaskan kepada ${technician.displayName}.` });
+            assignedTo_crew_userId: crewMember ? crewMember.id : '',
+            assignedTo_crew_userName: crewMember ? crewMember.displayName : '',
+        };
+        await updateDoc(docRef, updateData);
+        let description = `Order ditugaskan kepada ${technician.displayName}.`;
+        if (crewMember) {
+            description += ` bersama ${crewMember.displayName}.`
+        }
+
+        toast({ title: 'Sukses', description });
         setOrderToAssign(null);
     } catch (error: any) {
         toast({ variant: 'destructive', title: 'Gagal Menugaskan', description: error.message });
