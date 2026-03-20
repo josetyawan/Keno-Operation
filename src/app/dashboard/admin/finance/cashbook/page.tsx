@@ -8,18 +8,18 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { PlusCircle, ArrowUpCircle, ArrowDownCircle, CalendarIcon, Loader2, Edit, Trash2 } from 'lucide-react';
+import { PlusCircle, ArrowUpCircle, ArrowDownCircle, CalendarIcon, Loader2, Edit, Trash2, ChevronDown } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { format, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
-import type { CashTransaction, UserProfile } from '@/lib/types';
+import type { CashTransaction, UserProfile, Nota } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 
@@ -143,9 +143,14 @@ export default function AdminCashbookPage() {
 
     const [isFormInOpen, setIsFormInOpen] = useState(false);
     const [isFormOutOpen, setIsFormOutOpen] = useState(false);
-    const [transactionToEdit, setTransactionToEdit] = useState<CashTransaction | null>(null);
-    const [transactionToDelete, setTransactionToDelete] = useState<CashTransaction | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+
+    // State for individual dialogs
+    const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
+    const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null);
+
+    // State for expandable rows
+    const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
     const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
         useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
@@ -165,6 +170,27 @@ export default function AdminCashbookPage() {
     }, [firestore, currentUserProfile]);
 
     const { data: transactions, isLoading: areTransactionsLoading } = useCollection<CashTransaction>(cashbookQuery);
+
+    const { data: allNotas, isLoading: areNotasLoading } = useCollection<Nota>(
+        useMemoFirebase(() => query(collection(firestore, 'notas')), [firestore])
+    );
+
+    const notasMap = useMemo(() => {
+        if (!allNotas) return new Map<string, Nota>();
+        return new Map(allNotas.map(n => [n.id, n]));
+    }, [allNotas]);
+
+    const toggleRow = (rowId: string) => {
+        setExpandedRows(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(rowId)) {
+                newSet.delete(rowId);
+            } else {
+                newSet.add(rowId);
+            }
+            return newSet;
+        });
+    };
 
     const { transactionsWithBalance, finalBalance } = useMemo(() => {
         if (!transactions) return { transactionsWithBalance: [], finalBalance: 0 };
@@ -200,13 +226,13 @@ export default function AdminCashbookPage() {
     };
     
     const handleUpdateSubmit = async (data: Partial<CashTransaction>) => {
-        if (!transactionToEdit) return;
+        if (!editingTransactionId) return;
         setIsSaving(true);
         try {
-            const docRef = doc(firestore, 'cashbook', transactionToEdit.id);
+            const docRef = doc(firestore, 'cashbook', editingTransactionId);
             await updateDoc(docRef, data);
             toast({ title: 'Transaksi Diperbarui' });
-            setTransactionToEdit(null);
+            setEditingTransactionId(null);
         } catch (error: any) {
             toast({ variant: 'destructive', title: 'Gagal Memperbarui', description: error.message });
         } finally {
@@ -215,18 +241,18 @@ export default function AdminCashbookPage() {
     };
     
     const confirmDelete = async () => {
-        if (!transactionToDelete) return;
+        if (!deletingTransactionId) return;
         try {
-            await deleteDoc(doc(firestore, 'cashbook', transactionToDelete.id));
+            await deleteDoc(doc(firestore, 'cashbook', deletingTransactionId));
             toast({ title: 'Transaksi Dihapus' });
         } catch (error: any) {
              toast({ variant: 'destructive', title: 'Gagal Menghapus', description: error.message });
         } finally {
-            setTransactionToDelete(null);
+            setDeletingTransactionId(null);
         }
     };
     
-    const isLoading = isUserLoading || isProfileLoading || areTransactionsLoading;
+    const isLoading = isUserLoading || isProfileLoading || areTransactionsLoading || areNotasLoading;
 
     return (
         <div className="space-y-6">
@@ -262,7 +288,7 @@ export default function AdminCashbookPage() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Tanggal</TableHead>
+                                <TableHead className="w-28">Tanggal</TableHead>
                                 <TableHead>Keterangan</TableHead>
                                 <TableHead className="text-right">Pemasukan (Rp)</TableHead>
                                 <TableHead className="text-right">Pengeluaran (Rp)</TableHead>
@@ -276,49 +302,98 @@ export default function AdminCashbookPage() {
                                     <TableRow key={i}><TableCell colSpan={6}><Skeleton className="h-6 w-full" /></TableCell></TableRow>
                                 ))
                             ) : transactionsWithBalance.length > 0 ? (
-                                transactionsWithBalance.map(tx => (
-                                    <TableRow key={tx.id}>
-                                        <TableCell>{format(tx.date.toDate(), 'dd MMM yyyy', { locale: idLocale })}</TableCell>
-                                        <TableCell>
-                                            <p>{tx.description}</p>
-                                            {tx.notaIds && tx.notaIds.length > 0 && (
-                                                <p className="text-xs text-muted-foreground">
-                                                    Terkait {tx.notaIds.length} nota.
-                                                </p>
+                                transactionsWithBalance.map(tx => {
+                                    const isExpandable = tx.type === 'out' && tx.notaIds && tx.notaIds.length > 0;
+                                    const isExpanded = expandedRows.has(tx.id);
+                                    return (
+                                        <React.Fragment key={tx.id}>
+                                            <TableRow 
+                                                className={cn(isExpandable && 'cursor-pointer hover:bg-muted/50')} 
+                                                onClick={() => isExpandable && toggleRow(tx.id)}
+                                            >
+                                                <TableCell>{format(tx.date.toDate(), 'dd MMM yyyy', { locale: idLocale })}</TableCell>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-2">
+                                                        {isExpandable && <ChevronDown className={cn('h-4 w-4 transition-transform', isExpanded && 'rotate-180')} />}
+                                                        <div>
+                                                            <p>{tx.description}</p>
+                                                            {isExpandable && (
+                                                                <p className="text-xs text-muted-foreground">
+                                                                    Terkait {tx.notaIds!.length} nota. Klik untuk melihat rincian.
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-right font-medium text-green-600">
+                                                    {tx.type === 'in' ? tx.amount.toLocaleString('id-ID') : '-'}
+                                                </TableCell>
+                                                <TableCell className="text-right font-medium text-red-600">
+                                                    {tx.type === 'out' ? tx.amount.toLocaleString('id-ID') : '-'}
+                                                </TableCell>
+                                                <TableCell className="text-right font-bold">{tx.balance.toLocaleString('id-ID')}</TableCell>
+                                                <TableCell className="text-right">
+                                                    <Dialog open={editingTransactionId === tx.id} onOpenChange={(open) => !open && setEditingTransactionId(null)}>
+                                                        <DialogTrigger asChild>
+                                                            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setEditingTransactionId(tx.id); }}>
+                                                                <Edit className="h-4 w-4" />
+                                                            </Button>
+                                                        </DialogTrigger>
+                                                        <DialogContent>
+                                                            <DialogHeader><DialogTitle>Edit Transaksi</DialogTitle></DialogHeader>
+                                                            <EditTransactionForm transaction={tx} onFormSubmit={handleUpdateSubmit} isSaving={isSaving} />
+                                                        </DialogContent>
+                                                    </Dialog>
+                                                    <AlertDialog open={deletingTransactionId === tx.id} onOpenChange={(open) => !open && setDeletingTransactionId(null)}>
+                                                        <AlertDialogTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); setDeletingTransactionId(tx.id); }}>
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader><AlertDialogTitle>Anda Yakin?</AlertDialogTitle><AlertDialogDescription>Tindakan ini akan menghapus transaksi "{tx.description}" secara permanen.</AlertDialogDescription></AlertDialogHeader>
+                                                            <AlertDialogFooter><AlertDialogCancel>Batal</AlertDialogCancel><AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Hapus</AlertDialogAction></AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
+                                                </TableCell>
+                                            </TableRow>
+                                            {isExpandable && isExpanded && (
+                                                <TableRow className="bg-muted/20">
+                                                    <TableCell colSpan={6} className="p-0">
+                                                        <div className="p-4">
+                                                            <h4 className="font-semibold mb-2 ml-4">Rincian Nota Terkait</h4>
+                                                            <Table>
+                                                                <TableHeader>
+                                                                    <TableRow>
+                                                                        <TableHead>PIC</TableHead>
+                                                                        <TableHead>Tgl. Nota</TableHead>
+                                                                        <TableHead>Segmen</TableHead>
+                                                                        <TableHead className="text-right">Nominal</TableHead>
+                                                                    </TableRow>
+                                                                </TableHeader>
+                                                                <TableBody>
+                                                                    {tx.notaIds?.map(notaId => {
+                                                                        const nota = notasMap.get(notaId);
+                                                                        return nota ? (
+                                                                            <TableRow key={nota.id} className="hover:bg-muted/40">
+                                                                                <TableCell>{nota.namaPic}</TableCell>
+                                                                                <TableCell>{nota.tanggal?.toDate ? format(nota.tanggal.toDate(), 'dd MMM yyyy') : '-'}</TableCell>
+                                                                                <TableCell><Link href={`/dashboard/notas/${nota.id}`} className="text-blue-600 hover:underline">{nota.segmen}</Link></TableCell>
+                                                                                <TableCell className="text-right">Rp {nota.nominal.toLocaleString('id-ID')}</TableCell>
+                                                                            </TableRow>
+                                                                        ) : (
+                                                                            <TableRow key={notaId}><TableCell colSpan={4}>Nota dengan ID {notaId} tidak ditemukan.</TableCell></TableRow>
+                                                                        );
+                                                                    })}
+                                                                </TableBody>
+                                                            </Table>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
                                             )}
-                                        </TableCell>
-                                        <TableCell className="text-right font-medium text-green-600">
-                                            {tx.type === 'in' ? tx.amount.toLocaleString('id-ID') : '-'}
-                                        </TableCell>
-                                        <TableCell className="text-right font-medium text-red-600">
-                                            {tx.type === 'out' ? tx.amount.toLocaleString('id-ID') : '-'}
-                                        </TableCell>
-                                        <TableCell className="text-right font-bold">{tx.balance.toLocaleString('id-ID')}</TableCell>
-                                        <TableCell className="text-right">
-                                            <Dialog open={transactionToEdit?.id === tx.id} onOpenChange={(open) => !open && setTransactionToEdit(null)}>
-                                                <DialogTrigger asChild>
-                                                    <Button variant="ghost" size="icon" onClick={() => setTransactionToEdit(tx)}><Edit className="h-4 w-4" /></Button>
-                                                </DialogTrigger>
-                                                <DialogContent>
-                                                    <DialogHeader>
-                                                        <DialogTitle>Edit Transaksi</DialogTitle>
-                                                        <DialogDescription>Perbarui detail transaksi di bawah ini. Tipe transaksi tidak dapat diubah.</DialogDescription>
-                                                    </DialogHeader>
-                                                    {transactionToEdit && <EditTransactionForm transaction={transactionToEdit} onFormSubmit={handleUpdateSubmit} isSaving={isSaving} />}
-                                                </DialogContent>
-                                            </Dialog>
-                                            <AlertDialog open={transactionToDelete?.id === tx.id} onOpenChange={(open) => !open && setTransactionToDelete(null)}>
-                                                <AlertDialogTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => setTransactionToDelete(tx)}><Trash2 className="h-4 w-4" /></Button>
-                                                </AlertDialogTrigger>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader><AlertDialogTitle>Anda Yakin?</AlertDialogTitle><AlertDialogDescription>Tindakan ini akan menghapus transaksi "{tx.description}" secara permanen.</AlertDialogDescription></AlertDialogHeader>
-                                                    <AlertDialogFooter><AlertDialogCancel>Batal</AlertDialogCancel><AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Hapus</AlertDialogAction></AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
+                                        </React.Fragment>
+                                    )
+                                })
                             ) : (
                                 <TableRow>
                                     <TableCell colSpan={6} className="h-24 text-center">Belum ada transaksi.</TableCell>
