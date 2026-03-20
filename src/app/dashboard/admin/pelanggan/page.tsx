@@ -217,7 +217,7 @@ function NewPelangganDialog({ isOpen, onOpenChange, onFinished }: { isOpen: bool
         try {
             let fotoCpUrl: string | undefined = undefined;
             if (fotoCp) {
-                const filePath = `pelanggan_photos/${user.uid}/cp_${Date.now()}-${fotoCp.name}`;
+                const filePath = `notas/${user.uid}/pelanggan_cp_${Date.now()}-${fotoCp.name}`;
                 const storageRef = ref(storage, filePath);
                 await uploadBytes(storageRef, fotoCp);
                 fotoCpUrl = await getDownloadURL(storageRef);
@@ -399,7 +399,7 @@ function EditPelangganDialog({ pelanggan, isOpen, onOpenChange, onFinished }: { 
         try {
             let fotoUrl = pelanggan.fotoCpUrl;
             if (fotoCp) {
-                const filePath = `pelanggan_photos/${authUser.uid}/cp_${Date.now()}-${fotoCp.name}`;
+                const filePath = `notas/${authUser.uid}/pelanggan_cp_${Date.now()}-${fotoCp.name}`;
                 const storageRef = ref(storage, filePath);
                 await uploadBytes(storageRef, fotoCp);
                 fotoUrl = await getDownloadURL(storageRef);
@@ -634,7 +634,7 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
                     const evidenceUploadPromises = Object.entries(evidenceFiles)
                         .filter(([, file]) => file)
                         .map(async ([evidenceName, file]) => {
-                            const filePath = `gangguan_evidence/${user.uid}/${Date.now()}-${file!.name}`;
+                            const filePath = `notas/${user.uid}/gangguan_evidence_${Date.now()}-${file!.name}`;
                             const storageRef = ref(storage, filePath);
                             await uploadBytes(storageRef, file!);
                             const photoUrl = await getDownloadURL(storageRef);
@@ -661,7 +661,7 @@ function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, current
 
             let evidenSccUrl: string | undefined;
             if (evidenScc) {
-                const filePath = `gangguan_evidence/${user.uid}/scc_${Date.now()}-${evidenScc.name}`;
+                const filePath = `notas/${user.uid}/scc_${Date.now()}-${evidenScc.name}`;
                 const storageRef = ref(storage, filePath);
                 await uploadBytes(storageRef, evidenScc);
                 evidenSccUrl = await getDownloadURL(storageRef);
@@ -1097,7 +1097,6 @@ export default function PelangganAdminPage() {
                         Import Riwayat
                     </Button>
                     <Button variant="outline" onClick={handleExportData} disabled={arePelangganLoading || isImporting}><FileSpreadsheet className='mr-2 h-4 w-4' /> Export Data Pelanggan</Button>
-                    <Button onClick={() => setIsNewPelangganOpen(true)}><PlusCircle className='mr-2 h-4 w-4' /> Tambah Pelanggan</Button>
                 </div>
             </div>
             
@@ -1155,7 +1154,13 @@ export default function PelangganAdminPage() {
                                 ))}
                             </ul>
                        ) : (
-                           <p className="text-center text-muted-foreground py-8">Tidak ada pelanggan yang ditemukan.</p>
+                           <div className="text-center py-8">
+                               <p className="text-muted-foreground">Tidak ada pelanggan yang ditemukan untuk &quot;{searchQuery}&quot;.</p>
+                               <Button className="mt-4" onClick={() => setIsNewPelangganOpen(true)}>
+                                   <PlusCircle className="mr-2 h-4 w-4" />
+                                   Tambah Pelanggan Baru
+                               </Button>
+                           </div>
                        )}
                     </CardContent>
                 </Card>
@@ -1253,6 +1258,7 @@ export default function PelangganAdminPage() {
         </div>
     );
 }
+
 
 
 
