@@ -322,6 +322,188 @@ function NewPelangganDialog({ isOpen, onOpenChange, onFinished }: { isOpen: bool
     );
 }
 
+function EditPelangganDialog({ pelanggan, isOpen, onOpenChange, onFinished, user }: { pelanggan: Pelanggan; isOpen: boolean; onOpenChange: (open: boolean) => void; onFinished: () => void; user: UserProfile | null; }) {
+    const firestore = useFirestore();
+    const storage = useStorage();
+    const { toast } = useToast();
+    const [isSaving, setIsSaving] = useState(false);
+
+    // Form state
+    const [namaPelanggan, setNamaPelanggan] = useState('');
+    const [alamat, setAlamat] = useState('');
+    const [nomorTelepon, setNomorTelepon] = useState('');
+    const [koordinat, setKoordinat] = useState('');
+    const [serviceArea, setServiceArea] = useState('');
+    const [sto, setSto] = useState('');
+    const [odpName, setOdpName] = useState('');
+    const [odpPort, setOdpPort] = useState('');
+    const [odpQRCodeUrl, setOdpQRCodeUrl] = useState('');
+    const [fotoCp, setFotoCp] = useState<File | null>(null);
+    const [fotoCpPreview, setFotoCpPreview] = useState<string | null>(null);
+    const [isGettingLocation, setIsGettingLocation] = useState(false);
+    
+    useEffect(() => {
+        if (pelanggan) {
+            setNamaPelanggan(pelanggan.namaPelanggan);
+            setAlamat(pelanggan.alamat || '');
+            setNomorTelepon(Array.isArray(pelanggan.nomorTelepon) ? pelanggan.nomorTelepon.join(', ') : (pelanggan.nomorTelepon || ''));
+            setKoordinat(pelanggan.koordinat);
+            setServiceArea(pelanggan.serviceArea);
+            setSto(pelanggan.sto || '');
+            setOdpName(pelanggan.odpName || '');
+            setOdpPort(pelanggan.odpPort || '');
+            setOdpQRCodeUrl(pelanggan.odpQRCodeUrl || '');
+            setFotoCpPreview(pelanggan.fotoCpUrl || null);
+            setFotoCp(null);
+        }
+    }, [pelanggan, isOpen]);
+
+     useEffect(() => {
+        if (odpName) {
+            const parts = odpName.trim().toUpperCase().split('-');
+            if (parts.length > 1) {
+                setSto(parts[1]);
+            }
+        }
+    }, [odpName]);
+
+
+    const handleGetLocation = () => {
+        setIsGettingLocation(true);
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                setKoordinat(`${position.coords.latitude}, ${position.coords.longitude}`);
+                setIsGettingLocation(false);
+            },
+            () => {
+                toast({ variant: 'destructive', title: 'Gagal Mendapatkan Lokasi' });
+                setIsGettingLocation(false);
+            }
+        );
+    };
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            setFotoCp(file);
+            setFotoCpPreview(URL.createObjectURL(file));
+        }
+    };
+    
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!user || !user.email) return;
+        setIsSaving(true);
+        try {
+            let fotoUrl = pelanggan.fotoCpUrl;
+            if (fotoCp) {
+                const filePath = `pelanggan_photos/${user.uid}/cp_${Date.now()}-${fotoCp.name}`;
+                const storageRef = ref(storage, filePath);
+                await uploadBytes(storageRef, fotoCp);
+                fotoUrl = await getDownloadURL(storageRef);
+            }
+
+            const updateData: Partial<Pelanggan> = {
+                namaPelanggan,
+                alamat,
+                nomorTelepon: nomorTelepon.split(',').map(s => s.trim()).filter(Boolean),
+                koordinat,
+                serviceArea,
+                sto,
+                odpName,
+                odpPort,
+                odpQRCodeUrl,
+                fotoCpUrl: fotoUrl,
+                lastEditedBy: user.email,
+                lastEditedDate: serverTimestamp(),
+            };
+
+            const docRef = doc(firestore, 'pelanggan', pelanggan.id);
+            await updateDoc(docRef, updateData);
+            
+            toast({ title: 'Pelanggan Diperbarui' });
+            onFinished();
+
+        } catch (error: any) {
+             toast({ variant: 'destructive', title: 'Gagal memperbarui', description: error.message });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+    
+    return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                    <DialogTitle>Edit Data Pelanggan</DialogTitle>
+                    <DialogDescription>Perbarui detail untuk {pelanggan.namaPelanggan}.</DialogDescription>
+                </DialogHeader>
+                 <form onSubmit={handleSubmit} className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit-namaPelanggan">Nama Pelanggan *</Label>
+                    <Input id="edit-namaPelanggan" value={namaPelanggan} onChange={(e) => setNamaPelanggan(e.target.value)} required />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit-alamat">Alamat</Label>
+                    <Textarea id="edit-alamat" value={alamat} onChange={(e) => setAlamat(e.target.value)} />
+                  </div>
+                   <div className="grid gap-2">
+                    <Label htmlFor="edit-nomorTelepon">No. Telepon (pisahkan dengan koma)</Label>
+                    <Input id="edit-nomorTelepon" value={nomorTelepon} onChange={(e) => setNomorTelepon(e.target.value)} />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit-koordinat">Koordinat *</Label>
+                    <div className="flex items-center gap-2">
+                        <Input id="edit-koordinat" value={koordinat} onChange={(e) => setKoordinat(e.target.value)} required />
+                        <Button type="button" variant="outline" size="icon" onClick={handleGetLocation} disabled={isGettingLocation}>
+                            {isGettingLocation ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
+                        </Button>
+                    </div>
+                  </div>
+                   <div className="grid gap-2">
+                    <Label htmlFor="edit-serviceArea">Service Area *</Label>
+                     <Select value={serviceArea} onValueChange={setServiceArea} required>
+                        <SelectTrigger><SelectValue placeholder="Pilih Service Area" /></SelectTrigger>
+                        <SelectContent>{serviceAreas.map(sa => <SelectItem key={sa} value={sa}>{sa}</SelectItem>)}</SelectContent>
+                      </Select>
+                  </div>
+                   <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="edit-odpName">Nama ODP</Label>
+                            <Input id="edit-odpName" value={odpName} onChange={(e) => setOdpName(e.target.value)} />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="edit-sto">STO</Label>
+                            <Input id="edit-sto" value={sto} disabled />
+                        </div>
+                   </div>
+                   <div className="grid gap-2">
+                    <Label htmlFor="edit-odpPort">Port ODP</Label>
+                    <Input id="edit-odpPort" value={odpPort} onChange={(e) => setOdpPort(e.target.value)} />
+                  </div>
+                   <div className="grid gap-2">
+                    <Label htmlFor="edit-odpQRCodeUrl">URL QR Code ODP</Label>
+                    <Input id="edit-odpQRCodeUrl" value={odpQRCodeUrl} onChange={(e) => setOdpQRCodeUrl(e.target.value)} />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit-fotoCp">Foto Lokasi</Label>
+                    <Input id="edit-fotoCp" type="file" onChange={handleFileChange} accept="image/*" />
+                    {fotoCpPreview && (
+                        <div className="relative w-32 h-32 mt-2">
+                            <Image src={fotoCpPreview} alt="Preview Foto" fill className="rounded-md object-cover" />
+                        </div>
+                    )}
+                  </div>
+                  <DialogFooter>
+                    <DialogClose asChild><Button type="button" variant="secondary">Batal</Button></DialogClose>
+                    <Button type="submit" disabled={isSaving}>{isSaving ? <Loader2 className="animate-spin" /> : 'Simpan Perubahan'}</Button>
+                  </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 function NewRiwayatDialog({ pelanggan, isOpen, onOpenChange, onFinished, currentUserProfile }: { pelanggan: Pelanggan, isOpen: boolean, onOpenChange: (open: boolean) => void, onFinished: (riwayat: RiwayatGangguan) => void, currentUserProfile: UserProfile | null }) {
     const { user } = useUser();
     const firestore = useFirestore();
@@ -748,6 +930,7 @@ export default function PelangganAdminPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedPelanggan, setSelectedPelanggan] = useState<Pelanggan | null>(null);
     const [isNewPelangganOpen, setIsNewPelangganOpen] = useState(false);
+    const [isEditOpen, setIsEditOpen] = useState(false);
     const [isNewRiwayatOpen, setIsNewRiwayatOpen] = useState(false);
     const { user } = useUser();
     const { data: currentUserProfile } = useDoc<UserProfile>(
@@ -782,7 +965,6 @@ export default function PelangganAdminPage() {
     
     const handleDeletePelanggan = async (pelanggan: Pelanggan) => {
         try {
-            if (!window.confirm(`Anda yakin ingin menghapus pelanggan ${pelanggan.namaPelanggan}? Semua riwayat terkait akan tetap ada, tetapi tidak tertaut.`)) return;
             await deleteDoc(doc(firestore, 'pelanggan', pelanggan.id));
             if (selectedPelanggan?.id === pelanggan.id) {
                 setSelectedPelanggan(null);
@@ -958,7 +1140,7 @@ export default function PelangganAdminPage() {
                                                 </div>
                                                 <Badge variant="secondary">{p.sto}</Badge>
                                             </div>
-                                            <div className="mt-2 text-sm text-muted-foreground space-y-1">
+                                             <div className="mt-2 text-sm text-muted-foreground space-y-1">
                                                 <p className="truncate">Alamat: {p.alamat || 'N/A'}</p>
                                                 <p>Telp: {(Array.isArray(p.nomorTelepon) ? p.nomorTelepon.join(', ') : p.nomorTelepon) || 'N/A'}</p>
                                                 <p>ODP: {p.odpName || 'N/A'} {p.odpPort && ` / Port ${p.odpPort}`}</p>
@@ -978,7 +1160,7 @@ export default function PelangganAdminPage() {
                 <div className="space-y-6">
                     <Card>
                         <CardHeader>
-                            <div className="flex justify-between items-start flex-wrap gap-2">
+                             <div className="flex justify-between items-start flex-wrap gap-2">
                                 <div>
                                     <CardTitle>Detail Pelanggan</CardTitle>
                                     <CardDescription>Data pelanggan yang tersimpan di database aplikasi.</CardDescription>
@@ -1000,6 +1182,7 @@ export default function PelangganAdminPage() {
                                         </AlertDialogContent>
                                     </AlertDialog>
                                     <Button size="sm" onClick={() => setIsNewRiwayatOpen(true)}><Wrench /> Input Laporan Gangguan</Button>
+                                    <Button size="sm" variant="outline" onClick={() => setIsEditOpen(true)}><Pencil /> Ubah Info</Button>
                                 </div>
                             </div>
                         </CardHeader>
@@ -1038,6 +1221,21 @@ export default function PelangganAdminPage() {
                 onOpenChange={setIsNewPelangganOpen}
                 onFinished={handleNewPelanggan}
             />
+
+            {selectedPelanggan && (
+                <EditPelangganDialog
+                    pelanggan={selectedPelanggan}
+                    isOpen={isEditOpen}
+                    onOpenChange={setIsEditOpen}
+                    onFinished={() => {
+                        const current = selectedPelanggan;
+                        setSelectedPelanggan(null); // Force re-render
+                        setTimeout(() => setSelectedPelanggan(current), 0);
+                        setIsEditOpen(false);
+                    }}
+                    user={currentUserProfile}
+                />
+            )}
 
             {selectedPelanggan && (
                 <NewRiwayatDialog 
