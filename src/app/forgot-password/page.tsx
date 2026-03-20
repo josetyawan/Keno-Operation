@@ -30,8 +30,6 @@ export default function ForgotPasswordPage() {
     }
     setIsLoading(true);
     try {
-      // We no longer use actionCodeSettings as the base URL is broken on the platform.
-      // We will rely on the user to copy the oobCode from the URL.
       await sendPasswordReset(auth, email);
       setIsSuccess(true);
     } catch (error) {

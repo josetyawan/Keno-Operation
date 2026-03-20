@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -33,22 +32,20 @@ export default function SignupPage() {
     setSignupError(null);
     setIsLoading(true);
 
-    let authUser: User | undefined; // Define here to access in catch block
+    let authUser: User | undefined; 
 
     try {
-      // Step 1: Create the authentication user
       const userCredential = await signUpWithEmail(auth, password, { email });
       authUser = userCredential.user;
 
-      // Step 2: Directly create the user document in Firestore
       const newUserDocRef = doc(firestore, 'users', authUser.uid);
       const newUserProfileData: UserProfile = {
           id: authUser.uid,
           email: authUser.email!,
           role: 'teknisi',
           registrationStatus: 'pending',
-          appAccess: 'nota', // Default access level
-          displayName: authUser.email?.split('@')[0] || 'New User',
+          appAccess: 'nota',
+          displayName: authUser.email?.split('@')[0] || 'User Baru',
           firstName: '',
           lastName: '',
           nik: '',
@@ -56,15 +53,12 @@ export default function SignupPage() {
           jabatan: '',
       };
       
-      // Await the database write to ensure it completes before proceeding
       await setDoc(newUserDocRef, newUserProfileData);
 
-      // Step 3: If both succeed, sign the user out to prevent auto-login to a pending account
       if (auth.currentUser) {
         await auth.signOut();
       }
 
-      // Step 4: Show a clear success message and redirect to the login page
       toast({
         title: 'Pendaftaran Berhasil!',
         description: 'Akun Anda telah dibuat. Silakan login setelah akun Anda disetujui oleh admin.',
@@ -94,10 +88,9 @@ export default function SignupPage() {
             errorMessage = `Pendaftaran gagal: ${error.message}`;
         }
 
-        // Cleanup: If any step fails, delete the created auth user so they can try again.
         if (authUser) {
             await deleteUser(authUser).catch(delErr => {
-                console.error("Cleanup failed: Could not delete orphaned auth user.", delErr);
+                console.error("Gagal membersihkan user:", delErr);
                 errorMessage += " Gagal melakukan pembersihan otomatis, harap hubungi admin."
             });
         }

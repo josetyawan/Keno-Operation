@@ -61,7 +61,7 @@ export default function ResetPasswordPage() {
                     description = 'Password baru Anda terlalu lemah. Harap gunakan minimal 6 karakter.';
                     break;
                  default:
-                    description = `Terjadi kesalahan. (${firebaseError.code})`
+                    description = `Terjadi kesalahan. (${firebaseError.code})`;
                     break;
             }
         }
