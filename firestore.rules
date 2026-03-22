@@ -218,6 +218,7 @@ service cloud.firestore {
       allow read: if isAdmin() || isKorlap() || (isApproved() && resource.data.assignedTo_userId == request.auth.uid);
       allow create: if isAdmin() || isKorlap();
       allow update: if (isAdmin() || isKorlap()) || (isApproved() && resource.data.assignedTo_userId == request.auth.uid);
+      allow delete: if isAdmin() || isKorlap();
     }
   }
 }
