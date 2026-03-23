@@ -15,6 +15,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Adsense } from '@/components/adsense';
 
 // Helper to safely parse bobot which might be a string with a comma
 const parseBobot = (bobot: number | string | undefined): number => {
@@ -225,7 +226,7 @@ export default function UserPerformancePage() {
     return (
         <div className="space-y-6">
             <div className="flex items-center gap-4">
-                <Button onClick={() => router.push('/dashboard')} variant="outline" size="icon" className="h-8 w-8">
+                <Button onClick={() => router.push('/dashboard/hr/performance/goodbye')} variant="outline" size="icon" className="h-8 w-8">
                     <ArrowLeft className="h-4 w-4" />
                 </Button>
                 <div>
@@ -344,6 +345,15 @@ export default function UserPerformancePage() {
                     </CardContent>
                 </Card>
             )}
+             <div className="mt-8 w-full overflow-hidden">
+                <Adsense
+                data-ad-client="ca-pub-6478281232505590"
+                data-ad-slot="YOUR_AD_SLOT_ID_PERFORMANCE_BANNER"
+                data-ad-format="auto"
+                className="block"
+                data-full-width-responsive="true"
+                />
+            </div>
         </div>
     );
 }

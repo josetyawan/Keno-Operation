@@ -12,6 +12,7 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Adsense } from '@/components/adsense';
 
 export default function ChatHubPage() {
   const { user, isUserLoading } = useUser();
@@ -154,6 +155,15 @@ export default function ChatHubPage() {
             </CardFooter>
            )}
       </Card>
+        <div className="mt-8 w-full overflow-hidden">
+            <Adsense
+                data-ad-client="ca-pub-6478281232505590"
+                data-ad-slot="YOUR_AD_SLOT_ID_CHAT"
+                data-ad-format="auto"
+                className="block"
+                data-full-width-responsive="true"
+            />
+        </div>
     </div>
   );
 }

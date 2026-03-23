@@ -253,7 +253,7 @@ export default function AllproPage() {
   return (
     <div className="mx-auto grid w-full flex-1 auto-rows-max gap-6">
       <div className="flex items-center gap-4">
-        <Button onClick={() => router.push('/dashboard')} variant="outline" size="icon" className="h-8 w-8">
+        <Button onClick={() => router.push('/dashboard/allpro/goodbye')} variant="outline" size="icon" className="h-8 w-8">
           <ArrowLeft className="h-4 w-4" />
           <span className="sr-only">Kembali</span>
         </Button>
@@ -572,7 +572,7 @@ export default function AllproPage() {
           </CardContent>
         </Card>
       </div>
-      <div className="mt-2 w-full overflow-hidden">
+      <div className="mt-8 w-full overflow-hidden">
         <Adsense
           data-ad-client="ca-pub-6478281232505590"
           data-ad-slot="YOUR_AD_SLOT_ID_ALLPRO"

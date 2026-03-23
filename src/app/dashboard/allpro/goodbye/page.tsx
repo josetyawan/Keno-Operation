@@ -6,7 +6,7 @@ import { Adsense } from '@/components/adsense';
 import { Loader2 } from 'lucide-react';
 import { Logo } from '@/components/logo';
 
-export default function PerformanceGoodbyePage() {
+export default function AllproGoodbyePage() {
   const router = useRouter();
 
   useEffect(() => {
@@ -29,7 +29,7 @@ export default function PerformanceGoodbyePage() {
         <div className="border p-2 rounded-md">
             <Adsense
                 data-ad-client="ca-pub-6478281232505590"
-                data-ad-slot="YOUR_AD_SLOT_ID_PERFORMANCE"
+                data-ad-slot="YOUR_AD_SLOT_ID_ALLPRO_GOODBYE"
                 data-ad-format="auto"
                 data-full-width-responsive="true"
             />
