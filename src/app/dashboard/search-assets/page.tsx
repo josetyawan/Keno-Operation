@@ -388,9 +388,9 @@ export default function SearchAssetsPage() {
                         {!isMitratelSearch && <TableHead>STO</TableHead>}
                         <TableHead>Coordinates</TableHead>
                         {isMitratelSearch && <TableHead>Mitratel ID</TableHead>}
-                        {!isNodeB && !isMitratel && <TableHead>Site Name</TableHead>}
-                        {!isMitratel && !isNodeB && <TableHead>Avail</TableHead>}
-                        {!isMitratel && !isNodeB && <TableHead>Used</TableHead>}
+                        {!isNodeBSearch && !isMitratelSearch && <TableHead>Site Name</TableHead>}
+                        {!isMitratelSearch && !isNodeBSearch && <TableHead>Avail</TableHead>}
+                        {!isMitratelSearch && !isNodeBSearch && <TableHead>Used</TableHead>}
                         <TableHead>QR</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -399,7 +399,7 @@ export default function SearchAssetsPage() {
             <TableBody>
               {areAssetsLoading ? (
                  Array.from({ length: 5 }).map((_, index) => (
-                    <TableRow key={index}><TableCell colSpan={isNodeBSearch ? 12 : 11}><Skeleton className="h-6 w-full" /></TableCell></TableRow>
+                    <TableRow key={index}><TableCell colSpan={isNodeBSearch ? 12 : 12}><Skeleton className="h-6 w-full" /></TableCell></TableRow>
                 ))
               ) : paginatedAssets.length > 0 ? (
                 paginatedAssets.map(a => {
@@ -437,9 +437,9 @@ export default function SearchAssetsPage() {
                     {!isMitratelSearch && <TableCell>{a.sto}</TableCell>}
                     <TableCell>{a.coordinates || '-'}</TableCell>
                     {isMitratelSearch && <TableCell>{a.mitratelSiteId || '-'}</TableCell>}
-                    {!isNodeB && !isMitratel && <TableCell>{a.siteName || '-'}</TableCell>}
-                    {!isMitratel && !isNodeB && <TableCell>{a.portAvai || '-'}</TableCell>}
-                    {!isMitratel && !isNodeB && <TableCell>{a.portUsed || '-'}</TableCell>}
+                    {!isNodeBSearch && !isMitratelSearch && <TableCell>{a.siteName || '-'}</TableCell>}
+                    {!isMitratelSearch && !isNodeBSearch && <TableCell>{a.portAvai || '-'}</TableCell>}
+                    {!isMitratelSearch && !isNodeBSearch && <TableCell>{a.portUsed || '-'}</TableCell>}
                     <TableCell>
                         {a.qrCodeUrl ? (
                             <Button asChild variant="ghost" size="icon" title="Lihat QR Code">
@@ -467,7 +467,7 @@ export default function SearchAssetsPage() {
                 )})
               ) : (
                 <TableRow>
-                  <TableCell colSpan={isNodeBSearch ? 12 : 11} className="h-24 text-center">
+                  <TableCell colSpan={isNodeBSearch ? 12 : 12} className="h-24 text-center">
                     {!canSearch 
                       ? "Silakan pilih Kategori/Area untuk memulai." 
                       : !hasTyped 
