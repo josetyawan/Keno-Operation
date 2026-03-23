@@ -121,7 +121,7 @@ export default function AttendanceRekapPage() {
 
     const userMap = useMemo(() => {
         if (!allUsers) return new Map();
-        return new Map(allUsers.map(u => [u.id, u]));
+        return new Map(allUsers.map(u => [u.id, u.displayName || u.email]));
     }, [allUsers]);
     
     const handleDownloadJpg = async () => {
