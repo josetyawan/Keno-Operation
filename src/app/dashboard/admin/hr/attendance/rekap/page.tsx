@@ -334,8 +334,8 @@ export default function AttendanceRekapPage() {
             
             <div className="flex items-center justify-between no-print">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Rekap Absensi Jaga</h1>
-                    <p className="text-muted-foreground">Lihat foto absensi teknisi berdasarkan tanggal.</p>
+                    <h1 className="text-3xl font-bold tracking-tight">Rekap Absensi</h1>
+                    <p className="text-muted-foreground">Lihat foto absensi teknisi berdasarkan tanggal dan unduh rekap bulanan.</p>
                 </div>
             </div>
 
