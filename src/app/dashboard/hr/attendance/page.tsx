@@ -796,10 +796,15 @@ export default function AttendancePage() {
             let attendanceReason: string | undefined = undefined;
             let noticeStatus = 'Hadir Tepat Waktu';
 
-            if (checkInWindow && now > checkInWindow.target) {
-                attendanceStatus = 'late';
-                attendanceReason = `Absen terlambat di luar jam toleransi. Batas waktu: ${format(checkInWindow.target, 'HH:mm')}.`;
-                noticeStatus = `Terlambat (Absen Pukul ${format(now, 'HH:mm')})`;
+            if (checkInWindow) {
+                // To be late, the time must be 08:01:00 or later.
+                // Anything in the 08:00 minute is considered on time.
+                const lateThreshold = add(checkInWindow.target, { minutes: 1 });
+                if (now >= lateThreshold) {
+                    attendanceStatus = 'late';
+                    attendanceReason = `Absen terlambat di luar jam toleransi. Batas waktu: ${format(checkInWindow.target, 'HH:mm')}.`;
+                    noticeStatus = `Terlambat (Absen Pukul ${format(now, 'HH:mm')})`;
+                }
             }
 
             const newAttendance: Omit<Attendance, 'id'> = {
