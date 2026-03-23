@@ -1,18 +1,19 @@
+
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, where, Timestamp, doc, orderBy, writeBatch, getDocs, startOfMonth, endOfMonth, getDaysInMonth, isWeekend } from 'firebase/firestore';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { collection, query, where, Timestamp, doc, orderBy, writeBatch } from 'firebase/firestore';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { format, isValid } from 'date-fns';
+import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import Image from 'next/image';
-import type { UserProfile, Attendance, Schedule, Holiday } from '@/lib/types';
+import type { UserProfile, Attendance } from '@/lib/types';
 import { useRouter } from 'next/navigation';
-import { Calendar as CalendarIcon, Download, MapPin, Trash2, Loader2, FileSpreadsheet } from 'lucide-react';
+import { Calendar as CalendarIcon, Download, MapPin, Trash2, Loader2 } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,8 +29,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 export default function AttendanceRekapPage() {
@@ -38,15 +37,9 @@ export default function AttendanceRekapPage() {
     const router = useRouter();
     const { toast } = useToast();
 
-    // State for photo rekap
     const [selectedDate, setSelectedDate] = useState<Date | undefined>();
     const [isDeleteAllDialogOpen, setIsDeleteAllDialogOpen] = useState(false);
     const [isDeletingAll, setIsDeletingAll] = useState(false);
-
-    // State for Excel export
-    const [exportMonth, setExportMonth] = useState<string>(String(new Date().getMonth()));
-    const [exportYear, setExportYear] = useState<string>(String(new Date().getFullYear()));
-    const [isExporting, setIsExporting] = useState(false);
 
     useEffect(() => {
         setSelectedDate(new Date());
@@ -63,8 +56,7 @@ export default function AttendanceRekapPage() {
             }
         }
     }, [user, currentUserProfile, isUserLoading, isProfileLoading, router]);
-    
-    // --- Queries for Photo Rekap ---
+
     const attendancesQuery = useMemoFirebase(() => {
         if (!selectedDate) return null;
         const start = new Date(selectedDate);
@@ -82,47 +74,30 @@ export default function AttendanceRekapPage() {
 
     const { data: attendances, isLoading: areAttendancesLoading } = useCollection<Attendance>(attendancesQuery);
     
-    // --- Queries for Excel Export ---
-    const exportDateRange = useMemo(() => {
-        if (exportMonth === '' || exportYear === '') return null;
-        const year = parseInt(exportYear);
-        const month = parseInt(exportMonth);
-        const startDate = startOfMonth(new Date(year, month));
-        const endDate = endOfMonth(startDate);
-        return { startDate, endDate };
-    }, [exportMonth, exportYear]);
+    const usersQuery = useMemoFirebase(() => {
+        if (!attendances || attendances.length === 0) return null;
+        const userIds = [...new Set(attendances.map(a => a.userId))];
+        
+        if (userIds.length === 0) return null;
 
-    const allUsersQuery = useMemoFirebase(() => query(collection(firestore, 'users'), where('registrationStatus', '==', 'approved')), [firestore]);
-    const { data: allUsers, isLoading: areUsersLoading } = useCollection<UserProfile>(allUsersQuery);
-
-    const schedulesForMonthQuery = useMemoFirebase(() => {
-        if (!exportDateRange) return null;
-        return query(
-            collection(firestore, 'schedules'),
-            where('date', '>=', Timestamp.fromDate(exportDateRange.startDate)),
-            where('date', '<=', Timestamp.fromDate(exportDateRange.endDate))
-        );
-    }, [firestore, exportDateRange]);
-    const { data: schedulesInMonth, isLoading: areSchedulesLoading } = useCollection<Schedule>(schedulesForMonthQuery);
+        const chunks: string[][] = [];
+        for (let i = 0; i < userIds.length; i += 30) {
+            chunks.push(userIds.slice(i, i + 30));
+        }
+        
+        if(chunks.length > 1) {
+             toast({variant: 'destructive', title: 'Terlalu Banyak Pengguna', description: `Hanya nama untuk 30 dari ${userIds.length} pengguna pertama yang dapat ditampilkan.`})
+        }
+        
+        return query(collection(firestore, 'users'), where('id', 'in', chunks[0]));
+    }, [firestore, attendances, toast]);
     
-    const attendancesForMonthQuery = useMemoFirebase(() => {
-        if (!exportDateRange) return null;
-        return query(
-            collection(firestore, 'attendances'),
-            where('checkInTime', '>=', Timestamp.fromDate(exportDateRange.startDate)),
-            where('checkInTime', '<=', Timestamp.fromDate(exportDateRange.endDate))
-        );
-    }, [firestore, exportDateRange]);
-    const { data: attendancesInMonth, isLoading: areAttendancesInMonthLoading } = useCollection<Attendance>(attendancesForMonthQuery);
-
-    const holidaysQuery = useMemoFirebase(() => query(collection(firestore, 'holidays')), [firestore]);
-    const { data: allHolidays, isLoading: areHolidaysLoading } = useCollection<Holiday>(holidaysQuery);
-
+    const { data: users, isLoading: areUsersLoading } = useCollection<UserProfile>(usersQuery);
 
     const userMap = useMemo(() => {
-        if (!allUsers) return new Map();
-        return new Map(allUsers.map(u => [u.id, u.displayName || u.email]));
-    }, [allUsers]);
+        if (!users) return new Map();
+        return new Map(users.map(u => [u.id, u.displayName || u.email]));
+    }, [users]);
     
     const handleDownloadJpg = async () => {
         const recordsToDownload = attendances?.filter(att => att.checkInPhotoUrl);
@@ -220,98 +195,8 @@ export default function AttendanceRekapPage() {
             setIsDeletingAll(false);
         }
     };
-
-    const handleExport = async () => {
-        setIsExporting(true);
-
-        const teknisi = allUsers?.filter(u => u.role === 'teknisi') || [];
-        if (teknisi.length === 0) {
-            toast({ variant: 'destructive', title: 'Tidak ada data teknisi untuk diekspor.' });
-            setIsExporting(false);
-            return;
-        }
-        
-        try {
-            const XLSX = await import('xlsx');
-            
-            if (!exportDateRange) {
-                throw new Error("Periode export belum dipilih.");
-            }
-
-            const { startDate, endDate } = exportDateRange;
-            const daysInMonth = getDaysInMonth(startDate);
-
-            const holidaysMap = new Map(allHolidays?.map(h => [format(h.date.toDate(), 'yyyy-MM-dd'), true]));
-            const schedulesMap = new Map(schedulesInMonth?.map(s => [`${s.userId}-${format(s.date.toDate(), 'yyyy-MM-dd')}`, s]));
-            const attendancesMap = new Map(attendancesInMonth?.map(a => [`${a.userId}-${format(a.checkInTime.toDate(), 'yyyy-MM-dd')}`, a]));
-            
-            const workingShiftTypes = ['h', 'pu', 'pb', 'ptm', 'pt/bd', 'piket-demak', 'siang-malam', 'malam', 'weekend-duty', 'holiday-duty'];
-
-            const dataToExport = teknisi.map((tek, index) => {
-                const counts = { Hadir: 0, Terlambat: 0, Izin: 0, Cuti: 0, Mangkir: 0, Libur: 0 };
-                
-                for (let day = 1; day <= daysInMonth; day++) {
-                    const currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), day);
-                    const dateKey = format(currentDate, 'yyyy-MM-dd');
-                    const mapKey = `${tek.id}-${dateKey}`;
-
-                    const attendance = attendancesMap.get(mapKey);
-                    const schedule = schedulesMap.get(mapKey);
-
-                    if (attendance) {
-                        if (attendance.status === 'present') counts.Hadir++;
-                        else counts.Terlambat++; // Includes 'late' and 'remote-progress'
-                    } else if (schedule) {
-                        if (schedule.shiftType === 'ijin') counts.Izin++;
-                        else if (schedule.shiftType === 'cuti') counts.Cuti++;
-                        else if (['l', 'libur-dijadwalkan', 'tukar-jaga'].includes(schedule.shiftType)) counts.Libur++;
-                        else if (workingShiftTypes.includes(schedule.shiftType)) counts.Mangkir++;
-                    } else {
-                        if (isWeekend(currentDate) || holidaysMap.has(dateKey)) {
-                            counts.Libur++;
-                        } else {
-                            counts.Mangkir++;
-                        }
-                    }
-                }
-
-                return {
-                    'No': index + 1,
-                    'Nama Teknisi': tek.displayName || tek.email,
-                    'NIK': tek.nik || '-',
-                    'Hadir': counts.Hadir,
-                    'Terlambat': counts.Terlambat,
-                    'Izin': counts.Izin,
-                    'Cuti': counts.Cuti,
-                    'Mangkir': counts.Mangkir,
-                    'Libur': counts.Libur,
-                };
-            });
-
-            const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, 'Rekap Absensi');
-
-            const monthLabel = format(startDate, 'MMMM-yyyy', { locale: idLocale });
-            XLSX.writeFile(workbook, `Rekap_Absensi_${monthLabel}.xlsx`);
-
-            toast({ title: 'Ekspor Berhasil', description: 'File Excel telah diunduh.' });
-        } catch (error: any) {
-            console.error('Export error:', error);
-            toast({ variant: 'destructive', title: 'Gagal Mengekspor', description: error.message || 'Terjadi kesalahan saat membuat file.' });
-        } finally {
-            setIsExporting(false);
-        }
-    };
     
-    const pageIsLoading = isUserLoading || isProfileLoading || areAttendancesLoading || areUsersLoading;
-    const exportIsLoading = areUsersLoading || areSchedulesLoading || areAttendancesInMonthLoading || areHolidaysLoading;
-
-    const monthOptions = useMemo(() => Array.from({ length: 12 }, (_, i) => ({
-        value: String(i),
-        label: format(new Date(2000, i), 'MMMM', { locale: idLocale }),
-    })), []);
-    const yearOptions = useMemo(() => Array.from({ length: 5 }, (_, i) => String(new Date().getFullYear() - i)), []);
+    const isLoading = isUserLoading || isProfileLoading || areAttendancesLoading || areUsersLoading;
 
     return (
         <div id="rekap-page" className="space-y-6">
@@ -337,42 +222,14 @@ export default function AttendanceRekapPage() {
             
             <div className="flex items-center justify-between no-print">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Rekap Absensi</h1>
-                    <p className="text-muted-foreground">Lihat foto absensi teknisi berdasarkan tanggal dan unduh rekap bulanan.</p>
+                    <h1 className="text-3xl font-bold tracking-tight">Rekap Absensi Jaga</h1>
+                    <p className="text-muted-foreground">Lihat foto absensi teknisi berdasarkan tanggal.</p>
                 </div>
             </div>
-
-            <Card className="no-print">
-                <CardHeader>
-                    <CardTitle>Export Rekap Absensi Bulanan</CardTitle>
-                    <CardDescription>Pilih bulan dan tahun untuk mengunduh rekap absensi lengkap dalam format Excel.</CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-wrap items-end gap-4">
-                    <div className="grid gap-2">
-                        <Label htmlFor="export-month">Bulan</Label>
-                        <Select value={exportMonth} onValueChange={setExportMonth}>
-                            <SelectTrigger id="export-month" className="w-[180px]"><SelectValue /></SelectTrigger>
-                            <SelectContent>{monthOptions.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}</SelectContent>
-                        </Select>
-                    </div>
-                     <div className="grid gap-2">
-                        <Label htmlFor="export-year">Tahun</Label>
-                        <Select value={exportYear} onValueChange={setExportYear}>
-                            <SelectTrigger id="export-year" className="w-[120px]"><SelectValue /></SelectTrigger>
-                            <SelectContent>{yearOptions.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
-                        </Select>
-                    </div>
-                    <Button onClick={handleExport} disabled={isExporting || exportIsLoading}>
-                        {isExporting || exportIsLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-2 h-4 w-4" />}
-                        {exportIsLoading ? 'Memuat Data...' : 'Download Excel'}
-                    </Button>
-                </CardContent>
-            </Card>
             
              <Card className="no-print">
                 <CardHeader>
-                    <CardTitle>Rekap Foto Harian</CardTitle>
-                    <CardDescription>Pilih tanggal untuk melihat kolase foto absensi yang masuk pada hari itu.</CardDescription>
+                    <CardTitle>Pilih Tanggal</CardTitle>
                 </CardHeader>
                 <CardContent>
                      <Popover>
@@ -418,7 +275,7 @@ export default function AttendanceRekapPage() {
                     </div>
                 </div>
 
-                {pageIsLoading ? (
+                {isLoading ? (
                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         {Array.from({length: 8}).map((_, i) => (
                            <Skeleton key={i} className="aspect-square w-full" />
@@ -440,7 +297,7 @@ export default function AttendanceRekapPage() {
                                 </div>
                                 <CardContent className="p-3 text-sm">
                                     <p className="font-semibold truncate">{userMap.get(att.userId) || 'Memuat...'}</p>
-                                    <p className="text-muted-foreground">{att.checkInTime?.toDate ? format(att.checkInTime.toDate(), 'HH:mm:ss', {locale: idLocale}) : '...'}</p>
+                                    <p className="text-muted-foreground">{format(att.checkInTime.toDate(), 'HH:mm:ss', {locale: idLocale})}</p>
                                     <Link href={`https://www.google.com/maps/search/?api=1&query=${att.checkInCoordinates}`} target="_blank" rel="noopener noreferrer">
                                         <div className="text-blue-600 hover:underline flex items-center gap-1 mt-1">
                                             <MapPin className="h-3 w-3"/>
