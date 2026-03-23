@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
@@ -12,7 +11,7 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Camera, Clock, MapPin, Loader2, VideoOff, AlertTriangle, Coffee, Info, FileWarning, Upload, Calendar as CalendarIcon } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { format, set, add, sub } from 'date-fns';
+import { format, set, add, sub, isSameDay } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import Image from 'next/image';
 import type { Schedule, Attendance, UserProfile } from '@/lib/types';
@@ -292,23 +291,29 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished, userProfile, can
     const shiftType = todaySchedule?.shiftType;
 
     const isPagiShift = useMemo(() => ['h', 'pu', 'pb', 'ptm', 'pt/bd', 'piket-demak', 'weekend-duty', 'holiday-duty'].includes(shiftType || ''), [shiftType]);
-    const isAfterPagiCutoff = useMemo(() => now.getHours() >= 8 && new Date(now.toDateString()).getTime() === new Date(today.toDateString()).getTime(), [now, today]);
-    const isMangkir = isPagiShift && isAfterPagiCutoff;
-    
+    const isAfterPagiCutoff = useMemo(() => {
+        const cutoff = new Date(today);
+        cutoff.setHours(8, 0, 0, 0); // 08:00:00 sharp
+        return now >= cutoff;
+    }, [now, today]);
+
     const isSmcShift = shiftType === 'siang-malam';
-    const isAfterSmcCutoff = useMemo(() => now.getHours() >= 14 && new Date(now.toDateString()).getTime() === new Date(today.toDateString()).getTime(), [now, today]);
+    const isAfterSmcCutoff = useMemo(() => {
+        const cutoff = new Date(today);
+        cutoff.setHours(14, 0, 0, 0); // 14:00:00 sharp
+        return now >= cutoff;
+    }, [now, today]);
     
     const isMalamShift = shiftType === 'malam';
 
     const isTukarJagaAllowed = useMemo(() => {
         const shiftDate = today;
-        const startOfShiftDay = new Date(shiftDate.getFullYear(), shiftDate.getMonth(), shiftDate.getDate());
-        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-        if (startOfShiftDay > startOfToday) return true;
-        if (startOfShiftDay.getTime() === startOfToday.getTime()) return now.getHours() < 8;
-        return false;
+        const cutoff = new Date(shiftDate);
+        cutoff.setHours(8, 0, 0, 0);
+        return now < cutoff;
     }, [today, now]);
+    
+    const isMangkir = (isPagiShift && isAfterPagiCutoff) || (isSmcShift && isAfterSmcCutoff);
     // --- End of time-based rules ---
 
     useEffect(() => {
@@ -350,40 +355,34 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished, userProfile, can
     const handleSubmit = async () => {
         if (!user || !user.email || !userProfile) return;
 
-        // Re-validate rules on submit
+        // Re-validate rules on submit for maximum accuracy
         const submissionTime = new Date();
-        const subIsPagiShift = isPagiShift;
-        const subIsAfterPagiCutoff = submissionTime.getHours() >= 8 && new Date(submissionTime.toDateString()).getTime() === new Date(today.toDateString()).getTime();
-        const subIsSmcShift = isSmcShift;
-        const subIsAfterSmcCutoff = submissionTime.getHours() >= 14 && new Date(submissionTime.toDateString()).getTime() === new Date(today.toDateString()).getTime();
-        const subIsMalamShift = isMalamShift;
-        const subIsTukarJagaAllowed = (() => {
-            const shiftDate = swapDate || today;
-            const startOfShiftDay = new Date(shiftDate.getFullYear(), shiftDate.getMonth(), shiftDate.getDate());
-            const startOfToday = new Date(submissionTime.getFullYear(), submissionTime.getMonth(), submissionTime.getDate());
-            if (startOfShiftDay > startOfToday) return true;
-            if (startOfShiftDay.getTime() === startOfToday.getTime()) return submissionTime.getHours() < 8;
-            return false;
-        })();
+        const pagiCutoff = new Date(today);
+        pagiCutoff.setHours(8, 0, 0, 0);
+        const smcCutoff = new Date(today);
+        smcCutoff.setHours(14, 0, 0, 0);
         
-        if (
-            (leaveType === 'sick-leave' || leaveType === 'cuti') && subIsPagiShift && subIsAfterPagiCutoff
-        ) {
+        const subIsAfterPagiCutoff = isPagiShift && submissionTime >= pagiCutoff;
+        const subIsAfterSmcCutoff = isSmcShift && submissionTime >= smcCutoff;
+
+        const tukarJagaCutoff = new Date(swapDate || today);
+        tukarJagaCutoff.setHours(8, 0, 0, 0);
+        const subIsTukarJagaAllowed = submissionTime < tukarJagaCutoff;
+
+        // Perform validation checks based on the state at the moment of submission
+        if ((leaveType === 'sick-leave' || leaveType === 'cuti') && subIsAfterPagiCutoff) {
             toast({ variant: 'destructive', title: 'Waktu Habis', description: 'Waktu untuk mengajukan izin/cuti shift pagi sudah lewat (batas jam 08:00).' });
             return;
         }
         if (leaveType === 'tukar-jaga' && !subIsTukarJagaAllowed) {
-            toast({ variant: 'destructive', title: 'Waktu Habis', description: 'Request tukar jaga hanya bisa dilakukan sebelum hari H, atau pada hari H sebelum jam 08:00.' });
+            toast({ variant: 'destructive', title: 'Waktu Habis', description: 'Request tukar jaga hanya bisa dilakukan sebelum jam 08:00 pada hari H atau hari sebelumnya.' });
             return;
         }
-        if (leaveType === 'late' && subIsMalamShift) {
+        if (leaveType === 'late' && isMalamShift) {
              toast({ variant: 'destructive', title: 'Opsi Tidak Tersedia', description: 'Izin terlambat tidak tersedia untuk shift malam.' });
              return;
         }
-         if (
-            (leaveType === 'late' || leaveType === 'remote-progress') && 
-            ((subIsPagiShift && subIsAfterPagiCutoff) || (subIsSmcShift && subIsAfterSmcCutoff))
-        ) {
+        if ((leaveType === 'late' || leaveType === 'remote-progress') && (subIsAfterPagiCutoff || subIsAfterSmcCutoff)) {
             toast({ variant: 'destructive', title: 'Waktu Habis', description: 'Waktu untuk izin progres/terlambat sudah lewat.' });
             return;
         }
@@ -535,7 +534,7 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished, userProfile, can
                         <SelectContent>
                            {isMangkir ? (
                                 <div className="p-4 text-center text-sm font-medium text-destructive-foreground bg-destructive">
-                                    Anda sudah dianggap mangkir untuk shift pagi ini (lewat dari jam 08:00).
+                                    Anda sudah dianggap mangkir untuk shift ini.
                                 </div>
                             ) : (
                                 <>
