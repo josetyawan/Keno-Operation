@@ -133,7 +133,9 @@ export default function AlkerDetailPage() {
                         <CardTitle className="text-base">{tool.toolName}</CardTitle>
                         {tool.condition === 'baik' ? 
                             <Badge variant="outline" className="text-green-600 border-green-600"><Check className="mr-1 h-3 w-3"/> Baik</Badge> : 
-                            <Badge variant="destructive"><X className="mr-1 h-3 w-3"/> Rusak</Badge>
+                            tool.condition === 'rusak' ?
+                            <Badge variant="destructive"><X className="mr-1 h-3 w-3"/> Rusak</Badge> :
+                            <Badge variant="secondary">Tidak Punya</Badge>
                         }
                     </CardHeader>
                     <CardContent className="p-4 grid md:grid-cols-2 lg:grid-cols-4 gap-4">

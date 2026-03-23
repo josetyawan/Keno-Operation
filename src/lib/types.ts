@@ -297,7 +297,7 @@ export type Attendance = {
 
 export type AlkerTool = {
   toolName: string;
-  condition: 'baik' | 'rusak';
+  condition: 'baik' | 'rusak' | 'tidak-punya';
   serialNumber?: string;
   brand?: string;
   photoUrl1?: string;

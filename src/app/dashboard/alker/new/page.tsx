@@ -141,7 +141,7 @@ export default function NewAlkerPage() {
       crewUserId: '',
       tools: toolList.map(name => ({
         toolName: name,
-        condition: 'baik',
+        condition: 'tidak-punya',
         serialNumber: '',
         brand: '',
         photoUrl1: '',
@@ -165,7 +165,7 @@ export default function NewAlkerPage() {
         const existingTool = existingChecklist.tools.find(t => t.toolName === toolName);
         return {
           toolName: toolName,
-          condition: existingTool?.condition || 'baik',
+          condition: existingTool?.condition || 'tidak-punya',
           serialNumber: existingTool?.serialNumber || '',
           brand: existingTool?.brand || '',
           photoUrl1: existingTool?.photoUrl1 || '',
@@ -411,6 +411,7 @@ export default function NewAlkerPage() {
                                                         <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex gap-4">
                                                             <div className="flex items-center space-x-2"><RadioGroupItem value="baik" id={`baik-${index}`} /><Label htmlFor={`baik-${index}`}>Baik</Label></div>
                                                             <div className="flex items-center space-x-2"><RadioGroupItem value="rusak" id={`rusak-${index}`} /><Label htmlFor={`rusak-${index}`}>Rusak</Label></div>
+                                                            <div className="flex items-center space-x-2"><RadioGroupItem value="tidak-punya" id={`tidak-punya-${index}`} /><Label htmlFor={`tidak-punya-${index}`}>Tidak Punya</Label></div>
                                                         </RadioGroup>
                                                     )}
                                                 />
@@ -490,6 +491,7 @@ export default function NewAlkerPage() {
                                                 <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex gap-4">
                                                     <div className="flex items-center space-x-2"><RadioGroupItem value="baik" id={`otherBaik-${index}`} /><Label htmlFor={`otherBaik-${index}`}>Baik</Label></div>
                                                     <div className="flex items-center space-x-2"><RadioGroupItem value="rusak" id={`otherRusak-${index}`} /><Label htmlFor={`otherRusak-${index}`}>Rusak</Label></div>
+                                                    <div className="flex items-center space-x-2"><RadioGroupItem value="tidak-punya" id={`other-tidak-punya-${index}`} /><Label htmlFor={`other-tidak-punya-${index}`}>Tidak Punya</Label></div>
                                                 </RadioGroup>
                                             )}
                                         />
@@ -532,7 +534,7 @@ export default function NewAlkerPage() {
                             </Card>
                         );
                     })}
-                    <Button type="button" variant="outline" className="w-full mt-4" onClick={() => appendOther({ toolName: '', condition: 'baik', serialNumber: '', brand: '', photoUrl1: '', photoUrl2: '' })}>
+                    <Button type="button" variant="outline" className="w-full mt-4" onClick={() => appendOther({ toolName: '', condition: 'tidak-punya', serialNumber: '', brand: '', photoUrl1: '', photoUrl2: '' })}>
                         <PlusCircle className="mr-2 h-4 w-4" /> Tambah Alat Lain-lain
                     </Button>
                 </CardContent>
