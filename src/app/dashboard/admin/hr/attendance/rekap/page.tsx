@@ -84,7 +84,7 @@ export default function AttendanceRekapPage() {
     
     // --- Queries for Excel Export ---
     const exportDateRange = useMemo(() => {
-        if (!exportMonth || !exportYear) return null;
+        if (exportMonth === '' || exportYear === '') return null;
         const year = parseInt(exportYear);
         const month = parseInt(exportMonth);
         const startDate = startOfMonth(new Date(year, month));
@@ -234,9 +234,12 @@ export default function AttendanceRekapPage() {
         try {
             const XLSX = await import('xlsx');
             
-            const year = parseInt(exportYear);
-            const month = parseInt(exportMonth);
-            const daysInMonth = getDaysInMonth(new Date(year, month));
+            if (!exportDateRange) {
+                throw new Error("Periode export belum dipilih.");
+            }
+
+            const { startDate, endDate } = exportDateRange;
+            const daysInMonth = getDaysInMonth(startDate);
 
             const holidaysMap = new Map(allHolidays?.map(h => [format(h.date.toDate(), 'yyyy-MM-dd'), true]));
             const schedulesMap = new Map(schedulesInMonth?.map(s => [`${s.userId}-${format(s.date.toDate(), 'yyyy-MM-dd')}`, s]));
@@ -248,7 +251,7 @@ export default function AttendanceRekapPage() {
                 const counts = { Hadir: 0, Terlambat: 0, Izin: 0, Cuti: 0, Mangkir: 0, Libur: 0 };
                 
                 for (let day = 1; day <= daysInMonth; day++) {
-                    const currentDate = new Date(year, month, day);
+                    const currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), day);
                     const dateKey = format(currentDate, 'yyyy-MM-dd');
                     const mapKey = `${tek.id}-${dateKey}`;
 
@@ -289,13 +292,13 @@ export default function AttendanceRekapPage() {
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, 'Rekap Absensi');
 
-            const monthLabel = format(new Date(year, month), 'MMMM-yyyy', { locale: idLocale });
+            const monthLabel = format(startDate, 'MMMM-yyyy', { locale: idLocale });
             XLSX.writeFile(workbook, `Rekap_Absensi_${monthLabel}.xlsx`);
 
             toast({ title: 'Ekspor Berhasil', description: 'File Excel telah diunduh.' });
-        } catch (error) {
+        } catch (error: any) {
             console.error('Export error:', error);
-            toast({ variant: 'destructive', title: 'Gagal Mengekspor', description: 'Terjadi kesalahan saat membuat file.' });
+            toast({ variant: 'destructive', title: 'Gagal Mengekspor', description: error.message || 'Terjadi kesalahan saat membuat file.' });
         } finally {
             setIsExporting(false);
         }
@@ -369,6 +372,7 @@ export default function AttendanceRekapPage() {
              <Card className="no-print">
                 <CardHeader>
                     <CardTitle>Rekap Foto Harian</CardTitle>
+                    <CardDescription>Pilih tanggal untuk melihat kolase foto absensi yang masuk pada hari itu.</CardDescription>
                 </CardHeader>
                 <CardContent>
                      <Popover>
@@ -456,4 +460,3 @@ export default function AttendanceRekapPage() {
         </div>
     );
 }
-    
