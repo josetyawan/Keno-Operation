@@ -50,7 +50,7 @@ const adminNavGroups = [
       { href: '/dashboard/admin/users', label: 'Manajemen User', icon: Users, access: 'admin' },
       { href: '/dashboard/admin/hr/schedules', label: 'Manajemen Jadwal', icon: CalendarClock, access: 'korlap' },
       { href: '/dashboard/admin/hr/holidays', label: 'Manajemen Hari Libur', icon: CalendarOff, access: 'admin' },
-      { href: '/dashboard/admin/hr/leave-rekap', label: 'Rekap Izin/Cuti', icon: CalendarOff, access: 'korlap' },
+      { href: '/dashboard/admin/hr/leave-rekap', label: 'Rekap Kehadiran', icon: CalendarOff, access: 'korlap' },
       { href: '/dashboard/admin/hr/performance', label: 'Impor Performa', icon: Upload, access: 'korlap' },
       { href: '/dashboard/admin/hr/bobot', label: 'Manajemen Bobot', icon: Weight, access: 'korlap' },
       { href: '/dashboard/hr/work-schedule', label: 'Jadwal Kerja', icon: CalendarDays, access: 'korlap' },
