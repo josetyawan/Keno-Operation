@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -60,11 +61,8 @@ function TransactionForm({ type, onFormSubmit, isSaving, userEmail }: { type: 'i
                             mode="single" 
                             selected={date} 
                             onSelect={setDate} 
-                            initialFocus 
-                            captionLayout="dropdown"
-                            fromYear={new Date().getFullYear() - 5}
-                            toYear={new Date().getFullYear()}
-                            disabled={{ after: new Date() }}
+                            initialFocus
+                            disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
                         />
                     </PopoverContent>
                 </Popover>
@@ -127,10 +125,7 @@ function EditTransactionForm({ transaction, onFormSubmit, isSaving }: { transact
                             selected={date} 
                             onSelect={setDate} 
                             initialFocus 
-                            captionLayout="dropdown"
-                            fromYear={new Date().getFullYear() - 5}
-                            toYear={new Date().getFullYear()}
-                            disabled={{ after: new Date() }}
+                            disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
                         />
                     </PopoverContent>
                 </Popover>
