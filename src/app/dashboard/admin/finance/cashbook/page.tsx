@@ -1,4 +1,5 @@
 
+      
 'use client';
 
 import * as React from 'react';
@@ -62,9 +63,7 @@ function TransactionForm({ type, onFormSubmit, isSaving, userEmail }: { type: 'i
                             selected={date} 
                             onSelect={setDate} 
                             initialFocus
-                            captionLayout="dropdown-nav"
-                            fromYear={new Date().getFullYear() - 5}
-                            toYear={new Date().getFullYear()}
+                            disabled={{ after: new Date() }}
                         />
                     </PopoverContent>
                 </Popover>
@@ -127,9 +126,7 @@ function EditTransactionForm({ transaction, onFormSubmit, isSaving }: { transact
                             selected={date} 
                             onSelect={setDate} 
                             initialFocus 
-                            captionLayout="dropdown-nav"
-                            fromYear={new Date().getFullYear() - 5}
-                            toYear={new Date().getFullYear()}
+                            disabled={{ after: new Date() }}
                         />
                     </PopoverContent>
                 </Popover>
@@ -423,3 +420,5 @@ export default function AdminCashbookPage() {
         </div>
     );
 }
+
+    
