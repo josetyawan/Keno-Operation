@@ -29,6 +29,7 @@ function TransactionForm({ type, onFormSubmit, isSaving, userEmail }: { type: 'i
     const [amount, setAmount] = useState('');
     const [description, setDescription] = useState('');
     const [date, setDate] = useState<Date | undefined>();
+    const today = React.useMemo(() => new Date(), []);
 
     useEffect(() => {
         setDate(new Date());
@@ -63,10 +64,7 @@ function TransactionForm({ type, onFormSubmit, isSaving, userEmail }: { type: 'i
                             selected={date} 
                             onSelect={setDate} 
                             initialFocus
-                            captionLayout="dropdown-buttons"
-                            fromYear={new Date().getFullYear() - 5}
-                            toYear={new Date().getFullYear()}
-                            disabled={{ after: new Date() }}
+                            disabled={{ after: today }}
                         />
                     </PopoverContent>
                 </Popover>
@@ -93,6 +91,7 @@ function EditTransactionForm({ transaction, onFormSubmit, isSaving }: { transact
     const [amount, setAmount] = useState('');
     const [description, setDescription] = useState('');
     const [date, setDate] = useState<Date | undefined>();
+    const today = React.useMemo(() => new Date(), []);
 
     useEffect(() => {
         if (transaction) {
@@ -129,10 +128,7 @@ function EditTransactionForm({ transaction, onFormSubmit, isSaving }: { transact
                             selected={date} 
                             onSelect={setDate} 
                             initialFocus 
-                            captionLayout="dropdown-buttons"
-                            fromYear={new Date().getFullYear() - 5}
-                            toYear={new Date().getFullYear()}
-                            disabled={{ after: new Date() }}
+                            disabled={{ after: today }}
                         />
                     </PopoverContent>
                 </Popover>
