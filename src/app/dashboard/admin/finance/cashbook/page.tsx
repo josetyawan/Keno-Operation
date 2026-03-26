@@ -63,6 +63,9 @@ function TransactionForm({ type, onFormSubmit, isSaving, userEmail }: { type: 'i
                             selected={date} 
                             onSelect={setDate} 
                             initialFocus
+                            captionLayout="dropdown-buttons"
+                            fromYear={new Date().getFullYear() - 5}
+                            toYear={new Date().getFullYear()}
                             disabled={{ after: new Date() }}
                         />
                     </PopoverContent>
@@ -126,6 +129,9 @@ function EditTransactionForm({ transaction, onFormSubmit, isSaving }: { transact
                             selected={date} 
                             onSelect={setDate} 
                             initialFocus 
+                            captionLayout="dropdown-buttons"
+                            fromYear={new Date().getFullYear() - 5}
+                            toYear={new Date().getFullYear()}
                             disabled={{ after: new Date() }}
                         />
                     </PopoverContent>
@@ -421,4 +427,5 @@ export default function AdminCashbookPage() {
     );
 }
 
+    
     
