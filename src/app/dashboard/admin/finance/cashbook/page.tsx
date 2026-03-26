@@ -62,7 +62,6 @@ function TransactionForm({ type, onFormSubmit, isSaving, userEmail }: { type: 'i
                             selected={date} 
                             onSelect={setDate} 
                             initialFocus
-                            disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
                         />
                     </PopoverContent>
                 </Popover>
@@ -125,7 +124,6 @@ function EditTransactionForm({ transaction, onFormSubmit, isSaving }: { transact
                             selected={date} 
                             onSelect={setDate} 
                             initialFocus 
-                            disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
                         />
                     </PopoverContent>
                 </Popover>
