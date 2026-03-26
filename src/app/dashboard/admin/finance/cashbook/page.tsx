@@ -24,12 +24,12 @@ import { id as idLocale } from 'date-fns/locale';
 import type { CashTransaction, UserProfile, Nota } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { DatePickerDropdowns } from '@/components/ui/date-picker-dropdowns';
 
 function TransactionForm({ type, onFormSubmit, isSaving, userEmail }: { type: 'in' | 'out', onFormSubmit: (data: Omit<CashTransaction, 'id' | 'createdAt'>) => void, isSaving: boolean, userEmail: string }) {
     const [amount, setAmount] = useState('');
     const [description, setDescription] = useState('');
     const [date, setDate] = useState<Date | undefined>();
-    const today = React.useMemo(() => new Date(), []);
 
     useEffect(() => {
         setDate(new Date());
@@ -51,23 +51,12 @@ function TransactionForm({ type, onFormSubmit, isSaving, userEmail }: { type: 'i
         <form onSubmit={handleSubmit} className="grid gap-4 py-4">
             <div className="grid gap-2">
                 <Label htmlFor="date">Tanggal Transaksi</Label>
-                 <Popover>
-                    <PopoverTrigger asChild>
-                        <Button variant={'outline'} className={cn('w-full justify-start text-left font-normal', !date && 'text-muted-foreground')}>
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {date ? format(date, 'PPP', {locale: idLocale}) : <span>Pilih tanggal</span>}
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                        <Calendar 
-                            mode="single" 
-                            selected={date} 
-                            onSelect={setDate} 
-                            initialFocus
-                            disabled={{ after: today }}
-                        />
-                    </PopoverContent>
-                </Popover>
+                <DatePickerDropdowns
+                    value={date}
+                    onChange={setDate}
+                    fromYear={new Date().getFullYear() - 5}
+                    toYear={new Date().getFullYear()}
+                />
             </div>
             <div className="grid gap-2">
                 <Label htmlFor="amount">Jumlah (Rp)</Label>
@@ -91,7 +80,6 @@ function EditTransactionForm({ transaction, onFormSubmit, isSaving }: { transact
     const [amount, setAmount] = useState('');
     const [description, setDescription] = useState('');
     const [date, setDate] = useState<Date | undefined>();
-    const today = React.useMemo(() => new Date(), []);
 
     useEffect(() => {
         if (transaction) {
@@ -115,23 +103,12 @@ function EditTransactionForm({ transaction, onFormSubmit, isSaving }: { transact
         <form onSubmit={handleSubmit} className="grid gap-4 py-4">
             <div className="grid gap-2">
                 <Label htmlFor="edit-date">Tanggal Transaksi</Label>
-                 <Popover>
-                    <PopoverTrigger asChild>
-                        <Button variant={'outline'} className={cn('w-full justify-start text-left font-normal', !date && 'text-muted-foreground')}>
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {date ? format(date, 'PPP', {locale: idLocale}) : <span>Pilih tanggal</span>}
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                        <Calendar 
-                            mode="single" 
-                            selected={date} 
-                            onSelect={setDate} 
-                            initialFocus 
-                            disabled={{ after: today }}
-                        />
-                    </PopoverContent>
-                </Popover>
+                <DatePickerDropdowns
+                    value={date}
+                    onChange={setDate}
+                    fromYear={new Date().getFullYear() - 5}
+                    toYear={new Date().getFullYear()}
+                />
             </div>
             <div className="grid gap-2">
                 <Label htmlFor="edit-amount">Jumlah (Rp)</Label>
