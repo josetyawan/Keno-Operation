@@ -52,6 +52,7 @@ const jenisOrderOptions = [
   "IXSA FTM", "IXSA ODC", "IXSA OLT", "Patroli Akses",
   "Tiket GAMAS", "Tangible ODP", "Validasi Tiang", "Valins FTM", "Valins ODC",
   "Valins Regular", "Preventive FIberisasi", "PT2 Simple", "UNLOCK ODP", "EXPAND ODP",
+  "Tiket Infracare",
 ].sort();
 
 const typeOrderOptions: Record<string, string[]> = {
@@ -399,5 +400,4 @@ export default function OtherWorksPage() {
         </>
     );
 }
-
     
