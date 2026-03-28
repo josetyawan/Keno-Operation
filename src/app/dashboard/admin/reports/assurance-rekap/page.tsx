@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import type { RiwayatGangguan, UserProfile, MaterialEvidence, Pelanggan } from '@/lib/types';
-import { Calendar as CalendarIcon, Download, Loader2, Files } from 'lucide-react';
+import { Calendar as CalendarIcon, Download, Loader2, Files, Printer } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { DateRange } from 'react-day-picker';
 import { useRouter } from 'next/navigation';
@@ -394,7 +394,98 @@ export default function AssuranceRekapPage() {
             setPreviewHtml(allPagesHtml);
         }
     };
-    
+
+    const handleGenerateBAPreview = () => {
+        const selectedRiwayat = riwayatList?.filter(r => selectedIds.includes(r.id)) || [];
+        if (selectedRiwayat.length === 0) {
+            toast({ variant: 'destructive', title: 'Tidak ada laporan dipilih.' });
+            return;
+        }
+
+        const splitterItems = selectedRiwayat.flatMap(report => 
+            (report.materials || [])
+                .filter(material => material.materialName.toUpperCase().includes('SPLITTER'))
+                .map(material => ({
+                    ticket: report.noTiket || report.noService,
+                    materialName: material.materialName,
+                    quantity: material.quantity || 1,
+                    keterangan: 'REGULER' // As per example
+                }))
+        );
+
+        if (splitterItems.length === 0) {
+            toast({ variant: 'destructive', title: 'Tidak Ditemukan', description: 'Tidak ada material splitter pada laporan yang dipilih.' });
+            return;
+        }
+        
+        toast({ title: 'Mempersiapkan Pratinjau BA...', description: 'Mengumpulkan data material splitter.' });
+
+        const today = new Date();
+        const dayName = format(today, 'eeee', { locale: idLocale });
+        const day = format(today, 'd');
+        const monthName = format(today, 'MMMM', { locale: idLocale });
+        const year = format(today, 'yyyy');
+
+        const userName = currentUserProfile?.displayName || 'N/A';
+        const userNik = currentUserProfile?.nik || 'N/A';
+        const userJabatan = currentUserProfile?.jabatan || 'N/A';
+        
+        const tableRowsHtml = splitterItems.map((item, index) => `
+            <tr style="font-size: 11pt; text-align: center;">
+                <td style="border: 1px solid black; padding: 4px;">${index + 1}</td>
+                <td style="border: 1px solid black; padding: 4px; text-align: left;">${item.ticket}</td>
+                <td style="border: 1px solid black; padding: 4px; text-align: left;">${item.materialName}</td>
+                <td style="border: 1px solid black; padding: 4px;">${item.quantity} PCS</td>
+                <td style="border: 1px solid black; padding: 4px;">${item.keterangan}</td>
+            </tr>
+        `).join('');
+
+        const signatureSvgWahyu = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="80" viewBox="0 0 200 80"><path d="M 30 55 C 50 25, 100 25, 120 50 C 140 75, 160 65, 180 50" fill="none" stroke="black" stroke-width="2.5"/></svg>`;
+        const signatureSvgYeni = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="80" viewBox="0 0 200 100"><path d="M 40 70 C 20 40, 80 20, 100 50 Q 110 80, 80 75 C 50 70, 130 40, 150 70 C 170 90, 120 100, 90 80" fill="none" stroke="black" stroke-width="2.5"/></svg>`;
+
+        const baHtml = `
+            <div class="page-container" style="font-family: Arial, sans-serif; font-size: 12pt; color: black; background: white;">
+                <div style="text-align: center; font-weight: bold; text-decoration: underline; font-size: 14pt; margin-bottom: 30px;">
+                    BERITA ACARA PENYERAHAN MATERIAL MAGU
+                </div>
+                <p>Pada hari ini ${dayName}, tanggal ${day} bulan ${monthName}, tahun ${year}, saya yang bertanda tangan dibawah ini :</p>
+                <table style="border-collapse: collapse; margin-left: 30px; margin-top: 15px; margin-bottom: 15px;">
+                    <tr><td style="width: 100px; padding-bottom: 5px;">NAMA</td><td style="padding-bottom: 5px;">: ${userName}</td></tr>
+                    <tr><td style="padding-bottom: 5px;">NIK</td><td style="padding-bottom: 5px;">: ${userNik}</td></tr>
+                    <tr><td>JABATAN</td><td>: ${userJabatan}</td></tr>
+                </table>
+                <p>Menyerahkan material MAGU ke WH SO Kudus dengan rincian sebagai berikut :</p>
+                <table style="width: 100%; border-collapse: collapse; border: 1px solid black; margin-top: 15px;">
+                    <thead style="background-color: #E0E0E0; font-weight: bold;">
+                        <tr>
+                            <th style="border: 1px solid black; padding: 5px;">NO</th>
+                            <th style="border: 1px solid black; padding: 5px;">NO. TICKET / INET</th>
+                            <th style="border: 1px solid black; padding: 5px;">NAMA MATERIAL</th>
+                            <th style="border: 1px solid black; padding: 5px;">JUMLAH</th>
+                            <th style="border: 1px solid black; padding: 5px;">KETERANGAN</th>
+                        </tr>
+                    </thead>
+                    <tbody>${tableRowsHtml}</tbody>
+                </table>
+                <div style="margin-top: 50px; display: flex; justify-content: space-around; text-align: center; page-break-inside: avoid;">
+                    <div style="width: 45%;">
+                        <p style="margin:0;">Yang menyerahkan,<br/>OSA KUDUS</p>
+                        <div style="height: 80px; display: flex; align-items: center; justify-content: center;">${signatureSvgWahyu}</div>
+                        <p style="text-decoration: underline; font-weight: bold; margin-bottom: 0;">${userName}</p>
+                        <p style="margin-top: 0;">NIK. ${userNik}</p>
+                    </div>
+                    <div style="width: 45%;">
+                        <p style="margin:0;">Yang menerima,<br/>STAFF WH SO KUDUS</p>
+                        <div style="height: 80px; display: flex; align-items: center; justify-content: center;">${signatureSvgYeni}</div>
+                        <p style="text-decoration: underline; font-weight: bold; margin-bottom: 0;">YENI NOVITASARI</p>
+                        <p style="margin-top: 0;">NIK. 19880038</p>
+                    </div>
+                </div>
+            </div>`;
+            
+        setPreviewHtml(baHtml);
+    };
+
     const isLoading = isUserLoading || isProfileLoading || isRiwayatLoading || arePelangganLoading;
     if (isLoading) return <div>Memuat...</div>
 
@@ -471,7 +562,7 @@ export default function AssuranceRekapPage() {
                                             <TableCell>{item.namaPetugas}</TableCell>
                                             <TableCell>{item.jenisOrder}</TableCell>
                                             <TableCell className="text-sm text-muted-foreground max-w-xs truncate">{item.keterangan || '-'}</TableCell>
-                                            <TableCell>{format(item.tanggalLapor.toDate(), 'dd MMM yyyy')}</TableCell>
+                                            <TableCell>{item.tanggalLapor.toDate ? format(item.tanggalLapor.toDate(), 'dd MMM yyyy') : '-'}</TableCell>
                                         </TableRow>
                                     ))
                                 ) : (
@@ -491,6 +582,10 @@ export default function AssuranceRekapPage() {
                             <Files className="mr-2 h-4 w-4" />
                             Pratinjau Eviden
                         </Button>
+                        <Button onClick={handleGenerateBAPreview} disabled={isRiwayatLoading || selectedIds.length === 0} variant="outline">
+                            <Printer className="mr-2 h-4 w-4" />
+                            Cetak BA Penyerahan
+                        </Button>
                     </div>
                 </CardFooter>
             </Card>
@@ -501,4 +596,3 @@ export default function AssuranceRekapPage() {
         </>
     );
 }
-
