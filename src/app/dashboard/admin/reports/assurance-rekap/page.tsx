@@ -404,7 +404,7 @@ export default function AssuranceRekapPage() {
 
         const splitterItems = selectedRiwayat.flatMap(report => 
             (report.materials || [])
-                .filter(material => material.materialName.toUpperCase().includes('SPLITTER'))
+                .filter(material => material.materialName && material.materialName.toUpperCase().includes('SPLITTER'))
                 .map(material => ({
                     ticket: report.noTiket || report.noService,
                     materialName: material.materialName,
