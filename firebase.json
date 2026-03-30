@@ -5,6 +5,15 @@
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "apphosting": {
+          "backendId": "studio-7759201113-b7263",
+          "region": "us-central1"
+        }
+      }
     ]
   }
 }
