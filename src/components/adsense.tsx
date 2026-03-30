@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 
 declare global {
   interface Window {
@@ -37,6 +38,8 @@ interface AdsenseProps {
  * />
  */
 export function Adsense(props: AdsenseProps) {
+  const pathname = usePathname();
+
   useEffect(() => {
     try {
       (window.adsbygoogle = window.adsbygoogle || []).push({});
@@ -50,10 +53,11 @@ export function Adsense(props: AdsenseProps) {
       }
       console.error("AdSense error:", err);
     }
-  }, []);
+  }, [pathname]);
 
   return (
     <ins
+      key={pathname + props['data-ad-slot']}
       className={props.className || "adsbygoogle"}
       style={props.style || { display: 'block' }}
       data-ad-client={props['data-ad-client']}
