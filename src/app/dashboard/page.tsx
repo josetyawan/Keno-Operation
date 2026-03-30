@@ -113,7 +113,7 @@ export default function DashboardSelectorPage() {
       <div className="mt-8 w-full overflow-hidden">
         <Adsense
           data-ad-client="ca-pub-6478281232505590"
-          data-ad-slot="5734427659"
+          data-ad-slot="3045421226"
           data-ad-format="auto"
           className="block"
           data-full-width-responsive="true"
