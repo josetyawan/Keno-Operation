@@ -440,9 +440,6 @@ export default function AssuranceRekapPage() {
             </tr>
         `).join('');
 
-        const signatureSvgWahyu = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="80" viewBox="0 0 200 80"><path d="M 30 55 C 50 25, 100 25, 120 50 C 140 75, 160 65, 180 50" fill="none" stroke="black" stroke-width="2.5"/></svg>`;
-        const signatureSvgYeni = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="80" viewBox="0 0 200 100"><path d="M 40 70 C 20 40, 80 20, 100 50 Q 110 80, 80 75 C 50 70, 130 40, 150 70 C 170 90, 120 100, 90 80" fill="none" stroke="black" stroke-width="2.5"/></svg>`;
-
         const baHtml = `
             <div class="page-container" style="font-family: Arial, sans-serif; font-size: 12pt; color: black; background: white;">
                 <div style="text-align: center; font-weight: bold; text-decoration: underline; font-size: 14pt; margin-bottom: 30px;">
@@ -470,13 +467,13 @@ export default function AssuranceRekapPage() {
                 <div style="margin-top: 50px; display: flex; justify-content: space-around; text-align: center; page-break-inside: avoid;">
                     <div style="width: 45%;">
                         <p style="margin:0;">Yang menyerahkan,<br/>OSA KUDUS</p>
-                        <div style="height: 80px; display: flex; align-items: center; justify-content: center;">${signatureSvgWahyu}</div>
+                        <div style="height: 80px; display: flex; align-items: center; justify-content: center;"></div>
                         <p style="text-decoration: underline; font-weight: bold; margin-bottom: 0;">${userName}</p>
                         <p style="margin-top: 0;">NIK. ${userNik}</p>
                     </div>
                     <div style="width: 45%;">
                         <p style="margin:0;">Yang menerima,<br/>STAFF WH SO KUDUS</p>
-                        <div style="height: 80px; display: flex; align-items: center; justify-content: center;">${signatureSvgYeni}</div>
+                        <div style="height: 80px; display: flex; align-items: center; justify-content: center;"></div>
                         <p style="text-decoration: underline; font-weight: bold; margin-bottom: 0;">YENI NOVITASARI</p>
                         <p style="margin-top: 0;">NIK. 19880038</p>
                     </div>
