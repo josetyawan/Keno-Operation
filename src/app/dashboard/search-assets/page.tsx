@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -495,7 +496,7 @@ export default function SearchAssetsPage() {
       <div className="mt-8 w-full overflow-hidden">
         <Adsense
             data-ad-client="ca-pub-6478281232505590"
-            data-ad-slot="YOUR_AD_SLOT_ID_SEARCH"
+            data-ad-slot="5734427659"
             data-ad-format="auto"
             className="block"
             data-full-width-responsive="true"
