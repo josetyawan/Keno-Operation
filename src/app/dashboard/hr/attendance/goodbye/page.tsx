@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect } from 'react';
@@ -29,7 +30,7 @@ export default function AttendanceGoodbyePage() {
         <div className="border p-2 rounded-md">
             <Adsense
                 data-ad-client="ca-pub-6478281232505590"
-                data-ad-slot="GANTI_DENGAN_ID_SLOT_GOODBYE"
+                data-ad-slot="9251736929"
                 data-ad-format="auto"
                 data-full-width-responsive="true"
             />
