@@ -575,8 +575,7 @@ export default function AllproPage() {
       <div className="mt-8 w-full overflow-hidden">
         <Adsense
           data-ad-client="ca-pub-6478281232505590"
-          data-ad-slot="5734427659"
-          data-ad-format="auto"
+          data-ad-slot="GANTI_DENGAN_ID_SLOT_ALLPRO"
           className="block"
           data-full-width-responsive="true"
         />
