@@ -37,7 +37,7 @@ export default function GoodbyePage() {
         <div className="border p-2 rounded-md">
             <Adsense
                 data-ad-client="ca-pub-6478281232505590"
-                data-ad-slot="YOUR_AD_SLOT_ID_GOODBYE"
+                data-ad-slot="9637915589"
                 data-ad-format="auto"
                 data-full-width-responsive="true"
             />
