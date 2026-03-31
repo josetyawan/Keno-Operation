@@ -490,9 +490,10 @@ export default function ProvisioningDashboardPage() {
             description: findHeader(headers, ['description']),
             dateCreated: findHeader(headers, ['date created']),
             bookingDate: findHeader(headers, ['booking date']),
-            productName: findHeader(headers, ['product name']),
+            productName: findHeader(headers, ['product name', 'paket', 'nama paket']),
             productType: findHeader(headers, ['product type']),
             workzone: findHeader(headers, ['workzone']),
+            odpName: findHeader(headers, ['odp', 'odp name', 'nama odp']),
         };
 
         if (Object.values(headerMapping).some(val => val === undefined)) {
@@ -551,9 +552,10 @@ export default function ProvisioningDashboardPage() {
               description: headerMapping.description ? (row[headerMapping.description] || '-') : '-',
               dateCreated: formatDateValue(row[headerMapping.dateCreated!]),
               bookingDate: formatDateValue(row[headerMapping.bookingDate!]),
-              productName: row[headerMapping.productName!] || '-',
+              productName: headerMapping.productName ? (row[headerMapping.productName] || '-') : '-',
               productType: row[headerMapping.productType!] || '-',
               workzone: row[headerMapping.workzone!] || 'N/A',
+              odpName: headerMapping.odpName ? (row[headerMapping.odpName] || '') : '',
               provisioningStatus: 'unassigned',
             };
             
