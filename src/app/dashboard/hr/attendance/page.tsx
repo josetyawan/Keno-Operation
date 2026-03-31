@@ -68,12 +68,17 @@ const getCheckInWindow = (shiftType: Schedule['shiftType']): { start: Date, end:
         case 'pb':
         case 'ptm':
         case 'pt/bd':
-        case 'piket-demak':
-        case 'weekend-duty':
-        case 'holiday-duty': {
+        case 'piket-demak': {
             const targetTime = set(now, { hours: 8, minutes: 0, seconds: 0, milliseconds: 0 });
             const startTime = sub(targetTime, { hours: 1 }); // 07:00
             const endTime = add(targetTime, { hours: 1 });   // 09:00
+            return { start: startTime, end: endTime, target: targetTime };
+        }
+        case 'weekend-duty':
+        case 'holiday-duty': {
+            const targetTime = set(now, { hours: 8, minutes: 0, seconds: 0, milliseconds: 0 });
+            const startTime = sub(targetTime, { hours: 2 }); // 06:00
+            const endTime = add(targetTime, { hours: 2 });   // 10:00
             return { start: startTime, end: endTime, target: targetTime };
         }
         case 'siang-malam': {
@@ -306,12 +311,7 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished, userProfile, can
     
     const isMalamShift = shiftType === 'malam';
 
-    const isTukarJagaAllowed = useMemo(() => {
-        const shiftDate = today;
-        const cutoff = new Date(shiftDate);
-        cutoff.setHours(8, 0, 0, 0);
-        return now < cutoff;
-    }, [today, now]);
+    const isTukarJagaAllowed = true;
     
     const isMangkir = (isPagiShift && isAfterPagiCutoff) || (isSmcShift && isAfterSmcCutoff);
     // --- End of time-based rules ---
@@ -365,19 +365,12 @@ function LeaveRequestDialog({ todaySchedule, today, onFinished, userProfile, can
         const subIsAfterPagiCutoff = isPagiShift && submissionTime >= pagiCutoff;
         const subIsAfterSmcCutoff = isSmcShift && submissionTime >= smcCutoff;
 
-        const tukarJagaCutoff = new Date(swapDate || today);
-        tukarJagaCutoff.setHours(8, 0, 0, 0);
-        const subIsTukarJagaAllowed = submissionTime < tukarJagaCutoff;
-
         // Perform validation checks based on the state at the moment of submission
         if ((leaveType === 'sick-leave' || leaveType === 'cuti') && subIsAfterPagiCutoff) {
             toast({ variant: 'destructive', title: 'Waktu Habis', description: 'Waktu untuk mengajukan izin/cuti shift pagi sudah lewat (batas jam 08:00).' });
             return;
         }
-        if (leaveType === 'tukar-jaga' && !subIsTukarJagaAllowed) {
-            toast({ variant: 'destructive', title: 'Waktu Habis', description: 'Request tukar jaga hanya bisa dilakukan sebelum jam 08:00 pada hari H atau hari sebelumnya.' });
-            return;
-        }
+
         if (leaveType === 'late' && isMalamShift) {
              toast({ variant: 'destructive', title: 'Opsi Tidak Tersedia', description: 'Izin terlambat tidak tersedia untuk shift malam.' });
              return;
