@@ -105,11 +105,11 @@ export default function GamasApprovalListPage() {
         const priceMap = new Map(gamasPriceData.map(item => [item.code.trim().toUpperCase(), item]));
 
         const reportsByTicket = approvedReports.reduce((acc, report) => {
-            const key = report.noTiket || 'TANPA_TIKET';
-            if (!acc[key]) {
-                acc[key] = { report: report, evidences: [] };
+            const ticketKey = report.noTiket || 'TANPA_TIKET';
+            if (!acc[ticketKey]) {
+                acc[ticketKey] = { report: report, evidences: [] };
             }
-            acc[key].evidences.push(...report.evidences);
+            acc[ticketKey].evidences.push(...report.evidences);
             return acc;
         }, {} as Record<string, { report: GamasReport; evidences: DesignatorEvidence[] }>);
 
@@ -163,8 +163,8 @@ export default function GamasApprovalListPage() {
                     'HARGA SATUAN MATERIAL': materialPrice,
                     'HARGA SATUAN JASA': servicePrice,
                     'VOL': isFirstRowOfTicket ? totalVolForTicket : vol,
-                    'KUD (WORK DESC)': isFirstRowOfTicket ? (report.sto !== 'DMA' ? `KUD (${ticketKey})` : '') : '',
-                    'DMA (WORK DESC)': isFirstRowOfTicket ? (report.sto === 'DMA' ? `DMA (${ticketKey})` : '') : '',
+                    'KUD (NO TIKET)': isFirstRowOfTicket ? (report.sto !== 'DMA' ? `KUD (${ticketKey})` : '') : '',
+                    'DMA (NO TIKET)': isFirstRowOfTicket ? (report.sto === 'DMA' ? `DMA (${ticketKey})` : '') : '',
                     'TOTAL HARGA MATERIAL': totalMaterial,
                     'TOTAL HARGA JASA': totalService,
                     'TOTAL': totalHarga,
@@ -195,7 +195,7 @@ export default function GamasApprovalListPage() {
         
         const excelHeaders = [
             'NO', 'DESIGNATOR', 'URAIAN PEKERJAAN', 'SATUAN', 
-            'HARGA SATUAN MATERIAL', 'HARGA SATUAN JASA', 'VOL', 'KUD (WORK DESC)', 'DMA (WORK DESC)',
+            'HARGA SATUAN MATERIAL', 'HARGA SATUAN JASA', 'VOL', 'KUD (NO TIKET)', 'DMA (NO TIKET)',
             'TOTAL HARGA MATERIAL', 'TOTAL HARGA JASA', 'TOTAL'
         ];
         
