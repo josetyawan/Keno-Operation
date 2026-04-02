@@ -106,35 +106,52 @@ export default function GamasApprovalListPage() {
 
         const dataToExport = approvedReports.flatMap(report => 
             report.evidences.map(evidence => {
-                const priceInfo = priceMap.get(evidence.designator.trim().toUpperCase());
-                const hargaSatuan = priceInfo ? priceInfo.materialPrice + priceInfo.servicePrice : 0;
+                const cleanDesignator = evidence.designator.trim().toUpperCase();
+                const priceInfo = priceMap.get(cleanDesignator);
+                
+                const materialPrice = priceInfo?.materialPrice || 0;
+                const servicePrice = priceInfo?.servicePrice || 0;
                 const vol = evidence.quantity || 1;
-                const totalHarga = hargaSatuan * vol;
+                
+                const totalMaterial = materialPrice * vol;
+                const totalService = servicePrice * vol;
+                const totalHarga = totalMaterial + totalService;
 
                 return {
                     'NO TIKET': report.noTiket,
                     'DESIGNATOR': evidence.designator,
                     'URAIAN PEKERJAAN': priceInfo?.description || 'N/A',
                     'SATUAN': priceInfo?.unit || 'N/A',
-                    'HARGA SATUAN (Rp.)': hargaSatuan,
+                    'HARGA SATUAN MATERIAL': materialPrice,
+                    'HARGA SATUAN JASA': servicePrice,
                     'VOL': vol,
-                    'TOTAL HARGA (Rp.)': totalHarga,
+                    'TOTAL HARGA MATERIAL': totalMaterial,
+                    'TOTAL HARGA JASA': totalService,
+                    'TOTAL': totalHarga,
+                    'KETERANGAN': evidence.notes || ''
                 };
             })
         );
         
-        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+        const dataWithNumbers = dataToExport.map((row, index) => ({
+            'NO': index + 1,
+            ...row
+        }));
+        
+        const worksheet = XLSX.utils.json_to_sheet(dataWithNumbers);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Rekap Gamas Approved');
         
-        if (dataToExport.length > 0) {
-            const headers = Object.keys(dataToExport[0]);
+        if (dataWithNumbers.length > 0) {
+            const headers = Object.keys(dataWithNumbers[0]);
             const colWidths = headers.map(header => {
                 const maxLength = Math.max(
                     header.length,
-                    ...dataToExport.map(row => String(row[header as keyof typeof row] ?? '').length)
+                    ...dataWithNumbers.map(row => String(row[header as keyof typeof row] ?? '').length)
                 );
-                return { width: maxLength + 2 };
+                // Add some padding, but more for the description columns
+                const padding = (header.includes('URAIAN') || header.includes('KETERANGAN')) ? 10 : 2;
+                return { width: Math.min(maxLength + padding, 60) }; // Cap max width
             });
             worksheet['!cols'] = colWidths;
         }
