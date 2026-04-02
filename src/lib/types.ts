@@ -23,6 +23,12 @@ export type Nota = {
   tanggalPembayaran?: any;
 };
 
+export type KmlEvidence = {
+  fileName: string;
+  url: string;
+  keterangan: string;
+};
+
 export type DesignatorEvidence = {
   designator: string;
   notes?: string;
@@ -39,6 +45,7 @@ export type GamasReport = {
   noTiket: string;
   sto?: string;
   evidences: DesignatorEvidence[];
+  kmlEvidences?: KmlEvidence[];
   createdAt: any; // Timestamp
   status: 'pending' | 'approved' | 'rejected';
   rejectionReason?: string;

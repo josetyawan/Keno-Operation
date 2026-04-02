@@ -1,21 +1,20 @@
 
-
 'use client';
 
 import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Loader2, Upload, X, FileWarning, PlusCircle, Trash2, Check } from 'lucide-react';
+import { ArrowLeft, Loader2, Upload, X, FileWarning, PlusCircle, Trash2, Check, FileUp, FileIcon } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
 import { useStorage } from '@/firebase/provider';
 import { collection, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import type { GamasReport, UserProfile, DesignatorEvidence } from '@/lib/types';
+import type { GamasReport, UserProfile, DesignatorEvidence, KmlEvidence } from '@/lib/types';
 import Image from 'next/image';
 import { designatorListData } from '@/lib/designator-data';
 import { cn } from '@/lib/utils';
@@ -32,9 +31,17 @@ type EvidenceFormValues = {
   existingPhotos: string[];
 };
 
+type KmlFileFormValue = {
+  file?: File;
+  keterangan: string;
+  fileName?: string;
+  url?: string;
+};
+
 type FormValues = {
   noTiket: string;
   evidences: EvidenceFormValues[];
+  kmlEvidences: KmlFileFormValue[];
 };
 
 // Component to preview newly uploaded files
@@ -197,10 +204,12 @@ export default function EditGamasReportPage() {
     defaultValues: {
       noTiket: '',
       evidences: [],
+      kmlEvidences: [],
     },
   });
 
   const evidencesWatch = watch("evidences");
+  const { fields: kmlFields, append: appendKml, remove: removeKml } = useFieldArray({ control, name: 'kmlEvidences' });
 
   useEffect(() => {
     if (report) {
@@ -210,9 +219,14 @@ export default function EditGamasReportPage() {
           designator: ev.designator,
           notes: ev.notes || '',
           quantity: ev.quantity || 1,
-          photos: [], // New photos will be added here
-          existingPhotos: ev.photoUrls || [] // Store existing photos
-        }))
+          photos: [],
+          existingPhotos: ev.photoUrls || []
+        })),
+        kmlEvidences: (report.kmlEvidences || []).map(kml => ({
+          fileName: kml.fileName,
+          url: kml.url,
+          keterangan: kml.keterangan,
+        })),
       });
     }
   }, [report, reset]);
@@ -223,28 +237,37 @@ export default function EditGamasReportPage() {
     append({ designator: '', notes: '', quantity: 1, photos: [], existingPhotos: [] });
   };
 
-  const handleRemoveExistingPhoto = (evidenceIndex: number, photoIndex: number) => {
-    const currentEvidences = getValues('evidences');
-    const updatedPhotos = currentEvidences[evidenceIndex].existingPhotos.filter((_, idx) => idx !== photoIndex);
-    setValue(`evidences.${evidenceIndex}.existingPhotos`, updatedPhotos, { shouldDirty: true });
+  const handleKmlFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (kmlFields.length + files.length > 5) {
+      toast({ variant: 'destructive', title: 'Batas File', description: 'Maksimal 5 file KML/ABD/SS.' });
+      return;
+    }
+    files.forEach(file => appendKml({ file, keterangan: '', fileName: file.name, url: '' }));
+  };
+  
+  const handleRemoveExistingKml = (index: number) => {
+    removeKml(index);
+    // Note: This only removes it from the form state. The actual file in storage is not deleted until submission.
+    // If we want to delete it from storage, we'd need more complex logic here. For now, it will just be orphaned if the form is saved.
   };
 
   const onSubmit = async (data: FormValues) => {
     if (!user || !report) return;
     setIsSaving(true);
     try {
-      await user.getIdToken(true); // Force token refresh
+      await user.getIdToken(true);
       
       const evidencePromises = data.evidences.map(async (evidenceBlock) => {
-        
-        const newPhotoUploadPromises = (evidenceBlock.photos || []).map(async (file) => {
+        const uploadPhoto = async (file: File) => {
             const compressedFile = await compressImage(file);
-            const filePath = `notas/${user.uid}/gamas-edit-${Date.now()}-${file.name}`;
+            const filePath = `notas/${user.uid}/gamas-edit-${Date.now()}-${compressedFile.name}`;
             const storageRef = ref(storage, filePath);
             await uploadBytes(storageRef, compressedFile);
             return getDownloadURL(storageRef);
-        });
+        };
 
+        const newPhotoUploadPromises = (evidenceBlock.photos || []).map(file => uploadPhoto(file));
         const newPhotoUrls = await Promise.all(newPhotoUploadPromises);
         const finalPhotoUrls = [...(evidenceBlock.existingPhotos || []), ...newPhotoUrls];
         
@@ -253,17 +276,35 @@ export default function EditGamasReportPage() {
           notes: evidenceBlock.notes,
           quantity: evidenceBlock.quantity || 1,
           photoUrls: finalPhotoUrls,
-          status: 'pending', // Reset status on edit
-          rejectionReason: '', // Clear rejection reason
+          status: 'pending',
+          rejectionReason: '',
         } as DesignatorEvidence;
       });
 
-      const processedEvidences: DesignatorEvidence[] = await Promise.all(evidencePromises);
+      const kmlEvidencePromises = data.kmlEvidences.map(async (kmlItem) => {
+        if (kmlItem.file) { // It's a new file to upload
+          let fileToUpload = kmlItem.file;
+          if (['image/jpeg', 'image/png'].includes(kmlItem.file.type)) {
+              try { fileToUpload = await compressImage(kmlItem.file); } catch (e) { console.warn("Image compression failed, uploading original."); }
+          }
+          const filePath = `notas/${user.uid}/gamas-kml-${Date.now()}-${fileToUpload.name}`;
+          const storageRef = ref(storage, filePath);
+          await uploadBytes(storageRef, fileToUpload);
+          const url = await getDownloadURL(storageRef);
+          return { fileName: kmlItem.file.name, url, keterangan: kmlItem.keterangan || '' };
+        }
+        // It's an existing file, just return its data
+        return { fileName: kmlItem.fileName!, url: kmlItem.url!, keterangan: kmlItem.keterangan };
+      });
+      
+      const processedEvidences = await Promise.all(evidencePromises);
+      const processedKmlEvidences = await Promise.all(kmlEvidencePromises);
 
       await updateDoc(reportRef, {
         noTiket: data.noTiket,
         evidences: processedEvidences,
-        status: 'pending', // Reset main status on edit
+        kmlEvidences: processedKmlEvidences,
+        status: 'pending',
         rejectionReason: '',
       });
 
@@ -396,6 +437,53 @@ export default function EditGamasReportPage() {
         <Button type="button" variant="outline" onClick={addEvidenceBlock} className="w-full">
             <PlusCircle className="mr-2" /> Tambah Designator & Eviden
         </Button>
+        
+        <Card className="mt-6">
+            <CardHeader>
+                <CardTitle>Upload KML/ABD/SS KML (Opsional)</CardTitle>
+                <CardDescription>
+                    Unggah file pendukung seperti KML, ABD, atau PDF. Maksimal 5 file.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                {kmlFields.map((field, index) => (
+                    <div key={field.id} className="flex items-start gap-4 p-3 border rounded-md relative">
+                        <FileIcon className="h-6 w-6 text-muted-foreground mt-1" />
+                        <div className="flex-grow space-y-2">
+                            <p className="text-sm font-medium">{field.file?.name || field.fileName}</p>
+                            <div className="grid gap-2">
+                                <Label htmlFor={`kmlKeterangan-${index}`} className="sr-only">Keterangan</Label>
+                                <Input
+                                    id={`kmlKeterangan-${index}`}
+                                    placeholder="Tambahkan keterangan..."
+                                    {...register(`kmlEvidences.${index}.keterangan`)}
+                                />
+                            </div>
+                        </div>
+                        <Button type="button" variant="ghost" size="icon" className="shrink-0" onClick={() => handleRemoveExistingKml(index)}>
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </div>
+                ))}
+                {kmlFields.length < 5 && (
+                    <div className="relative flex justify-center items-center h-24 w-full rounded-md border-2 border-dashed">
+                        <Input
+                            type="file"
+                            id="kml-upload"
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            multiple
+                            accept=".jpg,.jpeg,.png,.kml,.pdf,.abd"
+                            onChange={handleKmlFileChange}
+                        />
+                        <div className="text-center text-muted-foreground">
+                            <Upload className="mx-auto h-8 w-8" />
+                            <span className="text-sm">Klik atau seret file ke sini</span>
+                        </div>
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+
 
         <div className="flex items-center justify-end gap-2 mt-4 md:hidden">
           <Button onClick={() => router.back()} variant="outline" type="button">Batal</Button>
@@ -407,4 +495,3 @@ export default function EditGamasReportPage() {
     </div>
   );
 }
-

@@ -3,8 +3,11 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useStorage } from '@/firebase/provider';
+import { doc, updateDoc } from 'firebase/firestore';
+import { ref, deleteObject } from 'firebase/storage';
 import { format, isValid } from 'date-fns';
+import { id as idLocale } from 'date-fns/locale';
 import {
   Card,
   CardContent,
@@ -15,14 +18,26 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, FileWarning, Download, Image as ImageIcon, Check, X, Info, Edit } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Image as ImageIcon, AlertTriangle, Info, Link as LinkIcon } from 'lucide-react';
 import type { GamasReport, UserProfile, DesignatorEvidence } from '@/lib/types';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
-// Helper function to safely convert Firebase Timestamp to Date
 const safeToDate = (timestamp: any): Date | null => {
   if (!timestamp) return null;
   if (timestamp.toDate) return timestamp.toDate();
@@ -112,33 +127,6 @@ export default function GamasDetailPage() {
     return report.userId === user?.uid;
   }, [userProfile, report, user]);
 
-  const handleDownloadAll = () => {
-    if (!report?.evidences) return;
-
-    const downloadWithAnchor = (url: string, filename: string) => {
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-    };
-
-    let photoIndex = 0;
-    report.evidences.forEach(evidence => {
-        (evidence.photoUrls || []).forEach(url => {
-            if (url) {
-                const filename = `${report.noTiket}_${evidence.designator}_${photoIndex + 1}.jpeg`;
-                // Use a timeout to prevent browser from blocking multiple downloads
-                setTimeout(() => {
-                    downloadWithAnchor(url, filename);
-                }, photoIndex * 300);
-                photoIndex++;
-            }
-        });
-    });
-  };
-
   if (isLoading) {
     return (
       <div className="mx-auto grid max-w-4xl flex-1 auto-rows-max gap-6">
@@ -181,7 +169,6 @@ export default function GamasDetailPage() {
                     <Button><Edit className="mr-2"/>Edit & Kirim Ulang Laporan</Button>
                 </Link>
             )}
-            <Button onClick={handleDownloadAll} variant="outline"><Download className="mr-2"/>Download Semua Foto</Button>
         </div>
       </div>
 
@@ -203,12 +190,33 @@ export default function GamasDetailPage() {
         )}
       </Card>
       
+      {report.kmlEvidences && report.kmlEvidences.length > 0 && (
+          <Card>
+              <CardHeader>
+                  <CardTitle>File KML/ABD/SS KML</CardTitle>
+              </CardHeader>
+              <CardContent>
+                  <ul className="space-y-3">
+                      {report.kmlEvidences.map((evidence, index) => (
+                          <li key={index} className="flex items-start gap-4 p-3 border rounded-md">
+                              <LinkIcon className="h-5 w-5 text-muted-foreground mt-1" />
+                              <div className="flex-grow">
+                                  <a href={evidence.url} target="_blank" rel="noopener noreferrer" className="font-semibold text-primary hover:underline">{evidence.fileName}</a>
+                                  <p className="text-sm text-muted-foreground">{evidence.keterangan}</p>
+                              </div>
+                          </li>
+                      ))}
+                  </ul>
+              </CardContent>
+          </Card>
+      )}
+
       <div className="space-y-6">
         {report.evidences.map((evidence, index) => (
             <Card key={index}>
                 <CardHeader className="flex flex-row items-start justify-between">
                     <div>
-                        <CardTitle>{evidence.designator}</CardTitle>
+                        <CardTitle>{evidence.designator} (VOL: {evidence.quantity || 1})</CardTitle>
                         {evidence.notes && <CardDescription>{evidence.notes}</CardDescription>}
                     </div>
                     <Badge variant={getStatusVariant(evidence.status)} className="capitalize">
