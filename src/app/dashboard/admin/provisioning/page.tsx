@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -361,6 +360,7 @@ export default function ProvisioningDashboardPage() {
   const [workzones, setWorkzones] = useState<string[]>([]);
   const [selectedWorkzone, setSelectedWorkzone] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTechnician, setSelectedTechnician] = useState('all');
   
   // States for pagination
   const [unassignedPage, setUnassignedPage] = useState(1);
@@ -373,6 +373,12 @@ export default function ProvisioningDashboardPage() {
       setWorkzones(uniqueWorkzones);
     }
   }, [data]);
+
+  const assignedTechnicians = useMemo(() => {
+    if (!data || !technicians) return [];
+    const assignedIds = new Set(data.map(order => order.assignedTo_userId).filter(Boolean));
+    return technicians.filter(tech => assignedIds.has(tech.id)).sort((a,b) => (a.displayName || '').localeCompare(b.displayName || ''));
+  }, [data, technicians]);
   
   const findHeader = (headers: string[], aliases: string[]): string | undefined => {
     const lowerAliases = aliases.map(a => a.toLowerCase().trim());
@@ -657,18 +663,29 @@ export default function ProvisioningDashboardPage() {
             Object.values(o).some(val => String(val).toLowerCase().includes(lowerQuery))
         );
     }
+    if (selectedTechnician !== 'all') {
+        filteredOrders = filteredOrders.filter(o => o.assignedTo_userId === selectedTechnician);
+    }
     
     return {
         unassignedOrders: filteredOrders.filter(o => !o.provisioningStatus || o.provisioningStatus === 'unassigned'),
         inProgressOrders: filteredOrders.filter(o => ['assigned', 'picked_up', 'departed', 'arrived', 'wip_odp_done'].includes(o.provisioningStatus || '')),
         completedOrders: filteredOrders.filter(o => o.provisioningStatus === 'completed'),
     };
-  }, [data, selectedWorkzone, searchQuery]);
+  }, [data, selectedWorkzone, searchQuery, selectedTechnician]);
 
   const pivotData = useMemo(() => {
     const pivot: any = {};
 
-    (data || []).filter(item => item.provisioningStatus !== 'completed').forEach(item => {
+    const dataToProcess = (data || []).filter(item => {
+        if (item.provisioningStatus === 'completed') return false;
+        if (selectedTechnician !== 'all' && item.assignedTo_userId !== selectedTechnician) {
+            return false;
+        }
+        return true;
+    });
+
+    dataToProcess.forEach(item => {
         const { productName, status, crmOrder, description, workzone } = item;
         if (!workzone) return;
         
@@ -694,7 +711,7 @@ export default function ProvisioningDashboardPage() {
         });
     });
     return pivot;
-  }, [data]);
+  }, [data, selectedTechnician]);
   
   const handleSendRekap = async () => {
       setIsSendingRekap(true);
@@ -823,6 +840,20 @@ export default function ProvisioningDashboardPage() {
                     {workzones.map(wz => <SelectItem key={wz} value={wz}>{wz}</SelectItem>)}
                   </SelectContent>
                 </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="technician-filter">Filter Teknisi</Label>
+              <Select value={selectedTechnician} onValueChange={setSelectedTechnician} disabled={assignedTechnicians.length === 0}>
+                <SelectTrigger id="technician-filter" className="w-full md:w-[220px]">
+                  <SelectValue placeholder="Filter Teknisi..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Teknisi</SelectItem>
+                  {assignedTechnicians.map(tech => (
+                    <SelectItem key={tech.id} value={tech.id}>{tech.displayName}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
              <div className="grid gap-2 flex-1">
                 <Label htmlFor="search-input">Cari</Label>
@@ -971,3 +1002,5 @@ export default function ProvisioningDashboardPage() {
     </div>
   );
 }
+
+    
