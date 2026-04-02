@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Upload, FileSpreadsheet, ChevronLeft, ChevronRight, Trash2, ChevronRightIcon, User, AlertTriangle, Phone, MoreHorizontal, Edit, Save, Package, Truck, PackageCheck, Send } from 'lucide-react';
+import { Loader2, Upload, FileSpreadsheet, ChevronLeft, ChevronRight, Trash2, ChevronRightIcon, User, AlertTriangle, Phone, MoreHorizontal, Edit, Save, Package, Truck, PackageCheck, Send, PlusCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, doc, writeBatch, orderBy, getDocs, setDoc, updateDoc, serverTimestamp, where } from 'firebase/firestore';
@@ -41,6 +41,158 @@ const formatWaNumber = (phone: string) => {
 };
 
 // --- Child Components ---
+
+function ManualOrderForm({ users, onSave, onCancel }: { users: UserProfile[], onSave: (data: Partial<ProvisioningRecord>) => Promise<void>, onCancel: () => void }) {
+    const [isSaving, setIsSaving] = useState(false);
+    const { toast } = useToast();
+    
+    // Form fields
+    const [crmOrder, setCrmOrder] = useState('');
+    const [workorder, setWorkorder] = useState('');
+    const [scOrder, setScOrder] = useState('');
+    const [contactNumber, setContactNumber] = useState('');
+    const [customerName, setCustomerName] = useState('');
+    const [address, setAddress] = useState('');
+    const [bookingDate, setBookingDate] = useState('');
+    const [serviceNo, setServiceNo] = useState('');
+    const [odpName, setOdpName] = useState('');
+    const [productName, setProductName] = useState('');
+    const [assignedTo_userId, setAssignedTo_userId] = useState('');
+    const [assignedTo_crew_userId, setAssignedTo_crew_userId] = useState('');
+
+    const jenisPekerjaanOptions = [
+      "PSB DATIN", "PSB OLO", "PSB WIFI", "PDA DATIN", "PDA WIFI",
+      "REPLACEMENT", "Instalasi IP Camera", "Instalasi SD-WAN",
+      "Instalasi Router", "Install AP WIFI (1 AP)", "Install AP WIFI (2 AP)",
+      "Install AP WIFI(3 AP)", "Install AP WIFI (4 AP)",
+      "Pembuatan BAI (Satkomindo,BRI MPLS)", "Provisioning MyRep", "PSB Surge",
+      "Provisioning 5 Menara Bintang", "PSB IBU - FTTR",
+      "PT Anagata Cipta Teknologi (KerjainAja)", "PSB TBG", "Provisioning Hypernet",
+      "2ND STB", "UPSELLING", "DISMANTLING EBIS",
+      "PSB Indihome", "PSB Indibiz", "PDA Indihome", "PDA Indibiz"
+    ].sort();
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!scOrder.trim() || !customerName.trim() || !crmOrder) {
+            toast({ variant: 'destructive', title: 'Data Wajib Kurang', description: 'WO Baru (SC Order), Nama Pelanggan, dan Jenis Pekerjaan harus diisi.' });
+            return;
+        }
+
+        setIsSaving(true);
+        const technician = users.find(u => u.id === assignedTo_userId);
+        const crew = users.find(u => u.id === assignedTo_crew_userId);
+        const isAssigned = !!technician;
+
+        const newOrder: Partial<ProvisioningRecord> = {
+            workorder, scOrder: scOrder.trim(), contactNumber, customerName, address, bookingDate, serviceNo,
+            odpName, productName, crmOrder,
+            assignedTo_userId: technician?.id || '',
+            assignedTo_userName: technician?.displayName || '',
+            assignedTo_crew_userId: crew?.id || '',
+            assignedTo_crew_userName: crew?.displayName || '',
+            provisioningStatus: isAssigned ? 'assigned' : 'unassigned',
+            assignedAt: isAssigned ? serverTimestamp() : null,
+            dateCreated: format(new Date(), 'dd-MM-yyyy HH:mm'),
+            status: 'OPEN',
+            workzone: userProfile?.psa || '',
+            productType: ''
+        };
+        
+        try {
+            await onSave(newOrder);
+        } catch (error) {
+            // Error is handled by the parent
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const availableCrew = useMemo(() => {
+        if (!users || !assignedTo_userId) return users;
+        return users.filter(u => u.id !== assignedTo_userId);
+    }, [users, assignedTo_userId]);
+
+    return (
+        <form onSubmit={handleSubmit}>
+            <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
+                 <div className="grid gap-2">
+                    <Label htmlFor="crmOrder">Jenis Pekerjaan *</Label>
+                    <Select value={crmOrder} onValueChange={setCrmOrder} required>
+                        <SelectTrigger id="crmOrder"><SelectValue placeholder="Pilih Jenis Pekerjaan..." /></SelectTrigger>
+                        <SelectContent><ScrollArea className="h-72">{jenisPekerjaanOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</ScrollArea></SelectContent>
+                    </Select>
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="workorder">WO Lama</Label>
+                        <Input id="workorder" value={workorder} onChange={e => setWorkorder(e.target.value)} />
+                    </div>
+                     <div className="grid gap-2">
+                        <Label htmlFor="scOrder">WO Baru / SC Order *</Label>
+                        <Input id="scOrder" value={scOrder} onChange={e => setScOrder(e.target.value)} required />
+                    </div>
+                </div>
+                <div className="grid gap-2">
+                    <Label htmlFor="customerName">Nama Pelanggan *</Label>
+                    <Input id="customerName" value={customerName} onChange={e => setCustomerName(e.target.value)} required />
+                </div>
+                <div className="grid gap-2">
+                    <Label htmlFor="address">Alamat</Label>
+                    <Textarea id="address" value={address} onChange={e => setAddress(e.target.value)} />
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="serviceNo">No. Internet</Label>
+                        <Input id="serviceNo" value={serviceNo} onChange={e => setServiceNo(e.target.value)} />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="contactNumber">No. Kontak</Label>
+                        <Input id="contactNumber" value={contactNumber} onChange={e => setContactNumber(e.target.value)} />
+                    </div>
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="productName">Paket Info</Label>
+                        <Input id="productName" value={productName} onChange={e => setProductName(e.target.value)} />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="odpName">Nama ODP</Label>
+                        <Input id="odpName" value={odpName} onChange={e => setOdpName(e.target.value)} />
+                    </div>
+                </div>
+                <div className="grid gap-2">
+                    <Label htmlFor="bookingDate">Jadwal Mulai</Label>
+                    <Input id="bookingDate" value={bookingDate} onChange={e => setBookingDate(e.target.value)} placeholder="Contoh: 25-07-2024 08:00"/>
+                </div>
+                 <div className="grid md:grid-cols-2 gap-4 border-t pt-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="assignedTo_userId">Tim Teknisi (Utama)</Label>
+                        <Select value={assignedTo_userId} onValueChange={setAssignedTo_userId}>
+                            <SelectTrigger id="assignedTo_userId"><SelectValue placeholder="Pilih teknisi utama..." /></SelectTrigger>
+                            <SelectContent>{users.map(u => <SelectItem key={u.id} value={u.id}>{u.displayName}</SelectItem>)}</SelectContent>
+                        </Select>
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="assignedTo_crew_userId">Rekan Crew (Opsional)</Label>
+                        <Select value={assignedTo_crew_userId} onValueChange={(value) => setAssignedTo_crew_userId(value === 'none' ? '' : value)}>
+                            <SelectTrigger id="assignedTo_crew_userId"><SelectValue placeholder="Pilih rekan crew..." /></SelectTrigger>
+                            <SelectContent><SelectItem value="none">Tidak Ada Rekan</SelectItem>{availableCrew.map(u => <SelectItem key={u.id} value={u.id}>{u.displayName}</SelectItem>)}</SelectContent>
+                        </Select>
+                    </div>
+                </div>
+            </div>
+             <DialogFooter>
+                <Button type="button" variant="ghost" onClick={onCancel}>Batal</Button>
+                <Button type="submit" disabled={isSaving}>
+                    {isSaving && <Loader2 className="mr-2 animate-spin" />}
+                    Simpan Order
+                </Button>
+            </DialogFooter>
+        </form>
+    );
+}
+
 
 function EditOrderForm({ order, onSave, onCancel, isSaving }: { order: ProvisioningRecord, onSave: (data: Partial<ProvisioningRecord>) => void, onCancel: () => void, isSaving: boolean }) {
     const [serviceNo, setServiceNo] = useState('');
@@ -332,11 +484,13 @@ function PivotTable({ data, workzones }: { data: any, workzones: string[] }) {
 export default function ProvisioningDashboardPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
-
+  const { user } = useUser();
+  
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
   
+  const [isManualFormOpen, setIsManualFormOpen] = useState(false);
   const [orderToAssign, setOrderToAssign] = useState<ProvisioningRecord | null>(null);
   const [isAssigning, setIsAssigning] = useState(false);
   
@@ -351,6 +505,9 @@ export default function ProvisioningDashboardPage() {
   
   const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users'), where('role', '==', 'teknisi'), where('registrationStatus', '==', 'approved')), [firestore]);
   const { data: technicians, isLoading: areTechniciansLoading } = useCollection<UserProfile>(usersQuery);
+  
+  const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
+  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
 
   const kendalaQuery = useMemoFirebase(() => {
     return query(collection(firestore, 'provisioning-records'), where('provisioningStatus', '==', 'kendala'));
@@ -597,6 +754,22 @@ export default function ProvisioningDashboardPage() {
     };
     reader.readAsArrayBuffer(file);
   };
+  
+  const handleManualSave = async (orderData: Partial<ProvisioningRecord>) => {
+    const scOrder = orderData.scOrder;
+    if (!scOrder) throw new Error("SC Order (WO Baru) tidak boleh kosong.");
+
+    const docRef = doc(firestore, 'provisioning-records', scOrder);
+    const existingDoc = await getDocs(query(collection(firestore, 'provisioning-records'), where('scOrder', '==', scOrder)));
+
+    if (!existingDoc.empty) {
+        throw new Error(`Order dengan SC Order ${scOrder} sudah ada.`);
+    }
+
+    await setDoc(docRef, orderData);
+    toast({ title: "Order Manual Disimpan", description: `Order untuk ${orderData.customerName} berhasil dibuat.` });
+    setIsManualFormOpen(false);
+  };
 
   const handleAssign = async (technicianId: string, crewId: string) => {
     if (!orderToAssign || !technicianId) return;
@@ -794,7 +967,7 @@ export default function ProvisioningDashboardPage() {
       <Card>
         <CardHeader>
           <CardTitle>Impor & Kelola Data</CardTitle>
-          <CardDescription>Unggah file Excel berisi data provisioning untuk ditampilkan atau hapus semua data yang ada.</CardDescription>
+          <CardDescription>Unggah file Excel berisi data provisioning atau tambahkan order secara manual.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col md:flex-row gap-4">
           <div className="grid w-full max-w-sm items-center gap-1.5">
@@ -807,7 +980,19 @@ export default function ProvisioningDashboardPage() {
                 </div>
             )}
           </div>
-          <div className="md:ml-auto md:self-end">
+          <div className="md:ml-auto md:self-end flex gap-2">
+            <Dialog open={isManualFormOpen} onOpenChange={setIsManualFormOpen}>
+                <DialogTrigger asChild>
+                    <Button variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> Tambah Order Manual</Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>Buat Order Provisioning Manual</DialogTitle>
+                        <DialogDescription>Isi detail order baru di bawah ini.</DialogDescription>
+                    </DialogHeader>
+                    <ManualOrderForm users={technicians || []} onSave={handleManualSave} onCancel={() => setIsManualFormOpen(false)} />
+                </DialogContent>
+            </Dialog>
             <Button variant="destructive" onClick={handleDeleteAll} disabled={isImporting || isDeleting || !data || data.length === 0}>
                 {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
                 Hapus Semua Data
@@ -1002,5 +1187,3 @@ export default function ProvisioningDashboardPage() {
     </div>
   );
 }
-
-    
