@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
-import type { GamasReport, UserProfile } from '@/lib/types';
+import type { GamasReport, UserProfile, DesignatorEvidence } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Eye, Trash2, ShieldX, FileSpreadsheet, Loader2 } from 'lucide-react';
 import Link from 'next/link';
@@ -157,7 +157,6 @@ export default function GamasApprovalListPage() {
 
                 dataToExport.push({
                     'NO': itemCounter++,
-                    'NO TIKET': ticketKey,
                     'DESIGNATOR': evidence.designator,
                     'URAIAN PEKERJAAN': priceInfo?.description || 'N/A',
                     'SATUAN': priceInfo?.unit || 'N/A',
@@ -195,7 +194,7 @@ export default function GamasApprovalListPage() {
         });
         
         const excelHeaders = [
-            'NO', 'NO TIKET', 'DESIGNATOR', 'URAIAN PEKERJAAN', 'SATUAN', 
+            'NO', 'DESIGNATOR', 'URAIAN PEKERJAAN', 'SATUAN', 
             'HARGA SATUAN MATERIAL', 'HARGA SATUAN JASA', 'VOL', 'KUD (WORK DESC)', 'DMA (WORK DESC)',
             'TOTAL HARGA MATERIAL', 'TOTAL HARGA JASA', 'TOTAL'
         ];
