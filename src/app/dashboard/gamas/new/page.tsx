@@ -22,6 +22,8 @@ import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
 
 type EvidenceFormValues = {
   designator: string;
@@ -435,7 +437,7 @@ export default function NewGamasReportPage() {
                     <div key={field.id} className="flex items-start gap-4 p-3 border rounded-md relative">
                         <FileIcon className="h-6 w-6 text-muted-foreground mt-1" />
                         <div className="flex-grow space-y-2">
-                            <p className="text-sm font-medium">{field.file?.name}</p>
+                            <p className="text-sm font-medium">{field.file.name}</p>
                             <div className="grid gap-2">
                                 <Label htmlFor={`kmlKeterangan-${index}`} className="sr-only">Keterangan</Label>
                                 <Input
@@ -480,6 +482,5 @@ export default function NewGamasReportPage() {
     </div>
   );
 }
-
 
     
