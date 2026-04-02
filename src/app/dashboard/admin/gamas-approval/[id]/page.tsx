@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, CheckCircle, ShieldX, Check, X, FileWarning, Loader2, Download, FileUp } from 'lucide-react';
+import { ArrowLeft, CheckCircle, ShieldX, Check, X, FileWarning, Loader2, Download, FileUp, LinkIcon } from 'lucide-react';
 import type { GamasReport, UserProfile, DesignatorEvidence } from '@/lib/types';
 import { useMemo, useState } from 'react';
 import Image from 'next/image';
@@ -323,6 +323,27 @@ export default function GamasApprovalDetailPage() {
             </Button>
         </div>
       </div>
+      
+      {report.kmlEvidences && report.kmlEvidences.length > 0 && (
+          <Card>
+              <CardHeader>
+                  <CardTitle>File KML/ABD/SS KML</CardTitle>
+              </CardHeader>
+              <CardContent>
+                  <ul className="space-y-3">
+                      {report.kmlEvidences.map((evidence, index) => (
+                          <li key={index} className="flex items-start gap-4 p-3 border rounded-md">
+                              <LinkIcon className="h-5 w-5 text-muted-foreground mt-1" />
+                              <div className="flex-grow">
+                                  <a href={evidence.url} target="_blank" rel="noopener noreferrer" className="font-semibold text-primary hover:underline">{evidence.fileName}</a>
+                                  <p className="text-sm text-muted-foreground">{evidence.keterangan}</p>
+                              </div>
+                          </li>
+                      ))}
+                  </ul>
+              </CardContent>
+          </Card>
+      )}
       
       {report.evidences.map((evidence, index) => (
         <Card key={index}>

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -7,13 +8,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Loader2, Upload, X, FileWarning, PlusCircle, Trash2, Check } from 'lucide-react';
+import { ArrowLeft, Loader2, Upload, X, FileWarning, PlusCircle, Trash2, Check, FileIcon } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
 import { useStorage } from '@/firebase/provider';
 import { collection, serverTimestamp, doc, addDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import type { GamasReport, UserProfile, DesignatorEvidence } from '@/lib/types';
+import type { GamasReport, UserProfile, DesignatorEvidence, KmlEvidence } from '@/lib/types';
 import Image from 'next/image';
 import { designatorListData } from '@/lib/designator-data';
 import { cn } from '@/lib/utils';
@@ -23,13 +24,21 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 type EvidenceFormValues = {
   designator: string;
-  quantity: number;
+  notes: string;
+  quantity: number; // VOL
   photos: File[];
+};
+
+type KmlFileFormValue = {
+    file: File;
+    keterangan: string;
 };
 
 type FormValues = {
   noTiket: string;
+  sto: string;
   evidences: EvidenceFormValues[];
+  kmlEvidences: KmlFileFormValue[];
 };
 
 function PhotoUploadPreview({ files, onRemove }: { files: File[], onRemove: (index: number) => void }) {
@@ -186,17 +195,26 @@ export default function NewGamasReportPage() {
   const { register, control, handleSubmit, formState: { errors }, getValues, setValue } = useForm<FormValues>({
     defaultValues: {
       noTiket: '',
+      sto: 'KUD',
       evidences: [],
+      kmlEvidences: [],
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: 'evidences',
-  });
+  const { fields, append, remove } = useFieldArray({ control, name: 'evidences' });
+  const { fields: kmlFields, append: appendKml, remove: removeKml } = useFieldArray({ control, name: 'kmlEvidences' });
 
   const addEvidenceBlock = () => {
-    append({ designator: '', quantity: 1, photos: [] });
+    append({ designator: '', notes: '', quantity: 1, photos: [] });
+  };
+  
+  const handleKmlFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (kmlFields.length + files.length > 5) {
+      toast({ variant: 'destructive', title: 'Batas File', description: 'Maksimal 5 file KML/ABD/SS.' });
+      return;
+    }
+    files.forEach(file => appendKml({ file, keterangan: '' }));
   };
 
   const onSubmit = async (data: FormValues) => {
@@ -235,20 +253,40 @@ export default function NewGamasReportPage() {
         
         return {
           designator: evidence.designator,
+          notes: evidence.notes,
           quantity: evidence.quantity || 1,
           photoUrls,
           status: 'pending',
         } as DesignatorEvidence;
       });
+      
+      const kmlEvidencePromises = data.kmlEvidences.map(async (kmlItem) => {
+        const fileToUpload = kmlItem.file;
+        let compressedFile = fileToUpload;
 
-      const processedEvidences: DesignatorEvidence[] = await Promise.all(evidencePromises);
+        if (['image/jpeg', 'image/png'].includes(fileToUpload.type)) {
+            try { compressedFile = await compressImage(fileToUpload); }
+            catch(e) { console.warn("Image compression failed, uploading original."); }
+        }
+
+        const filePath = `notas/${user.uid}/gamas-kml-${Date.now()}-${compressedFile.name}`;
+        const storageRef = ref(storage, filePath);
+        await uploadBytes(storageRef, compressedFile);
+        const url = await getDownloadURL(storageRef);
+        return { fileName: fileToUpload.name, url, keterangan: kmlItem.keterangan || '' };
+      });
+
+      const processedEvidences = await Promise.all(evidencePromises);
+      const processedKmlEvidences = await Promise.all(kmlEvidencePromises);
 
       const gamasCollection = collection(firestore, 'gamas-reports');
       const newReport: Omit<GamasReport, 'id'> = {
         userId: user.uid,
         userName: userProfile.displayName || user.email!,
         noTiket: data.noTiket.trim(),
+        sto: data.sto,
         evidences: processedEvidences,
+        kmlEvidences: processedKmlEvidences,
         createdAt: serverTimestamp(),
         status: 'pending',
       };
@@ -295,9 +333,29 @@ export default function NewGamasReportPage() {
         <Card className="mb-6">
             <CardHeader><CardTitle>Informasi Tiket</CardTitle></CardHeader>
             <CardContent>
-                <div className="grid gap-3">
-                    <Label htmlFor="noTiket">No. Tiket *</Label>
-                    <Input id="noTiket" placeholder="Contoh: INC12345678" {...register('noTiket')} required />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid gap-3">
+                        <Label htmlFor="noTiket">No. Tiket *</Label>
+                        <Input id="noTiket" placeholder="Contoh: INC12345678" {...register('noTiket')} required />
+                    </div>
+                    <div className="grid gap-3">
+                        <Label htmlFor="sto">STO *</Label>
+                        <Controller
+                            name="sto"
+                            control={control}
+                            render={({ field }) => (
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <SelectTrigger id="sto">
+                                        <SelectValue placeholder="Pilih STO..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="KUD">KUDUS (KUD)</SelectItem>
+                                        <SelectItem value="DMA">DEMAK (DMA)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            )}
+                        />
+                    </div>
                 </div>
             </CardContent>
         </Card>
@@ -330,8 +388,20 @@ export default function NewGamasReportPage() {
                     {errors.evidences?.[index]?.quantity && <p className="text-sm text-destructive">Volume wajib diisi.</p>}
                 </div>
               </div>
+               <div className="grid gap-3">
+                <Label htmlFor={`notes-${index}`}>Catatan</Label>
+                <Textarea id={`notes-${index}`} placeholder="Catatan tambahan untuk designator ini..." {...register(`evidences.${index}.notes`)} />
+              </div>
               <div className="grid gap-3">
                 <Label>Foto Eviden *</Label>
+                 <PhotoUploadPreview 
+                    files={getValues(`evidences.${index}.photos`) || []}
+                    onRemove={(photoIndex) => {
+                        const currentPhotos = getValues(`evidences.${index}.photos`) || [];
+                        const updatedPhotos = currentPhotos.filter((_, i) => i !== photoIndex);
+                        setValue(`evidences.${index}.photos`, updatedPhotos, { shouldValidate: true });
+                    }}
+                />
                 <Input
                     type="file"
                     accept="image/*"
@@ -340,14 +410,7 @@ export default function NewGamasReportPage() {
                         const currentPhotos = getValues(`evidences.${index}.photos`) || [];
                         const newFiles = Array.from(e.target.files || []);
                         setValue(`evidences.${index}.photos`, [...currentPhotos, ...newFiles], { shouldValidate: true });
-                    }}
-                />
-                 <PhotoUploadPreview 
-                    files={getValues(`evidences.${index}.photos`) || []}
-                    onRemove={(photoIndex) => {
-                        const currentPhotos = getValues(`evidences.${index}.photos`) || [];
-                        const updatedPhotos = currentPhotos.filter((_, i) => i !== photoIndex);
-                        setValue(`evidences.${index}.photos`, updatedPhotos, { shouldValidate: true });
+                        e.target.value = ''; // Reset input so same file can be re-added
                     }}
                 />
               </div>
@@ -358,6 +421,52 @@ export default function NewGamasReportPage() {
         <Button type="button" variant="outline" onClick={addEvidenceBlock} className="w-full">
             <PlusCircle className="mr-2" /> Tambah Designator & Eviden
         </Button>
+        
+        <Card className="mt-6">
+            <CardHeader>
+                <CardTitle>Upload KML/ABD/SS KML (Opsional)</CardTitle>
+                <CardDescription>
+                    Unggah file pendukung seperti KML, ABD, atau PDF. Maksimal 5 file.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                {kmlFields.map((field, index) => (
+                    <div key={field.id} className="flex items-start gap-4 p-3 border rounded-md relative">
+                        <FileIcon className="h-6 w-6 text-muted-foreground mt-1" />
+                        <div className="flex-grow space-y-2">
+                            <p className="text-sm font-medium">{field.file?.name}</p>
+                            <div className="grid gap-2">
+                                <Label htmlFor={`kmlKeterangan-${index}`} className="sr-only">Keterangan</Label>
+                                <Input
+                                    id={`kmlKeterangan-${index}`}
+                                    placeholder="Tambahkan keterangan..."
+                                    {...register(`kmlEvidences.${index}.keterangan`)}
+                                />
+                            </div>
+                        </div>
+                        <Button type="button" variant="ghost" size="icon" className="shrink-0" onClick={() => removeKml(index)}>
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </div>
+                ))}
+                {kmlFields.length < 5 && (
+                    <div className="relative flex justify-center items-center h-24 w-full rounded-md border-2 border-dashed">
+                        <Input
+                            type="file"
+                            id="kml-upload"
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            multiple
+                            accept=".jpg,.jpeg,.png,.kml,.pdf,.abd"
+                            onChange={handleKmlFileChange}
+                        />
+                        <div className="text-center text-muted-foreground">
+                            <Upload className="mx-auto h-8 w-8" />
+                            <span className="text-sm">Klik atau seret file ke sini</span>
+                        </div>
+                    </div>
+                )}
+            </CardContent>
+        </Card>
 
         <div className="flex items-center justify-end gap-2 mt-4 md:hidden">
           <Button onClick={() => router.back()} variant="outline" type="button">Batal</Button>

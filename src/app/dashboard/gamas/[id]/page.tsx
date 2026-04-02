@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Edit, Trash2, Image as ImageIcon, AlertTriangle, Info, Link as LinkIcon, Download, FileUp } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Image as ImageIcon, AlertTriangle, Info, Link as LinkIcon, Download, FileUp, Check, X } from 'lucide-react';
 import type { GamasReport, UserProfile, DesignatorEvidence } from '@/lib/types';
 import { useMemo, useState } from 'react';
 import Image from 'next/image';
