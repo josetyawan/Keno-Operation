@@ -98,7 +98,7 @@ function ManualOrderForm({ users, onSave, onCancel, currentUserProfile }: { user
             provisioningStatus: isAssigned ? 'assigned' : 'unassigned',
             assignedAt: isAssigned ? serverTimestamp() : null,
             status: 'OPEN',
-            workzone: currentUserProfile?.psa || '',
+            workzone: currentUserProfile?.psa || 'KDS',
             productType: ''
         };
         
@@ -390,7 +390,7 @@ function KendalaCard({ kendalaOrders, isLoading }: { kendalaOrders: Provisioning
     );
 }
 
-function PivotTable({ data, workzones, categoryLabel, selectedTechnician }: { data: any; workzones: string[]; categoryLabel: string; selectedTechnician: string; }) {
+function PivotTable({ data, workzones, categoryLabel }: { data: any; workzones: string[]; categoryLabel: string; }) {
     const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
 
     const toggleRow = (key: string) => {
@@ -406,6 +406,9 @@ function PivotTable({ data, workzones, categoryLabel, selectedTechnician }: { da
             const isExpanded = expandedRows[currentKey];
             const hasChildren = Object.keys(node[key].children).length > 0;
             
+            const nodeData = node[key];
+            const totalCount = nodeData.count['Grand Total'] || 0;
+
             rows.push(
                 <TableRow key={currentKey} className={cn(level > 0 && "bg-muted/50")}>
                     <TableCell style={{ paddingLeft: `${level * 1.5 + 1}rem` }} className="font-medium">
@@ -419,36 +422,15 @@ function PivotTable({ data, workzones, categoryLabel, selectedTechnician }: { da
                         </div>
                     </TableCell>
                     {workzones.map(wz => {
-                        const count = node[key].count[wz] || 0;
-                        const filters: Record<string, string> = { workzone: wz };
-                        
-                        const keys = currentKey.split('>');
-                        if (selectedTechnician === 'all') {
-                            if (keys[0] !== 'Unassigned') filters.assignedTo_userName = keys[0];
-                            if (keys[1] && keys[1] !== 'N/A') filters.crmOrder = keys[1];
-                            if (keys[2] && keys[2] !== 'N/A') filters.status = keys[2];
-                        } else {
-                            if (keys[0] && keys[0] !== 'N/A') filters.productName = keys[0];
-                            if (keys[1] && keys[1] !== 'N/A') filters.crmOrder = keys[1];
-                            if (keys[2] && keys[2] !== 'N/A') filters.status = keys[2];
-                        }
-                        
-                        const filteredFilters = Object.entries(filters).filter(([, value]) => value !== undefined && value !== 'N/A' && value !== 'Unassigned');
-                        const queryString = new URLSearchParams(filteredFilters as any).toString();
-
-
+                        const count = nodeData.count[wz] || 0;
                         return (
                             <TableCell key={wz} className="text-right">
-                                {count > 0 ? (
-                                    <Link href={`/dashboard/admin/provisioning/list?${queryString}`} className="hover:underline text-blue-600 font-medium">
-                                        {count}
-                                    </Link>
-                                ) : 0}
+                                {count > 0 ? count : 0}
                             </TableCell>
                         )
                     })}
                     <TableCell className="text-right font-bold">
-                        {node[key].count['Grand Total'] || 0}
+                        {totalCount}
                     </TableCell>
                 </TableRow>
             );
@@ -477,11 +459,11 @@ function PivotTable({ data, workzones, categoryLabel, selectedTechnician }: { da
                 </TableHeader>
                 <TableBody>
                    {Object.keys(data).length > 0 ? renderPivotRows(data) : (
-                       <TableRow><TableCell colSpan={workzones.length + 2} className="h-24 text-center">Silakan impor file Excel untuk melihat rekap.</TableCell></TableRow>
+                       <TableRow><TableCell colSpan={workzones.length + 2} className="h-24 text-center">Silakan impor file Excel atau buat order manual untuk melihat rekap.</TableCell></TableRow>
                    )}
                 </TableBody>
                  <TableRow className="font-bold bg-muted">
-                    <TableCell>{categoryLabel === 'Teknisi / Kategori' ? 'Grand Total' : 'Total'}</TableCell>
+                    <TableCell>Grand Total</TableCell>
                     {workzoneTotals.map((total, index) => (
                         <TableCell key={index} className="text-right">{total}</TableCell>
                     ))}
@@ -886,40 +868,41 @@ export default function ProvisioningDashboardPage() {
     const pivot: any = {};
     const dataToProcess = (data || []).filter(item => {
         if (item.provisioningStatus === 'completed') return false;
-        if (selectedTechnician !== 'all' && item.assignedTo_userId !== selectedTechnician) {
+        if (selectedTechnician !== 'all' && (item.assignedTo_userId !== selectedTechnician && item.assignedTo_crew_userId !== selectedTechnician)) {
             return false;
         }
         return true;
     });
 
     dataToProcess.forEach(item => {
-        const { productName, status, crmOrder, description, workzone, assignedTo_userName } = item;
-        if (!workzone) return;
+        const { scOrder, provisioningStatus, workzone, assignedTo_userName, assignedTo_crew_userName } = item;
         
-        const keys =
-          selectedTechnician === 'all'
-            ? [
-                assignedTo_userName || 'Unassigned',
-                crmOrder || 'N/A',
-                status || 'N/A',
-              ]
-            : [
-                crmOrder || 'N/A',
-                productName || 'N/A',
-                status || 'N/A',
-              ];
+        if (!workzone) return;
+
+        let techGroupKey = 'Unassigned';
+        if (assignedTo_userName) {
+            techGroupKey = assignedTo_userName;
+            if (assignedTo_crew_userName) {
+                techGroupKey += ` & ${assignedTo_crew_userName}`;
+            }
+        }
+        
+        const keys = [
+            techGroupKey,
+            scOrder || 'N/A',
+            provisioningStatus || 'unassigned'
+        ];
 
         let currentNode = pivot;
-        keys.forEach((key, index) => {
+        keys.forEach(key => {
             if (!currentNode[key]) {
-                currentNode[key] = { count: {}, children: {} };
+                currentNode[key] = { count: { 'Grand Total': 0 }, children: {} };
             }
+            
             currentNode[key].count[workzone] = (currentNode[key].count[workzone] || 0) + 1;
-            currentNode[key].count['Grand Total'] = (currentNode[key].count['Grand Total'] || 0) + 1;
+            currentNode[key].count['Grand Total'] += 1;
 
-            if (index < keys.length) {
-                currentNode = currentNode[key].children;
-            }
+            currentNode = currentNode[key].children;
         });
     });
     return pivot;
@@ -976,7 +959,7 @@ export default function ProvisioningDashboardPage() {
   
   const [activeTab, setActiveTab] = useState('unassigned');
   
-  const categoryLabel = selectedTechnician === 'all' ? 'Teknisi / Kategori' : 'Kategori';
+  const categoryLabel = 'Teknisi / SC Order / Status';
 
 
   useEffect(() => {
@@ -1049,7 +1032,7 @@ export default function ProvisioningDashboardPage() {
               <CardDescription>Ringkasan data provisioning yang dikelompokkan.</CardDescription>
           </CardHeader>
           <CardContent>
-              <PivotTable data={pivotData} workzones={workzones} categoryLabel={categoryLabel} selectedTechnician={selectedTechnician} />
+              <PivotTable data={pivotData} workzones={workzones} categoryLabel={categoryLabel} />
           </CardContent>
       </Card>
 
