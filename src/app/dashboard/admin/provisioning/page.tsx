@@ -506,6 +506,7 @@ export default function ProvisioningDashboardPage() {
         let writeCount = 0;
         let skippedCount = 0;
         let newRecordsCount = 0;
+        const scOrdersInThisBatch = new Set<string>();
         
         for (let i = 0; i < jsonData.length; i++) {
             const row = jsonData[i];
@@ -529,7 +530,7 @@ export default function ProvisioningDashboardPage() {
                 continue;
             }
 
-            if (existingScOrders.has(finalScOrder)) {
+            if (existingScOrders.has(finalScOrder) || scOrdersInThisBatch.has(finalScOrder)) {
                 skippedCount++;
                 continue;
             }
@@ -561,6 +562,7 @@ export default function ProvisioningDashboardPage() {
             
             const docRef = doc(recordsCollection, finalScOrder); // Use SC Order as ID
             batch.set(docRef, newRecord);
+            scOrdersInThisBatch.add(finalScOrder);
             writeCount++;
             newRecordsCount++;
 
@@ -568,6 +570,7 @@ export default function ProvisioningDashboardPage() {
                 await batch.commit();
                 batch = writeBatch(firestore);
                 writeCount = 0;
+                scOrdersInThisBatch.clear();
             }
             
             setImportProgress(((i + 1) / jsonData.length) * 100);
