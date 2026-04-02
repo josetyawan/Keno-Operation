@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -25,7 +23,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 type EvidenceFormValues = {
   designator: string;
-  notes: string;
+  quantity: number;
   photos: File[];
 };
 
@@ -131,34 +129,7 @@ function DesignatorSelector({ value, onChange }: { value: string, onChange: (val
     );
 }
 
-export default function NewGamasReportPage() {
-  const router = useRouter();
-  const { toast } = useToast();
-  const firestore = useFirestore();
-  const { user, isUserLoading } = useUser();
-  const storage = useStorage();
-  const [isSaving, setIsSaving] = useState(false);
-
-  const userDocRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
-  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
-
-  const { register, control, handleSubmit, formState: { errors }, getValues, setValue } = useForm<FormValues>({
-    defaultValues: {
-      noTiket: '',
-      evidences: [],
-    },
-  });
-
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: 'evidences',
-  });
-
-  const addEvidenceBlock = () => {
-    append({ designator: '', notes: '', photos: [] });
-  };
-  
-  const compressImage = (file: File): Promise<File> => {
+const compressImage = (file: File): Promise<File> => {
     return new Promise((resolve, reject) => {
       const img = document.createElement('img');
       const reader = new FileReader();
@@ -199,6 +170,33 @@ export default function NewGamasReportPage() {
       };
       img.onerror = (err) => reject(err);
     });
+};
+
+export default function NewGamasReportPage() {
+  const router = useRouter();
+  const { toast } = useToast();
+  const firestore = useFirestore();
+  const { user, isUserLoading } = useUser();
+  const storage = useStorage();
+  const [isSaving, setIsSaving] = useState(false);
+
+  const userDocRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
+
+  const { register, control, handleSubmit, formState: { errors }, getValues, setValue } = useForm<FormValues>({
+    defaultValues: {
+      noTiket: '',
+      evidences: [],
+    },
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'evidences',
+  });
+
+  const addEvidenceBlock = () => {
+    append({ designator: '', quantity: 1, photos: [] });
   };
 
   const onSubmit = async (data: FormValues) => {
@@ -237,7 +235,7 @@ export default function NewGamasReportPage() {
         
         return {
           designator: evidence.designator,
-          notes: evidence.notes,
+          quantity: evidence.quantity || 1,
           photoUrls,
           status: 'pending',
         } as DesignatorEvidence;
@@ -271,6 +269,10 @@ export default function NewGamasReportPage() {
       setIsSaving(false);
     }
   };
+  
+  if (isProfileLoading) {
+    return <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin" /> Memuat data pengguna...</div>;
+  }
 
   return (
     <div className="mx-auto grid w-full flex-1 auto-rows-max gap-4">
@@ -309,21 +311,24 @@ export default function NewGamasReportPage() {
                 </Button>
             </CardHeader>
             <CardContent className="grid gap-6">
-              <div className="grid gap-3">
-                <Label>Designator *</Label>
-                <Controller
-                  name={`evidences.${index}.designator`}
-                  control={control}
-                  rules={{ required: "Designator harus dipilih" }}
-                  render={({ field: { onChange, value } }) => (
-                    <DesignatorSelector value={value} onChange={onChange} />
-                  )}
-                />
-                 {errors.evidences?.[index]?.designator && <p className="text-sm text-destructive">{errors.evidences?.[index]?.designator?.message}</p>}
-              </div>
-              <div className="grid gap-3">
-                <Label htmlFor={`notes-${index}`}>Catatan</Label>
-                <Textarea id={`notes-${index}`} placeholder="Catatan tambahan untuk designator ini..." {...register(`evidences.${index}.notes`)} />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid gap-3">
+                    <Label>Designator *</Label>
+                    <Controller
+                    name={`evidences.${index}.designator`}
+                    control={control}
+                    rules={{ required: "Designator harus dipilih" }}
+                    render={({ field: { onChange, value } }) => (
+                        <DesignatorSelector value={value} onChange={onChange} />
+                    )}
+                    />
+                    {errors.evidences?.[index]?.designator && <p className="text-sm text-destructive">{errors.evidences?.[index]?.designator?.message}</p>}
+                </div>
+                 <div className="grid gap-3">
+                    <Label htmlFor={`quantity-${index}`}>Volume (VOL) *</Label>
+                    <Input id={`quantity-${index}`} type="number" placeholder="Jumlah, contoh: 100" {...register(`evidences.${index}.quantity`, { valueAsNumber: true, required: true, min: 1 })} />
+                    {errors.evidences?.[index]?.quantity && <p className="text-sm text-destructive">Volume wajib diisi.</p>}
+                </div>
               </div>
               <div className="grid gap-3">
                 <Label>Foto Eviden *</Label>
@@ -364,5 +369,3 @@ export default function NewGamasReportPage() {
     </div>
   );
 }
-
-    
