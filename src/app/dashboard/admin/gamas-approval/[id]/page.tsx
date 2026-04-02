@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, CheckCircle, ShieldX, Check, X, FileWarning, Loader2, Download } from 'lucide-react';
+import { ArrowLeft, CheckCircle, ShieldX, Check, X, FileWarning, Loader2, Download, FileUp } from 'lucide-react';
 import type { GamasReport, UserProfile, DesignatorEvidence } from '@/lib/types';
 import { useMemo, useState } from 'react';
 import Image from 'next/image';
@@ -250,6 +250,35 @@ export default function GamasApprovalDetailPage() {
     });
   };
 
+  const handleDownloadKmlFiles = () => {
+    if (!report?.kmlEvidences || report.kmlEvidences.length === 0) {
+        toast({
+            variant: "destructive",
+            title: "Tidak Ada File",
+            description: "Tidak ada file KML/ABD/SS KML untuk diunduh.",
+        });
+        return;
+    }
+
+    const downloadWithAnchor = (url: string, filename: string) => {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    };
+
+    report.kmlEvidences.forEach((file, index) => {
+        if (file.url && file.fileName) {
+            // Use a timeout to prevent browser from blocking multiple downloads
+            setTimeout(() => {
+                downloadWithAnchor(file.url, file.fileName!);
+            }, index * 300);
+        }
+    });
+  };
+
   if (isLoading) {
     return <div className="space-y-4"><Skeleton className="h-12 w-full" /><Skeleton className="h-96 w-full" /></div>;
   }
@@ -275,6 +304,12 @@ export default function GamasApprovalDetailPage() {
           <p className="text-muted-foreground text-sm">Oleh: {report.userName}</p>
         </div>
          <div className="ml-auto flex items-center gap-2">
+            {report.kmlEvidences && report.kmlEvidences.length > 0 && (
+                <Button onClick={handleDownloadKmlFiles} variant="outline" size="sm">
+                    <FileUp className="mr-2 h-4 w-4" />
+                    Download KML
+                </Button>
+            )}
             <Button onClick={handleDownloadAll} variant="outline" size="sm">
                 <Download className="mr-2 h-4 w-4" />
                 Download Foto

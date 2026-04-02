@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Edit, Trash2, Image as ImageIcon, AlertTriangle, Info, Link as LinkIcon } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Image as ImageIcon, AlertTriangle, Info, Link as LinkIcon, Download, FileUp } from 'lucide-react';
 import type { GamasReport, UserProfile, DesignatorEvidence } from '@/lib/types';
 import { useMemo, useState } from 'react';
 import Image from 'next/image';
@@ -101,6 +101,8 @@ export default function GamasDetailPage() {
   const router = useRouter();
   const { user } = useUser();
   const firestore = useFirestore();
+  const storage = useStorage();
+  const { toast } = useToast();
 
   const reportRef = useMemoFirebase(() => doc(firestore, 'gamas-reports', id), [firestore, id]);
   const { data: report, isLoading } = useDoc<GamasReport>(reportRef);
@@ -126,6 +128,62 @@ export default function GamasDetailPage() {
     if (userProfile.role === 'admin' || userProfile.role === 'korlap') return true;
     return report.userId === user?.uid;
   }, [userProfile, report, user]);
+
+  const handleDownloadAll = () => {
+    if (!report?.evidences) return;
+
+    const downloadWithAnchor = (url: string, filename: string) => {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    };
+
+    let photoIndex = 0;
+    report.evidences.forEach(evidence => {
+        (evidence.photoUrls || []).forEach(url => {
+            if (url) {
+                const filename = `${report.noTiket}_${evidence.designator}_${photoIndex + 1}.jpeg`;
+                // Use a timeout to prevent browser from blocking multiple downloads
+                setTimeout(() => {
+                    downloadWithAnchor(url, filename);
+                }, photoIndex * 300);
+                photoIndex++;
+            }
+        });
+    });
+  };
+
+  const handleDownloadKmlFiles = () => {
+    if (!report?.kmlEvidences || report.kmlEvidences.length === 0) {
+        toast({
+            variant: "destructive",
+            title: "Tidak Ada File",
+            description: "Tidak ada file KML/ABD/SS KML untuk diunduh.",
+        });
+        return;
+    }
+
+    const downloadWithAnchor = (url: string, filename: string) => {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    };
+
+    report.kmlEvidences.forEach((file, index) => {
+        if (file.url && file.fileName) {
+            // Use a timeout to prevent browser from blocking multiple downloads
+            setTimeout(() => {
+                downloadWithAnchor(file.url, file.fileName!);
+            }, index * 300);
+        }
+    });
+  };
 
   if (isLoading) {
     return (
@@ -169,6 +227,14 @@ export default function GamasDetailPage() {
                     <Button><Edit className="mr-2"/>Edit & Kirim Ulang Laporan</Button>
                 </Link>
             )}
+            {report.kmlEvidences && report.kmlEvidences.length > 0 && (
+                <Button onClick={handleDownloadKmlFiles} variant="outline" size="sm">
+                    <FileUp className="mr-2 h-4 w-4" /> Download KML
+                </Button>
+            )}
+            <Button onClick={handleDownloadAll} variant="outline" size="sm">
+                <Download className="mr-2 h-4 w-4" /> Download Foto
+            </Button>
         </div>
       </div>
 
