@@ -104,15 +104,20 @@ export default function GamasApprovalListPage() {
         const XLSX = await import('xlsx');
         const priceMap = new Map(gamasPriceData.map(item => [item.code.trim().toUpperCase(), item]));
 
+        const dataToExport: any[] = [];
         let itemCounter = 1;
-        const dataToExport = approvedReports.flatMap(report => 
-            report.evidences.map(evidence => {
+        
+        approvedReports.forEach(report => {
+            const totalVolForReport = report.evidences.reduce((sum, ev) => sum + (ev.quantity || 1), 0);
+
+            report.evidences.forEach((evidence, evidenceIndex) => {
+                const vol = evidence.quantity || 1;
+                // Clean up designator code for better matching
                 const cleanDesignator = evidence.designator.trim().toUpperCase();
                 const priceInfo = priceMap.get(cleanDesignator);
                 
                 const materialPrice = priceInfo?.materialPrice || 0;
                 const servicePrice = priceInfo?.servicePrice || 0;
-                const vol = evidence.quantity || 1;
                 
                 const totalMaterial = materialPrice * vol;
                 const totalService = servicePrice * vol;
@@ -120,31 +125,36 @@ export default function GamasApprovalListPage() {
 
                 let kudWorkDesc = '';
                 let dmaWorkDesc = '';
+                let displayVol: number | string = vol;
 
-                if (report.sto === 'DMA') {
-                    dmaWorkDesc = report.noTiket;
-                } else {
-                    // Default to KUD if STO is 'KUD', undefined, or anything else
-                    kudWorkDesc = report.noTiket;
+                // For the first evidence of a report, display ticket and total volume.
+                if (evidenceIndex === 0) {
+                    if (report.sto === 'DMA') {
+                        dmaWorkDesc = report.noTiket;
+                    } else {
+                        // Default to KUD if STO is KUD or not set
+                        kudWorkDesc = report.noTiket;
+                    }
+                    displayVol = totalVolForReport;
                 }
 
-                return {
+                dataToExport.push({
                     'NO': itemCounter++,
                     'DESIGNATOR': evidence.designator,
                     'URAIAN PEKERJAAN': priceInfo?.description || 'N/A',
                     'SATUAN': priceInfo?.unit || 'N/A',
                     'HARGA SATUAN MATERIAL': materialPrice,
                     'HARGA SATUAN JASA': servicePrice,
-                    'VOL': vol,
+                    'VOL': displayVol,
                     'KUD (WORK DESC)': kudWorkDesc,
                     'DMA (WORK DESC)': dmaWorkDesc,
                     'TOTAL HARGA MATERIAL': totalMaterial,
                     'TOTAL HARGA JASA': totalService,
                     'TOTAL': totalHarga,
                     'KETERANGAN': evidence.notes || ''
-                };
-            })
-        );
+                });
+            });
+        });
         
         const worksheet = XLSX.utils.json_to_sheet(dataToExport);
         const workbook = XLSX.utils.book_new();
