@@ -102,103 +102,108 @@ export default function GamasApprovalListPage() {
     try {
         const XLSX = await import('xlsx');
         const priceMap = new Map(gamasPriceData.map(item => [item.code.trim().toUpperCase(), item]));
+        
+        const pivotedData: Record<string, any> = {};
+        const ticketColumns = new Set<string>();
 
-        const allEvidences = approvedReports.flatMap(report => 
-            report.evidences.map(evidence => ({ ...evidence, ticketInfo: { noTiket: report.noTiket || 'TANPA_TIKET', sto: report.sto } }))
-        );
+        approvedReports.forEach(report => {
+            const sto = report.sto || 'KUD';
+            const ticketHeader = `${sto} (${report.noTiket || 'TANPA_TIKET'})`;
+            ticketColumns.add(ticketHeader);
 
-        if (allEvidences.length === 0) {
-            toast({ variant: 'destructive', title: 'Tidak ada eviden', description: 'Laporan yang disetujui tidak memiliki rincian pekerjaan untuk diekspor.' });
-            setIsExporting(false);
-            return;
-        }
+            report.evidences.forEach(evidence => {
+                const designatorCode = evidence.designator.trim().toUpperCase();
+                if (!pivotedData[designatorCode]) {
+                    const priceInfo = priceMap.get(designatorCode);
+                    pivotedData[designatorCode] = {
+                        designator: evidence.designator,
+                        uraian: priceInfo?.description || 'N/A',
+                        satuan: priceInfo?.unit || 'N/A',
+                        hargaMaterial: priceInfo?.materialPrice || 0,
+                        hargaJasa: priceInfo?.servicePrice || 0,
+                        totalVol: 0,
+                        ticketVols: {}
+                    };
+                }
+                
+                const vol = evidence.quantity || 1;
+                pivotedData[designatorCode].totalVol += vol;
+                pivotedData[designatorCode].ticketVols[ticketHeader] = (pivotedData[designatorCode].ticketVols[ticketHeader] || 0) + vol;
+            });
+        });
+
+        const sortedTicketColumns = Array.from(ticketColumns).sort();
+        const staticHeaders = [
+            'NO', 'DESIGNATOR', 'URAIAN PEKERJAAN', 'SATUAN',
+            'HARGA SATUAN MATERIAL', 'HARGA SATUAN JASA', 'VOL'
+        ];
+        const finalHeaders = [
+            'TOTAL HARGA MATERIAL', 'TOTAL HARGA JASA', 'TOTAL'
+        ];
+        const excelHeaders = [...staticHeaders, ...sortedTicketColumns, ...finalHeaders];
 
         const dataToExport: any[] = [];
         let itemCounter = 1;
-        
-        const grandTotals = {
-            vol: 0,
-            material: 0,
-            jasa: 0,
-            total: 0,
-        };
+        const sortedDesignators = Object.keys(pivotedData).sort();
 
-        allEvidences.forEach(evidence => {
-            const vol = evidence.quantity || 1;
-            const cleanDesignator = evidence.designator.trim().toUpperCase();
-            const priceInfo = priceMap.get(cleanDesignator);
+        sortedDesignators.forEach(designatorCode => {
+            const item = pivotedData[designatorCode];
+            const totalHargaMaterial = item.hargaMaterial * item.totalVol;
+            const totalHargaJasa = item.hargaJasa * item.totalVol;
+            const total = totalHargaMaterial + totalHargaJasa;
 
-            let materialPrice = 0;
-            let servicePrice = 0;
-            
-            if (priceInfo) {
-                if (cleanDesignator.startsWith('J-')) {
-                    servicePrice = priceInfo.servicePrice || 0;
-                } else if (cleanDesignator.startsWith('M-')) {
-                    materialPrice = priceInfo.materialPrice || 0;
-                } else {
-                    materialPrice = priceInfo.materialPrice || 0;
-                    servicePrice = priceInfo.servicePrice || 0;
-                }
-            }
-
-            const totalMaterial = materialPrice * vol;
-            const totalService = servicePrice * vol;
-            const totalHarga = totalMaterial + totalService;
-
-            grandTotals.vol += vol;
-            grandTotals.material += totalMaterial;
-            grandTotals.jasa += totalService;
-            grandTotals.total += totalHarga;
-
-            dataToExport.push({
+            const row: any = {
                 'NO': itemCounter++,
-                'DESIGNATOR': evidence.designator,
-                'URAIAN PEKERJAAN': priceInfo?.description || 'N/A',
-                'SATUAN': priceInfo?.unit || 'N/A',
-                'HARGA SATUAN MATERIAL': materialPrice,
-                'HARGA SATUAN JASA': servicePrice,
-                'VOL': vol,
-                'KUD (NO TIKET)': evidence.ticketInfo.sto !== 'DMA' ? `KUD (${evidence.ticketInfo.noTiket})` : '',
-                'DMA (NO TIKET)': evidence.ticketInfo.sto === 'DMA' ? `DMA (${evidence.ticketInfo.noTiket})` : '',
-                'TOTAL HARGA MATERIAL': totalMaterial,
-                'TOTAL HARGA JASA': totalService,
-                'TOTAL': totalHarga,
+                'DESIGNATOR': item.designator,
+                'URAIAN PEKERJAAN': item.uraian,
+                'SATUAN': item.satuan,
+                'HARGA SATUAN MATERIAL': item.hargaMaterial,
+                'HARGA SATUAN JASA': item.hargaJasa,
+                'VOL': item.totalVol,
+                'TOTAL HARGA MATERIAL': totalHargaMaterial,
+                'TOTAL HARGA JASA': totalHargaJasa,
+                'TOTAL': total,
+            };
+
+            sortedTicketColumns.forEach(ticketHeader => {
+                row[ticketHeader] = item.ticketVols[ticketHeader] || '';
             });
+
+            dataToExport.push(row);
         });
+
+        const grandTotals = {
+            vol: dataToExport.reduce((acc, row) => acc + (row['VOL'] || 0), 0),
+            material: dataToExport.reduce((acc, row) => acc + (row['TOTAL HARGA MATERIAL'] || 0), 0),
+            jasa: dataToExport.reduce((acc, row) => acc + (row['TOTAL HARGA JASA'] || 0), 0),
+            total: dataToExport.reduce((acc, row) => acc + (row['TOTAL'] || 0), 0),
+        };
         
         dataToExport.push({}); // Spacer row
         dataToExport.push({ 'NO': '', 'DESIGNATOR': 'MATERIAL', 'TOTAL HARGA MATERIAL': grandTotals.material });
         dataToExport.push({ 'NO': '', 'DESIGNATOR': 'JASA', 'TOTAL HARGA JASA': grandTotals.jasa });
         dataToExport.push({ 'NO': '', 'DESIGNATOR': 'TOTAL', 'TOTAL': grandTotals.total });
-        dataToExport.push({
+        
+        const grandTotalRow: any = {
             'NO': '',
             'DESIGNATOR': 'GRAND TOTAL',
             'VOL': grandTotals.vol,
             'TOTAL HARGA MATERIAL': grandTotals.material,
             'TOTAL HARGA JASA': grandTotals.jasa,
             'TOTAL': grandTotals.total
-        });
-        
-        const excelHeaders = [
-            'NO', 'DESIGNATOR', 'URAIAN PEKERJAAN', 'SATUAN', 
-            'HARGA SATUAN MATERIAL', 'HARGA SATUAN JASA', 'VOL', 'KUD (NO TIKET)', 'DMA (NO TIKET)',
-            'TOTAL HARGA MATERIAL', 'TOTAL HARGA JASA', 'TOTAL'
-        ];
+        };
+        dataToExport.push(grandTotalRow);
         
         const worksheet = XLSX.utils.json_to_sheet(dataToExport, { header: excelHeaders });
+        
+        const colWidths = excelHeaders.map(header => ({
+            width: Math.max(header.length, ...dataToExport.map(row => String(row[header] ?? '').length)) + 2
+        }));
+        worksheet['!cols'] = colWidths;
+
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Rekap Gamas Approved');
         
-        const colWidths = excelHeaders.map(header => {
-            const maxLength = Math.max(
-                header.length,
-                ...dataToExport.map(row => String(row[header as keyof typeof row] ?? '').length)
-            );
-            return { width: Math.min(maxLength + 2, 60) };
-        });
-        worksheet['!cols'] = colWidths;
-
         const dateString = format(new Date(), 'yyyy-MM-dd');
         XLSX.writeFile(workbook, `Rekap_Gamas_Approved_${dateString}.xlsx`);
         
