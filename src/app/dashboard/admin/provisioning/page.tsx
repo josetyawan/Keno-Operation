@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -49,6 +50,7 @@ function ManualOrderForm({ users, onSave, onCancel }: { users: UserProfile[], on
     // Form fields
     const [crmOrder, setCrmOrder] = useState('');
     const [workorder, setWorkorder] = useState('');
+    const [workorderBaru, setWorkorderBaru] = useState('');
     const [scOrder, setScOrder] = useState('');
     const [contactNumber, setContactNumber] = useState('');
     const [customerName, setCustomerName] = useState('');
@@ -75,7 +77,7 @@ function ManualOrderForm({ users, onSave, onCancel }: { users: UserProfile[], on
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!scOrder.trim() || !customerName.trim() || !crmOrder) {
-            toast({ variant: 'destructive', title: 'Data Wajib Kurang', description: 'WO Baru (SC Order), Nama Pelanggan, dan Jenis Pekerjaan harus diisi.' });
+            toast({ variant: 'destructive', title: 'Data Wajib Kurang', description: 'SC Order, Nama Pelanggan, dan Jenis Pekerjaan harus diisi.' });
             return;
         }
 
@@ -89,7 +91,10 @@ function ManualOrderForm({ users, onSave, onCancel }: { users: UserProfile[], on
         );
 
         const newOrder: Partial<ProvisioningRecord> = {
-            workorder, scOrder: scOrder.trim(), contactNumber, customerName, address, bookingDate, serviceNo,
+            workorder,
+            workorderBaru,
+            scOrder: scOrder.trim(),
+            contactNumber, customerName, address, bookingDate, serviceNo,
             odpName, productName, crmOrder,
             assignedTo_userId: technician?.id || '',
             assignedTo_userName: technician?.displayName || '',
@@ -129,13 +134,17 @@ function ManualOrderForm({ users, onSave, onCancel }: { users: UserProfile[], on
                         <SelectContent><ScrollArea className="h-72">{jenisPekerjaanOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</ScrollArea></SelectContent>
                     </Select>
                 </div>
-                <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid md:grid-cols-3 gap-4">
                     <div className="grid gap-2">
                         <Label htmlFor="workorder">WO Lama</Label>
                         <Input id="workorder" value={workorder} onChange={e => setWorkorder(e.target.value)} />
                     </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="workorderBaru">WO Baru</Label>
+                        <Input id="workorderBaru" value={workorderBaru} onChange={e => setWorkorderBaru(e.target.value)} />
+                    </div>
                      <div className="grid gap-2">
-                        <Label htmlFor="scOrder">WO Baru / SC Order *</Label>
+                        <Label htmlFor="scOrder">SC Order *</Label>
                         <Input id="scOrder" value={scOrder} onChange={e => setScOrder(e.target.value)} required />
                     </div>
                 </div>
@@ -649,6 +658,7 @@ export default function ProvisioningDashboardPage() {
 
         const headerMapping = {
             workorder: findHeader(headers, ['workorder']),
+            workorderBaru: findHeader(headers, ['wo baru', 'workorder baru', 'new workorder']),
             scOrder: scOrderHeader,
             serviceNo: findHeader(headers, ['service no']),
             crmOrder: findHeader(headers, ['crm', 'order type']),
@@ -712,6 +722,7 @@ export default function ProvisioningDashboardPage() {
             
             const newRecord: Omit<ProvisioningRecord, 'id'> = {
               workorder: row[headerMapping.workorder!] || '-',
+              workorderBaru: headerMapping.workorderBaru ? (row[headerMapping.workorderBaru] || '') : '',
               scOrder: finalScOrder,
               serviceNo: row[headerMapping.serviceNo!]?.toString() || '-',
               crmOrder: row[headerMapping.crmOrder!] || '-',
@@ -763,7 +774,7 @@ export default function ProvisioningDashboardPage() {
   
   const handleManualSave = async (orderData: Partial<ProvisioningRecord>) => {
     const scOrder = orderData.scOrder;
-    if (!scOrder) throw new Error("SC Order (WO Baru) tidak boleh kosong.");
+    if (!scOrder) throw new Error("SC Order tidak boleh kosong.");
 
     const docRef = doc(firestore, 'provisioning-records', scOrder);
     const existingDoc = await getDocs(query(collection(firestore, 'provisioning-records'), where('scOrder', '==', scOrder)));
@@ -1075,14 +1086,20 @@ export default function ProvisioningDashboardPage() {
             <CardContent className="pt-6">
                 <Table>
                     <TableHeader><TableRow>
-                        <TableHead>Workorder</TableHead><TableHead>SC Order</TableHead>
+                        <TableHead>WO Lama</TableHead>
+                        <TableHead>WO Baru</TableHead>
+                        <TableHead>SC Order</TableHead>
                         <TableHead>Customer Name</TableHead><TableHead>Contact</TableHead>
                         <TableHead>Address</TableHead><TableHead className="text-right">Aksi</TableHead>
                     </TableRow></TableHeader>
                     <TableBody>
-                        {areRecordsLoading ? <TableRow><TableCell colSpan={6}><Skeleton className="h-10 w-full" /></TableCell></TableRow> : paginatedUnassigned.length > 0 ? (
+                        {areRecordsLoading ? <TableRow><TableCell colSpan={7}><Skeleton className="h-10 w-full" /></TableCell></TableRow> : paginatedUnassigned.length > 0 ? (
                             paginatedUnassigned.map(item => (
-                                <TableRow key={item.id}><TableCell>{item.workorder}</TableCell><TableCell>{item.scOrder}</TableCell><TableCell>{item.customerName}</TableCell>
+                                <TableRow key={item.id}>
+                                    <TableCell>{item.workorder}</TableCell>
+                                    <TableCell>{item.workorderBaru || '-'}</TableCell>
+                                    <TableCell>{item.scOrder}</TableCell>
+                                    <TableCell>{item.customerName}</TableCell>
                                     <TableCell>
                                         <a href={formatWaNumber(item.contactNumber)} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1"><Phone className="h-3 w-3" />{item.contactNumber}</a>
                                     </TableCell>
@@ -1098,7 +1115,7 @@ export default function ProvisioningDashboardPage() {
                                     </TableCell>
                                 </TableRow>
                             ))
-                        ) : <TableRow><TableCell colSpan={6} className="h-24 text-center">Tidak ada order baru.</TableCell></TableRow>}
+                        ) : <TableRow><TableCell colSpan={7} className="h-24 text-center">Tidak ada order baru.</TableCell></TableRow>}
                     </TableBody>
                 </Table>
             </CardContent>
@@ -1114,16 +1131,25 @@ export default function ProvisioningDashboardPage() {
 
         <TabsContent value="in-progress">
           <Card><CardContent className="pt-6">
-            <Table><TableHeader><TableRow><TableHead>Workorder</TableHead><TableHead>Customer</TableHead><TableHead>Teknisi</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Aksi</TableHead></TableRow></TableHeader>
+            <Table><TableHeader><TableRow>
+                <TableHead>WO Lama</TableHead>
+                <TableHead>WO Baru</TableHead>
+                <TableHead>SC Order</TableHead>
+                <TableHead>Customer</TableHead><TableHead>Teknisi</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Aksi</TableHead></TableRow></TableHeader>
                 <TableBody>
-                    {areRecordsLoading ? <TableRow><TableCell colSpan={5}><Skeleton className="h-10 w-full" /></TableCell></TableRow> : paginatedInProgress.length > 0 ? (
+                    {areRecordsLoading ? <TableRow><TableCell colSpan={7}><Skeleton className="h-10 w-full" /></TableCell></TableRow> : paginatedInProgress.length > 0 ? (
                         paginatedInProgress.map(item => (
-                            <TableRow key={item.id}><TableCell>{item.workorder}</TableCell><TableCell>{item.customerName}</TableCell><TableCell>{item.assignedTo_userName}</TableCell>
+                            <TableRow key={item.id}>
+                                <TableCell>{item.workorder}</TableCell>
+                                <TableCell>{item.workorderBaru || '-'}</TableCell>
+                                <TableCell>{item.scOrder}</TableCell>
+                                <TableCell>{item.customerName}</TableCell>
+                                <TableCell>{item.assignedTo_userName}</TableCell>
                                 <TableCell><Badge variant="secondary">{item.provisioningStatus}</Badge></TableCell>
                                 <TableCell className="text-right"><Button asChild variant="outline" size="sm"><Link href={`/dashboard/provi-orders/${item.id}`}>Lihat Detail</Link></Button></TableCell>
                             </TableRow>
                         ))
-                    ) : <TableRow><TableCell colSpan={5} className="h-24 text-center">Tidak ada order yang sedang dikerjakan.</TableCell></TableRow>}
+                    ) : <TableRow><TableCell colSpan={7} className="h-24 text-center">Tidak ada order yang sedang dikerjakan.</TableCell></TableRow>}
                 </TableBody>
             </Table>
           </CardContent>
@@ -1139,16 +1165,25 @@ export default function ProvisioningDashboardPage() {
 
         <TabsContent value="completed">
            <Card><CardContent className="pt-6">
-                <Table><TableHeader><TableRow><TableHead>Workorder</TableHead><TableHead>Customer</TableHead><TableHead>Teknisi</TableHead><TableHead>Tanggal PS</TableHead><TableHead className="text-right">Aksi</TableHead></TableRow></TableHeader>
+                <Table><TableHeader><TableRow>
+                    <TableHead>WO Lama</TableHead>
+                    <TableHead>WO Baru</TableHead>
+                    <TableHead>SC Order</TableHead>
+                    <TableHead>Customer</TableHead><TableHead>Teknisi</TableHead><TableHead>Tanggal PS</TableHead><TableHead className="text-right">Aksi</TableHead></TableRow></TableHeader>
                     <TableBody>
-                         {areRecordsLoading ? <TableRow><TableCell colSpan={5}><Skeleton className="h-10 w-full" /></TableCell></TableRow> : paginatedCompleted.length > 0 ? (
+                         {areRecordsLoading ? <TableRow><TableCell colSpan={7}><Skeleton className="h-10 w-full" /></TableCell></TableRow> : paginatedCompleted.length > 0 ? (
                             paginatedCompleted.map(item => (
-                                <TableRow key={item.id}><TableCell>{item.workorder}</TableCell><TableCell>{item.customerName}</TableCell><TableCell>{item.assignedTo_userName}</TableCell>
+                                <TableRow key={item.id}>
+                                    <TableCell>{item.workorder}</TableCell>
+                                    <TableCell>{item.workorderBaru || '-'}</TableCell>
+                                    <TableCell>{item.scOrder}</TableCell>
+                                    <TableCell>{item.customerName}</TableCell>
+                                    <TableCell>{item.assignedTo_userName}</TableCell>
                                     <TableCell>{item.completedAt?.toDate ? format(item.completedAt.toDate(), 'dd MMM yyyy') : '-'}</TableCell>
                                     <TableCell className="text-right"><Button asChild variant="outline" size="sm"><Link href={`/dashboard/provi-orders/${item.id}`}>Lihat Detail</Link></Button></TableCell>
                                 </TableRow>
                             ))
-                        ) : <TableRow><TableCell colSpan={5} className="h-24 text-center">Tidak ada order yang selesai.</TableCell></TableRow>}
+                        ) : <TableRow><TableCell colSpan={7} className="h-24 text-center">Tidak ada order yang selesai.</TableCell></TableRow>}
                     </TableBody>
                 </Table>
             </CardContent>

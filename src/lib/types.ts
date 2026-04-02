@@ -1,4 +1,5 @@
 
+
 import { Timestamp } from 'firebase/firestore';
 
 export type Nota = {
@@ -367,6 +368,7 @@ export type ProvisioningMaterial = {
 export type ProvisioningRecord = {
   id: string;
   workorder: string;
+  workorderBaru?: string;
   scOrder: string;
   serviceNo: string;
   crmOrder: string;

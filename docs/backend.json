@@ -506,6 +506,7 @@
       "properties": {
         "id": { "type": "string" },
         "workorder": { "type": "string" },
+        "workorderBaru": { "type": "string" },
         "scOrder": { "type": "string" },
         "serviceNo": { "type": "string" },
         "crmOrder": { "type": "string" },
@@ -521,6 +522,8 @@
         "workzone": { "type": "string" },
         "assignedTo_userId": { "type": "string" },
         "assignedTo_userName": { "type": "string" },
+        "assignedTo_crew_userId": { "type": "string" },
+        "assignedTo_crew_userName": { "type": "string" },
         "assignedAt": { "type": "string", "format": "date-time" },
         "provisioningStatus": { "type": "string", "enum": ["unassigned", "assigned", "picked_up", "departed", "arrived", "kendala", "wip_odp_done", "completed"] },
         "pickupAt": { "type": "string", "format": "date-time" },
@@ -592,4 +595,5 @@
 
 
     
+
 
