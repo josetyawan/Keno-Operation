@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Upload, FileSpreadsheet, ChevronLeft, ChevronRight, Trash2, ChevronRightIcon, User, AlertTriangle, Phone, MoreHorizontal, Edit, Save, Package, Truck, PackageCheck, Send, PlusCircle } from 'lucide-react';
 import { format } from 'date-fns';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, doc, writeBatch, orderBy, getDocs, setDoc, updateDoc, serverTimestamp, where } from 'firebase/firestore';
 import type { ProvisioningRecord, UserProfile } from '@/lib/types';
 import { Progress } from '@/components/ui/progress';
