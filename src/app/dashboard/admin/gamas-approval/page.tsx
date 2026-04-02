@@ -102,11 +102,11 @@ export default function GamasApprovalListPage() {
 
     try {
         const XLSX = await import('xlsx');
-        const priceMap = new Map(gamasPriceData.map(item => [item.code, item]));
+        const priceMap = new Map(gamasPriceData.map(item => [item.code.trim().toUpperCase(), item]));
 
         const dataToExport = approvedReports.flatMap(report => 
             report.evidences.map(evidence => {
-                const priceInfo = priceMap.get(evidence.designator);
+                const priceInfo = priceMap.get(evidence.designator.trim().toUpperCase());
                 const hargaSatuan = priceInfo ? priceInfo.materialPrice + priceInfo.servicePrice : 0;
                 const vol = evidence.quantity || 1;
                 const totalHarga = hargaSatuan * vol;
@@ -127,17 +127,17 @@ export default function GamasApprovalListPage() {
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Rekap Gamas Approved');
         
-        // Auto-fit columns
-        const objectMaxLength: any[] = [];
-        dataToExport.forEach(row => {
-          Object.entries(row).forEach(([key, value], colIndex) => {
-            const headerLength = key.length;
-            const cellLength = value ? String(value).length : 0;
-            objectMaxLength[colIndex] = Math.max(objectMaxLength[colIndex] || headerLength, cellLength);
-          });
-        });
-        worksheet['!cols'] = objectMaxLength.map(w => ({ width: w + 2 }));
-
+        if (dataToExport.length > 0) {
+            const headers = Object.keys(dataToExport[0]);
+            const colWidths = headers.map(header => {
+                const maxLength = Math.max(
+                    header.length,
+                    ...dataToExport.map(row => String(row[header as keyof typeof row] ?? '').length)
+                );
+                return { width: maxLength + 2 };
+            });
+            worksheet['!cols'] = colWidths;
+        }
 
         const dateString = format(new Date(), 'yyyy-MM-dd');
         XLSX.writeFile(workbook, `Rekap_Gamas_Approved_${dateString}.xlsx`);
