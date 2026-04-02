@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -104,15 +103,15 @@ export default function GamasApprovalListPage() {
         const XLSX = await import('xlsx');
         const priceMap = new Map(gamasPriceData.map(item => [item.code.trim().toUpperCase(), item]));
 
-        const reportsByTicket = approvedReports.reduce((acc, report) => {
-            const ticketKey = report.noTiket || 'TANPA_TIKET';
-            if (!acc[ticketKey]) {
-                acc[ticketKey] = { report: report, evidences: [] };
-            }
-            acc[ticketKey].evidences.push(...report.evidences);
-            return acc;
-        }, {} as Record<string, { report: GamasReport; evidences: DesignatorEvidence[] }>);
+        const allEvidences = approvedReports.flatMap(report => 
+            report.evidences.map(evidence => ({ ...evidence, ticketInfo: { noTiket: report.noTiket || 'TANPA_TIKET', sto: report.sto } }))
+        );
 
+        if (allEvidences.length === 0) {
+            toast({ variant: 'destructive', title: 'Tidak ada eviden', description: 'Laporan yang disetujui tidak memiliki rincian pekerjaan untuk diekspor.' });
+            setIsExporting(false);
+            return;
+        }
 
         const dataToExport: any[] = [];
         let itemCounter = 1;
@@ -124,66 +123,54 @@ export default function GamasApprovalListPage() {
             total: 0,
         };
 
-        for (const ticketKey in reportsByTicket) {
-            const { report, evidences } = reportsByTicket[ticketKey];
-            if (evidences.length === 0) continue;
+        allEvidences.forEach(evidence => {
+            const vol = evidence.quantity || 1;
+            const cleanDesignator = evidence.designator.trim().toUpperCase();
+            const priceInfo = priceMap.get(cleanDesignator);
 
-            const totalVolForTicket = evidences.reduce((sum, ev) => sum + (ev.quantity || 1), 0);
-            grandTotals.vol += totalVolForTicket;
-
-            let ticketSubtotals = { material: 0, jasa: 0 };
-            let isFirstRowOfTicket = true;
-
-            evidences.forEach(evidence => {
-                const vol = evidence.quantity || 1;
-                const cleanDesignator = evidence.designator.trim().toUpperCase();
-                const priceInfo = priceMap.get(cleanDesignator);
-
-                let materialPrice = priceInfo?.materialPrice || 0;
-                let servicePrice = priceInfo?.servicePrice || 0;
-                
-                if (cleanDesignator.startsWith('J-')) {
-                    materialPrice = 0;
-                } else if (cleanDesignator.startsWith('M-')) {
-                    servicePrice = 0;
-                }
-
-                const totalMaterial = materialPrice * vol;
-                const totalService = servicePrice * vol;
-                const totalHarga = totalMaterial + totalService;
-
-                ticketSubtotals.material += totalMaterial;
-                ticketSubtotals.jasa += totalService;
-
-                dataToExport.push({
-                    'NO': itemCounter++,
-                    'DESIGNATOR': evidence.designator,
-                    'URAIAN PEKERJAAN': priceInfo?.description || 'N/A',
-                    'SATUAN': priceInfo?.unit || 'N/A',
-                    'HARGA SATUAN MATERIAL': materialPrice,
-                    'HARGA SATUAN JASA': servicePrice,
-                    'VOL': isFirstRowOfTicket ? totalVolForTicket : vol,
-                    'KUD (NO TIKET)': isFirstRowOfTicket ? (report.sto !== 'DMA' ? `KUD (${ticketKey})` : '') : '',
-                    'DMA (NO TIKET)': isFirstRowOfTicket ? (report.sto === 'DMA' ? `DMA (${ticketKey})` : '') : '',
-                    'TOTAL HARGA MATERIAL': totalMaterial,
-                    'TOTAL HARGA JASA': totalService,
-                    'TOTAL': totalHarga,
-                });
-                
-                isFirstRowOfTicket = false;
-            });
-
-            const ticketTotal = ticketSubtotals.material + ticketSubtotals.jasa;
-            dataToExport.push({ 'NO': '', 'DESIGNATOR': 'MATERIAL', 'TOTAL': ticketSubtotals.material });
-            dataToExport.push({ 'NO': '', 'DESIGNATOR': 'JASA', 'TOTAL': ticketSubtotals.jasa });
-            dataToExport.push({ 'NO': '', 'DESIGNATOR': 'TOTAL', 'TOTAL': ticketTotal });
+            let materialPrice = 0;
+            let servicePrice = 0;
             
-            grandTotals.material += ticketSubtotals.material;
-            grandTotals.jasa += ticketSubtotals.jasa;
-            grandTotals.total += ticketTotal;
-        }
+            if (priceInfo) {
+                if (cleanDesignator.startsWith('J-')) {
+                    servicePrice = priceInfo.servicePrice || 0;
+                } else if (cleanDesignator.startsWith('M-')) {
+                    materialPrice = priceInfo.materialPrice || 0;
+                } else {
+                    materialPrice = priceInfo.materialPrice || 0;
+                    servicePrice = priceInfo.servicePrice || 0;
+                }
+            }
 
-        // Add Grand Total row
+            const totalMaterial = materialPrice * vol;
+            const totalService = servicePrice * vol;
+            const totalHarga = totalMaterial + totalService;
+
+            grandTotals.vol += vol;
+            grandTotals.material += totalMaterial;
+            grandTotals.jasa += totalService;
+            grandTotals.total += totalHarga;
+
+            dataToExport.push({
+                'NO': itemCounter++,
+                'DESIGNATOR': evidence.designator,
+                'URAIAN PEKERJAAN': priceInfo?.description || 'N/A',
+                'SATUAN': priceInfo?.unit || 'N/A',
+                'HARGA SATUAN MATERIAL': materialPrice,
+                'HARGA SATUAN JASA': servicePrice,
+                'VOL': vol,
+                'KUD (NO TIKET)': evidence.ticketInfo.sto !== 'DMA' ? `KUD (${evidence.ticketInfo.noTiket})` : '',
+                'DMA (NO TIKET)': evidence.ticketInfo.sto === 'DMA' ? `DMA (${evidence.ticketInfo.noTiket})` : '',
+                'TOTAL HARGA MATERIAL': totalMaterial,
+                'TOTAL HARGA JASA': totalService,
+                'TOTAL': totalHarga,
+            });
+        });
+        
+        dataToExport.push({}); // Spacer row
+        dataToExport.push({ 'NO': '', 'DESIGNATOR': 'MATERIAL', 'TOTAL HARGA MATERIAL': grandTotals.material });
+        dataToExport.push({ 'NO': '', 'DESIGNATOR': 'JASA', 'TOTAL HARGA JASA': grandTotals.jasa });
+        dataToExport.push({ 'NO': '', 'DESIGNATOR': 'TOTAL', 'TOTAL': grandTotals.total });
         dataToExport.push({
             'NO': '',
             'DESIGNATOR': 'GRAND TOTAL',
@@ -203,7 +190,6 @@ export default function GamasApprovalListPage() {
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Rekap Gamas Approved');
         
-        // Auto-fit columns
         const colWidths = excelHeaders.map(header => {
             const maxLength = Math.max(
                 header.length,
