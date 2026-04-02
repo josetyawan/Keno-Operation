@@ -118,8 +118,15 @@ export default function GamasApprovalListPage() {
                 const totalService = servicePrice * vol;
                 const totalHarga = totalMaterial + totalService;
 
-                const kudWorkDesc = report.sto === 'KUD' ? report.noTiket : '';
-                const dmaWorkDesc = report.sto === 'DMA' ? report.noTiket : '';
+                let kudWorkDesc = '';
+                let dmaWorkDesc = '';
+
+                if (report.sto === 'DMA') {
+                    dmaWorkDesc = report.noTiket;
+                } else {
+                    // Default to KUD if STO is 'KUD', undefined, or anything else
+                    kudWorkDesc = report.noTiket;
+                }
 
                 return {
                     'NO': itemCounter++,
