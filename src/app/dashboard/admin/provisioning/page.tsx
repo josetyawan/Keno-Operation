@@ -11,9 +11,9 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Upload, FileSpreadsheet, ChevronLeft, ChevronRight, Trash2, ChevronRightIcon, User, AlertTriangle, Phone, MoreHorizontal, Edit, Save, Package, Truck, PackageCheck, Send, PlusCircle } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, doc, writeBatch, orderBy, getDocs, setDoc, updateDoc, serverTimestamp, where } from 'firebase/firestore';
+import { collection, query, doc, writeBatch, orderBy, getDocs, setDoc, updateDoc, serverTimestamp, where, Timestamp } from 'firebase/firestore';
 import type { ProvisioningRecord, UserProfile } from '@/lib/types';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
@@ -97,7 +97,6 @@ function ManualOrderForm({ users, onSave, onCancel, currentUserProfile }: { user
             assignedTo_crew_userName: crew?.displayName || '',
             provisioningStatus: isAssigned ? 'assigned' : 'unassigned',
             assignedAt: isAssigned ? serverTimestamp() : null,
-            dateCreated: format(new Date(), 'dd-MM-yyyy HH:mm'),
             status: 'OPEN',
             workzone: currentUserProfile?.psa || '',
             productType: ''
@@ -203,13 +202,13 @@ function ManualOrderForm({ users, onSave, onCancel, currentUserProfile }: { user
 
 
 function EditOrderForm({ order, onSave, onCancel, isSaving }: { order: ProvisioningRecord, onSave: (data: Partial<ProvisioningRecord>) => void, onCancel: () => void, isSaving: boolean }) {
-    const [serviceNo, setServiceNo] = useState('');
-    const [customerName, setCustomerName] = useState('');
-    const [contactNumber, setContactNumber] = useState('');
-    const [address, setAddress] = useState('');
-    const [productName, setProductName] = useState('');
-    const [crmOrder, setCrmOrder] = useState('');
-    const [description, setDescription] = useState(''); // This will be our "Order Type"
+    const [serviceNo, setServiceNo] = useState(order.serviceNo || '');
+    const [customerName, setCustomerName] = useState(order.customerName || '');
+    const [contactNumber, setContactNumber] = useState(order.contactNumber || '');
+    const [address, setAddress] = useState(order.address || '');
+    const [productName, setProductName] = useState(order.productName || '');
+    const [crmOrder, setCrmOrder] = useState(order.crmOrder || '');
+    const [description, setDescription] = useState(order.description || ''); // This will be our "Order Type"
 
     const jenisPekerjaanOptions = [
       "PSB DATIN", "PSB OLO", "PSB WIFI", "PDA DATIN", "PDA WIFI",
@@ -686,6 +685,24 @@ export default function ProvisioningDashboardPage() {
         let newRecordsCount = 0;
         const scOrdersInThisBatch = new Set<string>();
         
+        const formatDateValue = (dateValue: any) => {
+            if (!dateValue) return '-';
+            const date = new Date(dateValue);
+            return date instanceof Date && !isNaN(date.valueOf()) ? format(date, 'dd-MM-yyyy HH:mm') : String(dateValue);
+        };
+
+        const formatDateToTimestamp = (dateValue: any): Timestamp | null => {
+            if (!dateValue) return null;
+            if (dateValue instanceof Date && isValid(dateValue)) {
+                return Timestamp.fromDate(dateValue);
+            }
+            if (typeof dateValue === 'string') {
+                const parsedDate = new Date(dateValue);
+                if (isValid(parsedDate)) return Timestamp.fromDate(parsedDate);
+            }
+            return null;
+        };
+
         for (let i = 0; i < jsonData.length; i++) {
             const row = jsonData[i];
             
@@ -712,13 +729,9 @@ export default function ProvisioningDashboardPage() {
                 skippedCount++;
                 continue;
             }
-
-            const formatDateValue = (dateValue: any) => {
-              if (!dateValue) return '-';
-              const date = new Date(dateValue);
-              return date instanceof Date && !isNaN(date.valueOf()) ? format(date, 'dd-MM-yyyy HH:mm') : String(dateValue);
-            };
             
+            const dateCreatedTs = formatDateToTimestamp(row[headerMapping.dateCreated!]);
+
             const newRecord: Omit<ProvisioningRecord, 'id'> = {
               workorder: row[headerMapping.workorder!] || '-',
               workorderBaru: headerMapping.workorderBaru ? (row[headerMapping.workorderBaru] || '') : '',
@@ -730,7 +743,7 @@ export default function ProvisioningDashboardPage() {
               contactNumber: row[headerMapping.contactNumber!]?.toString() || '-',
               address: row[headerMapping.address!] || '-',
               description: headerMapping.description ? (row[headerMapping.description] || '-') : '-',
-              dateCreated: formatDateValue(row[headerMapping.dateCreated!]),
+              dateCreated: dateCreatedTs,
               bookingDate: formatDateValue(row[headerMapping.bookingDate!]),
               productName: headerMapping.productName ? (row[headerMapping.productName] || '-') : '-',
               productType: row[headerMapping.productType!] || '-',
@@ -740,7 +753,7 @@ export default function ProvisioningDashboardPage() {
             };
             
             const docRef = doc(recordsCollection, finalScOrder); // Use SC Order as ID
-            batch.set(docRef, newRecord);
+            batch.set(docRef, { ...newRecord, id: finalScOrder });
             scOrdersInThisBatch.add(finalScOrder);
             writeCount++;
             newRecordsCount++;
@@ -782,7 +795,13 @@ export default function ProvisioningDashboardPage() {
         throw new Error(`Order dengan SC Order ${scOrder} sudah ada.`);
     }
 
-    await setDoc(docRef, orderData);
+    const dataToSave = {
+      ...orderData,
+      id: scOrder,
+      dateCreated: serverTimestamp(),
+    };
+
+    await setDoc(docRef, dataToSave);
     toast({ title: "Order Manual Disimpan", description: `Order untuk ${orderData.customerName} berhasil dibuat.` });
     setIsManualFormOpen(false);
   };

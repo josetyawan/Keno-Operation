@@ -385,7 +385,7 @@ export type ProvisioningRecord = {
   contactNumber: string;
   address: string;
   description?: string;
-  dateCreated: string;
+  dateCreated: any;
   bookingDate: string;
   productName: string;
   productType: string;
