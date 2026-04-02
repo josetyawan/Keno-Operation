@@ -118,15 +118,19 @@ export default function GamasApprovalListPage() {
                 const totalService = servicePrice * vol;
                 const totalHarga = totalMaterial + totalService;
 
+                const kudWorkDesc = report.sto === 'KUD' ? report.noTiket : '';
+                const dmaWorkDesc = report.sto === 'DMA' ? report.noTiket : '';
+
                 return {
                     'NO': itemCounter++,
-                    'NO TIKET': report.noTiket,
                     'DESIGNATOR': evidence.designator,
                     'URAIAN PEKERJAAN': priceInfo?.description || 'N/A',
                     'SATUAN': priceInfo?.unit || 'N/A',
                     'HARGA SATUAN MATERIAL': materialPrice,
                     'HARGA SATUAN JASA': servicePrice,
                     'VOL': vol,
+                    'KUD (WORK DESC)': kudWorkDesc,
+                    'DMA (WORK DESC)': dmaWorkDesc,
                     'TOTAL HARGA MATERIAL': totalMaterial,
                     'TOTAL HARGA JASA': totalService,
                     'TOTAL': totalHarga,
@@ -193,6 +197,7 @@ export default function GamasApprovalListPage() {
                       <TableHeader>
                           <TableRow>
                               <TableHead>No. Tiket</TableHead>
+                              <TableHead>STO</TableHead>
                               <TableHead>Teknisi</TableHead>
                               <TableHead>Tanggal</TableHead>
                               <TableHead>Status</TableHead>
@@ -201,11 +206,12 @@ export default function GamasApprovalListPage() {
                       </TableHeader>
                       <TableBody>
                           {isLoading ? (
-                              <TableRow><TableCell colSpan={5}><Skeleton className="h-10" /></TableCell></TableRow>
+                              <TableRow><TableCell colSpan={6}><Skeleton className="h-10" /></TableCell></TableRow>
                           ) : paginatedReports && paginatedReports.length > 0 ? (
                               paginatedReports.map(report => (
                                   <TableRow key={report.id}>
                                       <TableCell className="font-medium">{report.noTiket}</TableCell>
+                                      <TableCell>{report.sto || '-'}</TableCell>
                                       <TableCell>{report.userName}</TableCell>
                                       <TableCell>{safeToDate(report.createdAt) ? format(safeToDate(report.createdAt)!, 'dd MMM yyyy, HH:mm') : '-'}</TableCell>
                                       <TableCell><Badge variant={report.status === 'approved' ? 'default' : report.status === 'rejected' ? 'destructive' : 'secondary'}>{report.status}</Badge></TableCell>
@@ -235,7 +241,7 @@ export default function GamasApprovalListPage() {
                               ))
                           ) : (
                               <TableRow>
-                                  <TableCell colSpan={5} className="h-24 text-center">
+                                  <TableCell colSpan={6} className="h-24 text-center">
                                       Tidak ada laporan yang menunggu persetujuan.
                                   </TableCell>
                               </TableRow>

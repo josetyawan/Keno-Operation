@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -10,7 +11,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter
+  CardFooter,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -186,7 +187,10 @@ export default function GamasDetailPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><FileWarning /> No. Tiket: {report.noTiket}</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <FileWarning /> No. Tiket: {report.noTiket}
+            {report.sto && <Badge variant="outline" className="ml-2">{report.sto}</Badge>}
+          </CardTitle>
           <CardDescription>Status Laporan Keseluruhan: <Badge variant={report.status === 'approved' ? 'default' : report.status === 'rejected' ? 'destructive' : 'secondary'}>{report.status}</Badge></CardDescription>
         </CardHeader>
         {report.rejectionReason && (

@@ -1,5 +1,4 @@
 
-
 import { Timestamp } from 'firebase/firestore';
 
 export type Nota = {
@@ -38,6 +37,7 @@ export type GamasReport = {
   userId: string;
   userName: string;
   noTiket: string;
+  sto?: string;
   evidences: DesignatorEvidence[];
   createdAt: any; // Timestamp
   status: 'pending' | 'approved' | 'rejected';
