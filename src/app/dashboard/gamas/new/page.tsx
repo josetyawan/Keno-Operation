@@ -3,7 +3,7 @@
 
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type EvidenceFormValues = {
   designator: string;
@@ -468,6 +469,7 @@ export default function NewGamasReportPage() {
             </CardContent>
         </Card>
 
+
         <div className="flex items-center justify-end gap-2 mt-4 md:hidden">
           <Button onClick={() => router.back()} variant="outline" type="button">Batal</Button>
           <Button type="submit" disabled={isSaving || isUserLoading || isProfileLoading}>
@@ -478,3 +480,6 @@ export default function NewGamasReportPage() {
     </div>
   );
 }
+
+
+    
