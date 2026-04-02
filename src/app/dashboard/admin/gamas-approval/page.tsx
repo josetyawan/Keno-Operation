@@ -104,6 +104,7 @@ export default function GamasApprovalListPage() {
         const XLSX = await import('xlsx');
         const priceMap = new Map(gamasPriceData.map(item => [item.code.trim().toUpperCase(), item]));
 
+        let itemCounter = 1;
         const dataToExport = approvedReports.flatMap(report => 
             report.evidences.map(evidence => {
                 const cleanDesignator = evidence.designator.trim().toUpperCase();
@@ -118,6 +119,7 @@ export default function GamasApprovalListPage() {
                 const totalHarga = totalMaterial + totalService;
 
                 return {
+                    'NO': itemCounter++,
                     'NO TIKET': report.noTiket,
                     'DESIGNATOR': evidence.designator,
                     'URAIAN PEKERJAAN': priceInfo?.description || 'N/A',
@@ -133,25 +135,19 @@ export default function GamasApprovalListPage() {
             })
         );
         
-        const dataWithNumbers = dataToExport.map((row, index) => ({
-            'NO': index + 1,
-            ...row
-        }));
-        
-        const worksheet = XLSX.utils.json_to_sheet(dataWithNumbers);
+        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Rekap Gamas Approved');
         
-        if (dataWithNumbers.length > 0) {
-            const headers = Object.keys(dataWithNumbers[0]);
+        if (dataToExport.length > 0) {
+            const headers = Object.keys(dataToExport[0]);
             const colWidths = headers.map(header => {
                 const maxLength = Math.max(
                     header.length,
-                    ...dataWithNumbers.map(row => String(row[header as keyof typeof row] ?? '').length)
+                    ...dataToExport.map(row => String(row[header as keyof typeof row] ?? '').length)
                 );
-                // Add some padding, but more for the description columns
                 const padding = (header.includes('URAIAN') || header.includes('KETERANGAN')) ? 10 : 2;
-                return { width: Math.min(maxLength + padding, 60) }; // Cap max width
+                return { width: Math.min(maxLength + padding, 60) }; 
             });
             worksheet['!cols'] = colWidths;
         }
