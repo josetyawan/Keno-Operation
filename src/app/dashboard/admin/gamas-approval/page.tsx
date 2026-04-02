@@ -104,74 +104,115 @@ export default function GamasApprovalListPage() {
         const XLSX = await import('xlsx');
         const priceMap = new Map(gamasPriceData.map(item => [item.code.trim().toUpperCase(), item]));
 
+        const reportsByTicket = approvedReports.reduce((acc, report) => {
+            const key = report.noTiket || 'TANPA_TIKET';
+            if (!acc[key]) {
+                acc[key] = { report: report, evidences: [] };
+            }
+            acc[key].evidences.push(...report.evidences);
+            return acc;
+        }, {} as Record<string, { report: GamasReport; evidences: DesignatorEvidence[] }>);
+
+
         const dataToExport: any[] = [];
         let itemCounter = 1;
         
-        approvedReports.forEach(report => {
-            const totalVolForReport = report.evidences.reduce((sum, ev) => sum + (ev.quantity || 1), 0);
+        const grandTotals = {
+            vol: 0,
+            material: 0,
+            jasa: 0,
+            total: 0,
+        };
 
-            report.evidences.forEach((evidence, evidenceIndex) => {
+        for (const ticketKey in reportsByTicket) {
+            const { report, evidences } = reportsByTicket[ticketKey];
+            if (evidences.length === 0) continue;
+
+            const totalVolForTicket = evidences.reduce((sum, ev) => sum + (ev.quantity || 1), 0);
+            grandTotals.vol += totalVolForTicket;
+
+            let ticketSubtotals = { material: 0, jasa: 0 };
+            let isFirstRowOfTicket = true;
+
+            evidences.forEach(evidence => {
                 const vol = evidence.quantity || 1;
-                // Clean up designator code for better matching
                 const cleanDesignator = evidence.designator.trim().toUpperCase();
                 const priceInfo = priceMap.get(cleanDesignator);
+
+                let materialPrice = priceInfo?.materialPrice || 0;
+                let servicePrice = priceInfo?.servicePrice || 0;
                 
-                const materialPrice = priceInfo?.materialPrice || 0;
-                const servicePrice = priceInfo?.servicePrice || 0;
-                
+                if (cleanDesignator.startsWith('J-')) {
+                    materialPrice = 0;
+                } else if (cleanDesignator.startsWith('M-')) {
+                    servicePrice = 0;
+                }
+
                 const totalMaterial = materialPrice * vol;
                 const totalService = servicePrice * vol;
                 const totalHarga = totalMaterial + totalService;
 
-                let kudWorkDesc = '';
-                let dmaWorkDesc = '';
-                let displayVol: number | string = vol;
-
-                // For the first evidence of a report, display ticket and total volume.
-                if (evidenceIndex === 0) {
-                    if (report.sto === 'DMA') {
-                        dmaWorkDesc = report.noTiket;
-                    } else {
-                        // Default to KUD if STO is KUD or not set
-                        kudWorkDesc = report.noTiket;
-                    }
-                    displayVol = totalVolForReport;
-                }
+                ticketSubtotals.material += totalMaterial;
+                ticketSubtotals.jasa += totalService;
 
                 dataToExport.push({
                     'NO': itemCounter++,
+                    'NO TIKET': ticketKey,
                     'DESIGNATOR': evidence.designator,
                     'URAIAN PEKERJAAN': priceInfo?.description || 'N/A',
                     'SATUAN': priceInfo?.unit || 'N/A',
                     'HARGA SATUAN MATERIAL': materialPrice,
                     'HARGA SATUAN JASA': servicePrice,
-                    'VOL': displayVol,
-                    'KUD (WORK DESC)': kudWorkDesc,
-                    'DMA (WORK DESC)': dmaWorkDesc,
+                    'VOL': isFirstRowOfTicket ? totalVolForTicket : vol,
+                    'KUD (WORK DESC)': isFirstRowOfTicket ? (report.sto !== 'DMA' ? ticketKey : '') : '',
+                    'DMA (WORK DESC)': isFirstRowOfTicket ? (report.sto === 'DMA' ? ticketKey : '') : '',
                     'TOTAL HARGA MATERIAL': totalMaterial,
                     'TOTAL HARGA JASA': totalService,
                     'TOTAL': totalHarga,
-                    'KETERANGAN': evidence.notes || ''
                 });
+                
+                isFirstRowOfTicket = false;
             });
+
+            const ticketTotal = ticketSubtotals.material + ticketSubtotals.jasa;
+            dataToExport.push({ 'NO': '', 'DESIGNATOR': 'MATERIAL', 'TOTAL': ticketSubtotals.material });
+            dataToExport.push({ 'NO': '', 'DESIGNATOR': 'JASA', 'TOTAL': ticketSubtotals.jasa });
+            dataToExport.push({ 'NO': '', 'DESIGNATOR': 'TOTAL', 'TOTAL': ticketTotal });
+            
+            grandTotals.material += ticketSubtotals.material;
+            grandTotals.jasa += ticketSubtotals.jasa;
+            grandTotals.total += ticketTotal;
+        }
+
+        // Add Grand Total row
+        dataToExport.push({
+            'NO': '',
+            'DESIGNATOR': 'GRAND TOTAL',
+            'VOL': grandTotals.vol,
+            'TOTAL HARGA MATERIAL': grandTotals.material,
+            'TOTAL HARGA JASA': grandTotals.jasa,
+            'TOTAL': grandTotals.total
         });
         
-        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+        const excelHeaders = [
+            'NO', 'NO TIKET', 'DESIGNATOR', 'URAIAN PEKERJAAN', 'SATUAN', 
+            'HARGA SATUAN MATERIAL', 'HARGA SATUAN JASA', 'VOL', 'KUD (WORK DESC)', 'DMA (WORK DESC)',
+            'TOTAL HARGA MATERIAL', 'TOTAL HARGA JASA', 'TOTAL'
+        ];
+        
+        const worksheet = XLSX.utils.json_to_sheet(dataToExport, { header: excelHeaders });
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Rekap Gamas Approved');
         
-        if (dataToExport.length > 0) {
-            const headers = Object.keys(dataToExport[0]);
-            const colWidths = headers.map(header => {
-                const maxLength = Math.max(
-                    header.length,
-                    ...dataToExport.map(row => String(row[header as keyof typeof row] ?? '').length)
-                );
-                const padding = (header.includes('URAIAN') || header.includes('KETERANGAN')) ? 10 : 2;
-                return { width: Math.min(maxLength + padding, 60) }; 
-            });
-            worksheet['!cols'] = colWidths;
-        }
+        // Auto-fit columns
+        const colWidths = excelHeaders.map(header => {
+            const maxLength = Math.max(
+                header.length,
+                ...dataToExport.map(row => String(row[header as keyof typeof row] ?? '').length)
+            );
+            return { width: Math.min(maxLength + 2, 60) };
+        });
+        worksheet['!cols'] = colWidths;
 
         const dateString = format(new Date(), 'yyyy-MM-dd');
         XLSX.writeFile(workbook, `Rekap_Gamas_Approved_${dateString}.xlsx`);
