@@ -22,6 +22,7 @@ import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type EvidenceFormValues = {
   designator: string;
@@ -40,6 +41,7 @@ type KmlFileFormValue = {
 
 type FormValues = {
   noTiket: string;
+  sto: string;
   evidences: EvidenceFormValues[];
   kmlEvidences: KmlFileFormValue[];
 };
@@ -203,6 +205,7 @@ export default function EditGamasReportPage() {
   const { register, control, handleSubmit, formState: { errors }, getValues, setValue, reset, watch } = useForm<FormValues>({
     defaultValues: {
       noTiket: '',
+      sto: 'KUD',
       evidences: [],
       kmlEvidences: [],
     },
@@ -215,6 +218,7 @@ export default function EditGamasReportPage() {
     if (report) {
       reset({
         noTiket: report.noTiket,
+        sto: report.sto || 'KUD',
         evidences: report.evidences.map(ev => ({
           designator: ev.designator,
           notes: ev.notes || '',
@@ -236,7 +240,7 @@ export default function EditGamasReportPage() {
   const addEvidenceBlock = () => {
     append({ designator: '', notes: '', quantity: 1, photos: [], existingPhotos: [] });
   };
-
+  
   const handleKmlFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (kmlFields.length + files.length > 5) {
@@ -250,6 +254,12 @@ export default function EditGamasReportPage() {
     removeKml(index);
     // Note: This only removes it from the form state. The actual file in storage is not deleted until submission.
     // If we want to delete it from storage, we'd need more complex logic here. For now, it will just be orphaned if the form is saved.
+  };
+
+  const handleRemoveExistingPhoto = (evidenceIndex: number, photoIndex: number) => {
+    const existingPhotos = getValues(`evidences.${evidenceIndex}.existingPhotos`);
+    const updatedPhotos = (existingPhotos || []).filter((_, idx) => idx !== photoIndex);
+    setValue(`evidences.${evidenceIndex}.existingPhotos`, updatedPhotos);
   };
 
   const onSubmit = async (data: FormValues) => {
@@ -302,6 +312,7 @@ export default function EditGamasReportPage() {
 
       await updateDoc(reportRef, {
         noTiket: data.noTiket,
+        sto: data.sto,
         evidences: processedEvidences,
         kmlEvidences: processedKmlEvidences,
         status: 'pending',
@@ -348,9 +359,29 @@ export default function EditGamasReportPage() {
         <Card className="mb-6">
             <CardHeader><CardTitle>Informasi Tiket</CardTitle></CardHeader>
             <CardContent>
-                <div className="grid gap-3">
-                    <Label htmlFor="noTiket">No. Tiket *</Label>
-                    <Input id="noTiket" placeholder="Contoh: INC12345678" {...register('noTiket')} required />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid gap-3">
+                        <Label htmlFor="noTiket">No. Tiket *</Label>
+                        <Input id="noTiket" placeholder="Contoh: INC12345678" {...register('noTiket')} required />
+                    </div>
+                    <div className="grid gap-3">
+                        <Label htmlFor="sto">STO *</Label>
+                        <Controller
+                            name="sto"
+                            control={control}
+                            render={({ field }) => (
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                    <SelectTrigger id="sto">
+                                        <SelectValue placeholder="Pilih STO..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="KUD">KUDUS (KUD)</SelectItem>
+                                        <SelectItem value="DMA">DEMAK (DMA)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            )}
+                        />
+                    </div>
                 </div>
             </CardContent>
         </Card>
