@@ -1,0 +1,72 @@
+
+export type GamasPriceItem = {
+    code: string;
+    description: string;
+    unit: string;
+    materialPrice: number;
+    servicePrice: number;
+};
+
+// Data harga dari Telkom ke TA
+export const gamasPriceData: GamasPriceItem[] = [
+    { code: "J-FAL-LOC", description: "PEKERJAAN PENCARIAN TITIK KABEL PUTUS PADA SAAT PERBAIKAN", unit: "titik", materialPrice: 0, servicePrice: 89000 },
+    { code: "WSM-PHK3", description: "PEKERJAAN PENGAWASAN DAN PENGAMANAN UNTUK PROJECT PIHAK", unit: "Mandays", materialPrice: 0, servicePrice: 161250 },
+    { code: "J-WSM-PHK3", description: "PEKERJAAN PENGAWASAN DAN PENGAMANAN UNTUK PROJECT PIHAK", unit: "Mandays", materialPrice: 0, servicePrice: 161250 },
+    { code: "DIS-ODP", description: "PEMBONGKARAN ODP BESERTA ASESORISNYA DAN JASA PEMBAWAAN", unit: "Pcs", materialPrice: 0, servicePrice: 12400 },
+    { code: "J-DIS-ODP", description: "PEMBONGKARAN ODP BESERTA ASESORISNYA DAN JASA PEMBAWAAN", unit: "Pcs", materialPrice: 0, servicePrice: 12400 },
+    { code: "RENT-IBT", description: "Biaya-biaya yang timbul dalam rangka sewa lahan untuk penempatan", unit: "Lumpsum", materialPrice: 0, servicePrice: 1 },
+    { code: "J-RENT-IBT", description: "Biaya-biaya yang timbul dalam rangka sewa lahan untuk penempatan", unit: "Lumpsum", materialPrice: 0, servicePrice: 1 },
+    { code: "RENT-BMN", description: "Biaya-biaya yang timbul dalam rangka sewa lahan untuk penempatan", unit: "Lumpsum", materialPrice: 0, servicePrice: 1 },
+    { code: "J-RENT-BMN", description: "Biaya-biaya yang timbul dalam rangka sewa lahan untuk penempatan", unit: "Lumpsum", materialPrice: 0, servicePrice: 1 },
+    { code: "PU-W7", description: "Pengadaan dan Pemasangan Tiang Kayu Keras setara ULIN panjang 7", unit: "Btg", materialPrice: 1360000, servicePrice: 229165 },
+    { code: "M-PU-W7", description: "Pengadaan dan Pemasangan Tiang Kayu Keras setara ULIN panjang 7", unit: "Btg", materialPrice: 1360000, servicePrice: 0 },
+    { code: "J-PU-W7", description: "Pengadaan dan Pemasangan Tiang Kayu Keras setara ULIN panjang 7", unit: "Btg", materialPrice: 0, servicePrice: 229165 },
+    { code: "DC-OF-SM-12D", description: "Pengadaan dan pemasangan kabel duct fiber optik single mode 12 core g 652 d", unit: "meter", materialPrice: 6403, servicePrice: 3126 },
+    { code: "M-DC-OF-SM-12D", description: "Pengadaan dan pemasangan kabel duct fiber optik single mode 12 core g 652 d", unit: "meter", materialPrice: 6403, servicePrice: 0 },
+    { code: "J-DC-OF-SM-12D", description: "Pengadaan dan pemasangan kabel duct fiber optik single mode 12 core g 652 d", unit: "meter", materialPrice: 0, servicePrice: 3126 },
+    { code: "DC-OF-SM-24D", description: "Pengadaan dan pemasangan kabel duct fiber optik single mode 24 core g 652 d", unit: "meter", materialPrice: 8400, servicePrice: 3106 },
+    { code: "M-DC-OF-SM-24D", description: "Pengadaan dan pemasangan kabel duct fiber optik single mode 24 core g 652 d", unit: "meter", materialPrice: 8400, servicePrice: 0 },
+    { code: "J-DC-OF-SM-24D", description: "Pengadaan dan pemasangan kabel duct fiber optik single mode 24 core g 652 d", unit: "meter", materialPrice: 0, servicePrice: 3106 },
+    { code: "DC-OF-SM-48D", description: "Pengadaan dan pemasangan kabel duct fiber optik single mode 48 core g 652 d", unit: "meter", materialPrice: 12100, servicePrice: 3156 },
+    { code: "M-DC-OF-SM-48D", description: "Pengadaan dan pemasangan kabel duct fiber optik single mode 48 core g 652 d", unit: "meter", materialPrice: 12100, servicePrice: 0 },
+    { code: "J-DC-OF-SM-48D", description: "Pengadaan dan pemasangan kabel duct fiber optik single mode 48 core g 652 d", unit: "meter", materialPrice: 0, servicePrice: 3156 },
+    { code: "DC-OF-SM-96D", description: "Pengadaan dan pemasangan kabel duct fiber optik single mode 96 core g 652 d", unit: "meter", materialPrice: 31011, servicePrice: 3125 },
+    { code: "M-DC-OF-SM-96D", description: "Pengadaan dan pemasangan kabel duct fiber optik single mode 96 core g 652 d", unit: "meter", materialPrice: 31011, servicePrice: 0 },
+    { code: "J-DC-OF-SM-96D", description: "Pengadaan dan pemasangan kabel duct fiber optik single mode 96 core g 652 d", unit: "meter", materialPrice: 0, servicePrice: 3125 },
+    { code: "DC-OF-SM-144D", description: "Pengadaan dan pemasangan kabel duct fiber optik single mode 144 core g 652 d", unit: "meter", materialPrice: 43932, servicePrice: 3802 },
+    { code: "M-DC-OF-SM-144D", description: "Pengadaan dan pemasangan kabel duct fiber optik single mode 144 core g 652 d", unit: "meter", materialPrice: 43932, servicePrice: 0 },
+    { code: "J-DC-OF-SM-144D", description: "Pengadaan dan pemasangan kabel duct fiber optik single mode 144 core g 652 d", unit: "meter", materialPrice: 0, servicePrice: 3802 },
+    { code: "DC-OF-SM-288D", description: "Pengadaan dan pemasangan kabel duct fiber optik single mode 288 core g 652 d", unit: "meter", materialPrice: 79595, servicePrice: 3796 },
+    { code: "M-DC-OF-SM-288D", description: "Pengadaan dan pemasangan kabel duct fiber optik single mode 288 core g 652 d", unit: "meter", materialPrice: 79595, servicePrice: 0 },
+    { code: "J-DC-OF-SM-288D", description: "Pengadaan dan pemasangan kabel duct fiber optik single mode 288 core g 652 d", unit: "meter", materialPrice: 0, servicePrice: 3796 },
+    { code: "AC-OF-SM-12D", description: "Pengadaan dan pemasangan kabel udara fiber optik single mode 12 core g 652 d", unit: "meter", materialPrice: 12611, servicePrice: 4354 },
+    { code: "M-AC-OF-SM-12D", description: "Pengadaan dan pemasangan kabel udara fiber optik single mode 12 core g 652 d", unit: "meter", materialPrice: 12611, servicePrice: 0 },
+    { code: "J-AC-OF-SM-12D", description: "Pengadaan dan pemasangan kabel udara fiber optik single mode 12 core g 652 d", unit: "meter", materialPrice: 0, servicePrice: 4354 },
+    { code: "AC-OF-SM-24D", description: "Pengadaan dan pemasangan kabel udara fiber optik single mode 24 core g 652 d", unit: "meter", materialPrice: 15506, servicePrice: 4321 },
+    { code: "M-AC-OF-SM-24D", description: "Pengadaan dan pemasangan kabel udara fiber optik single mode 24 core g 652 d", unit: "meter", materialPrice: 15506, servicePrice: 0 },
+    { code: "J-AC-OF-SM-24D", description: "Pengadaan dan pemasangan kabel udara fiber optik single mode 24 core g 652 d", unit: "meter", materialPrice: 0, servicePrice: 4321 },
+    { code: "AC-OF-SM-48D", description: "Pengadaan dan pemasangan kabel udara fiber optik single mode 48 core g 652 d", unit: "meter", materialPrice: 21708, servicePrice: 4321 },
+    { code: "M-AC-OF-SM-48D", description: "Pengadaan dan pemasangan kabel udara fiber optik single mode 48 core g 652 d", unit: "meter", materialPrice: 21708, servicePrice: 0 },
+    { code: "J-AC-OF-SM-48D", description: "Pengadaan dan pemasangan kabel udara fiber optik single mode 48 core g 652 d", unit: "meter", materialPrice: 0, servicePrice: 4321 },
+    { code: "AC-OF-SM-96D", description: "Pengadaan dan pemasangan kabel udara fiber optik single mode 96 core g 652 d", unit: "meter", materialPrice: 33078, servicePrice: 4321 },
+    { code: "M-AC-OF-SM-96D", description: "Pengadaan dan pemasangan kabel udara fiber optik single mode 96 core g 652 d", unit: "meter", materialPrice: 33078, servicePrice: 0 },
+    { code: "J-AC-OF-SM-96D", description: "Pengadaan dan pemasangan kabel udara fiber optik single mode 96 core g 652 d", unit: "meter", materialPrice: 0, servicePrice: 4321 },
+    { code: "SC-OF-SM-24", description: "Pengadaan dan pemasangan alat sambung (cabang/ lurus) untuk fiber optik kapasitas 12 - 24 core", unit: "pcs", materialPrice: 652500, servicePrice: 32500 },
+    { code: "M-SC-OF-SM-24", description: "Pengadaan dan pemasangan alat sambung (cabang/ lurus) untuk fiber optik kapasitas 12 - 24 core", unit: "pcs", materialPrice: 652500, servicePrice: 0 },
+    { code: "J-SC-OF-SM-24", description: "Pengadaan dan pemasangan alat sambung (cabang/ lurus) untuk fiber optik kapasitas 12 - 24 core", unit: "pcs", materialPrice: 0, servicePrice: 32500 },
+    { code: "SC-OF-SM-48", description: "Pengadaan dan pemasangan alat sambung (cabang/ lurus) untuk fiber optik kapasitas 12 - 48 core", unit: "pcs", materialPrice: 737149, servicePrice: 32500 },
+    { code: "M-SC-OF-SM-48", description: "Pengadaan dan pemasangan alat sambung (cabang/ lurus) untuk fiber optik kapasitas 12 - 48 core", unit: "pcs", materialPrice: 737149, servicePrice: 0 },
+    { code: "J-SC-OF-SM-48", description: "Pengadaan dan pemasangan alat sambung (cabang/ lurus) untuk fiber optik kapasitas 12 - 48 core", unit: "pcs", materialPrice: 0, servicePrice: 32500 },
+    { code: "SC-OF-SM-96", description: "Pengadaan dan pemasangan alat sambung (cabang/ lurus) untuk fiber optik kapasitas 12 - 96 core", unit: "pcs", materialPrice: 869859, servicePrice: 30726 },
+    { code: "M-SC-OF-SM-96", description: "Pengadaan dan pemasangan alat sambung (cabang/ lurus) untuk fiber optik kapasitas 12 - 96 core", unit: "pcs", materialPrice: 869859, servicePrice: 0 },
+    { code: "J-SC-OF-SM-96", description: "Pengadaan dan pemasangan alat sambung (cabang/ lurus) untuk fiber optik kapasitas 12 - 96 core", unit: "pcs", materialPrice: 0, servicePrice: 30726 },
+    { code: "SC-OF-SM-144", description: "Pengadaan dan pemasangan alat sambung (cabang/ lurus) untuk fiber optik kapasitas 12 - 144 core", unit: "pcs", materialPrice: 1209429, servicePrice: 30726 },
+    { code: "M-SC-OF-SM-144", description: "Pengadaan dan pemasangan alat sambung (cabang/ lurus) untuk fiber optik kapasitas 12 - 144 core", unit: "pcs", materialPrice: 1209429, servicePrice: 0 },
+    { code: "J-SC-OF-SM-144", description: "Pengadaan dan pemasangan alat sambung (cabang/ lurus) untuk fiber optik kapasitas 12 - 144 core", unit: "pcs", materialPrice: 0, servicePrice: 30726 },
+    { code: "SC-OF-SM-288", description: "Pengadaan dan pemasangan alat sambung (cabang/ lurus) untuk fiber optik kapasitas 12 - 288 core", unit: "pcs", materialPrice: 2377510, servicePrice: 30726 },
+    { code: "M-SC-OF-SM-288", description: "Pengadaan dan pemasangan alat sambung (cabang/ lurus) untuk fiber optik kapasitas 12 - 288 core", unit: "pcs", materialPrice: 2377510, servicePrice: 0 },
+    { code: "J-SC-OF-SM-288", description: "Pengadaan dan pemasangan alat sambung (cabang/ lurus) untuk fiber optik kapasitas 12 - 288 core", unit: "pcs", materialPrice: 0, servicePrice: 30726 },
+    { code: "OS-SM-1", description: "Penyambungan kabel optik single mode kap 1 core dengan cara fusion splice", unit: "core", materialPrice: 0, servicePrice: 47000 },
+    { code: "J-OS-SM-1", description: "Penyambungan kabel optik single mode kap 1 core dengan cara fusion splice", unit: "core", materialPrice: 0, servicePrice: 47000 },
+    // Add other items from the provided list
+];

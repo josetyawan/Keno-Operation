@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useRouter, useParams } from 'next/navigation';
@@ -26,6 +27,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 type EvidenceFormValues = {
   designator: string;
   notes: string;
+  quantity: number; // VOL
   photos: File[];
   existingPhotos: string[];
 };
@@ -207,6 +209,7 @@ export default function EditGamasReportPage() {
         evidences: report.evidences.map(ev => ({
           designator: ev.designator,
           notes: ev.notes || '',
+          quantity: ev.quantity || 1,
           photos: [], // New photos will be added here
           existingPhotos: ev.photoUrls || [] // Store existing photos
         }))
@@ -217,7 +220,7 @@ export default function EditGamasReportPage() {
   const { fields, append, remove } = useFieldArray({ control, name: 'evidences' });
 
   const addEvidenceBlock = () => {
-    append({ designator: '', notes: '', photos: [], existingPhotos: [] });
+    append({ designator: '', notes: '', quantity: 1, photos: [], existingPhotos: [] });
   };
 
   const handleRemoveExistingPhoto = (evidenceIndex: number, photoIndex: number) => {
@@ -248,6 +251,7 @@ export default function EditGamasReportPage() {
         return {
           designator: evidenceBlock.designator,
           notes: evidenceBlock.notes,
+          quantity: evidenceBlock.quantity || 1,
           photoUrls: finalPhotoUrls,
           status: 'pending', // Reset status on edit
           rejectionReason: '', // Clear rejection reason
@@ -319,17 +323,23 @@ export default function EditGamasReportPage() {
                 </Button>
             </CardHeader>
             <CardContent className="grid gap-6">
-              <div className="grid gap-3">
-                <Label>Designator *</Label>
-                <Controller
-                  name={`evidences.${index}.designator`}
-                  control={control}
-                  rules={{ required: "Designator harus dipilih" }}
-                  render={({ field: { onChange, value } }) => (
-                    <DesignatorSelector value={value} onChange={onChange} />
-                  )}
-                />
-                 {errors.evidences?.[index]?.designator && <p className="text-sm text-destructive">{errors.evidences?.[index]?.designator?.message}</p>}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid gap-3">
+                    <Label>Designator *</Label>
+                    <Controller
+                    name={`evidences.${index}.designator`}
+                    control={control}
+                    rules={{ required: "Designator harus dipilih" }}
+                    render={({ field: { onChange, value } }) => (
+                        <DesignatorSelector value={value} onChange={onChange} />
+                    )}
+                    />
+                    {errors.evidences?.[index]?.designator && <p className="text-sm text-destructive">{errors.evidences?.[index]?.designator?.message}</p>}
+                </div>
+                 <div className="grid gap-3">
+                    <Label htmlFor={`quantity-${index}`}>Volume (VOL) *</Label>
+                    <Input id={`quantity-${index}`} type="number" {...register(`evidences.${index}.quantity`, { valueAsNumber: true, min: 1 })} required min="1" />
+                </div>
               </div>
               <div className="grid gap-3">
                 <Label htmlFor={`notes-${index}`}>Catatan</Label>
@@ -398,4 +408,3 @@ export default function EditGamasReportPage() {
   );
 }
 
-    

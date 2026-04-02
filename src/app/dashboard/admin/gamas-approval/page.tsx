@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -12,10 +13,11 @@ import { format, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import type { GamasReport, UserProfile } from '@/lib/types';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, Eye, Trash2, ShieldX } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Eye, Trash2, ShieldX, FileSpreadsheet, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { gamasPriceData } from '@/lib/gamas-price-data';
 
 const safeToDate = (timestamp: any): Date | null => {
   if (!timestamp) return null;
@@ -33,6 +35,7 @@ export default function GamasApprovalListPage() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
+  const [isExporting, setIsExporting] = useState(false);
 
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(
     useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore])
@@ -59,7 +62,12 @@ export default function GamasApprovalListPage() {
 
   const reports = useMemo(() => {
       if (!allReports) return [];
-      return allReports.filter(report => report.status === 'pending');
+      // Show pending reports first, then others
+      return [...allReports].sort((a, b) => {
+        if (a.status === 'pending' && b.status !== 'pending') return -1;
+        if (a.status !== 'pending' && b.status === 'pending') return 1;
+        return (b.createdAt?.toDate?.() || 0) - (a.createdAt?.toDate?.() || 0);
+      });
   }, [allReports]);
   
   const totalPages = reports ? Math.ceil(reports.length / ITEMS_PER_PAGE) : 0;
@@ -81,6 +89,67 @@ export default function GamasApprovalListPage() {
       toast({ variant: 'destructive', title: "Gagal Menghapus", description: e.message });
     }
   };
+
+  const handleExportExcel = async () => {
+    setIsExporting(true);
+    const approvedReports = allReports?.filter(r => r.status === 'approved');
+
+    if (!approvedReports || approvedReports.length === 0) {
+      toast({ variant: 'destructive', title: 'Tidak ada data', description: 'Tidak ada laporan yang berstatus "approved" untuk diekspor.' });
+      setIsExporting(false);
+      return;
+    }
+
+    try {
+        const XLSX = await import('xlsx');
+        const priceMap = new Map(gamasPriceData.map(item => [item.code, item]));
+
+        const dataToExport = approvedReports.flatMap(report => 
+            report.evidences.map(evidence => {
+                const priceInfo = priceMap.get(evidence.designator);
+                const hargaSatuan = priceInfo ? priceInfo.materialPrice + priceInfo.servicePrice : 0;
+                const vol = evidence.quantity || 1;
+                const totalHarga = hargaSatuan * vol;
+
+                return {
+                    'NO TIKET': report.noTiket,
+                    'DESIGNATOR': evidence.designator,
+                    'URAIAN PEKERJAAN': priceInfo?.description || 'N/A',
+                    'SATUAN': priceInfo?.unit || 'N/A',
+                    'HARGA SATUAN (Rp.)': hargaSatuan,
+                    'VOL': vol,
+                    'TOTAL HARGA (Rp.)': totalHarga,
+                };
+            })
+        );
+        
+        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Rekap Gamas Approved');
+        
+        // Auto-fit columns
+        const objectMaxLength: any[] = [];
+        dataToExport.forEach(row => {
+          Object.entries(row).forEach(([key, value], colIndex) => {
+            const headerLength = key.length;
+            const cellLength = value ? String(value).length : 0;
+            objectMaxLength[colIndex] = Math.max(objectMaxLength[colIndex] || headerLength, cellLength);
+          });
+        });
+        worksheet['!cols'] = objectMaxLength.map(w => ({ width: w + 2 }));
+
+
+        const dateString = format(new Date(), 'yyyy-MM-dd');
+        XLSX.writeFile(workbook, `Rekap_Gamas_Approved_${dateString}.xlsx`);
+        
+        toast({ title: 'Ekspor Berhasil', description: 'File rekap Excel telah diunduh.' });
+
+    } catch (error: any) {
+         toast({ variant: 'destructive', title: 'Gagal Mengekspor', description: error.message });
+    } finally {
+        setIsExporting(false);
+    }
+  };
   
   const isLoading = isUserLoading || isProfileLoading || areReportsLoading;
 
@@ -91,14 +160,20 @@ export default function GamasApprovalListPage() {
   return (
     <>
       <div className="space-y-6">
-        <div>
-              <h1 className="text-3xl font-bold tracking-tight">Persetujuan Laporan Gamas</h1>
-              <p className="text-muted-foreground mt-1">Tinjau dan kelola laporan eviden gamas yang masuk.</p>
+        <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight">Persetujuan Laporan Gamas</h1>
+                <p className="text-muted-foreground mt-1">Tinjau dan kelola laporan eviden gamas yang masuk.</p>
+              </div>
+              <Button onClick={handleExportExcel} disabled={isExporting}>
+                {isExporting ? <Loader2 className="mr-2 animate-spin" /> : <FileSpreadsheet className="mr-2" />}
+                Download Rekap
+              </Button>
           </div>
           <Card>
               <CardHeader>
-                  <CardTitle>Laporan Menunggu Persetujuan</CardTitle>
-                  <CardDescription>Daftar laporan yang memerlukan tindakan Anda.</CardDescription>
+                  <CardTitle>Semua Laporan</CardTitle>
+                  <CardDescription>Daftar semua laporan yang memerlukan tindakan atau telah diproses.</CardDescription>
               </CardHeader>
               <CardContent>
                   <Table>
@@ -107,21 +182,23 @@ export default function GamasApprovalListPage() {
                               <TableHead>No. Tiket</TableHead>
                               <TableHead>Teknisi</TableHead>
                               <TableHead>Tanggal</TableHead>
+                              <TableHead>Status</TableHead>
                               <TableHead className="text-right">Aksi</TableHead>
                           </TableRow>
                       </TableHeader>
                       <TableBody>
                           {isLoading ? (
-                              <TableRow><TableCell colSpan={4}><Skeleton className="h-10" /></TableCell></TableRow>
+                              <TableRow><TableCell colSpan={5}><Skeleton className="h-10" /></TableCell></TableRow>
                           ) : paginatedReports && paginatedReports.length > 0 ? (
                               paginatedReports.map(report => (
                                   <TableRow key={report.id}>
                                       <TableCell className="font-medium">{report.noTiket}</TableCell>
                                       <TableCell>{report.userName}</TableCell>
                                       <TableCell>{safeToDate(report.createdAt) ? format(safeToDate(report.createdAt)!, 'dd MMM yyyy, HH:mm') : '-'}</TableCell>
+                                      <TableCell><Badge variant={report.status === 'approved' ? 'default' : report.status === 'rejected' ? 'destructive' : 'secondary'}>{report.status}</Badge></TableCell>
                                       <TableCell className="text-right">
                                           <Button asChild variant="outline" size="sm">
-                                              <Link href={`/dashboard/admin/gamas-approval/${report.id}`}><Eye className="mr-2 h-4 w-4" />Tinjau Laporan</Link>
+                                              <Link href={`/dashboard/admin/gamas-approval/${report.id}`}><Eye className="mr-2 h-4 w-4" />Tinjau</Link>
                                           </Button>
                                           <AlertDialog>
                                             <AlertDialogTrigger asChild>
@@ -145,7 +222,7 @@ export default function GamasApprovalListPage() {
                               ))
                           ) : (
                               <TableRow>
-                                  <TableCell colSpan={4} className="h-24 text-center">
+                                  <TableCell colSpan={5} className="h-24 text-center">
                                       Tidak ada laporan yang menunggu persetujuan.
                                   </TableCell>
                               </TableRow>

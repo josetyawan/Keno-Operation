@@ -30,6 +30,7 @@ export type DesignatorEvidence = {
   photoUrls: string[];
   status: 'pending' | 'approved' | 'rejected';
   rejectionReason?: string;
+  quantity?: number; // VOL
 };
 
 export type GamasReport = {
