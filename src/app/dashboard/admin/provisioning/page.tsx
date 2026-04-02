@@ -42,7 +42,7 @@ const formatWaNumber = (phone: string) => {
 
 // --- Child Components ---
 
-function ManualOrderForm({ users, onSave, onCancel }: { users: UserProfile[], onSave: (data: Partial<ProvisioningRecord>) => Promise<void>, onCancel: () => void }) {
+function ManualOrderForm({ users, onSave, onCancel, currentUserProfile }: { users: UserProfile[], onSave: (data: Partial<ProvisioningRecord>) => Promise<void>, onCancel: () => void, currentUserProfile: UserProfile | null }) {
     const [isSaving, setIsSaving] = useState(false);
     const { toast } = useToast();
     
@@ -85,11 +85,6 @@ function ManualOrderForm({ users, onSave, onCancel }: { users: UserProfile[], on
         const crew = users.find(u => u.id === assignedTo_crew_userId);
         const isAssigned = !!technician;
         
-        const { user } = useUser();
-        const { data: userProfile } = useDoc<UserProfile>(
-          useMemoFirebase(() => (user ? doc(useFirestore(), 'users', user.uid) : null), [user])
-        );
-
         const newOrder: Partial<ProvisioningRecord> = {
             workorder,
             workorderBaru,
@@ -104,7 +99,7 @@ function ManualOrderForm({ users, onSave, onCancel }: { users: UserProfile[], on
             assignedAt: isAssigned ? serverTimestamp() : null,
             dateCreated: format(new Date(), 'dd-MM-yyyy HH:mm'),
             status: 'OPEN',
-            workzone: userProfile?.psa || '',
+            workzone: currentUserProfile?.psa || '',
             productType: ''
         };
         
@@ -1018,7 +1013,7 @@ export default function ProvisioningDashboardPage() {
                         <DialogTitle>Buat Order Provisioning Manual</DialogTitle>
                         <DialogDescription>Isi detail order baru di bawah ini.</DialogDescription>
                     </DialogHeader>
-                    <ManualOrderForm users={technicians || []} onSave={handleManualSave} onCancel={() => setIsManualFormOpen(false)} />
+                    <ManualOrderForm users={technicians || []} onSave={handleManualSave} onCancel={() => setIsManualFormOpen(false)} currentUserProfile={userProfile} />
                 </DialogContent>
             </Dialog>
             <Button variant="destructive" onClick={handleDeleteAll} disabled={isImporting || isDeleting || !data || data.length === 0}>
