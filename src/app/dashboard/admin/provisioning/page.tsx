@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -96,7 +97,7 @@ function ManualOrderForm({ users, onSave, onCancel, currentUserProfile }: { user
             assignedTo_crew_userId: crew?.id || '',
             assignedTo_crew_userName: crew?.displayName || '',
             provisioningStatus: isAssigned ? 'assigned' : 'unassigned',
-            assignedAt: isAssigned ? serverTimestamp() : null,
+            assignedAt: isAssigned ? Timestamp.now() : null,
             status: 'OPEN',
             workzone: currentUserProfile?.psa || 'KDS',
             productType: ''
@@ -780,7 +781,7 @@ export default function ProvisioningDashboardPage() {
     const dataToSave = {
       ...orderData,
       id: scOrder,
-      dateCreated: serverTimestamp(),
+      dateCreated: Timestamp.now(),
     };
 
     await setDoc(docRef, dataToSave);
@@ -805,7 +806,7 @@ export default function ProvisioningDashboardPage() {
         const updateData: Partial<ProvisioningRecord> = {
             assignedTo_userId: technician.id,
             assignedTo_userName: technician.displayName,
-            assignedAt: serverTimestamp(),
+            assignedAt: Timestamp.now(),
             provisioningStatus: 'assigned',
             assignedTo_crew_userId: crewMember ? crewMember.id : '',
             assignedTo_crew_userName: crewMember ? crewMember.displayName : '',
@@ -894,7 +895,7 @@ export default function ProvisioningDashboardPage() {
         ];
 
         let currentNode = pivot;
-        keys.forEach(key => {
+        for (const key of keys) {
             if (!currentNode[key]) {
                 currentNode[key] = { count: { 'Grand Total': 0 }, children: {} };
             }
@@ -903,7 +904,7 @@ export default function ProvisioningDashboardPage() {
             currentNode[key].count['Grand Total'] += 1;
 
             currentNode = currentNode[key].children;
-        });
+        }
     });
     return pivot;
   }, [data, selectedTechnician]);

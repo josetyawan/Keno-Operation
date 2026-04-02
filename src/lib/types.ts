@@ -1,4 +1,5 @@
 
+
 import { Timestamp } from 'firebase/firestore';
 
 export type Nota = {
@@ -404,6 +405,7 @@ export type ProvisioningRecord = {
   progressNotes?: string;
   kendalaNotes?: string;
   kendalaPhotos?: string[];
+  kendalaAt?: any; // Timestamp
   customerHousePhoto?: string;
   odpName?: string;
   odpPort?: string;
