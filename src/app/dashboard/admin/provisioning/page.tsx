@@ -19,7 +19,7 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogContent, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogContent, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
@@ -84,6 +84,10 @@ function ManualOrderForm({ users, onSave, onCancel }: { users: UserProfile[], on
         const crew = users.find(u => u.id === assignedTo_crew_userId);
         const isAssigned = !!technician;
 
+        const { data: userProfile } = useDoc<UserProfile>(
+          useMemoFirebase(() => (user ? doc(useFirestore(), 'users', user.uid) : null), [user])
+        );
+
         const newOrder: Partial<ProvisioningRecord> = {
             workorder, scOrder: scOrder.trim(), contactNumber, customerName, address, bookingDate, serviceNo,
             odpName, productName, crmOrder,
@@ -112,6 +116,8 @@ function ManualOrderForm({ users, onSave, onCancel }: { users: UserProfile[], on
         if (!users || !assignedTo_userId) return users;
         return users.filter(u => u.id !== assignedTo_userId);
     }, [users, assignedTo_userId]);
+
+    const { user } = useUser();
 
     return (
         <form onSubmit={handleSubmit}>
@@ -203,7 +209,7 @@ function EditOrderForm({ order, onSave, onCancel, isSaving }: { order: Provision
     const [crmOrder, setCrmOrder] = useState('');
     const [description, setDescription] = useState(''); // This will be our "Order Type"
 
-    const jenisOrderOptions = [
+    const jenisPekerjaanOptions = [
       "PSB DATIN", "PSB OLO", "PSB WIFI", "PDA DATIN", "PDA WIFI",
       "REPLACEMENT", "Instalasi IP Camera", "Instalasi SD-WAN",
       "Instalasi Router", "Install AP WIFI (1 AP)", "Install AP WIFI (2 AP)",
@@ -277,7 +283,7 @@ function EditOrderForm({ order, onSave, onCancel, isSaving }: { order: Provision
                         <Label htmlFor="edit-crmOrder">Jenis Order</Label>
                         <Select value={crmOrder} onValueChange={setCrmOrder}>
                             <SelectTrigger id="edit-crmOrder"><SelectValue placeholder="Pilih Jenis Order..." /></SelectTrigger>
-                            <SelectContent><ScrollArea className="h-72">{jenisOrderOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</ScrollArea></SelectContent>
+                            <SelectContent><ScrollArea className="h-72">{jenisPekerjaanOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</ScrollArea></SelectContent>
                         </Select>
                     </div>
                     {showOrderType && (
