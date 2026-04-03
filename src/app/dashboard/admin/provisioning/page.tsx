@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -940,7 +941,7 @@ export default function ProvisioningDashboardPage() {
             provisioningStatus: 'assigned',
             kendalaNotes: '',
             kendalaPhotos: [],
-            kendalaCategory: undefined,
+            kendalaCategory: null,
             kendalaAt: null,
             assignedTo_crew_userId: crewMember ? crewMember.id : '',
             assignedTo_crew_userName: crewMember ? crewMember.displayName : '',
@@ -1571,3 +1572,5 @@ export default function ProvisioningDashboardPage() {
     </div>
   );
 }
+
+    
