@@ -79,11 +79,13 @@ export async function sendProvisioningRekap(
         
         let statusKey: keyof typeof summary | null = null;
         let detailStatusInfo: { emoji: string; ket: string } | null = null;
+        
+        const dateInfo = (order.bookingDate && order.bookingDate.trim() !== '') ? 'H+1' : 'HI';
 
         switch (order.provisioningStatus) {
             case 'completed':
                 statusKey = '✅ PS CLOSE         ';
-                detailStatusInfo = { emoji: '✅', ket: `${order.crmOrder || 'PS'} H+1` };
+                detailStatusInfo = { emoji: '✅', ket: `${order.crmOrder || 'PS'} ${dateInfo}` };
                 break;
             case 'cancelled':
                 statusKey = '❌ BATAL            ';
@@ -100,7 +102,7 @@ export async function sendProvisioningRekap(
                 break;
             default: // unassigned, assigned, picked_up, etc.
                 statusKey = '🕗 SISA ORDER       ';
-                detailStatusInfo = { emoji: '🕗', ket: `SISA OR : ONPROGRESS ${order.crmOrder || 'ORDER'} H+1` };
+                detailStatusInfo = { emoji: '🕗', ket: `SISA OR : ONPROGRESS ${order.crmOrder || 'ORDER'} ${dateInfo}` };
                 break;
         }
 
@@ -129,8 +131,20 @@ export async function sendProvisioningRekap(
     message += `\n📌 DETAIL WO (${dateHeader})\n`;
     
     detailRows.sort((a, b) => {
-        if (a.status === 'completed' && b.status !== 'completed') return -1;
-        if (a.status !== 'completed' && b.status === 'completed') return 1;
+        const getPriority = (status: string) => {
+            if (status === 'completed') return 0;
+            if (status === 'kendala') return 1;
+            if (status === 'cancelled') return 2;
+            return 3; // for 'unassigned', 'assigned', etc.
+        }
+
+        const priorityA = getPriority(a.status);
+        const priorityB = getPriority(b.status);
+
+        if (priorityA !== priorityB) {
+            return priorityA - priorityB;
+        }
+        
         return a.scOrder.localeCompare(b.scOrder);
     });
 
