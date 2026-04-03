@@ -102,7 +102,7 @@ function ManualOrderForm({ users, onSave, onCancel, currentUserProfile }: { user
             provisioningStatus: isAssigned ? 'assigned' : 'unassigned',
             assignedAt: isAssigned ? Timestamp.now() : null,
             status: 'OPEN',
-            workzone: currentUserProfile?.psa || 'KDS',
+            workzone: currentUserProfile?.psa || 'N/A',
             productType: ''
         };
         
@@ -394,80 +394,80 @@ function KendalaCard({ kendalaOrders, isLoading }: { kendalaOrders: Provisioning
     );
 }
 
-function PivotTable({ data, workzones, categoryLabel }: { data: any; workzones: string[]; categoryLabel: string; }) {
+function PivotTable({ data, workzones }: { data: any; workzones: string[]; }) {
     const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
 
     const toggleRow = (key: string) => {
         setExpandedRows(prev => ({ ...prev, [key]: !prev[key] }));
     };
 
-    const renderPivotRows = (node: any, level = 0, prefix = '') => {
-        const rows: React.ReactNode[] = [];
-        const sortedKeys = Object.keys(node).sort();
-
-        sortedKeys.forEach(key => {
-            const currentKey = `${prefix}${key}`;
-            const isExpanded = expandedRows[currentKey];
-            const hasChildren = Object.keys(node[key].children).length > 0;
-            
-            const nodeData = node[key];
-            const totalCount = nodeData.count['Grand Total'] || 0;
-
-            rows.push(
-                <TableRow key={currentKey} className={cn(level > 0 && "bg-muted/50")}>
-                    <TableCell style={{ paddingLeft: `${level * 1.5 + 1}rem` }} className="font-medium">
-                        <div className="flex items-center gap-2">
-                            {hasChildren && (
-                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => toggleRow(currentKey)}>
-                                    <ChevronRightIcon className={cn("h-4 w-4 transition-transform", isExpanded && "rotate-90")} />
-                                </Button>
-                            )}
-                            <span className={cn(!hasChildren && "ml-8")}>{key}</span>
-                        </div>
-                    </TableCell>
-                    {workzones.map(wz => {
-                        const count = nodeData.count[wz] || 0;
-                        return (
-                            <TableCell key={wz} className="text-right">
-                                {count > 0 ? count : 0}
-                            </TableCell>
-                        )
-                    })}
-                    <TableCell className="text-right font-bold">
-                        {totalCount}
-                    </TableCell>
-                </TableRow>
-            );
-
-            if (isExpanded && hasChildren) {
-                rows.push(...renderPivotRows(node[key].children, level + 1, `${currentKey}>`));
-            }
-        });
-
-        return rows;
-    };
+    const sortedTechKeys = Object.keys(data).sort();
     
-    const totalCount = Object.values(data).reduce((acc: number, item: any) => acc + (item.count['Grand Total'] || 0), 0);
-    const workzoneTotals = workzones.map(wz => Object.values(data).reduce((acc: number, item: any) => acc + (item.count[wz] || 0), 0));
-
+    const totalCount = sortedTechKeys.reduce((acc, key) => acc + data[key].count['Grand Total'], 0);
+    const workzoneTotals = workzones.map(wz => sortedTechKeys.reduce((acc, key) => acc + (data[key].count[wz] || 0), 0));
 
     return (
         <div className="overflow-x-auto border rounded-lg">
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead className="w-[400px]">{categoryLabel}</TableHead>
+                        <TableHead className="w-[400px]">Teknisi / SC Order</TableHead>
+                        <TableHead>Status</TableHead>
                         {workzones.map(wz => <TableHead key={wz} className="text-right">{wz}</TableHead>)}
                         <TableHead className="text-right font-bold">Grand Total</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                   {Object.keys(data).length > 0 ? renderPivotRows(data) : (
-                       <TableRow><TableCell colSpan={workzones.length + 2} className="h-24 text-center">Silakan impor file Excel atau buat order manual untuk melihat rekap.</TableCell></TableRow>
+                   {sortedTechKeys.length > 0 ? (
+                       sortedTechKeys.map(techKey => {
+                           const techData = data[techKey];
+                           const isExpanded = expandedRows[techKey];
+
+                           return (
+                               <React.Fragment key={techKey}>
+                                   <TableRow>
+                                       <TableCell className="font-medium">
+                                           <div className="flex items-center gap-2">
+                                               <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => toggleRow(techKey)}>
+                                                   <ChevronRightIcon className={cn("h-4 w-4 transition-transform", isExpanded && "rotate-90")} />
+                                               </Button>
+                                               <span>{techKey}</span>
+                                           </div>
+                                       </TableCell>
+                                       <TableCell></TableCell> {/* Empty status cell for tech row */}
+                                       {workzones.map(wz => (
+                                           <TableCell key={wz} className="text-right font-semibold">
+                                               {techData.count[wz] || 0}
+                                           </TableCell>
+                                       ))}
+                                       <TableCell className="text-right font-bold">{techData.count['Grand Total']}</TableCell>
+                                   </TableRow>
+
+                                   {isExpanded && techData.orders.map((order: any, index: number) => (
+                                       <TableRow key={`${techKey}-${order.id}-${index}`} className="bg-muted/50">
+                                           <TableCell style={{ paddingLeft: '3.5rem' }}>{order.scOrder}</TableCell>
+                                           <TableCell>
+                                               <Badge variant={order.status === 'completed' ? 'default' : order.status === 'kendala' ? 'destructive' : 'secondary'}>
+                                                   {order.status}
+                                               </Badge>
+                                           </TableCell>
+                                           {workzones.map(wz => (
+                                               <TableCell key={wz} className="text-right">
+                                                   {order.workzone === wz ? 1 : 0}
+                                               </TableCell>
+                                           ))}
+                                           <TableCell className="text-right font-bold">1</TableCell>
+                                       </TableRow>
+                                   ))}
+                               </React.Fragment>
+                           );
+                       })
+                   ) : (
+                       <TableRow><TableCell colSpan={workzones.length + 3} className="h-24 text-center">Silakan impor file Excel atau buat order manual untuk melihat rekap.</TableCell></TableRow>
                    )}
                 </TableBody>
                  <TableRow className="font-bold bg-muted">
-                    <TableCell>Grand Total</TableCell>
+                    <TableCell colSpan={2}>Grand Total</TableCell>
                     {workzoneTotals.map((total, index) => (
                         <TableCell key={index} className="text-right">{total}</TableCell>
                     ))}
@@ -532,19 +532,20 @@ export default function ProvisioningDashboardPage() {
     if (timestamp instanceof Timestamp) {
         return timestamp.toDate();
     }
+    // Handle manual string dates
     if (typeof timestamp === 'string') {
-        const parsed = new Date(timestamp.replace(' ', 'T'));
+        const parts = timestamp.match(/(\d{2})-(\d{2})-(\d{4}) (\d{2}):(\d{2})/);
+        if (parts) {
+            // DD-MM-YYYY HH:mm
+            const [, day, month, year, hour, minute] = parts;
+            return new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
+        }
+        // Fallback for other string formats
+        const parsed = new Date(timestamp);
         if (isValid(parsed)) return parsed;
-        const excelDate = new Date(1899, 11, 30 + Number(timestamp));
-        if(isValid(excelDate)) return excelDate;
     }
     if (timestamp instanceof Date && isValid(timestamp)) return timestamp;
-    try {
-        const d = new Date(timestamp);
-        return isValid(d) ? d : null;
-    } catch (e) {
-        return null;
-    }
+    return null;
   };
   
   const monthYearOptions = useMemo(() => {
@@ -720,10 +721,6 @@ export default function ProvisioningDashboardPage() {
             workzone: findHeader(headers, ['workzone']),
             odpName: findHeader(headers, ['odp', 'odp name', 'nama odp']),
         };
-
-        if (Object.values(headerMapping).some(val => val === undefined)) {
-            console.warn("Header mapping incomplete:", headerMapping);
-        }
         
         const recordsCollection = collection(firestore, 'provisioning-records');
         const batchSize = 400;
@@ -737,24 +734,6 @@ export default function ProvisioningDashboardPage() {
             if (!dateValue) return '-';
             const date = new Date(dateValue);
             return date instanceof Date && !isNaN(date.valueOf()) ? format(date, 'dd-MM-yyyy HH:mm') : String(dateValue);
-        };
-
-        const formatDateToTimestamp = (dateValue: any): Timestamp => {
-            // Excel dates are numbers. JS dates can also be passed.
-            if (typeof dateValue === 'number') {
-                // Excel's epoch starts on 1900-01-01, but it has a bug where it thinks 1900 is a leap year.
-                // JS epoch is 1970-01-01. The difference is 25569 days.
-                return Timestamp.fromMillis((dateValue - 25569) * 86400 * 1000);
-            }
-            if (dateValue instanceof Date && isValid(dateValue)) {
-                return Timestamp.fromDate(dateValue);
-            }
-            if (typeof dateValue === 'string') {
-                const parsedDate = new Date(dateValue.replace(' ', 'T'));
-                if (isValid(parsedDate)) return Timestamp.fromDate(parsedDate);
-            }
-            // Fallback to now if parsing fails, but this should be handled better if needed.
-            return Timestamp.now();
         };
 
         for (let i = 0; i < jsonData.length; i++) {
@@ -795,7 +774,7 @@ export default function ProvisioningDashboardPage() {
               contactNumber: row[headerMapping.contactNumber!]?.toString() || '-',
               address: row[headerMapping.address!] || '-',
               description: headerMapping.description ? (row[headerMapping.description] || '-') : '-',
-              dateCreated: formatDateToTimestamp(row[headerMapping.dateCreated!]),
+              dateCreated: Timestamp.now(), // Always use timestamp for consistency
               bookingDate: formatDateValue(row[headerMapping.bookingDate!]),
               productName: headerMapping.productName ? (row[headerMapping.productName] || '-') : '-',
               productType: row[headerMapping.productType!] || '-',
@@ -850,7 +829,7 @@ export default function ProvisioningDashboardPage() {
     const dataToSave: Partial<ProvisioningRecord> = {
         ...orderData,
         id: scOrder,
-        dateCreated: Timestamp.now(), // Always use Timestamp for new manual orders
+        dateCreated: Timestamp.now(),
     };
     
     await setDoc(docRef, dataToSave);
@@ -965,16 +944,17 @@ export default function ProvisioningDashboardPage() {
 
   const pivotData = useMemo(() => {
     const pivot: any = {};
-    const dataToProcess = (dateFilteredData || []).filter(item => {
+    const dataToProcess = (dateFilteredData || []);
+
+    const technicianFilteredData = dataToProcess.filter(item => {
         if (selectedTechnician !== 'all' && (item.assignedTo_userId !== selectedTechnician && item.assignedTo_crew_userId !== selectedTechnician)) {
             return false;
         }
         return true;
     });
 
-    dataToProcess.forEach(item => {
+    technicianFilteredData.forEach(item => {
         const { scOrder, provisioningStatus, workzone, assignedTo_userName, assignedTo_crew_userName } = item;
-        
         const wz = workzone || 'N/A';
         
         let techGroupKey = 'Unassigned';
@@ -984,32 +964,44 @@ export default function ProvisioningDashboardPage() {
                 techGroupKey += ` & ${assignedTo_crew_userName}`;
             }
         }
-        
-        const keys = [
-            techGroupKey,
-            provisioningStatus || 'unassigned',
-            scOrder || 'N/A',
-        ];
 
-        let currentNode = pivot;
-        for (const key of keys) {
-            if (!currentNode[key]) {
-                currentNode[key] = { count: { 'Grand Total': 0 }, children: {} };
-            }
-            
-            currentNode[key].count[wz] = (currentNode[key].count[wz] || 0) + 1;
-            currentNode[key].count['Grand Total'] += 1;
+        // Tech level
+        if (!pivot[techGroupKey]) {
+            pivot[techGroupKey] = { count: { 'Grand Total': 0 }, children: {} };
+        }
+        pivot[techGroupKey].count[wz] = (pivot[techGroupKey].count[wz] || 0) + 1;
+        pivot[techGroupKey].count['Grand Total']++;
 
-            currentNode = currentNode[key].children;
+        // Status level
+        const finalStatus = provisioningStatus || 'unassigned';
+        if (!pivot[techGroupKey].children[finalStatus]) {
+            pivot[techGroupKey].children[finalStatus] = {
+                count: { 'Grand Total': 0 },
+                children: {}
+            };
+        }
+        pivot[techGroupKey].children[finalStatus].count[wz] = (pivot[techGroupKey].children[finalStatus].count[wz] || 0) + 1;
+        pivot[techGroupKey].children[finalStatus].count['Grand Total']++;
+
+        // SC Order level
+        const finalScOrder = scOrder || 'N/A-' + item.id;
+        if (!pivot[techGroupKey].children[finalStatus].children[finalScOrder]) {
+             const newCount: Record<string, number> = { 'Grand Total': 1 };
+             newCount[wz] = 1;
+             pivot[techGroupKey].children[finalStatus].children[finalScOrder] = {
+                 count: newCount,
+                 children: {}
+             };
         }
     });
+
     return pivot;
   }, [dateFilteredData, selectedTechnician]);
   
   const handleSendRekap = async () => {
       setIsSendingRekap(true);
       try {
-          if (!data) { // Use all data for the rekap
+          if (!data) {
             throw new Error("Data rekap belum siap.");
           }
           
@@ -1205,7 +1197,7 @@ export default function ProvisioningDashboardPage() {
               <CardDescription>Ringkasan order dikelompokkan berdasarkan teknisi, status, dan SC order.</CardDescription>
           </CardHeader>
           <CardContent>
-              <PivotTable data={pivotData} workzones={workzones} categoryLabel={categoryLabel} />
+              <PivotTable data={pivotData} workzones={workzones} />
           </CardContent>
       </Card>
 
