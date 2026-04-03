@@ -18,7 +18,7 @@ import Link from 'next/link';
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { gamasPriceData as gamasPriceDataMitra } from '@/lib/gamas-price-data';
-import { gamasPriceData as gamasPriceDataTelkom } from '@/lib/gamas-price-data-telkom';
+import { gamasPriceDataTelkom } from '@/lib/gamas-price-data-telkom';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -114,6 +114,10 @@ export default function GamasApprovalListPage() {
         const XLSX = await import('xlsx');
         const priceData = priceSource === 'telkom' ? gamasPriceDataTelkom : gamasPriceDataMitra;
         
+        if (!priceData) {
+            throw new Error(`Sumber data harga untuk "${priceSource}" tidak ditemukan.`);
+        }
+
         const pivotedData: Record<string, any> = {};
         const sto = report.sto || 'KUD';
         const ticketHeader = `${sto} (${report.noTiket || 'TANPA_TIKET'})`;
@@ -231,6 +235,10 @@ export default function GamasApprovalListPage() {
     try {
         const XLSX = await import('xlsx');
         const priceData = priceSource === 'telkom' ? gamasPriceDataTelkom : gamasPriceDataMitra;
+
+        if (!priceData) {
+            throw new Error(`Sumber data harga untuk "${priceSource}" tidak ditemukan.`);
+        }
         
         const pivotedData: Record<string, any> = {};
         const ticketColumns = new Set<string>();
