@@ -411,7 +411,7 @@ function PivotTable({ data, workzones }: { data: any; workzones: string[]; }) {
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead className="w-[400px]">Teknisi / SC Order</TableHead>
+                        <TableHead className="w-[300px]">Teknisi / SC Order</TableHead>
                         <TableHead>Status</TableHead>
                         {workzones.map(wz => <TableHead key={wz} className="text-right">{wz}</TableHead>)}
                         <TableHead className="text-right font-bold">Grand Total</TableHead>
@@ -434,7 +434,7 @@ function PivotTable({ data, workzones }: { data: any; workzones: string[]; }) {
                                                <span>{techKey}</span>
                                            </div>
                                        </TableCell>
-                                       <TableCell></TableCell> {/* Empty status cell for tech row */}
+                                       <TableCell></TableCell> {/* Empty cell for status header */}
                                        {workzones.map(wz => (
                                            <TableCell key={wz} className="text-right font-semibold">
                                                {techData.count[wz] || 0}
@@ -445,16 +445,14 @@ function PivotTable({ data, workzones }: { data: any; workzones: string[]; }) {
 
                                    {isExpanded && techData.orders.map((order: any, index: number) => (
                                        <TableRow key={`${techKey}-${order.id}-${index}`} className="bg-muted/50">
-                                           <TableCell style={{ paddingLeft: '3.5rem' }}>{order.scOrder}</TableCell>
+                                           <TableCell style={{ paddingLeft: '2.5rem' }}>{order.scOrder}</TableCell>
                                            <TableCell>
                                                <Badge variant={order.status === 'completed' ? 'default' : order.status === 'kendala' ? 'destructive' : 'secondary'}>
                                                    {order.status}
                                                </Badge>
                                            </TableCell>
                                            {workzones.map(wz => (
-                                               <TableCell key={wz} className="text-right">
-                                                   {order.workzone === wz ? 1 : 0}
-                                               </TableCell>
+                                               <TableCell key={wz} className="text-right">{order.workzone === wz ? 1 : 0}</TableCell>
                                            ))}
                                            <TableCell className="text-right font-bold">1</TableCell>
                                        </TableRow>
@@ -534,13 +532,17 @@ export default function ProvisioningDashboardPage() {
     }
     // Handle manual string dates
     if (typeof timestamp === 'string') {
-        const parts = timestamp.match(/(\d{2})-(\d{2})-(\d{4}) (\d{2}):(\d{2})/);
-        if (parts) {
-            // DD-MM-YYYY HH:mm
-            const [, day, month, year, hour, minute] = parts;
-            return new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
+        // Attempt to parse various formats
+        const formatsToTry = [
+            "dd-MM-yyyy HH:mm",
+            "yyyy-MM-dd HH:mm",
+            "MM/dd/yyyy HH:mm",
+        ];
+        for (const fmt of formatsToTry) {
+            const date = new Date(timestamp); // Direct parse might work
+            if (isValid(date)) return date;
         }
-        // Fallback for other string formats
+        // Last resort for unexpected string formats
         const parsed = new Date(timestamp);
         if (isValid(parsed)) return parsed;
     }
@@ -829,7 +831,7 @@ export default function ProvisioningDashboardPage() {
     const dataToSave: Partial<ProvisioningRecord> = {
         ...orderData,
         id: scOrder,
-        dateCreated: Timestamp.now(),
+        dateCreated: Timestamp.now(), // Ensure date is a Timestamp
     };
     
     await setDoc(docRef, dataToSave);
@@ -944,7 +946,7 @@ export default function ProvisioningDashboardPage() {
 
   const pivotData = useMemo(() => {
     const pivot: any = {};
-    const dataToProcess = (dateFilteredData || []);
+    const dataToProcess = dateFilteredData || [];
 
     const technicianFilteredData = dataToProcess.filter(item => {
         if (selectedTechnician !== 'all' && (item.assignedTo_userId !== selectedTechnician && item.assignedTo_crew_userId !== selectedTechnician)) {
@@ -964,35 +966,20 @@ export default function ProvisioningDashboardPage() {
                 techGroupKey += ` & ${assignedTo_crew_userName}`;
             }
         }
-
-        // Tech level
+        
         if (!pivot[techGroupKey]) {
-            pivot[techGroupKey] = { count: { 'Grand Total': 0 }, children: {} };
+            pivot[techGroupKey] = { count: { 'Grand Total': 0 }, orders: [] };
         }
+        
         pivot[techGroupKey].count[wz] = (pivot[techGroupKey].count[wz] || 0) + 1;
         pivot[techGroupKey].count['Grand Total']++;
-
-        // Status level
-        const finalStatus = provisioningStatus || 'unassigned';
-        if (!pivot[techGroupKey].children[finalStatus]) {
-            pivot[techGroupKey].children[finalStatus] = {
-                count: { 'Grand Total': 0 },
-                children: {}
-            };
-        }
-        pivot[techGroupKey].children[finalStatus].count[wz] = (pivot[techGroupKey].children[finalStatus].count[wz] || 0) + 1;
-        pivot[techGroupKey].children[finalStatus].count['Grand Total']++;
-
-        // SC Order level
-        const finalScOrder = scOrder || 'N/A-' + item.id;
-        if (!pivot[techGroupKey].children[finalStatus].children[finalScOrder]) {
-             const newCount: Record<string, number> = { 'Grand Total': 1 };
-             newCount[wz] = 1;
-             pivot[techGroupKey].children[finalStatus].children[finalScOrder] = {
-                 count: newCount,
-                 children: {}
-             };
-        }
+        
+        pivot[techGroupKey].orders.push({
+            id: item.id,
+            scOrder: scOrder || 'N/A-' + item.id,
+            status: provisioningStatus || 'unassigned',
+            workzone: wz,
+        });
     });
 
     return pivot;
@@ -1049,9 +1036,7 @@ export default function ProvisioningDashboardPage() {
   
   const [activeTab, setActiveTab] = useState('unassigned');
   
-  const categoryLabel = 'Teknisi / Status / SC Order';
-
-
+  
   useEffect(() => {
       if (unassignedOrders.length > 0) {
         setActiveTab('unassigned');
