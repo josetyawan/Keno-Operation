@@ -51,6 +51,14 @@ export type GamasReport = {
   rejectionReason?: string;
 };
 
+export type GamasPriceItem = {
+    code: string;
+    description: string;
+    unit: string;
+    materialPrice: number;
+    servicePrice: number;
+};
+
 export type Pendidikan = {
   institusi?: string;
   jurusan?: string;

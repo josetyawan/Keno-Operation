@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -10,13 +11,22 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
-import type { GamasReport, UserProfile, DesignatorEvidence } from '@/lib/types';
+import type { GamasReport, UserProfile, DesignatorEvidence, GamasPriceItem } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Eye, Trash2, ShieldX, FileSpreadsheet, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { gamasPriceData } from '@/lib/gamas-price-data';
+import { gamasPriceData as gamasPriceDataMitra } from '@/lib/gamas-price-data';
+import { gamasPriceData as gamasPriceDataTelkom } from '@/lib/gamas-price-data-telkom';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
 
 const safeToDate = (timestamp: any): Date | null => {
   if (!timestamp) return null;
@@ -89,7 +99,7 @@ export default function GamasApprovalListPage() {
     }
   };
   
-  const handleExportBoQ = async (report: GamasReport) => {
+  const handleExportBoQ = async (report: GamasReport, priceSource: 'telkom' | 'mitra') => {
     if (report.status !== 'approved') {
         toast({
             variant: "destructive",
@@ -102,7 +112,8 @@ export default function GamasApprovalListPage() {
 
     try {
         const XLSX = await import('xlsx');
-        const priceMap = new Map(gamasPriceData.map(item => [item.code.trim().toUpperCase(), item]));
+        const priceData = priceSource === 'telkom' ? gamasPriceDataTelkom : gamasPriceDataMitra;
+        const priceMap = new Map(priceData.map(item => [item.code.trim().toUpperCase(), item]));
         
         const pivotedData: Record<string, any> = {};
         const sto = report.sto || 'KUD';
@@ -196,7 +207,7 @@ export default function GamasApprovalListPage() {
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, `BoQ ${report.noTiket}`);
         
-        XLSX.writeFile(workbook, `BoQ_${report.noTiket}.xlsx`);
+        XLSX.writeFile(workbook, `BoQ_${report.noTiket}_(${priceSource}).xlsx`);
         
         toast({ title: 'Ekspor BoQ Berhasil', description: `File BoQ untuk tiket ${report.noTiket} telah diunduh.` });
 
@@ -208,7 +219,7 @@ export default function GamasApprovalListPage() {
   };
 
 
-  const handleExportExcel = async () => {
+  const handleExportExcel = async (priceSource: 'telkom' | 'mitra') => {
     setIsExporting(true);
     const approvedReports = allReports?.filter(r => r.status === 'approved');
 
@@ -220,7 +231,8 @@ export default function GamasApprovalListPage() {
 
     try {
         const XLSX = await import('xlsx');
-        const priceMap = new Map(gamasPriceData.map(item => [item.code.trim().toUpperCase(), item]));
+        const priceData = priceSource === 'telkom' ? gamasPriceDataTelkom : gamasPriceDataMitra;
+        const priceMap = new Map(priceData.map(item => [item.code.trim().toUpperCase(), item]));
         
         const pivotedData: Record<string, any> = {};
         const ticketColumns = new Set<string>();
@@ -324,7 +336,7 @@ export default function GamasApprovalListPage() {
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Rekap Gamas Approved');
         
         const dateString = format(new Date(), 'yyyy-MM-dd');
-        XLSX.writeFile(workbook, `Rekap_Gamas_Approved_${dateString}.xlsx`);
+        XLSX.writeFile(workbook, `Rekap_Gamas_Approved_(${priceSource})_${dateString}.xlsx`);
         
         toast({ title: 'Ekspor Berhasil', description: 'File rekap Excel telah diunduh.' });
 
@@ -349,10 +361,19 @@ export default function GamasApprovalListPage() {
                 <h1 className="text-3xl font-bold tracking-tight">Persetujuan Laporan Gamas</h1>
                 <p className="text-muted-foreground mt-1">Tinjau dan kelola laporan eviden gamas yang masuk.</p>
               </div>
-              <Button onClick={handleExportExcel} disabled={isExporting}>
-                {isExporting ? <Loader2 className="mr-2 animate-spin" /> : <FileSpreadsheet className="mr-2" />}
-                Download Rekap (TA-Mitra)
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button disabled={isExporting}>
+                        {isExporting ? <Loader2 className="mr-2 animate-spin" /> : <FileSpreadsheet className="mr-2" />}
+                        Download Rekap
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                    <DropdownMenuLabel>Pilih Sumber Harga</DropdownMenuLabel>
+                    <DropdownMenuItem onSelect={() => handleExportExcel('telkom')}>Telkom - TA</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => handleExportExcel('mitra')}>TA - Mitra</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
           </div>
           <Card>
               <CardHeader>
@@ -383,9 +404,19 @@ export default function GamasApprovalListPage() {
                                       <TableCell>{safeToDate(report.createdAt) ? format(safeToDate(report.createdAt)!, 'dd MMM yyyy, HH:mm') : '-'}</TableCell>
                                       <TableCell><Badge variant={report.status === 'approved' ? 'default' : report.status === 'rejected' ? 'destructive' : 'secondary'}>{report.status}</Badge></TableCell>
                                       <TableCell className="text-right">
-                                          <Button variant="outline" size="sm" className="mr-2" onClick={() => handleExportBoQ(report)} disabled={isExporting}>
-                                            Download BoQ
-                                          </Button>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="outline" size="sm" className="mr-2" disabled={isExporting || report.status !== 'approved'}>
+                                                    Download BoQ
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent>
+                                                <DropdownMenuLabel>Pilih Sumber Harga</DropdownMenuLabel>
+                                                <DropdownMenuItem onSelect={() => handleExportBoQ(report, 'telkom')}>Telkom - TA</DropdownMenuItem>
+                                                <DropdownMenuItem onSelect={() => handleExportBoQ(report, 'mitra')}>TA - Mitra</DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                          
                                           <Button asChild variant="outline" size="sm">
                                               <Link href={`/dashboard/admin/gamas-approval/${report.id}`}><Eye className="mr-2 h-4 w-4" />Tinjau</Link>
                                           </Button>
