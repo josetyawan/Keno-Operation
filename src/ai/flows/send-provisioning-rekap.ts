@@ -59,7 +59,7 @@ export async function sendProvisioningRekap(
         switch (order.provisioningStatus) {
             case 'completed':
                 statusKey = '✅ PS CLOSE         ';
-                detailStatusInfo = { emoji: '✅', ket: 'PS CLOSE MODIFY H+1' };
+                detailStatusInfo = { emoji: '✅', ket: `${order.crmOrder || 'PS CLOSE'} H+1` };
                 break;
             case 'kendala':
                 const notes = (order.kendalaNotes || '').toLowerCase();
