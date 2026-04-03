@@ -15,7 +15,7 @@ import { format, isValid, startOfMonth, endOfMonth, startOfDay, endOfDay } from 
 import { id as idLocale } from 'date-fns/locale';
 import type { DateRange } from 'react-day-picker';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, doc, writeBatch, orderBy, getDocs, setDoc, updateDoc, serverTimestamp, where, Timestamp } from 'firebase/firestore';
+import { collection, query, doc, writeBatch, orderBy, getDocs, setDoc, updateDoc, serverTimestamp, where, Timestamp, getDoc, limit } from 'firebase/firestore';
 import type { ProvisioningRecord, UserProfile } from '@/lib/types';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
@@ -519,25 +519,66 @@ export default function ProvisioningDashboardPage() {
   const [selectedTechnician, setSelectedTechnician] = useState('all');
   
   const [filterMode, setFilterMode] = useState<'month' | 'range' | 'all'>('all');
-  const [selectedMonth, setSelectedMonth] = useState<string>(format(new Date(), 'yyyy-MM'));
+  const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   
   // States for pagination
   const [unassignedPage, setUnassignedPage] = useState(1);
   const [inProgressPage, setInProgressPage] = useState(1);
   const [completedPage, setCompletedPage] = useState(1);
+
+  const safeToDate = (timestamp: any): Date | null => {
+    if (!timestamp) return null;
+    if (timestamp.toDate) return timestamp.toDate();
+    if (timestamp instanceof Date && isValid(timestamp)) return timestamp;
+    try {
+        const d = new Date(timestamp);
+        return isValid(d) ? d : null;
+    } catch (e) {
+        return null;
+    }
+  };
   
   const monthYearOptions = useMemo(() => {
-    const options: { value: string, label: string }[] = [];
+    if (!data) return [];
+    
+    const periods = new Set<string>();
+    
+    // Add periods from the actual data
+    data.forEach(order => {
+        const date = safeToDate(order.dateCreated);
+        if (date) {
+            periods.add(format(date, 'yyyy-MM'));
+        }
+    });
+
+    // Also add the current month in case there's no data for it yet, and a few future/past months for flexibility.
     const now = new Date();
-    for (let i = 0; i < 24; i++) { // Go back 2 years
-        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const value = format(date, 'yyyy-MM');
-        const label = format(date, 'MMMM yyyy', { locale: idLocale });
-        options.push({ value, label });
+    for (let i = -3; i <= 3; i++) { // From 3 months ago to 3 months in the future
+        const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
+        periods.add(format(date, 'yyyy-MM'));
     }
-    return options;
-  }, []);
+
+    return Array.from(periods)
+      .sort((a, b) => b.localeCompare(a)) // Sort descending (most recent first)
+      .map(period => {
+          const [year, month] = period.split('-');
+          const date = new Date(Number(year), Number(month) - 1);
+          return {
+              value: period,
+              label: format(date, 'MMMM yyyy', { locale: idLocale })
+          }
+      });
+  }, [data]);
+  
+  useEffect(() => {
+    if (monthYearOptions.length > 0 && !selectedMonth) {
+        // Default to the current month if available, otherwise the most recent month with data
+        const currentMonthYYYYMM = format(new Date(), 'yyyy-MM');
+        const defaultPeriod = monthYearOptions.find(opt => opt.value === currentMonthYYYYMM) || monthYearOptions[0];
+        setSelectedMonth(defaultPeriod.value);
+    }
+  }, [monthYearOptions, selectedMonth]);
   
   useEffect(() => {
     if (data) {
@@ -791,18 +832,18 @@ export default function ProvisioningDashboardPage() {
     if (!scOrder) throw new Error("SC Order tidak boleh kosong.");
 
     const docRef = doc(firestore, 'provisioning-records', scOrder);
-    const existingDocSnap = await getDocs(query(collection(firestore, 'provisioning-records'), where('scOrder', '==', scOrder), limit(1)));
+    const existingDocSnap = await getDoc(docRef);
 
-    if (!existingDocSnap.empty) {
+    if (existingDocSnap.exists()) {
         throw new Error(`Order dengan SC Order ${scOrder} sudah ada.`);
     }
 
-    const dataToSave: Omit<ProvisioningRecord, 'id'> & { id: string, dateCreated: Timestamp } = {
+    const dataToSave = {
         ...orderData,
         id: scOrder,
-        dateCreated: Timestamp.now(),
-    } as Omit<ProvisioningRecord, 'id'> & { id: string, dateCreated: Timestamp };
-
+        dateCreated: Timestamp.now(), // Always set dateCreated on manual add
+    }
+    
     await setDoc(docRef, dataToSave);
     toast({ title: "Order Manual Disimpan", description: `Order untuk ${orderData.customerName} berhasil dibuat.` });
     setIsManualFormOpen(false);
@@ -862,19 +903,12 @@ export default function ProvisioningDashboardPage() {
   
   const dateFilteredData = useMemo(() => {
     const allOrders = data || [];
-    if (filterMode === 'all' || (!selectedMonth && !dateRange)) {
-        return allOrders;
+    if (filterMode === 'all') {
+      return allOrders;
     }
     
-    const safeToDate = (timestamp: any): Date | null => {
-        if (!timestamp) return null;
-        if (timestamp.toDate) return timestamp.toDate();
-        if (timestamp instanceof Date && isValid(timestamp)) return timestamp;
-        const d = new Date(timestamp);
-        return isValid(d) ? d : null;
-    };
-
-    if (filterMode === 'month' && selectedMonth) {
+    if (filterMode === 'month') {
+        if (!selectedMonth) return [];
         const [year, month] = selectedMonth.split('-').map(Number);
         const startDate = startOfMonth(new Date(year, month - 1));
         const endDate = endOfMonth(startDate);
@@ -883,7 +917,9 @@ export default function ProvisioningDashboardPage() {
             return orderDate && orderDate >= startDate && orderDate <= endDate;
         });
     }
-    if (filterMode === 'range' && dateRange?.from) {
+
+    if (filterMode === 'range') {
+        if (!dateRange?.from) return [];
         const startDate = startOfDay(dateRange.from);
         const endDate = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
         return allOrders.filter(o => {
@@ -891,6 +927,7 @@ export default function ProvisioningDashboardPage() {
             return orderDate && orderDate >= startDate && orderDate <= endDate;
         });
     }
+    
     return allOrders;
   }, [data, filterMode, selectedMonth, dateRange]);
   
@@ -1119,9 +1156,6 @@ export default function ProvisioningDashboardPage() {
                   <Label>Filter Berdasarkan Tanggal Dibuat</Label>
                   <Tabs value={filterMode} onValueChange={(value) => {
                       setFilterMode(value as any);
-                      if (value === 'month') { setDateRange(undefined); if (monthYearOptions.length > 0) setSelectedMonth(monthYearOptions[0].value); }
-                      if (value === 'range') setSelectedMonth('');
-                      if (value === 'all') { setDateRange(undefined); setSelectedMonth(''); }
                   }} className="w-full mt-2">
                     <TabsList className="grid w-full grid-cols-3">
                       <TabsTrigger value="month">Per Bulan</TabsTrigger>
