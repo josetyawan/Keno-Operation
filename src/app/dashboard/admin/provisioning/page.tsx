@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -398,6 +399,7 @@ function PivotTable({ data, workzones }: { data: any; workzones: string[]; }) {
 
     const workzoneMapping: { [key: string]: string } = {
         'KUDUS': 'KUD',
+        'KDS': 'KUD',
         'DEMAK': 'DMA',
         'PURWODADI': 'PWD',
         'PATI': 'PTI',
@@ -567,11 +569,9 @@ export default function ProvisioningDashboardPage() {
         return timestamp.toDate();
     }
     if (typeof timestamp === 'string') {
-        // Handle YYYY-MM-DD and other simple date strings
         const date = new Date(timestamp);
         if (isValid(date)) return date;
     }
-    // Handle cases where dateCreated is a complex object from legacy import
     if (typeof timestamp === 'object' && timestamp.seconds) {
         return new Timestamp(timestamp.seconds, timestamp.nanoseconds).toDate();
     }
@@ -590,7 +590,6 @@ export default function ProvisioningDashboardPage() {
         }
     });
     
-    // Ensure current and nearby months are always available
     const now = new Date();
     for (let i = -3; i <= 3; i++) { 
         const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
@@ -805,7 +804,7 @@ export default function ProvisioningDashboardPage() {
               contactNumber: row[headerMapping.contactNumber!]?.toString() || '-',
               address: row[headerMapping.address!] || '-',
               description: headerMapping.description ? (row[headerMapping.description] || '-') : '-',
-              dateCreated: Timestamp.now(),
+              dateCreated: serverTimestamp(),
               bookingDate: formatDateValue(row[headerMapping.bookingDate!]),
               productName: headerMapping.productName ? (row[headerMapping.productName] || '-') : '-',
               productType: row[headerMapping.productType!] || '-',
@@ -1405,3 +1404,4 @@ export default function ProvisioningDashboardPage() {
     </div>
   );
 }
+

@@ -37,6 +37,7 @@ export async function sendProvisioningRekap(
 
     const sektorMapping: { [key: string]: string } = {
         'KUDUS': 'KUD',
+        'KDS': 'KUD',
         'DEMAK': 'DMA',
         'PURWODADI': 'PWD',
         'PATI': 'PTI',
@@ -122,3 +123,4 @@ export async function sendProvisioningRekap(
     
     return `<pre>${message.trim()}</pre>`;
 }
+
