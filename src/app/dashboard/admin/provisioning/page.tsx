@@ -308,7 +308,7 @@ function EditOrderForm({ order, onSave, onCancel, isSaving }: { order: Provision
                         <Label htmlFor="edit-crmOrder">Jenis Order</Label>
                         <Select value={crmOrder} onValueChange={setCrmOrder}>
                             <SelectTrigger id="edit-crmOrder"><SelectValue placeholder="Pilih Jenis Order..." /></SelectTrigger>
-                            <SelectContent><ScrollArea className="h-72">{jenisPekerjaanOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</ScrollArea></SelectContent>
+                            <SelectContent><ScrollArea className="h-72">{jenisPekerjaanOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</SelectContent>
                         </Select>
                     </div>
                     {showOrderType && (
@@ -673,8 +673,8 @@ export default function ProvisioningDashboardPage() {
   useEffect(() => {
     if (data) {
       const uniqueWorkzones = [...new Set(data.map((item) => {
-        const wz = item.workzone || 'N/A';
-        return wz.toUpperCase() === 'KDS' ? 'KUD' : wz;
+        const wzRaw = (item.workzone || 'N/A').toUpperCase();
+        return (wzRaw === 'KDS' || wzRaw === 'N/A') ? 'KUD' : wzRaw;
       }))].sort();
       setWorkzones(uniqueWorkzones);
     }
@@ -851,7 +851,8 @@ export default function ProvisioningDashboardPage() {
             }
             
             let workzoneValue = row[headerMapping.workzone!] || 'N/A';
-            if (String(workzoneValue).toUpperCase() === 'KDS') {
+            const upperWz = String(workzoneValue).toUpperCase();
+            if (upperWz === 'KDS' || upperWz === 'N/A') {
                 workzoneValue = 'KUD';
             }
 
@@ -1035,7 +1036,10 @@ export default function ProvisioningDashboardPage() {
 
     if (selectedWorkzone !== 'all') {
         const upperSelectedWorkzone = selectedWorkzone.toUpperCase();
-        filteredOrders = filteredOrders.filter(o => (o.workzone || 'N/A').toUpperCase() === upperSelectedWorkzone || (upperSelectedWorkzone === 'KUD' && (o.workzone || 'N/A').toUpperCase() === 'KDS'));
+        filteredOrders = filteredOrders.filter(o => {
+            const orderWz = (o.workzone || 'N/A').toUpperCase();
+            return orderWz === upperSelectedWorkzone || (upperSelectedWorkzone === 'KUD' && (orderWz === 'KDS' || orderWz === 'N/A'));
+        });
     }
     if (searchQuery) {
         const lowerQuery = searchQuery.toLowerCase();
@@ -1067,7 +1071,8 @@ export default function ProvisioningDashboardPage() {
 
     dataToProcess.forEach(item => {
         const { scOrder, provisioningStatus, workzone, assignedTo_userName, assignedTo_crew_userName } = item;
-        const wz = (workzone || 'N/A').toUpperCase() === 'KDS' ? 'KUD' : (workzone || 'N/A');
+        const wzRaw = (workzone || 'N/A').toUpperCase();
+        const wz = (wzRaw === 'KDS' || wzRaw === 'N/A') ? 'KUD' : wzRaw;
         
         let techGroupKey = 'Unassigned';
         if (assignedTo_userName) {
