@@ -543,7 +543,7 @@ export default function ProvisioningDashboardPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTechnician, setSelectedTechnician] = useState('all');
   
-  const [filterMode, setFilterMode] = useState<'month' | 'range' | 'all'>('all');
+  const [filterMode, setFilterMode] = useState<'month' | 'range' | 'all'>('month');
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   
@@ -567,16 +567,16 @@ export default function ProvisioningDashboardPage() {
   
   const monthYearOptions = useMemo(() => {
     const periods = new Set<string>();
-    
-    if (data) {
-        data.forEach(order => {
-            const date = safeToDate(order.dateCreated);
-            if (date) {
-                periods.add(format(date, 'yyyy-MM'));
-            }
-        });
-    }
+    const allRecords = data || [];
 
+    allRecords.forEach(order => {
+        const date = safeToDate(order.dateCreated);
+        if (date) {
+            periods.add(format(date, 'yyyy-MM'));
+        }
+    });
+    
+    // Ensure current and nearby months are always available
     const now = new Date();
     for (let i = -3; i <= 3; i++) { 
         const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
@@ -846,7 +846,7 @@ export default function ProvisioningDashboardPage() {
     const dataToSave: Partial<ProvisioningRecord> = {
         ...orderData,
         id: scOrder,
-        dateCreated: Timestamp.now(), // Ensure date is a Timestamp
+        dateCreated: Timestamp.now(),
     };
     
     await setDoc(docRef, dataToSave);
@@ -961,16 +961,14 @@ export default function ProvisioningDashboardPage() {
 
   const pivotData = useMemo(() => {
     const pivot: any = {};
-    const dataToProcess = dateFilteredData || [];
-
-    const technicianFilteredData = dataToProcess.filter(item => {
+    const dataToProcess = dateFilteredData.filter(item => {
         if (selectedTechnician !== 'all' && (item.assignedTo_userId !== selectedTechnician && item.assignedTo_crew_userId !== selectedTechnician)) {
             return false;
         }
         return true;
     });
 
-    technicianFilteredData.forEach(item => {
+    dataToProcess.forEach(item => {
         const { scOrder, provisioningStatus, workzone, assignedTo_userName, assignedTo_crew_userName } = item;
         const wz = workzone || 'N/A';
         
@@ -1007,16 +1005,37 @@ export default function ProvisioningDashboardPage() {
     return pivot;
   }, [dateFilteredData, selectedTechnician]);
   
+  const allFilteredOrders = useMemo(() => {
+    return [...unassignedOrders, ...inProgressOrders, ...completedOrders];
+  }, [unassignedOrders, inProgressOrders, completedOrders]);
+
+  const dateHeader = useMemo(() => {
+    if (filterMode === 'all') return 'Semua Waktu';
+    if (filterMode === 'month' && selectedMonth) {
+        const [year, month] = selectedMonth.split('-');
+        const date = new Date(Number(year), Number(month) - 1);
+        return format(date, 'MMMM yyyy', { locale: idLocale });
+    }
+    if (filterMode === 'range' && dateRange?.from) {
+        if (dateRange.to) {
+            return `${format(dateRange.from, "dd LLL, yy")} - ${format(dateRange.to, "dd LLL, yy")}`;
+        }
+        return format(dateRange.from, "dd LLL, yy");
+    }
+    return 'Memuat...';
+  }, [filterMode, selectedMonth, dateRange]);
+
   const handleSendRekap = async () => {
       setIsSendingRekap(true);
       try {
-          if (!data) {
-            throw new Error("Data rekap belum siap.");
+          if (!allFilteredOrders || allFilteredOrders.length === 0) {
+            throw new Error("Tidak ada data rekap untuk filter yang dipilih.");
           }
           
           const payload = {
-              allOrders: data,
+              allOrders: allFilteredOrders,
               sektor: selectedWorkzone === 'all' ? 'KUDUS' : selectedWorkzone,
+              dateHeader: dateHeader,
           };
 
           const result = await triggerProvisioningRekapAction(payload);
@@ -1080,7 +1099,7 @@ export default function ProvisioningDashboardPage() {
         <h1 className="text-3xl font-bold tracking-tight">Dashboard Provisioning</h1>
         <Button onClick={handleSendRekap} disabled={isSendingRekap}>
             {isSendingRekap ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-            Kirim Rekap Harian
+            Kirim Rekap Sesuai Filter
         </Button>
       </div>
       
@@ -1200,7 +1219,7 @@ export default function ProvisioningDashboardPage() {
       
       <Card>
           <CardHeader>
-              <CardTitle>Pivot Table Rekap</CardTitle>
+              <CardTitle>Tabel Rekapitulasi</CardTitle>
               <CardDescription>Ringkasan order dikelompokkan berdasarkan teknisi, status, dan SC order.</CardDescription>
           </CardHeader>
           <CardContent>

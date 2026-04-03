@@ -11,6 +11,7 @@ type ProvisioningCategory = 'IH' | 'ORBIT' | 'MO' | 'INDBZ' | 'MIGR' | 'DATIN/WI
 const provisioningRekapSchema = z.object({
   allOrders: z.array(z.any()),
   sektor: z.string(),
+  dateHeader: z.string(),
 });
 
 const getProductCategory = (order: ProvisioningRecord): ProvisioningCategory => {
@@ -32,7 +33,7 @@ export async function sendProvisioningRekap(
 ): Promise<string> {
     const now = new Date();
     const updateTimestamp = format(now, 'dd/MM/yyyy HH:mm:ss');
-    const dateHeader = format(now, 'dd/MM/yyyy');
+    const dateHeader = input.dateHeader;
 
     let message = `📅 UPDATE: ${updateTimestamp}\n`;
     message += `📍 SEKTOR: ${input.sektor.toUpperCase()}\n\n`;
