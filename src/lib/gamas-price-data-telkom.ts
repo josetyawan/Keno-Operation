@@ -86,4 +86,4 @@ export const gamasPriceDataTelkom: GamasPriceItem[] = [
     { "code": "J-SC-OF-SM-288", "description": "Pengadaan dan pemasangan alat sambung (cabang/ lurus) untuk fiber optik kapasitas 12 - 288 core", "unit": "pcs", "materialPrice": 0, "servicePrice": 30726 },
     { "code": "OS-SM-1", "description": "Penyambungan kabel optik single mode kap 1 core dengan cara fusion splice", "unit": "core", "materialPrice": 0, "servicePrice": 47000 },
     { "code": "J-OS-SM-1", "description": "Penyambungan kabel optik single mode kap 1 core dengan cara fusion splice", "unit": "core", "materialPrice": 0, "servicePrice": 47000 }
-];
+]
