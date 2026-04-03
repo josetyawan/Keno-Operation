@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -11,8 +10,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Upload, FileSpreadsheet, ChevronLeft, ChevronRight, Trash2, ChevronRightIcon, User, AlertTriangle, Phone, MoreHorizontal, Edit, Save, Package, Truck, PackageCheck, Send, PlusCircle } from 'lucide-react';
-import { format, isValid } from 'date-fns';
+import { Loader2, Upload, FileSpreadsheet, ChevronLeft, ChevronRight, Trash2, ChevronRightIcon, User, AlertTriangle, Phone, MoreHorizontal, Edit, Save, Package, Truck, PackageCheck, Send, PlusCircle, Calendar as CalendarIcon } from 'lucide-react';
+import { format, isValid, startOfMonth, endOfMonth, startOfDay, endOfDay } from 'date-fns';
+import { id as idLocale } from 'date-fns/locale';
+import type { DateRange } from 'react-day-picker';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, doc, writeBatch, orderBy, getDocs, setDoc, updateDoc, serverTimestamp, where, Timestamp } from 'firebase/firestore';
 import type { ProvisioningRecord, UserProfile } from '@/lib/types';
@@ -26,6 +27,8 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { triggerProvisioningRekapAction } from '@/app/actions/triggerProvisioningRekapAction';
 
 const ITEMS_PER_PAGE = 5;
@@ -515,10 +518,26 @@ export default function ProvisioningDashboardPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTechnician, setSelectedTechnician] = useState('all');
   
+  const [filterMode, setFilterMode] = useState<'month' | 'range' | 'all'>('all');
+  const [selectedMonth, setSelectedMonth] = useState<string>(format(new Date(), 'yyyy-MM'));
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  
   // States for pagination
   const [unassignedPage, setUnassignedPage] = useState(1);
   const [inProgressPage, setInProgressPage] = useState(1);
   const [completedPage, setCompletedPage] = useState(1);
+  
+  const monthYearOptions = useMemo(() => {
+    const options: { value: string, label: string }[] = [];
+    const now = new Date();
+    for (let i = 0; i < 24; i++) { // Go back 2 years
+        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const value = format(date, 'yyyy-MM');
+        const label = format(date, 'MMMM yyyy', { locale: idLocale });
+        options.push({ value, label });
+    }
+    return options;
+  }, []);
   
   useEffect(() => {
     if (data) {
@@ -772,17 +791,17 @@ export default function ProvisioningDashboardPage() {
     if (!scOrder) throw new Error("SC Order tidak boleh kosong.");
 
     const docRef = doc(firestore, 'provisioning-records', scOrder);
-    const existingDoc = await getDocs(query(collection(firestore, 'provisioning-records'), where('scOrder', '==', scOrder)));
+    const existingDocSnap = await getDocs(query(collection(firestore, 'provisioning-records'), where('scOrder', '==', scOrder), limit(1)));
 
-    if (!existingDoc.empty) {
+    if (!existingDocSnap.empty) {
         throw new Error(`Order dengan SC Order ${scOrder} sudah ada.`);
     }
 
-    const dataToSave = {
-      ...orderData,
-      id: scOrder,
-      dateCreated: Timestamp.now(),
-    };
+    const dataToSave: Omit<ProvisioningRecord, 'id'> & { id: string, dateCreated: Timestamp } = {
+        ...orderData,
+        id: scOrder,
+        dateCreated: Timestamp.now(),
+    } as Omit<ProvisioningRecord, 'id'> & { id: string, dateCreated: Timestamp };
 
     await setDoc(docRef, dataToSave);
     toast({ title: "Order Manual Disimpan", description: `Order untuk ${orderData.customerName} berhasil dibuat.` });
@@ -841,9 +860,33 @@ export default function ProvisioningDashboardPage() {
     }
   };
   
-  const { unassignedOrders, inProgressOrders, completedOrders } = useMemo(() => {
+  const dateFilteredData = useMemo(() => {
     const allOrders = data || [];
-    let filteredOrders = allOrders;
+    if (filterMode === 'all' || (!selectedMonth && !dateRange)) {
+        return allOrders;
+    }
+    if (filterMode === 'month' && selectedMonth) {
+        const [year, month] = selectedMonth.split('-').map(Number);
+        const startDate = startOfMonth(new Date(year, month - 1));
+        const endDate = endOfMonth(startDate);
+        return allOrders.filter(o => {
+            const orderDate = o.dateCreated?.toDate();
+            return orderDate && orderDate >= startDate && orderDate <= endDate;
+        });
+    }
+    if (filterMode === 'range' && dateRange?.from) {
+        const startDate = startOfDay(dateRange.from);
+        const endDate = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
+        return allOrders.filter(o => {
+            const orderDate = o.dateCreated?.toDate();
+            return orderDate && orderDate >= startDate && orderDate <= endDate;
+        });
+    }
+    return allOrders;
+  }, [data, filterMode, selectedMonth, dateRange]);
+  
+  const { unassignedOrders, inProgressOrders, completedOrders } = useMemo(() => {
+    let filteredOrders = dateFilteredData || [];
 
     if (selectedWorkzone !== 'all') {
         filteredOrders = filteredOrders.filter(o => o.workzone === selectedWorkzone);
@@ -863,11 +906,11 @@ export default function ProvisioningDashboardPage() {
         inProgressOrders: filteredOrders.filter(o => ['assigned', 'picked_up', 'departed', 'arrived', 'wip_odp_done'].includes(o.provisioningStatus || '')),
         completedOrders: filteredOrders.filter(o => o.provisioningStatus === 'completed'),
     };
-  }, [data, selectedWorkzone, searchQuery, selectedTechnician]);
+  }, [dateFilteredData, selectedWorkzone, searchQuery, selectedTechnician]);
 
   const pivotData = useMemo(() => {
     const pivot: any = {};
-    const dataToProcess = (data || []).filter(item => {
+    const dataToProcess = (dateFilteredData || []).filter(item => {
         if (item.provisioningStatus === 'completed') return false;
         if (selectedTechnician !== 'all' && (item.assignedTo_userId !== selectedTechnician && item.assignedTo_crew_userId !== selectedTechnician)) {
             return false;
@@ -907,7 +950,7 @@ export default function ProvisioningDashboardPage() {
         }
     });
     return pivot;
-  }, [data, selectedTechnician]);
+  }, [dateFilteredData, selectedTechnician]);
   
   const handleSendRekap = async () => {
       setIsSendingRekap(true);
@@ -1029,50 +1072,92 @@ export default function ProvisioningDashboardPage() {
       
       <Card>
           <CardHeader>
+              <CardTitle>Filter & Cari Laporan</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-6">
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="workzone-filter">Filter Workzone</Label>
+                        <Select value={selectedWorkzone} onValueChange={setSelectedWorkzone} disabled={!data || data.length === 0}>
+                          <SelectTrigger id="workzone-filter"><SelectValue placeholder="Pilih Workzone" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Semua Workzone</SelectItem>
+                            {workzones.map(wz => <SelectItem key={wz} value={wz}>{wz}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="technician-filter">Filter Teknisi</Label>
+                      <Select value={selectedTechnician} onValueChange={setSelectedTechnician} disabled={assignedTechnicians.length === 0}>
+                        <SelectTrigger id="technician-filter">
+                          <SelectValue placeholder="Filter Teknisi..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Semua Teknisi</SelectItem>
+                          {assignedTechnicians.map(tech => (
+                            <SelectItem key={tech.id} value={tech.id}>{tech.displayName}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                     <div className="grid gap-2">
+                        <Label htmlFor="search-input">Cari (di semua kolom)</Label>
+                        <Input id="search-input" placeholder="Ketik kata kunci..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} disabled={!data || data.length === 0} />
+                    </div>
+                </div>
+                <div className="pt-4 border-t">
+                  <Label>Filter Berdasarkan Tanggal Dibuat</Label>
+                  <Tabs value={filterMode} onValueChange={(value) => {
+                      setFilterMode(value as any);
+                      if (value === 'month') { setDateRange(undefined); if (monthYearOptions.length > 0) setSelectedMonth(monthYearOptions[0].value); }
+                      if (value === 'range') setSelectedMonth('');
+                      if (value === 'all') { setDateRange(undefined); setSelectedMonth(''); }
+                  }} className="w-full mt-2">
+                    <TabsList className="grid w-full grid-cols-3">
+                      <TabsTrigger value="month">Per Bulan</TabsTrigger>
+                      <TabsTrigger value="range">Rentang Tanggal</TabsTrigger>
+                      <TabsTrigger value="all">Semua</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="month" className="pt-2">
+                      <Select onValueChange={setSelectedMonth} value={selectedMonth}>
+                        <SelectTrigger className="w-[280px]"><SelectValue placeholder="Pilih bulan..." /></SelectTrigger>
+                        <SelectContent>
+                          {monthYearOptions.map(option => (
+                            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TabsContent>
+                    <TabsContent value="range" className="pt-2">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant={"outline"} className={cn("w-[280px] justify-start text-left font-normal", !dateRange && "text-muted-foreground")}>
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {dateRange?.from ? ( dateRange.to ? (<>{format(dateRange.from, "dd LLL, yy")} - {format(dateRange.to, "dd LLL, yy")}</>) : (format(dateRange.from, "dd LLL, yy"))) : (<span>Pilih rentang</span>)}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar initialFocus mode="range" defaultMonth={dateRange?.from} selected={dateRange} onSelect={setDateRange} numberOfMonths={2}/>
+                        </PopoverContent>
+                      </Popover>
+                    </TabsContent>
+                  </Tabs>
+                </div>
+            </div>
+          </CardContent>
+      </Card>
+      
+      <Card>
+          <CardHeader>
               <CardTitle>Pivot Table Rekap</CardTitle>
-              <CardDescription>Ringkasan data provisioning yang dikelompokkan.</CardDescription>
+              <CardDescription>Ringkasan order yang belum selesai, dikelompokkan berdasarkan teknisi, SC order, dan status.</CardDescription>
           </CardHeader>
           <CardContent>
               <PivotTable data={pivotData} workzones={workzones} categoryLabel={categoryLabel} />
           </CardContent>
       </Card>
 
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Filter Laporan</CardTitle>
-          <div className="flex flex-col md:flex-row gap-4 pt-4">
-            <div className="grid gap-2">
-                <Label htmlFor="workzone-filter">Filter Workzone</Label>
-                <Select value={selectedWorkzone} onValueChange={setSelectedWorkzone} disabled={!data || data.length === 0}>
-                  <SelectTrigger id="workzone-filter" className="w-full md:w-[180px]"><SelectValue placeholder="Pilih Workzone" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Semua Workzone</SelectItem>
-                    {workzones.map(wz => <SelectItem key={wz} value={wz}>{wz}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="technician-filter">Filter Teknisi</Label>
-              <Select value={selectedTechnician} onValueChange={setSelectedTechnician} disabled={assignedTechnicians.length === 0}>
-                <SelectTrigger id="technician-filter" className="w-full md:w-[220px]">
-                  <SelectValue placeholder="Filter Teknisi..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Semua Teknisi</SelectItem>
-                  {assignedTechnicians.map(tech => (
-                    <SelectItem key={tech.id} value={tech.id}>{tech.displayName}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-             <div className="grid gap-2 flex-1">
-                <Label htmlFor="search-input">Cari</Label>
-                <Input id="search-input" placeholder="Cari di semua kolom..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} disabled={!data || data.length === 0} />
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
