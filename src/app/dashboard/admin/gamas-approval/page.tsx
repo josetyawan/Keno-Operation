@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -123,9 +122,11 @@ export default function GamasApprovalListPage() {
         const ticketHeader = `${sto} (${report.noTiket || 'TANPA_TIKET'})`;
 
         (report.evidences || []).forEach(evidence => {
+            const cleanEvidenceDesignator = evidence.designator.replace(/[\s-]/g, '').toUpperCase();
             const designatorCode = evidence.designator.trim().replace(/^-/, '').toUpperCase();
+            
             if (!pivotedData[designatorCode]) {
-                const priceInfo = priceData.find(p => p.code.trim().toUpperCase() === designatorCode);
+                const priceInfo = priceData.find(p => p.code.replace(/[\s-]/g, '').toUpperCase() === cleanEvidenceDesignator);
                 pivotedData[designatorCode] = {
                     designator: evidence.designator,
                     uraian: priceInfo?.description || 'N/A',
@@ -249,9 +250,11 @@ export default function GamasApprovalListPage() {
             ticketColumns.add(ticketHeader);
 
             (report.evidences || []).forEach(evidence => {
+                const cleanEvidenceDesignator = evidence.designator.replace(/[\s-]/g, '').toUpperCase();
                 const designatorCode = evidence.designator.trim().replace(/^-/, '').toUpperCase();
+                
                 if (!pivotedData[designatorCode]) {
-                    const priceInfo = priceData.find(p => p.code.trim().toUpperCase() === designatorCode);
+                    const priceInfo = priceData.find(p => p.code.replace(/[\s-]/g, '').toUpperCase() === cleanEvidenceDesignator);
                     pivotedData[designatorCode] = {
                         designator: evidence.designator,
                         uraian: priceInfo?.description || 'N/A',
