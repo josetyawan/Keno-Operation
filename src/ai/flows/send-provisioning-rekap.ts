@@ -32,7 +32,17 @@ export async function sendProvisioningRekap(
   input: z.infer<typeof provisioningRekapSchema>
 ): Promise<string> {
     const now = new Date();
-    const updateTimestamp = format(now, 'dd/MM/yyyy HH:mm:ss', { locale: idLocale });
+    
+    // Format the date to be in Asia/Jakarta timezone (WIB/UTC+7)
+    const options: Intl.DateTimeFormatOptions = {
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hour12: false,
+      timeZone: 'Asia/Jakarta'
+    };
+    const formatter = new Intl.DateTimeFormat('en-GB', options); // en-GB for dd/mm/yyyy
+    const updateTimestamp = formatter.format(now).replace(',', '');
+
     const dateHeader = input.dateHeader;
 
     const sektorMapping: { [key: string]: string } = {
