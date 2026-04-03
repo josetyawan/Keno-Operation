@@ -550,11 +550,6 @@ export default function ProvisioningDashboardPage() {
   const userProfileRef = useMemoFirebase(() => (user ? doc(firestore, 'users', user.uid) : null), [user, firestore]);
   const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
 
-  const kendalaQuery = useMemoFirebase(() => {
-    return query(collection(firestore, 'provisioning-records'), where('provisioningStatus', '==', 'kendala'));
-  }, [firestore]);
-  const { data: kendalaOrders, isLoading: areKendalaLoading } = useCollection<ProvisioningRecord>(kendalaQuery);
-
   const [workzones, setWorkzones] = useState<string[]>([]);
   const [selectedWorkzone, setSelectedWorkzone] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -955,7 +950,7 @@ export default function ProvisioningDashboardPage() {
     return allOrders;
   }, [data, filterMode, selectedMonth, dateRange]);
   
-  const { unassignedOrders, inProgressOrders, completedOrders } = useMemo(() => {
+  const { unassignedOrders, inProgressOrders, completedOrders, kendalaOrders } = useMemo(() => {
     let filteredOrders = dateFilteredData || [];
 
     if (selectedWorkzone !== 'all') {
@@ -968,13 +963,14 @@ export default function ProvisioningDashboardPage() {
         );
     }
     if (selectedTechnician !== 'all') {
-        filteredOrders = filteredOrders.filter(o => o.assignedTo_userId === selectedTechnician);
+        filteredOrders = filteredOrders.filter(o => o.assignedTo_userId === selectedTechnician || o.assignedTo_crew_userId === selectedTechnician);
     }
     
     return {
         unassignedOrders: filteredOrders.filter(o => !o.provisioningStatus || o.provisioningStatus === 'unassigned'),
         inProgressOrders: filteredOrders.filter(o => ['assigned', 'picked_up', 'departed', 'arrived', 'wip_odp_done'].includes(o.provisioningStatus || '')),
         completedOrders: filteredOrders.filter(o => o.provisioningStatus === 'completed'),
+        kendalaOrders: filteredOrders.filter(o => o.provisioningStatus === 'kendala'),
     };
   }, [dateFilteredData, selectedWorkzone, searchQuery, selectedTechnician]);
 
@@ -1025,8 +1021,8 @@ export default function ProvisioningDashboardPage() {
   }, [dateFilteredData, selectedTechnician]);
   
   const allFilteredOrders = useMemo(() => {
-    return [...unassignedOrders, ...inProgressOrders, ...completedOrders];
-  }, [unassignedOrders, inProgressOrders, completedOrders]);
+    return [...unassignedOrders, ...inProgressOrders, ...completedOrders, ...kendalaOrders];
+  }, [unassignedOrders, inProgressOrders, completedOrders, kendalaOrders]);
 
   const dateHeader = useMemo(() => {
     if (filterMode === 'all') return 'Semua Waktu';
@@ -1109,7 +1105,7 @@ export default function ProvisioningDashboardPage() {
       }
   }, [unassignedOrders.length, inProgressOrders.length, completedOrders.length]);
   
-  const isDataLoading = areRecordsLoading || areTechniciansLoading || areKendalaLoading;
+  const isDataLoading = areRecordsLoading || areTechniciansLoading;
 
 
   return (
@@ -1413,4 +1409,3 @@ export default function ProvisioningDashboardPage() {
   );
 }
 
-    
