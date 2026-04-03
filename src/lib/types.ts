@@ -411,7 +411,7 @@ export type ProvisioningRecord = {
   arriveCoordinates?: string;
   progressNotes?: string;
   kendalaNotes?: string;
-  kendalaCategory?: 'pelanggan' | 'teknis';
+  kendalaCategory?: 'pelanggan' | 'teknis' | 'batal';
   kendalaPhotos?: string[];
   kendalaAt?: any; // Timestamp
   customerHousePhoto?: string;
