@@ -66,6 +66,17 @@ function ManualOrderForm({ users, onSave, onCancel, currentUserProfile }: { user
     const [productName, setProductName] = useState('');
     const [assignedTo_userId, setAssignedTo_userId] = useState('');
     const [assignedTo_crew_userId, setAssignedTo_crew_userId] = useState('');
+    const [workzone, setWorkzone] = useState('');
+
+    const workzoneOptions = ['KUD', 'DMA', 'PWD', 'PTI', 'JPR', 'RBG', 'BLA'];
+
+    useEffect(() => {
+        if (currentUserProfile?.psa) {
+            setWorkzone(currentUserProfile.psa.toUpperCase() === 'KDS' ? 'KUD' : currentUserProfile.psa);
+        } else {
+            setWorkzone('KUD'); // Default
+        }
+    }, [currentUserProfile]);
 
     const jenisPekerjaanOptions = [
       "PSB DATIN", "PSB OLO", "PSB WIFI", "PDA DATIN", "PDA WIFI",
@@ -81,8 +92,8 @@ function ManualOrderForm({ users, onSave, onCancel, currentUserProfile }: { user
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!scOrder.trim() || !customerName.trim() || !crmOrder) {
-            toast({ variant: 'destructive', title: 'Data Wajib Kurang', description: 'SC Order, Nama Pelanggan, dan Jenis Pekerjaan harus diisi.' });
+        if (!scOrder.trim() || !customerName.trim() || !crmOrder || !workzone) {
+            toast({ variant: 'destructive', title: 'Data Wajib Kurang', description: 'SC Order, Nama Pelanggan, Jenis Pekerjaan, dan Workzone harus diisi.' });
             return;
         }
 
@@ -104,7 +115,7 @@ function ManualOrderForm({ users, onSave, onCancel, currentUserProfile }: { user
             provisioningStatus: isAssigned ? 'assigned' : 'unassigned',
             assignedAt: isAssigned ? Timestamp.now() : null,
             status: 'OPEN',
-            workzone: currentUserProfile?.psa || 'N/A',
+            workzone: workzone,
             productType: ''
         };
         
@@ -164,14 +175,21 @@ function ManualOrderForm({ users, onSave, onCancel, currentUserProfile }: { user
                         <Input id="contactNumber" value={contactNumber} onChange={e => setContactNumber(e.target.value)} />
                     </div>
                 </div>
-                <div className="grid md:grid-cols-2 gap-4">
-                    <div className="grid gap-2">
+                 <div className="grid md:grid-cols-3 gap-4">
+                     <div className="grid gap-2">
                         <Label htmlFor="productName">Paket Info</Label>
                         <Input id="productName" value={productName} onChange={e => setProductName(e.target.value)} />
                     </div>
-                    <div className="grid gap-2">
+                     <div className="grid gap-2">
                         <Label htmlFor="odpName">Nama ODP</Label>
                         <Input id="odpName" value={odpName} onChange={e => setOdpName(e.target.value)} />
+                    </div>
+                     <div className="grid gap-2">
+                        <Label htmlFor="workzone">Workzone *</Label>
+                        <Select value={workzone} onValueChange={setWorkzone} required>
+                            <SelectTrigger id="workzone"><SelectValue placeholder="Pilih Workzone..." /></SelectTrigger>
+                            <SelectContent>{workzoneOptions.map(wz => <SelectItem key={wz} value={wz}>{wz}</SelectItem>)}</SelectContent>
+                        </Select>
                     </div>
                 </div>
                 <div className="grid gap-2">
@@ -431,12 +449,19 @@ function PivotTable({ data, workzones }: { data: any; workzones: string[]; }) {
 
     const workzoneMapping: { [key: string]: string } = {
         'KDS': 'KUD',
+        'KUD': 'KUD',
         'DEMAK': 'DMA',
+        'DMA': 'DMA',
         'PURWODADI': 'PWD',
+        'PWD': 'PWD',
         'PATI': 'PTI',
+        'PTI': 'PTI',
         'JEPARA': 'JPR',
+        'JPR': 'JPR',
         'REMBANG': 'RBG',
+        'RBG': 'RBG',
         'BLORA': 'BLA',
+        'BLA': 'BLA',
     };
 
     const toggleRow = (key: string) => {
@@ -647,7 +672,10 @@ export default function ProvisioningDashboardPage() {
   
   useEffect(() => {
     if (data) {
-      const uniqueWorkzones = [...new Set(data.map((item) => item.workzone || 'N/A'))].sort();
+      const uniqueWorkzones = [...new Set(data.map((item) => {
+        const wz = item.workzone || 'N/A';
+        return wz.toUpperCase() === 'KDS' ? 'KUD' : wz;
+      }))].sort();
       setWorkzones(uniqueWorkzones);
     }
   }, [data]);
@@ -822,6 +850,11 @@ export default function ProvisioningDashboardPage() {
                 continue;
             }
             
+            let workzoneValue = row[headerMapping.workzone!] || 'N/A';
+            if (String(workzoneValue).toUpperCase() === 'KDS') {
+                workzoneValue = 'KUD';
+            }
+
             const newRecord: Omit<ProvisioningRecord, 'id'> = {
               workorder: row[headerMapping.workorder!] || '-',
               workorderBaru: headerMapping.workorderBaru ? (row[headerMapping.workorderBaru] || '') : '',
@@ -837,7 +870,7 @@ export default function ProvisioningDashboardPage() {
               bookingDate: formatDateValue(row[headerMapping.bookingDate!]),
               productName: headerMapping.productName ? (row[headerMapping.productName] || '-') : '-',
               productType: row[headerMapping.productType!] || '-',
-              workzone: row[headerMapping.workzone!] || 'N/A',
+              workzone: workzoneValue,
               odpName: headerMapping.odpName ? (row[headerMapping.odpName] || '') : '',
               provisioningStatus: 'unassigned',
             };
@@ -1001,7 +1034,8 @@ export default function ProvisioningDashboardPage() {
     let filteredOrders = dateFilteredData || [];
 
     if (selectedWorkzone !== 'all') {
-        filteredOrders = filteredOrders.filter(o => o.workzone === selectedWorkzone);
+        const upperSelectedWorkzone = selectedWorkzone.toUpperCase();
+        filteredOrders = filteredOrders.filter(o => (o.workzone || 'N/A').toUpperCase() === upperSelectedWorkzone || (upperSelectedWorkzone === 'KUD' && (o.workzone || 'N/A').toUpperCase() === 'KDS'));
     }
     if (searchQuery) {
         const lowerQuery = searchQuery.toLowerCase();
@@ -1033,7 +1067,7 @@ export default function ProvisioningDashboardPage() {
 
     dataToProcess.forEach(item => {
         const { scOrder, provisioningStatus, workzone, assignedTo_userName, assignedTo_crew_userName } = item;
-        const wz = workzone || 'N/A';
+        const wz = (workzone || 'N/A').toUpperCase() === 'KDS' ? 'KUD' : (workzone || 'N/A');
         
         let techGroupKey = 'Unassigned';
         if (assignedTo_userName) {
