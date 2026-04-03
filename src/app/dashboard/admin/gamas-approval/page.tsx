@@ -35,6 +35,14 @@ const safeToDate = (timestamp: any): Date | null => {
   return isValid(d) ? d : null;
 };
 
+// Helper function to normalize designator codes for reliable matching
+const normalizeCode = (code: string): string => {
+  if (!code) return '';
+  // Removes all non-alphanumeric characters and converts to uppercase
+  return code.trim().replace(/[^A-Z0-9]/gi, '').toUpperCase();
+};
+
+
 export default function GamasApprovalListPage() {
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
@@ -122,12 +130,11 @@ export default function GamasApprovalListPage() {
         const ticketHeader = `${sto} (${report.noTiket || 'TANPA_TIKET'})`;
 
         (report.evidences || []).forEach(evidence => {
-            const cleanEvidenceDesignator = evidence.designator.replace(/[\s-]/g, '').toUpperCase();
-            const designatorCode = evidence.designator.trim().replace(/^-/, '').toUpperCase();
+            const cleanEvidenceDesignator = normalizeCode(evidence.designator);
             
-            if (!pivotedData[designatorCode]) {
-                const priceInfo = priceData.find(p => p.code.replace(/[\s-]/g, '').toUpperCase() === cleanEvidenceDesignator);
-                pivotedData[designatorCode] = {
+            if (!pivotedData[cleanEvidenceDesignator]) {
+                const priceInfo = priceData.find(p => normalizeCode(p.code) === cleanEvidenceDesignator);
+                pivotedData[cleanEvidenceDesignator] = {
                     designator: evidence.designator,
                     uraian: priceInfo?.description || 'N/A',
                     satuan: priceInfo?.unit || 'N/A',
@@ -139,8 +146,8 @@ export default function GamasApprovalListPage() {
             }
             
             const vol = evidence.quantity || 1;
-            pivotedData[designatorCode].totalVol += vol;
-            pivotedData[designatorCode].ticketVols[ticketHeader] = (pivotedData[designatorCode].ticketVols[ticketHeader] || 0) + vol;
+            pivotedData[cleanEvidenceDesignator].totalVol += vol;
+            pivotedData[cleanEvidenceDesignator].ticketVols[ticketHeader] = (pivotedData[cleanEvidenceDesignator].ticketVols[ticketHeader] || 0) + vol;
         });
 
         const staticHeaders = [
@@ -250,12 +257,11 @@ export default function GamasApprovalListPage() {
             ticketColumns.add(ticketHeader);
 
             (report.evidences || []).forEach(evidence => {
-                const cleanEvidenceDesignator = evidence.designator.replace(/[\s-]/g, '').toUpperCase();
-                const designatorCode = evidence.designator.trim().replace(/^-/, '').toUpperCase();
+                const cleanEvidenceDesignator = normalizeCode(evidence.designator);
                 
-                if (!pivotedData[designatorCode]) {
-                    const priceInfo = priceData.find(p => p.code.replace(/[\s-]/g, '').toUpperCase() === cleanEvidenceDesignator);
-                    pivotedData[designatorCode] = {
+                if (!pivotedData[cleanEvidenceDesignator]) {
+                    const priceInfo = priceData.find(p => normalizeCode(p.code) === cleanEvidenceDesignator);
+                    pivotedData[cleanEvidenceDesignator] = {
                         designator: evidence.designator,
                         uraian: priceInfo?.description || 'N/A',
                         satuan: priceInfo?.unit || 'N/A',
@@ -267,8 +273,8 @@ export default function GamasApprovalListPage() {
                 }
                 
                 const vol = evidence.quantity || 1;
-                pivotedData[designatorCode].totalVol += vol;
-                pivotedData[designatorCode].ticketVols[ticketHeader] = (pivotedData[designatorCode].ticketVols[ticketHeader] || 0) + vol;
+                pivotedData[cleanEvidenceDesignator].totalVol += vol;
+                pivotedData[cleanEvidenceDesignator].ticketVols[ticketHeader] = (pivotedData[cleanEvidenceDesignator].ticketVols[ticketHeader] || 0) + vol;
             });
         });
 
