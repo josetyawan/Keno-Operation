@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -39,7 +40,7 @@ const safeToDate = (timestamp: any): Date | null => {
 const normalizeCode = (code: string): string => {
   if (!code) return '';
   // Removes all non-alphanumeric characters and converts to uppercase
-  return code.trim().replace(/[^A-Z0-9]/gi, '').toUpperCase();
+  return code.trim().replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
 };
 
 
@@ -125,6 +126,13 @@ export default function GamasApprovalListPage() {
             throw new Error(`Sumber data harga untuk "${priceSource}" tidak ditemukan atau kosong.`);
         }
 
+        const priceMap = new Map<string, GamasPriceItem>();
+        priceData.forEach(p => {
+          if (p.code) {
+            priceMap.set(normalizeCode(p.code), p);
+          }
+        });
+
         const pivotedData: Record<string, any> = {};
         const sto = report.sto || 'KUD';
         const ticketHeader = `${sto} (${report.noTiket || 'TANPA_TIKET'})`;
@@ -133,7 +141,7 @@ export default function GamasApprovalListPage() {
             const cleanEvidenceDesignator = normalizeCode(evidence.designator);
             
             if (!pivotedData[cleanEvidenceDesignator]) {
-                const priceInfo = priceData.find(p => normalizeCode(p.code) === cleanEvidenceDesignator);
+                const priceInfo = priceMap.get(cleanEvidenceDesignator);
                 pivotedData[cleanEvidenceDesignator] = {
                     designator: evidence.designator,
                     uraian: priceInfo?.description || 'N/A',
@@ -248,6 +256,13 @@ export default function GamasApprovalListPage() {
             throw new Error(`Sumber data harga untuk "${priceSource}" tidak ditemukan atau kosong.`);
         }
         
+        const priceMap = new Map<string, GamasPriceItem>();
+        priceData.forEach(p => {
+          if (p.code) {
+            priceMap.set(normalizeCode(p.code), p);
+          }
+        });
+        
         const pivotedData: Record<string, any> = {};
         const ticketColumns = new Set<string>();
 
@@ -260,7 +275,7 @@ export default function GamasApprovalListPage() {
                 const cleanEvidenceDesignator = normalizeCode(evidence.designator);
                 
                 if (!pivotedData[cleanEvidenceDesignator]) {
-                    const priceInfo = priceData.find(p => normalizeCode(p.code) === cleanEvidenceDesignator);
+                    const priceInfo = priceMap.get(cleanEvidenceDesignator);
                     pivotedData[cleanEvidenceDesignator] = {
                         designator: evidence.designator,
                         uraian: priceInfo?.description || 'N/A',

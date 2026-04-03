@@ -85,5 +85,7 @@ export const gamasPriceDataTelkom: GamasPriceItem[] = [
     { "code": "M-SC-OF-SM-288", "description": "Pengadaan dan pemasangan alat sambung (cabang/ lurus) untuk fiber optik kapasitas 12 - 288 core", "unit": "pcs", "materialPrice": 2377510, "servicePrice": 0 },
     { "code": "J-SC-OF-SM-288", "description": "Pengadaan dan pemasangan alat sambung (cabang/ lurus) untuk fiber optik kapasitas 12 - 288 core", "unit": "pcs", "materialPrice": 0, "servicePrice": 30726 },
     { "code": "OS-SM-1", "description": "Penyambungan kabel optik single mode kap 1 core dengan cara fusion splice", "unit": "core", "materialPrice": 0, "servicePrice": 47000 },
-    { "code": "J-OS-SM-1", "description": "Penyambungan kabel optik single mode kap 1 core dengan cara fusion splice", "unit": "core", "materialPrice": 0, "servicePrice": 47000 }
-]
+    { "code": "J-OS-SM-1", "description": "Penyambungan kabel optik single mode kap 1 core dengan cara fusion splice", "unit": "core", "materialPrice": 0, "servicePrice": 47000 },
+    { "code": "CO-OF", "description": "Pekerjaan Cut Over Kabel Serat Optik", "unit": "core", "materialPrice": 0, "servicePrice": 45142 },
+    { "code": "J-CO-OF", "description": "Pekerjaan Cut Over Kabel Serat Optik", "unit": "core", "materialPrice": 0, "servicePrice": 45142 }
+];
