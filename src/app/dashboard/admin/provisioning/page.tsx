@@ -529,7 +529,9 @@ export default function ProvisioningDashboardPage() {
 
   const safeToDate = (timestamp: any): Date | null => {
     if (!timestamp) return null;
-    if (timestamp.toDate) return timestamp.toDate();
+    if (timestamp instanceof Timestamp) {
+        return timestamp.toDate();
+    }
     if (timestamp instanceof Date && isValid(timestamp)) return timestamp;
     try {
         const d = new Date(timestamp);
@@ -838,11 +840,11 @@ export default function ProvisioningDashboardPage() {
         throw new Error(`Order dengan SC Order ${scOrder} sudah ada.`);
     }
 
-    const dataToSave = {
+    const dataToSave: Partial<ProvisioningRecord> = {
         ...orderData,
         id: scOrder,
-        dateCreated: Timestamp.now(), // Always set dateCreated on manual add
-    }
+        dateCreated: serverTimestamp(),
+    };
     
     await setDoc(docRef, dataToSave);
     toast({ title: "Order Manual Disimpan", description: `Order untuk ${orderData.customerName} berhasil dibuat.` });
@@ -979,8 +981,8 @@ export default function ProvisioningDashboardPage() {
         
         const keys = [
             techGroupKey,
+            provisioningStatus || 'unassigned',
             scOrder || 'N/A',
-            provisioningStatus || 'unassigned'
         ];
 
         let currentNode = pivot;
@@ -1049,7 +1051,7 @@ export default function ProvisioningDashboardPage() {
   
   const [activeTab, setActiveTab] = useState('unassigned');
   
-  const categoryLabel = 'Teknisi / SC Order / Status';
+  const categoryLabel = 'Teknisi / Status / SC Order';
 
 
   useEffect(() => {
@@ -1194,7 +1196,7 @@ export default function ProvisioningDashboardPage() {
       <Card>
           <CardHeader>
               <CardTitle>Pivot Table Rekap</CardTitle>
-              <CardDescription>Ringkasan order yang belum selesai, dikelompokkan berdasarkan teknisi, SC order, dan status.</CardDescription>
+              <CardDescription>Ringkasan order yang belum selesai, dikelompokkan berdasarkan teknisi, status, dan SC order.</CardDescription>
           </CardHeader>
           <CardContent>
               <PivotTable data={pivotData} workzones={workzones} categoryLabel={categoryLabel} />
