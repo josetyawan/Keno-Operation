@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -30,7 +29,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { triggerProvisioningRekapAction } from '@/app/actions/triggerProvisioningRekapAction';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 
 const ITEMS_PER_PAGE = 5;
@@ -84,7 +83,8 @@ function ManualOrderForm({ users, onSave, onCancel, currentUserProfile }: { user
 
     useEffect(() => {
         if (currentUserProfile?.psa) {
-            setWorkzone(currentUserProfile.psa.toUpperCase() === 'KDS' ? 'KUD' : currentUserProfile.psa);
+            const initialWz = currentUserProfile.psa.toUpperCase();
+            setWorkzone(initialWz === 'KDS' || initialWz === 'N/A' ? 'KUD' : initialWz);
         } else {
             setWorkzone('KUD'); // Default
         }
