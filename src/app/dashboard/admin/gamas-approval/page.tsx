@@ -88,6 +88,125 @@ export default function GamasApprovalListPage() {
       toast({ variant: 'destructive', title: "Gagal Menghapus", description: e.message });
     }
   };
+  
+  const handleExportBoQ = async (report: GamasReport) => {
+    if (report.status !== 'approved') {
+        toast({
+            variant: "destructive",
+            title: "Laporan Belum Disetujui",
+            description: "Hanya laporan yang berstatus 'approved' yang dapat diekspor sebagai BoQ.",
+        });
+        return;
+    }
+    setIsExporting(true);
+
+    try {
+        const XLSX = await import('xlsx');
+        const priceMap = new Map(gamasPriceData.map(item => [item.code.trim().toUpperCase(), item]));
+        
+        const pivotedData: Record<string, any> = {};
+        const sto = report.sto || 'KUD';
+        const ticketHeader = `${sto} (${report.noTiket || 'TANPA_TIKET'})`;
+
+        report.evidences.forEach(evidence => {
+            const designatorCode = evidence.designator.trim().toUpperCase();
+            if (!pivotedData[designatorCode]) {
+                const priceInfo = priceMap.get(designatorCode);
+                pivotedData[designatorCode] = {
+                    designator: evidence.designator,
+                    uraian: priceInfo?.description || 'N/A',
+                    satuan: priceInfo?.unit || 'N/A',
+                    hargaMaterial: priceInfo?.materialPrice || 0,
+                    hargaJasa: priceInfo?.servicePrice || 0,
+                    totalVol: 0,
+                    ticketVols: {}
+                };
+            }
+            
+            const vol = evidence.quantity || 1;
+            pivotedData[designatorCode].totalVol += vol;
+            pivotedData[designatorCode].ticketVols[ticketHeader] = (pivotedData[designatorCode].ticketVols[ticketHeader] || 0) + vol;
+        });
+
+        const staticHeaders = [
+            'NO', 'DESIGNATOR', 'URAIAN PEKERJAAN', 'SATUAN',
+            'HARGA SATUAN MATERIAL', 'HARGA SATUAN JASA', 'VOL'
+        ];
+        const finalHeaders = [
+            'TOTAL HARGA MATERIAL', 'TOTAL HARGA JASA', 'TOTAL'
+        ];
+        const excelHeaders = [...staticHeaders, ticketHeader, ...finalHeaders];
+
+        const dataToExport: any[] = [];
+        let itemCounter = 1;
+        const sortedDesignators = Object.keys(pivotedData).sort();
+
+        sortedDesignators.forEach(designatorCode => {
+            const item = pivotedData[designatorCode];
+            const totalHargaMaterial = item.hargaMaterial * item.totalVol;
+            const totalHargaJasa = item.hargaJasa * item.totalVol;
+            const total = totalHargaMaterial + totalHargaJasa;
+
+            const row: any = {
+                'NO': itemCounter++,
+                'DESIGNATOR': item.designator,
+                'URAIAN PEKERJAAN': item.uraian,
+                'SATUAN': item.satuan,
+                'HARGA SATUAN MATERIAL': item.hargaMaterial,
+                'HARGA SATUAN JASA': item.hargaJasa,
+                'VOL': item.totalVol,
+                'TOTAL HARGA MATERIAL': totalHargaMaterial,
+                'TOTAL HARGA JASA': totalHargaJasa,
+                'TOTAL': total,
+                [ticketHeader]: item.ticketVols[ticketHeader] || '',
+            };
+
+            dataToExport.push(row);
+        });
+
+        const grandTotals = {
+            vol: dataToExport.reduce((acc, row) => acc + (row['VOL'] || 0), 0),
+            material: dataToExport.reduce((acc, row) => acc + (row['TOTAL HARGA MATERIAL'] || 0), 0),
+            jasa: dataToExport.reduce((acc, row) => acc + (row['TOTAL HARGA JASA'] || 0), 0),
+            total: dataToExport.reduce((acc, row) => acc + (row['TOTAL'] || 0), 0),
+        };
+        
+        dataToExport.push({}); // Spacer row
+        dataToExport.push({ 'NO': '', 'DESIGNATOR': 'MATERIAL', 'TOTAL HARGA MATERIAL': grandTotals.material });
+        dataToExport.push({ 'NO': '', 'DESIGNATOR': 'JASA', 'TOTAL HARGA JASA': grandTotals.jasa });
+        dataToExport.push({ 'NO': '', 'DESIGNATOR': 'TOTAL', 'TOTAL': grandTotals.total });
+        
+        const grandTotalRow: any = {
+            'NO': '',
+            'DESIGNATOR': 'GRAND TOTAL',
+            'VOL': grandTotals.vol,
+            'TOTAL HARGA MATERIAL': grandTotals.material,
+            'TOTAL HARGA JASA': grandTotals.jasa,
+            'TOTAL': grandTotals.total
+        };
+        dataToExport.push(grandTotalRow);
+        
+        const worksheet = XLSX.utils.json_to_sheet(dataToExport, { header: excelHeaders });
+        
+        const colWidths = excelHeaders.map(header => ({
+            width: Math.max(header.length, ...dataToExport.map(row => String(row[header] ?? '').length)) + 2
+        }));
+        worksheet['!cols'] = colWidths;
+
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, `BoQ ${report.noTiket}`);
+        
+        XLSX.writeFile(workbook, `BoQ_${report.noTiket}.xlsx`);
+        
+        toast({ title: 'Ekspor BoQ Berhasil', description: `File BoQ untuk tiket ${report.noTiket} telah diunduh.` });
+
+    } catch (error: any) {
+         toast({ variant: 'destructive', title: 'Gagal Mengekspor BoQ', description: error.message });
+    } finally {
+        setIsExporting(false);
+    }
+  };
+
 
   const handleExportExcel = async () => {
     setIsExporting(true);
@@ -232,7 +351,7 @@ export default function GamasApprovalListPage() {
               </div>
               <Button onClick={handleExportExcel} disabled={isExporting}>
                 {isExporting ? <Loader2 className="mr-2 animate-spin" /> : <FileSpreadsheet className="mr-2" />}
-                Download Rekap
+                Download Rekap (TA-Mitra)
               </Button>
           </div>
           <Card>
@@ -264,6 +383,9 @@ export default function GamasApprovalListPage() {
                                       <TableCell>{safeToDate(report.createdAt) ? format(safeToDate(report.createdAt)!, 'dd MMM yyyy, HH:mm') : '-'}</TableCell>
                                       <TableCell><Badge variant={report.status === 'approved' ? 'default' : report.status === 'rejected' ? 'destructive' : 'secondary'}>{report.status}</Badge></TableCell>
                                       <TableCell className="text-right">
+                                          <Button variant="outline" size="sm" className="mr-2" onClick={() => handleExportBoQ(report)} disabled={isExporting}>
+                                            Download BoQ
+                                          </Button>
                                           <Button asChild variant="outline" size="sm">
                                               <Link href={`/dashboard/admin/gamas-approval/${report.id}`}><Eye className="mr-2 h-4 w-4" />Tinjau</Link>
                                           </Button>
