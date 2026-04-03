@@ -865,12 +865,21 @@ export default function ProvisioningDashboardPage() {
     if (filterMode === 'all' || (!selectedMonth && !dateRange)) {
         return allOrders;
     }
+    
+    const safeToDate = (timestamp: any): Date | null => {
+        if (!timestamp) return null;
+        if (timestamp.toDate) return timestamp.toDate();
+        if (timestamp instanceof Date && isValid(timestamp)) return timestamp;
+        const d = new Date(timestamp);
+        return isValid(d) ? d : null;
+    };
+
     if (filterMode === 'month' && selectedMonth) {
         const [year, month] = selectedMonth.split('-').map(Number);
         const startDate = startOfMonth(new Date(year, month - 1));
         const endDate = endOfMonth(startDate);
         return allOrders.filter(o => {
-            const orderDate = o.dateCreated?.toDate();
+            const orderDate = safeToDate(o.dateCreated);
             return orderDate && orderDate >= startDate && orderDate <= endDate;
         });
     }
@@ -878,7 +887,7 @@ export default function ProvisioningDashboardPage() {
         const startDate = startOfDay(dateRange.from);
         const endDate = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
         return allOrders.filter(o => {
-            const orderDate = o.dateCreated?.toDate();
+            const orderDate = safeToDate(o.dateCreated);
             return orderDate && orderDate >= startDate && orderDate <= endDate;
         });
     }
