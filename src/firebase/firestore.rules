@@ -215,10 +215,13 @@ service cloud.firestore {
     }
 
     match /provisioning-records/{recordId} {
-      allow read: if isAdmin() || isKorlap() || (isApproved() && resource.data.assignedTo_userId == request.auth.uid);
+      allow read: if isApproved();
       allow create: if isAdmin() || isKorlap();
       allow update: if (isAdmin() || isKorlap()) || (isApproved() && resource.data.assignedTo_userId == request.auth.uid);
+      allow delete: if isAdmin();
     }
   }
 }
     
+
+  

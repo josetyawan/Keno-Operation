@@ -77,13 +77,17 @@ export async function sendProvisioningRekap(
     for (const order of input.allOrders) {
         const productCat = getProductCategory(order);
         
-        let statusKey: keyof typeof summary = '🕗 SISA ORDER       ';
-        let detailStatusInfo = { emoji: '🕗', ket: `SISA OR : ONPROGRESS ${order.crmOrder || 'ORDER'} H+1` };
+        let statusKey: keyof typeof summary | null = null;
+        let detailStatusInfo: { emoji: string; ket: string } | null = null;
 
         switch (order.provisioningStatus) {
             case 'completed':
                 statusKey = '✅ PS CLOSE         ';
                 detailStatusInfo = { emoji: '✅', ket: `${order.crmOrder || 'PS'} H+1` };
+                break;
+            case 'cancelled':
+                statusKey = '❌ BATAL            ';
+                detailStatusInfo = { emoji: '❌', ket: `BATAL: ${order.kendalaNotes || order.crmOrder}` };
                 break;
             case 'kendala':
                 if (order.kendalaCategory === 'pelanggan') {
@@ -100,15 +104,17 @@ export async function sendProvisioningRekap(
                 break;
         }
 
-        if (summary[statusKey]) {
+        if (statusKey && summary[statusKey]) {
             summary[statusKey][productCat]++;
         }
         
-        detailRows.push({
-            ...detailStatusInfo,
-            scOrder: order.scOrder,
-            status: order.provisioningStatus,
-        });
+        if (detailStatusInfo) {
+            detailRows.push({
+                ...detailStatusInfo,
+                scOrder: order.scOrder,
+                status: order.provisioningStatus,
+            });
+        }
     }
 
     // Format Summary Table
@@ -134,3 +140,5 @@ export async function sendProvisioningRekap(
     
     return `<pre>${message.trim()}</pre>`;
 }
+
+  

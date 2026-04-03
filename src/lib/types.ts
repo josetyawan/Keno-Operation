@@ -404,7 +404,7 @@ export type ProvisioningRecord = {
   assignedTo_crew_userId?: string;
   assignedTo_crew_userName?: string;
   assignedAt?: any; // Timestamp
-  provisioningStatus?: 'unassigned' | 'assigned' | 'picked_up' | 'departed' | 'arrived' | 'kendala' | 'wip_odp_done' | 'completed';
+  provisioningStatus?: 'unassigned' | 'assigned' | 'picked_up' | 'departed' | 'arrived' | 'kendala' | 'wip_odp_done' | 'completed' | 'cancelled';
   pickupAt?: any; // Timestamp
   departAt?: any; // Timestamp
   arriveAt?: any; // Timestamp
@@ -437,3 +437,5 @@ export type RekapDataItem = {
 };
 
     
+
+  
