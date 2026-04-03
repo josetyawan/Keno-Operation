@@ -26,6 +26,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 
 const formatWaNumber = (phone: string) => {
@@ -71,6 +72,45 @@ const typeOrderOptions: Record<string, string[]> = {
     'DISMANTLING EBIS': ['ONT', 'STB', 'AP', 'IP CAMERA'],
     'REPLACEMENT': ['ONT', 'STB'],
 };
+
+function KendalaDetailsCard({ order }: { order: ProvisioningRecord }) {
+    if (order.provisioningStatus !== 'kendala') return null;
+
+    return (
+        <Card className="border-destructive">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-destructive"><AlertTriangle /> Detail Kendala</CardTitle>
+                <CardDescription>
+                    Dilaporkan pada: {order.kendalaAt ? format(order.kendalaAt.toDate(), 'dd MMMM yyyy, HH:mm') : '-'}
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div>
+                    <Label className="text-sm text-muted-foreground">Kategori Kendala</Label>
+                    <p className="font-medium capitalize">{order.kendalaCategory || 'Teknis'}</p>
+                </div>
+                 <div>
+                    <Label className="text-sm text-muted-foreground">Catatan Kendala</Label>
+                    <p className="font-medium whitespace-pre-wrap">{order.kendalaNotes || 'Tidak ada catatan.'}</p>
+                </div>
+                {order.kendalaPhotos && order.kendalaPhotos.length > 0 && (
+                     <div>
+                        <Label className="text-sm text-muted-foreground">Foto Bukti Kendala</Label>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-2">
+                           {order.kendalaPhotos.map((url, index) => (
+                               <a href={url} target="_blank" rel="noopener noreferrer" key={index}>
+                                   <div className="relative aspect-square w-full rounded-md overflow-hidden border">
+                                       <Image src={url} alt={`Bukti Kendala ${index + 1}`} fill className="object-cover" />
+                                   </div>
+                               </a>
+                           ))}
+                        </div>
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+    );
+}
 
 function InitialDataForm({ order, onSave }: { order: ProvisioningRecord, onSave: (data: Partial<ProvisioningRecord>) => void }) {
     const [serviceNo, setServiceNo] = useState(order.serviceNo || '');
@@ -172,6 +212,7 @@ export default function OrderDetailPage() {
   const [isSyncing, setIsSyncing] = useState(false);
   
   const [kendalaReason, setKendalaReason] = useState('');
+  const [kendalaCategory, setKendalaCategory] = useState<'pelanggan' | 'teknis'>('teknis');
   const [kendalaFiles, setKendalaFiles] = useState<FileList | null>(null);
 
   const [odpName, setOdpName] = useState('');
@@ -282,6 +323,7 @@ export default function OrderDetailPage() {
     
             await updateDoc(orderRef, {
                 provisioningStatus: 'kendala',
+                kendalaCategory,
                 kendalaNotes: kendalaReason,
                 kendalaPhotos: photoUrls,
                 kendalaAt: serverTimestamp(),
@@ -511,6 +553,8 @@ export default function OrderDetailPage() {
         </CardContent>
       </Card>
       
+      <KendalaDetailsCard order={order} />
+
       {canPickup && (
           <Card>
             <CardHeader><CardTitle>Aksi Berikutnya</CardTitle></CardHeader>
@@ -612,11 +656,24 @@ export default function OrderDetailPage() {
                         </DialogHeader>
                         <form onSubmit={handleKendalaSubmit} className="space-y-4">
                             <div className="grid gap-2">
-                                <Label htmlFor="kendala-reason">Alasan Kendala</Label>
+                                <Label>Kategori Kendala *</Label>
+                                <RadioGroup defaultValue="teknis" onValueChange={(value: 'pelanggan' | 'teknis') => setKendalaCategory(value)} className="flex gap-4">
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="teknis" id="kendala-teknis" />
+                                        <Label htmlFor="kendala-teknis">Kendala Teknis</Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="pelanggan" id="kendala-pelanggan" />
+                                        <Label htmlFor="kendala-pelanggan">Kendala Pelanggan</Label>
+                                    </div>
+                                </RadioGroup>
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="kendala-reason">Alasan Kendala *</Label>
                                 <Textarea id="kendala-reason" value={kendalaReason} onChange={e => setKendalaReason(e.target.value)} placeholder="Contoh: Pelanggan tidak ada di rumah, alamat tidak ditemukan, dll." required/>
                             </div>
                             <div className="grid gap-2">
-                                <Label htmlFor="kendala-evidence">Foto Bukti (min 2, maks 10)</Label>
+                                <Label htmlFor="kendala-evidence">Foto Bukti (min 2, maks 10) *</Label>
                                 <Input id="kendala-evidence" type="file" multiple accept="image/*" onChange={e => setKendalaFiles(e.target.files)} required/>
                             </div>
                             <DialogFooter>

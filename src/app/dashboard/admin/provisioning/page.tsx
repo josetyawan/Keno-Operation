@@ -381,10 +381,17 @@ function KendalaCard({ kendalaOrders, isLoading }: { kendalaOrders: Provisioning
             <CardContent>
                 {isLoading ? <Skeleton className="h-10 w-full" /> : 
                  kendalaOrders && kendalaOrders.length > 0 ? (
-                    <ul className="space-y-2">
+                    <ul className="space-y-3">
                         {kendalaOrders.map(order => (
-                            <li key={order.id} className="text-sm p-2 bg-destructive/10 rounded-md">
-                                <Link href={`/dashboard/provi-orders/${order.id}`} className="font-medium hover:underline">{order.customerName}</Link> ({order.workorder}) - Teknisi: {order.assignedTo_userName}
+                            <li key={order.id} className="text-sm p-3 bg-destructive/10 rounded-md">
+                                <Link href={`/dashboard/provi-orders/${order.id}`} className="block hover:bg-destructive/10 -m-3 p-3 rounded-md">
+                                    <div className="flex justify-between items-start">
+                                        <span className="font-semibold">{order.customerName} ({order.workorder})</span>
+                                        <Badge variant="outline" className="capitalize shrink-0">{order.kendalaCategory || 'Teknis'}</Badge>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-1">Teknisi: {order.assignedTo_userName}</p>
+                                    <p className="text-sm mt-1 truncate">Alasan: {order.kendalaNotes || 'Tidak ada catatan.'}</p>
+                                </Link>
                             </li>
                         ))}
                     </ul>
@@ -398,7 +405,6 @@ function PivotTable({ data, workzones }: { data: any; workzones: string[]; }) {
     const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
 
     const workzoneMapping: { [key: string]: string } = {
-        'KUDUS': 'KUD',
         'KDS': 'KUD',
         'DEMAK': 'DMA',
         'PURWODADI': 'PWD',
@@ -1047,7 +1053,7 @@ export default function ProvisioningDashboardPage() {
           
           const payload = {
               allOrders: allFilteredOrders,
-              sektor: selectedWorkzone === 'all' ? 'KUDUS' : selectedWorkzone,
+              sektor: selectedWorkzone === 'all' ? 'KDS' : selectedWorkzone,
               dateHeader: dateHeader,
           };
 

@@ -83,15 +83,15 @@ export async function sendProvisioningRekap(
         switch (order.provisioningStatus) {
             case 'completed':
                 statusKey = '✅ PS CLOSE         ';
-                detailStatusInfo = { emoji: '✅', ket: `${order.crmOrder} H+1` };
+                detailStatusInfo = { emoji: '✅', ket: `${order.crmOrder || 'PS'} H+1` };
                 break;
             case 'kendala':
-                const notes = (order.kendalaNotes || '').toLowerCase();
-                 if (notes.includes('pelanggan') || notes.includes('rfs') || notes.includes('cancel') || notes.includes('rumah kosong')) {
-                    statusKey = '👫 KENDALA PELANGGAN';
-                 } else {
-                    statusKey = '🛠 KENDALA TEKNIS   ';
-                 }
+                if (order.kendalaCategory === 'pelanggan') {
+                   statusKey = '👫 KENDALA PELANGGAN';
+                } else {
+                   statusKey = '🛠 KENDALA TEKNIS   ';
+                }
+                detailStatusInfo = { emoji: '❌', ket: `KENDALA: ${order.kendalaNotes || order.crmOrder}` };
                 break;
             default: // unassigned, assigned, picked_up, etc.
                 statusKey = '🕗 SISA ORDER       ';
