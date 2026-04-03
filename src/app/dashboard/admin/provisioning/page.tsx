@@ -532,8 +532,11 @@ export default function ProvisioningDashboardPage() {
     if (timestamp instanceof Timestamp) {
         return timestamp.toDate();
     }
-    if (typeof timestamp === 'string' && !isNaN(Date.parse(timestamp))) {
-      return new Date(timestamp);
+    if (typeof timestamp === 'string') {
+        const parsed = new Date(timestamp.replace(' ', 'T'));
+        if (isValid(parsed)) return parsed;
+        const excelDate = new Date(1899, 11, 30 + Number(timestamp));
+        if(isValid(excelDate)) return excelDate;
     }
     if (timestamp instanceof Date && isValid(timestamp)) return timestamp;
     try {
@@ -547,7 +550,6 @@ export default function ProvisioningDashboardPage() {
   const monthYearOptions = useMemo(() => {
     const periods = new Set<string>();
     
-    // Add periods from the actual data
     if (data) {
         data.forEach(order => {
             const date = safeToDate(order.dateCreated);
@@ -557,15 +559,14 @@ export default function ProvisioningDashboardPage() {
         });
     }
 
-    // Also add the current month in case there's no data for it yet, and a few future/past months for flexibility.
     const now = new Date();
-    for (let i = -3; i <= 3; i++) { // From 3 months ago to 3 months in the future
+    for (let i = -3; i <= 3; i++) { 
         const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
         periods.add(format(date, 'yyyy-MM'));
     }
 
     return Array.from(periods)
-      .sort((a, b) => b.localeCompare(a)) // Sort descending (most recent first)
+      .sort((a, b) => b.localeCompare(a)) 
       .map(period => {
           const [year, month] = period.split('-');
           const date = new Date(Number(year), Number(month) - 1);
@@ -578,7 +579,6 @@ export default function ProvisioningDashboardPage() {
   
   useEffect(() => {
     if (monthYearOptions.length > 0 && !selectedMonth) {
-        // Default to the current month if available, otherwise the most recent month with data
         const currentMonthYYYYMM = format(new Date(), 'yyyy-MM');
         const defaultPeriod = monthYearOptions.find(opt => opt.value === currentMonthYYYYMM) || monthYearOptions[0];
         setSelectedMonth(defaultPeriod.value);
@@ -587,7 +587,7 @@ export default function ProvisioningDashboardPage() {
   
   useEffect(() => {
     if (data) {
-      const uniqueWorkzones = [...new Set(data.map((item) => item.workzone).filter(Boolean))].sort();
+      const uniqueWorkzones = [...new Set(data.map((item) => item.workzone || 'N/A'))].sort();
       setWorkzones(uniqueWorkzones);
     }
   }, [data]);
@@ -739,16 +739,22 @@ export default function ProvisioningDashboardPage() {
             return date instanceof Date && !isNaN(date.valueOf()) ? format(date, 'dd-MM-yyyy HH:mm') : String(dateValue);
         };
 
-        const formatDateToTimestamp = (dateValue: any): Timestamp | null => {
-            if (!dateValue) return null;
+        const formatDateToTimestamp = (dateValue: any): Timestamp => {
+            // Excel dates are numbers. JS dates can also be passed.
+            if (typeof dateValue === 'number') {
+                // Excel's epoch starts on 1900-01-01, but it has a bug where it thinks 1900 is a leap year.
+                // JS epoch is 1970-01-01. The difference is 25569 days.
+                return Timestamp.fromMillis((dateValue - 25569) * 86400 * 1000);
+            }
             if (dateValue instanceof Date && isValid(dateValue)) {
                 return Timestamp.fromDate(dateValue);
             }
             if (typeof dateValue === 'string') {
-                const parsedDate = new Date(dateValue);
+                const parsedDate = new Date(dateValue.replace(' ', 'T'));
                 if (isValid(parsedDate)) return Timestamp.fromDate(parsedDate);
             }
-            return null;
+            // Fallback to now if parsing fails, but this should be handled better if needed.
+            return Timestamp.now();
         };
 
         for (let i = 0; i < jsonData.length; i++) {
@@ -778,8 +784,6 @@ export default function ProvisioningDashboardPage() {
                 continue;
             }
             
-            const dateCreatedTs = formatDateToTimestamp(row[headerMapping.dateCreated!]);
-
             const newRecord: Omit<ProvisioningRecord, 'id'> = {
               workorder: row[headerMapping.workorder!] || '-',
               workorderBaru: headerMapping.workorderBaru ? (row[headerMapping.workorderBaru] || '') : '',
@@ -791,7 +795,7 @@ export default function ProvisioningDashboardPage() {
               contactNumber: row[headerMapping.contactNumber!]?.toString() || '-',
               address: row[headerMapping.address!] || '-',
               description: headerMapping.description ? (row[headerMapping.description] || '-') : '-',
-              dateCreated: dateCreatedTs,
+              dateCreated: formatDateToTimestamp(row[headerMapping.dateCreated!]),
               bookingDate: formatDateValue(row[headerMapping.bookingDate!]),
               productName: headerMapping.productName ? (row[headerMapping.productName] || '-') : '-',
               productType: row[headerMapping.productType!] || '-',
@@ -846,7 +850,7 @@ export default function ProvisioningDashboardPage() {
     const dataToSave: Partial<ProvisioningRecord> = {
         ...orderData,
         id: scOrder,
-        dateCreated: Timestamp.now(),
+        dateCreated: Timestamp.now(), // Always use Timestamp for new manual orders
     };
     
     await setDoc(docRef, dataToSave);
@@ -971,8 +975,8 @@ export default function ProvisioningDashboardPage() {
     dataToProcess.forEach(item => {
         const { scOrder, provisioningStatus, workzone, assignedTo_userName, assignedTo_crew_userName } = item;
         
-        if (!workzone) return;
-
+        const wz = workzone || 'N/A';
+        
         let techGroupKey = 'Unassigned';
         if (assignedTo_userName) {
             techGroupKey = assignedTo_userName;
@@ -993,7 +997,7 @@ export default function ProvisioningDashboardPage() {
                 currentNode[key] = { count: { 'Grand Total': 0 }, children: {} };
             }
             
-            currentNode[key].count[workzone] = (currentNode[key].count[workzone] || 0) + 1;
+            currentNode[key].count[wz] = (currentNode[key].count[wz] || 0) + 1;
             currentNode[key].count['Grand Total'] += 1;
 
             currentNode = currentNode[key].children;
