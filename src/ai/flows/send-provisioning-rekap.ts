@@ -88,10 +88,11 @@ export async function sendProvisioningRekap(
             case 'kendala':
                 if (order.kendalaCategory === 'pelanggan') {
                    statusKey = '👫 KENDALA PELANGGAN';
+                   detailStatusInfo = { emoji: '👫', ket: `KENDALA: ${order.kendalaNotes || order.crmOrder}` };
                 } else {
                    statusKey = '🛠 KENDALA TEKNIS   ';
+                   detailStatusInfo = { emoji: '🛠', ket: `KENDALA: ${order.kendalaNotes || order.crmOrder}` };
                 }
-                detailStatusInfo = { emoji: '❌', ket: `KENDALA: ${order.kendalaNotes || order.crmOrder}` };
                 break;
             default: // unassigned, assigned, picked_up, etc.
                 statusKey = '🕗 SISA ORDER       ';
