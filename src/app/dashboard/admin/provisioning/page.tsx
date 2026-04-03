@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Upload, FileSpreadsheet, ChevronLeft, ChevronRight, Trash2, ChevronRightIcon, User, AlertTriangle, Phone, MoreHorizontal, Edit, Save, Package, Truck, PackageCheck, Send, PlusCircle, Calendar as CalendarIcon } from 'lucide-react';
 import { format, isValid, startOfMonth, endOfMonth, startOfDay, endOfDay } from 'date-fns';
@@ -403,8 +403,25 @@ function PivotTable({ data, workzones }: { data: any; workzones: string[]; }) {
 
     const sortedTechKeys = Object.keys(data).sort();
     
-    const totalCount = sortedTechKeys.reduce((acc, key) => acc + data[key].count['Grand Total'], 0);
-    const workzoneTotals = workzones.map(wz => sortedTechKeys.reduce((acc, key) => acc + (data[key].count[wz] || 0), 0));
+    const { grandTotalCount, workzoneTotals, grandStatusCounts } = useMemo(() => {
+        const wt: Record<string, number> = {};
+        let gtc = 0;
+        const gsc: Record<string, number> = {};
+
+        sortedTechKeys.forEach(key => {
+            const techData = data[key];
+            gtc += techData.count['Grand Total'];
+            workzones.forEach(wz => {
+                wt[wz] = (wt[wz] || 0) + (techData.count[wz] || 0);
+            });
+             if (techData.statusCounts) {
+                Object.entries(techData.statusCounts).forEach(([status, count]) => {
+                    gsc[status] = (gsc[status] || 0) + (count as number);
+                });
+            }
+        });
+        return { grandTotalCount: gtc, workzoneTotals: workzones.map(wz => wt[wz] || 0), grandStatusCounts: gsc };
+    }, [data, sortedTechKeys, workzones]);
 
     return (
         <div className="overflow-x-auto border rounded-lg">
@@ -422,6 +439,11 @@ function PivotTable({ data, workzones }: { data: any; workzones: string[]; }) {
                        sortedTechKeys.map(techKey => {
                            const techData = data[techKey];
                            const isExpanded = expandedRows[techKey];
+                           const statusSummary = techData.statusCounts 
+                                ? Object.entries(techData.statusCounts)
+                                    .map(([status, count]) => `${status}: ${count}`)
+                                    .join(', ')
+                                : '';
 
                            return (
                                <React.Fragment key={techKey}>
@@ -434,7 +456,7 @@ function PivotTable({ data, workzones }: { data: any; workzones: string[]; }) {
                                                <span>{techKey}</span>
                                            </div>
                                        </TableCell>
-                                       <TableCell></TableCell> {/* Empty cell for status header */}
+                                       <TableCell className="text-xs text-muted-foreground">{statusSummary}</TableCell>
                                        {workzones.map(wz => (
                                            <TableCell key={wz} className="text-right font-semibold">
                                                {techData.count[wz] || 0}
@@ -445,16 +467,16 @@ function PivotTable({ data, workzones }: { data: any; workzones: string[]; }) {
 
                                    {isExpanded && techData.orders.map((order: any, index: number) => (
                                        <TableRow key={`${techKey}-${order.id}-${index}`} className="bg-muted/50">
-                                           <TableCell style={{ paddingLeft: '2.5rem' }}>{order.scOrder}</TableCell>
+                                           <TableCell style={{ paddingLeft: '3.5rem' }}>{order.scOrder}</TableCell>
                                            <TableCell>
                                                <Badge variant={order.status === 'completed' ? 'default' : order.status === 'kendala' ? 'destructive' : 'secondary'}>
                                                    {order.status}
                                                </Badge>
                                            </TableCell>
                                            {workzones.map(wz => (
-                                               <TableCell key={wz} className="text-right">{order.workzone === wz ? 1 : 0}</TableCell>
+                                               <TableCell key={wz} className="text-right">{order.workzone === wz ? 1 : ''}</TableCell>
                                            ))}
-                                           <TableCell className="text-right font-bold">1</TableCell>
+                                           <TableCell className="text-right font-bold"></TableCell>
                                        </TableRow>
                                    ))}
                                </React.Fragment>
@@ -464,13 +486,18 @@ function PivotTable({ data, workzones }: { data: any; workzones: string[]; }) {
                        <TableRow><TableCell colSpan={workzones.length + 3} className="h-24 text-center">Silakan impor file Excel atau buat order manual untuk melihat rekap.</TableCell></TableRow>
                    )}
                 </TableBody>
-                 <TableRow className="font-bold bg-muted">
-                    <TableCell colSpan={2}>Grand Total</TableCell>
-                    {workzoneTotals.map((total, index) => (
-                        <TableCell key={index} className="text-right">{total}</TableCell>
-                    ))}
-                    <TableCell className="text-right">{totalCount}</TableCell>
-                </TableRow>
+                 <TableFooter>
+                    <TableRow className="font-bold bg-muted">
+                        <TableCell>Grand Total</TableCell>
+                         <TableCell className="text-xs text-muted-foreground font-normal">
+                           {Object.entries(grandStatusCounts).map(([status, count]) => `${status}: ${count}`).join(', ')}
+                        </TableCell>
+                        {workzoneTotals.map((total, index) => (
+                            <TableCell key={index} className="text-right">{total}</TableCell>
+                        ))}
+                        <TableCell className="text-right">{grandTotalCount}</TableCell>
+                    </TableRow>
+                 </TableFooter>
             </Table>
         </div>
     )
@@ -530,21 +557,9 @@ export default function ProvisioningDashboardPage() {
     if (timestamp instanceof Timestamp) {
         return timestamp.toDate();
     }
-    // Handle manual string dates
     if (typeof timestamp === 'string') {
-        // Attempt to parse various formats
-        const formatsToTry = [
-            "dd-MM-yyyy HH:mm",
-            "yyyy-MM-dd HH:mm",
-            "MM/dd/yyyy HH:mm",
-        ];
-        for (const fmt of formatsToTry) {
-            const date = new Date(timestamp); // Direct parse might work
-            if (isValid(date)) return date;
-        }
-        // Last resort for unexpected string formats
-        const parsed = new Date(timestamp);
-        if (isValid(parsed)) return parsed;
+        const date = new Date(timestamp);
+        if (isValid(date)) return date;
     }
     if (timestamp instanceof Date && isValid(timestamp)) return timestamp;
     return null;
@@ -776,7 +791,7 @@ export default function ProvisioningDashboardPage() {
               contactNumber: row[headerMapping.contactNumber!]?.toString() || '-',
               address: row[headerMapping.address!] || '-',
               description: headerMapping.description ? (row[headerMapping.description] || '-') : '-',
-              dateCreated: Timestamp.now(), // Always use timestamp for consistency
+              dateCreated: Timestamp.now(),
               bookingDate: formatDateValue(row[headerMapping.bookingDate!]),
               productName: headerMapping.productName ? (row[headerMapping.productName] || '-') : '-',
               productType: row[headerMapping.productType!] || '-',
@@ -968,16 +983,23 @@ export default function ProvisioningDashboardPage() {
         }
         
         if (!pivot[techGroupKey]) {
-            pivot[techGroupKey] = { count: { 'Grand Total': 0 }, orders: [] };
+            pivot[techGroupKey] = {
+              count: { 'Grand Total': 0 }, 
+              orders: [],
+              statusCounts: {}
+            };
         }
         
         pivot[techGroupKey].count[wz] = (pivot[techGroupKey].count[wz] || 0) + 1;
         pivot[techGroupKey].count['Grand Total']++;
         
+        const status = provisioningStatus || 'unassigned';
+        pivot[techGroupKey].statusCounts[status] = (pivot[techGroupKey].statusCounts[status] || 0) + 1;
+
         pivot[techGroupKey].orders.push({
             id: item.id,
             scOrder: scOrder || 'N/A-' + item.id,
-            status: provisioningStatus || 'unassigned',
+            status: status,
             workzone: wz,
         });
     });
