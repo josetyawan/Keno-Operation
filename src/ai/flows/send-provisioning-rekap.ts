@@ -32,11 +32,24 @@ export async function sendProvisioningRekap(
   input: z.infer<typeof provisioningRekapSchema>
 ): Promise<string> {
     const now = new Date();
-    const updateTimestamp = format(now, 'dd/MM/yyyy HH:mm:ss');
+    const updateTimestamp = format(now, 'dd/MM/yyyy HH:mm:ss', { locale: idLocale });
     const dateHeader = input.dateHeader;
 
+    const sektorMapping: { [key: string]: string } = {
+        'KUDUS': 'KUD',
+        'DEMAK': 'DMA',
+        'PURWODADI': 'PWD',
+        'PATI': 'PTI',
+        'JEPARA': 'JPR',
+        'REMBANG': 'RBG',
+        'BLORA': 'BLA',
+    };
+    const sektorUpper = input.sektor.toUpperCase();
+    const sektorDisplay = sektorMapping[sektorUpper] || sektorUpper;
+
+
     let message = `📅 UPDATE: ${updateTimestamp}\n`;
-    message += `📍 SEKTOR: ${input.sektor.toUpperCase()}\n\n`;
+    message += `📍 SEKTOR: ${sektorDisplay}\n\n`;
     message += `📆 ${dateHeader}\n`;
 
     const summary: Record<string, Record<ProvisioningCategory, number>> = {
@@ -59,7 +72,7 @@ export async function sendProvisioningRekap(
         switch (order.provisioningStatus) {
             case 'completed':
                 statusKey = '✅ PS CLOSE         ';
-                detailStatusInfo = { emoji: '✅', ket: `${order.crmOrder || 'PS CLOSE'} H+1` };
+                detailStatusInfo = { emoji: '✅', ket: `${order.crmOrder} H+1` };
                 break;
             case 'kendala':
                 const notes = (order.kendalaNotes || '').toLowerCase();
@@ -79,13 +92,11 @@ export async function sendProvisioningRekap(
             summary[statusKey][productCat]++;
         }
         
-        if (order.provisioningStatus === 'completed' || (order.provisioningStatus && order.provisioningStatus !== 'kendala' && order.provisioningStatus !== 'unassigned')) {
-             detailRows.push({
-                ...detailStatusInfo,
-                scOrder: order.scOrder,
-                status: order.provisioningStatus,
-            });
-        }
+        detailRows.push({
+            ...detailStatusInfo,
+            scOrder: order.scOrder,
+            status: order.provisioningStatus,
+        });
     }
 
     // Format Summary Table
