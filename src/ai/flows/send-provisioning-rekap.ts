@@ -2,7 +2,7 @@
 'use server';
 
 import { z } from 'zod';
-import { format } from 'date-fns';
+import { format, differenceInCalendarDays, parse, startOfToday, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 
 type ProvisioningRecord = any;
@@ -80,7 +80,27 @@ export async function sendProvisioningRekap(
         let statusKey: keyof typeof summary | null = null;
         let detailStatusInfo: { emoji: string; ket: string } | null = null;
         
-        const dateInfo = (order.bookingDate && order.bookingDate.trim() !== '') ? 'H+1' : 'HI';
+        let dateInfo = 'HI';
+        if (order.bookingDate && order.bookingDate.trim() !== '') {
+            try {
+                // Assuming format is dd-MM-yyyy HH:mm
+                const parsedDate = parse(order.bookingDate, 'dd-MM-yyyy HH:mm', new Date());
+                if (isValid(parsedDate)) {
+                    const today = startOfToday();
+                    const diff = differenceInCalendarDays(parsedDate, today);
+                    if (diff < 0) {
+                        dateInfo = 'LATE';
+                    } else if (diff > 0) {
+                        dateInfo = `H+${diff}`;
+                    } else {
+                        dateInfo = 'HI';
+                    }
+                }
+            } catch (e) {
+                // If parsing fails, it stays 'HI'
+                console.error(`Could not parse bookingDate: ${order.bookingDate}`);
+            }
+        }
 
         switch (order.provisioningStatus) {
             case 'completed':
@@ -97,7 +117,7 @@ export async function sendProvisioningRekap(
                    detailStatusInfo = { emoji: '👫', ket: `KENDALA: ${order.kendalaNotes || order.crmOrder}` };
                 } else {
                    statusKey = '🛠 KENDALA TEKNIS   ';
-                   detailStatusInfo = { emoji: '🛠', ket: `KENDALA: ${order.kendalaNotes || order.crmOrder}` };
+                   detailStatusInfo = { emoji: '🛠️', ket: `KENDALA: ${order.kendalaNotes || order.crmOrder}` };
                 }
                 break;
             default: // unassigned, assigned, picked_up, etc.
