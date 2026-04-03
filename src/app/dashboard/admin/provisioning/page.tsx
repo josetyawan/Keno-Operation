@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -397,6 +396,16 @@ function KendalaCard({ kendalaOrders, isLoading }: { kendalaOrders: Provisioning
 function PivotTable({ data, workzones }: { data: any; workzones: string[]; }) {
     const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
 
+    const workzoneMapping: { [key: string]: string } = {
+        'KUDUS': 'KUD',
+        'DEMAK': 'DMA',
+        'PURWODADI': 'PWD',
+        'PATI': 'PTI',
+        'JEPARA': 'JPR',
+        'REMBANG': 'RBG',
+        'BLORA': 'BLA',
+    };
+
     const toggleRow = (key: string) => {
         setExpandedRows(prev => ({ ...prev, [key]: !prev[key] }));
     };
@@ -430,7 +439,7 @@ function PivotTable({ data, workzones }: { data: any; workzones: string[]; }) {
                     <TableRow>
                         <TableHead className="w-[300px]">Teknisi / SC Order</TableHead>
                         <TableHead>Status</TableHead>
-                        {workzones.map(wz => <TableHead key={wz} className="text-right">{wz}</TableHead>)}
+                        {workzones.map(wz => <TableHead key={wz} className="text-right">{workzoneMapping[wz.toUpperCase()] || wz}</TableHead>)}
                         <TableHead className="text-right font-bold">Grand Total</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -465,7 +474,7 @@ function PivotTable({ data, workzones }: { data: any; workzones: string[]; }) {
                                        <TableCell className="text-right font-bold">{techData.count['Grand Total']}</TableCell>
                                    </TableRow>
 
-                                   {isExpanded && techData.orders.map((order: any, index: number) => (
+                                   {isExpanded && techData.orders?.map((order: any, index: number) => (
                                        <TableRow key={`${techKey}-${order.id}-${index}`} className="bg-muted/50">
                                            <TableCell style={{ paddingLeft: '3.5rem' }}>{order.scOrder}</TableCell>
                                            <TableCell>
@@ -558,8 +567,13 @@ export default function ProvisioningDashboardPage() {
         return timestamp.toDate();
     }
     if (typeof timestamp === 'string') {
+        // Handle YYYY-MM-DD and other simple date strings
         const date = new Date(timestamp);
         if (isValid(date)) return date;
+    }
+    // Handle cases where dateCreated is a complex object from legacy import
+    if (typeof timestamp === 'object' && timestamp.seconds) {
+        return new Timestamp(timestamp.seconds, timestamp.nanoseconds).toDate();
     }
     if (timestamp instanceof Date && isValid(timestamp)) return timestamp;
     return null;
@@ -846,7 +860,7 @@ export default function ProvisioningDashboardPage() {
     const dataToSave: Partial<ProvisioningRecord> = {
         ...orderData,
         id: scOrder,
-        dateCreated: Timestamp.now(),
+        dateCreated: serverTimestamp(),
     };
     
     await setDoc(docRef, dataToSave);
