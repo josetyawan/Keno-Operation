@@ -1210,8 +1210,18 @@ export default function PelangganAdminPage() {
                                         ))}
                                     </div>
                                     <div><Label className="text-muted-foreground">Koordinat</Label><a href={`https://www.google.com/maps/search/?api=1&query=${selectedPelanggan.koordinat}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1"><MapPin className="h-3 w-3"/>{selectedPelanggan.koordinat}</a></div>
-                                    <div><Label className="text-muted-foreground">ODP Terhubung</Label><p>{selectedPelanggan.odpName}</p></div>
-                                    <div><Label className="text-muted-foreground">Port ODP</Label><p>{selectedPelanggan.odpPort}</p></div>
+                                    <div><Label className="text-muted-foreground">ODP Terhubung</Label><p>{selectedPelanggan.odpName || '-'}</p></div>
+                                    <div><Label className="text-muted-foreground">Port ODP</Label><p>{selectedPelanggan.odpPort || '-'}</p></div>
+                                     <div className="col-span-2">
+                                        <Label className="text-muted-foreground">ODP QR Code</Label>
+                                        {selectedPelanggan.odpQRCodeUrl ? (
+                                            <a href={selectedPelanggan.odpQRCodeUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
+                                            <QrCode className="h-4 w-4 mr-1"/> Buka Tautan QR
+                                            </a>
+                                        ) : (
+                                            <p>-</p>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="md:col-span-1 space-y-2">
                                     <Label>Foto Lokasi</Label>
@@ -1258,6 +1268,7 @@ export default function PelangganAdminPage() {
         </div>
     );
 }
+
 
 
 
