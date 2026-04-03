@@ -114,8 +114,8 @@ export default function GamasApprovalListPage() {
         const XLSX = await import('xlsx');
         const priceData = priceSource === 'telkom' ? gamasPriceDataTelkom : gamasPriceDataMitra;
         
-        if (!priceData) {
-            throw new Error(`Sumber data harga untuk "${priceSource}" tidak ditemukan.`);
+        if (!priceData || priceData.length === 0) {
+            throw new Error(`Sumber data harga untuk "${priceSource}" tidak ditemukan atau kosong.`);
         }
 
         const pivotedData: Record<string, any> = {};
@@ -123,7 +123,7 @@ export default function GamasApprovalListPage() {
         const ticketHeader = `${sto} (${report.noTiket || 'TANPA_TIKET'})`;
 
         (report.evidences || []).forEach(evidence => {
-            const designatorCode = evidence.designator.trim().toUpperCase();
+            const designatorCode = evidence.designator.trim().replace(/^-/, '').toUpperCase();
             if (!pivotedData[designatorCode]) {
                 const priceInfo = priceData.find(p => p.code.trim().toUpperCase() === designatorCode);
                 pivotedData[designatorCode] = {
@@ -236,8 +236,8 @@ export default function GamasApprovalListPage() {
         const XLSX = await import('xlsx');
         const priceData = priceSource === 'telkom' ? gamasPriceDataTelkom : gamasPriceDataMitra;
 
-        if (!priceData) {
-            throw new Error(`Sumber data harga untuk "${priceSource}" tidak ditemukan.`);
+        if (!priceData || priceData.length === 0) {
+            throw new Error(`Sumber data harga untuk "${priceSource}" tidak ditemukan atau kosong.`);
         }
         
         const pivotedData: Record<string, any> = {};
@@ -249,7 +249,7 @@ export default function GamasApprovalListPage() {
             ticketColumns.add(ticketHeader);
 
             (report.evidences || []).forEach(evidence => {
-                const designatorCode = evidence.designator.trim().toUpperCase();
+                const designatorCode = evidence.designator.trim().replace(/^-/, '').toUpperCase();
                 if (!pivotedData[designatorCode]) {
                     const priceInfo = priceData.find(p => p.code.trim().toUpperCase() === designatorCode);
                     pivotedData[designatorCode] = {
