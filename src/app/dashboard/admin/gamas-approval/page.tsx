@@ -18,7 +18,7 @@ import Link from 'next/link';
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { gamasPriceData as gamasPriceDataMitra } from '@/lib/gamas-price-data';
-import { gamasPriceData as gamasPriceDataTelkom } from '@/lib/gamas-price-data-telkom';
+import { gamasPriceDataTelkom } from '@/lib/gamas-price-data-telkom';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -119,7 +119,7 @@ export default function GamasApprovalListPage() {
         const sto = report.sto || 'KUD';
         const ticketHeader = `${sto} (${report.noTiket || 'TANPA_TIKET'})`;
 
-        report.evidences.forEach(evidence => {
+        (report.evidences || []).forEach(evidence => {
             const designatorCode = evidence.designator.trim().toUpperCase();
             if (!pivotedData[designatorCode]) {
                 const priceInfo = priceMap.get(designatorCode);
@@ -242,7 +242,7 @@ export default function GamasApprovalListPage() {
             const ticketHeader = `${sto} (${report.noTiket || 'TANPA_TIKET'})`;
             ticketColumns.add(ticketHeader);
 
-            report.evidences.forEach(evidence => {
+            (report.evidences || []).forEach(evidence => {
                 const designatorCode = evidence.designator.trim().toUpperCase();
                 if (!pivotedData[designatorCode]) {
                     const priceInfo = priceMap.get(designatorCode);
@@ -466,3 +466,5 @@ export default function GamasApprovalListPage() {
     </>
   )
 }
+
+    
