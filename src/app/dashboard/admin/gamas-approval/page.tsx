@@ -18,7 +18,7 @@ import Link from 'next/link';
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { gamasPriceData as gamasPriceDataMitra } from '@/lib/gamas-price-data';
-import { gamasPriceDataTelkom } from '@/lib/gamas-price-data-telkom';
+import { gamasPriceData as gamasPriceDataTelkom } from '@/lib/gamas-price-data-telkom';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -113,7 +113,6 @@ export default function GamasApprovalListPage() {
     try {
         const XLSX = await import('xlsx');
         const priceData = priceSource === 'telkom' ? gamasPriceDataTelkom : gamasPriceDataMitra;
-        const priceMap = new Map(priceData.map(item => [item.code.trim().toUpperCase(), item]));
         
         const pivotedData: Record<string, any> = {};
         const sto = report.sto || 'KUD';
@@ -122,7 +121,7 @@ export default function GamasApprovalListPage() {
         (report.evidences || []).forEach(evidence => {
             const designatorCode = evidence.designator.trim().toUpperCase();
             if (!pivotedData[designatorCode]) {
-                const priceInfo = priceMap.get(designatorCode);
+                const priceInfo = priceData.find(p => p.code.trim().toUpperCase() === designatorCode);
                 pivotedData[designatorCode] = {
                     designator: evidence.designator,
                     uraian: priceInfo?.description || 'N/A',
@@ -232,7 +231,6 @@ export default function GamasApprovalListPage() {
     try {
         const XLSX = await import('xlsx');
         const priceData = priceSource === 'telkom' ? gamasPriceDataTelkom : gamasPriceDataMitra;
-        const priceMap = new Map(priceData.map(item => [item.code.trim().toUpperCase(), item]));
         
         const pivotedData: Record<string, any> = {};
         const ticketColumns = new Set<string>();
@@ -245,7 +243,7 @@ export default function GamasApprovalListPage() {
             (report.evidences || []).forEach(evidence => {
                 const designatorCode = evidence.designator.trim().toUpperCase();
                 if (!pivotedData[designatorCode]) {
-                    const priceInfo = priceMap.get(designatorCode);
+                    const priceInfo = priceData.find(p => p.code.trim().toUpperCase() === designatorCode);
                     pivotedData[designatorCode] = {
                         designator: evidence.designator,
                         uraian: priceInfo?.description || 'N/A',
@@ -466,5 +464,3 @@ export default function GamasApprovalListPage() {
     </>
   )
 }
-
-    
