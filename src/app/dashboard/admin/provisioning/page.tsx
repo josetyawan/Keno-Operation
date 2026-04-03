@@ -46,6 +46,18 @@ const formatWaNumber = (phone: string) => {
     return `https://wa.me/${cleanPhone}`;
 };
 
+const jenisPekerjaanOptions = [
+  "PSB DATIN", "PSB OLO", "PSB WIFI", "PDA DATIN", "PDA WIFI",
+  "REPLACEMENT", "Instalasi IP Camera", "Instalasi SD-WAN",
+  "Instalasi Router", "Install AP WIFI (1 AP)", "Install AP WIFI (2 AP)",
+  "Install AP WIFI(3 AP)", "Install AP WIFI (4 AP)",
+  "Pembuatan BAI (Satkomindo,BRI MPLS)", "Provisioning MyRep", "PSB Surge",
+  "Provisioning 5 Menara Bintang", "PSB IBU - FTTR",
+  "PT Anagata Cipta Teknologi (KerjainAja)", "PSB TBG", "Provisioning Hypernet",
+  "2ND STB", "UPSELLING", "DISMANTLING EBIS",
+  "PSB Indihome", "PSB Indibiz", "PDA Indihome", "PDA Indibiz"
+].sort();
+
 // --- Child Components ---
 
 function ManualOrderForm({ users, onSave, onCancel, currentUserProfile }: { users: UserProfile[], onSave: (data: Partial<ProvisioningRecord>) => Promise<void>, onCancel: () => void, currentUserProfile: UserProfile | null }) {
@@ -77,18 +89,6 @@ function ManualOrderForm({ users, onSave, onCancel, currentUserProfile }: { user
             setWorkzone('KUD'); // Default
         }
     }, [currentUserProfile]);
-
-    const jenisPekerjaanOptions = [
-      "PSB DATIN", "PSB OLO", "PSB WIFI", "PDA DATIN", "PDA WIFI",
-      "REPLACEMENT", "Instalasi IP Camera", "Instalasi SD-WAN",
-      "Instalasi Router", "Install AP WIFI (1 AP)", "Install AP WIFI (2 AP)",
-      "Install AP WIFI(3 AP)", "Install AP WIFI (4 AP)",
-      "Pembuatan BAI (Satkomindo,BRI MPLS)", "Provisioning MyRep", "PSB Surge",
-      "Provisioning 5 Menara Bintang", "PSB IBU - FTTR",
-      "PT Anagata Cipta Teknologi (KerjainAja)", "PSB TBG", "Provisioning Hypernet",
-      "2ND STB", "UPSELLING", "DISMANTLING EBIS",
-      "PSB Indihome", "PSB Indibiz", "PDA Indihome", "PDA Indibiz"
-    ].sort();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -234,18 +234,6 @@ function EditOrderForm({ order, onSave, onCancel, isSaving }: { order: Provision
     const [crmOrder, setCrmOrder] = useState(order.crmOrder || '');
     const [description, setDescription] = useState(order.description || ''); // This will be our "Order Type"
 
-    const jenisPekerjaanOptions = [
-      "PSB DATIN", "PSB OLO", "PSB WIFI", "PDA DATIN", "PDA WIFI",
-      "REPLACEMENT", "Instalasi IP Camera", "Instalasi SD-WAN",
-      "Instalasi Router", "Install AP WIFI (1 AP)", "Install AP WIFI (2 AP)",
-      "Install AP WIFI(3 AP)", "Install AP WIFI (4 AP)",
-      "Pembuatan BAI (Satkomindo,BRI MPLS)", "Provisioning MyRep", "PSB Surge",
-      "Provisioning 5 Menara Bintang", "PSB IBU - FTTR",
-      "PT Anagata Cipta Teknologi (KerjainAja)", "PSB TBG", "Provisioning Hypernet",
-      "2ND STB", "UPSELLING", "DISMANTLING EBIS",
-      "PSB Indihome", "PSB Indibiz", "PDA Indihome", "PDA Indibiz"
-    ].sort();
-
     const typeOrderOptions: Record<string, string[]> = {
         'DISMANTLING EBIS': ['ONT', 'STB', 'AP', 'IP CAMERA'],
         'REPLACEMENT': ['ONT', 'STB'],
@@ -308,7 +296,7 @@ function EditOrderForm({ order, onSave, onCancel, isSaving }: { order: Provision
                         <Label htmlFor="edit-crmOrder">Jenis Order</Label>
                         <Select value={crmOrder} onValueChange={setCrmOrder}>
                             <SelectTrigger id="edit-crmOrder"><SelectValue placeholder="Pilih Jenis Order..." /></SelectTrigger>
-                            <SelectContent><ScrollArea className="h-72">{jenisPekerjaanOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</SelectContent>
+                            <SelectContent><ScrollArea className="h-72">{jenisPekerjaanOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</ScrollArea></SelectContent>
                         </Select>
                     </div>
                     {showOrderType && (
@@ -674,7 +662,8 @@ export default function ProvisioningDashboardPage() {
     if (data) {
       const uniqueWorkzones = [...new Set(data.map((item) => {
         const wzRaw = (item.workzone || 'N/A').toUpperCase();
-        return (wzRaw === 'KDS' || wzRaw === 'N/A') ? 'KUD' : wzRaw;
+        if (wzRaw === 'KDS' || wzRaw === 'N/A') return 'KUD';
+        return wzRaw;
       }))].sort();
       setWorkzones(uniqueWorkzones);
     }
