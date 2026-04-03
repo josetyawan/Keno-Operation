@@ -532,6 +532,9 @@ export default function ProvisioningDashboardPage() {
     if (timestamp instanceof Timestamp) {
         return timestamp.toDate();
     }
+    if (typeof timestamp === 'string' && !isNaN(Date.parse(timestamp))) {
+      return new Date(timestamp);
+    }
     if (timestamp instanceof Date && isValid(timestamp)) return timestamp;
     try {
         const d = new Date(timestamp);
@@ -542,17 +545,17 @@ export default function ProvisioningDashboardPage() {
   };
   
   const monthYearOptions = useMemo(() => {
-    if (!data) return [];
-    
     const periods = new Set<string>();
     
     // Add periods from the actual data
-    data.forEach(order => {
-        const date = safeToDate(order.dateCreated);
-        if (date) {
-            periods.add(format(date, 'yyyy-MM'));
-        }
-    });
+    if (data) {
+        data.forEach(order => {
+            const date = safeToDate(order.dateCreated);
+            if (date) {
+                periods.add(format(date, 'yyyy-MM'));
+            }
+        });
+    }
 
     // Also add the current month in case there's no data for it yet, and a few future/past months for flexibility.
     const now = new Date();
@@ -843,7 +846,7 @@ export default function ProvisioningDashboardPage() {
     const dataToSave: Partial<ProvisioningRecord> = {
         ...orderData,
         id: scOrder,
-        dateCreated: serverTimestamp(),
+        dateCreated: Timestamp.now(),
     };
     
     await setDoc(docRef, dataToSave);
@@ -959,7 +962,6 @@ export default function ProvisioningDashboardPage() {
   const pivotData = useMemo(() => {
     const pivot: any = {};
     const dataToProcess = (dateFilteredData || []).filter(item => {
-        if (item.provisioningStatus === 'completed') return false;
         if (selectedTechnician !== 'all' && (item.assignedTo_userId !== selectedTechnician && item.assignedTo_crew_userId !== selectedTechnician)) {
             return false;
         }
@@ -1196,7 +1198,7 @@ export default function ProvisioningDashboardPage() {
       <Card>
           <CardHeader>
               <CardTitle>Pivot Table Rekap</CardTitle>
-              <CardDescription>Ringkasan order yang belum selesai, dikelompokkan berdasarkan teknisi, status, dan SC order.</CardDescription>
+              <CardDescription>Ringkasan order dikelompokkan berdasarkan teknisi, status, dan SC order.</CardDescription>
           </CardHeader>
           <CardContent>
               <PivotTable data={pivotData} workzones={workzones} categoryLabel={categoryLabel} />
