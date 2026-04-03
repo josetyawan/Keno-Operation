@@ -10,12 +10,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Upload, FileSpreadsheet, ChevronLeft, ChevronRight, Trash2, ChevronRightIcon, User, AlertTriangle, Phone, MoreHorizontal, Edit, Save, Package, Truck, PackageCheck, Send, PlusCircle, Calendar as CalendarIcon } from 'lucide-react';
+import { Loader2, Upload, FileSpreadsheet, ChevronLeft, ChevronRight, Trash2, ChevronRightIcon, User, AlertTriangle, Phone, MoreHorizontal, Edit, Save, Package, Truck, PackageCheck, Send, PlusCircle, Calendar as CalendarIcon, RefreshCw, X } from 'lucide-react';
 import { format, isValid, startOfMonth, endOfMonth, startOfDay, endOfDay } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import type { DateRange } from 'react-day-picker';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, doc, writeBatch, orderBy, getDocs, setDoc, updateDoc, serverTimestamp, where, Timestamp, getDoc, limit } from 'firebase/firestore';
+import { collection, query, doc, writeBatch, orderBy, getDocs, setDoc, updateDoc, serverTimestamp, where, Timestamp, getDoc, limit, deleteDoc } from 'firebase/firestore';
 import type { ProvisioningRecord, UserProfile } from '@/lib/types';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
@@ -30,6 +30,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { triggerProvisioningRekapAction } from '@/app/actions/triggerProvisioningRekapAction';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+
 
 const ITEMS_PER_PAGE = 5;
 
@@ -369,7 +371,12 @@ function AssignTechnicianDialog({ order, users, isOpen, onOpenChange, onAssign, 
   );
 }
 
-function KendalaCard({ kendalaOrders, isLoading }: { kendalaOrders: ProvisioningRecord[], isLoading: boolean }) {
+function KendalaCard({ kendalaOrders, isLoading, onAssign, onCancel }: { 
+    kendalaOrders: ProvisioningRecord[], 
+    isLoading: boolean,
+    onAssign: (order: ProvisioningRecord) => void,
+    onCancel: (order: ProvisioningRecord) => void,
+}) {
     return (
         <Card className="border-destructive">
             <CardHeader>
@@ -383,8 +390,8 @@ function KendalaCard({ kendalaOrders, isLoading }: { kendalaOrders: Provisioning
                  kendalaOrders && kendalaOrders.length > 0 ? (
                     <ul className="space-y-3">
                         {kendalaOrders.map(order => (
-                            <li key={order.id} className="text-sm p-3 bg-destructive/10 rounded-md">
-                                <Link href={`/dashboard/provi-orders/${order.id}`} className="block hover:bg-destructive/10 -m-3 p-3 rounded-md">
+                             <li key={order.id} className="text-sm p-3 bg-destructive/10 rounded-md flex items-start justify-between gap-2">
+                                <Link href={`/dashboard/provi-orders/${order.id}`} className="flex-grow hover:bg-destructive/10 -m-3 p-3 rounded-l-md">
                                     <div className="flex justify-between items-start">
                                         <span className="font-semibold">{order.customerName} ({order.workorder})</span>
                                         <Badge variant="outline" className="capitalize shrink-0">{order.kendalaCategory || 'Teknis'}</Badge>
@@ -392,6 +399,24 @@ function KendalaCard({ kendalaOrders, isLoading }: { kendalaOrders: Provisioning
                                     <p className="text-xs text-muted-foreground mt-1">Teknisi: {order.assignedTo_userName}</p>
                                     <p className="text-sm mt-1 truncate">Alasan: {order.kendalaNotes || 'Tidak ada catatan.'}</p>
                                 </Link>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuLabel>Aksi Kendala</DropdownMenuLabel>
+                                        <DropdownMenuItem onSelect={() => onAssign(order)}>
+                                            <RefreshCw className="mr-2 h-4 w-4" />
+                                            Assign Ulang Teknisi
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onSelect={() => onCancel(order)} className="text-destructive focus:text-destructive">
+                                            <X className="mr-2 h-4 w-4" />
+                                            Batalkan Order
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </li>
                         ))}
                     </ul>
@@ -538,6 +563,8 @@ export default function ProvisioningDashboardPage() {
   const [orderToEdit, setOrderToEdit] = useState<ProvisioningRecord | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   
+  const [orderToCancel, setOrderToCancel] = useState<ProvisioningRecord | null>(null);
+  
   const [isSendingRekap, setIsSendingRekap] = useState(false);
 
   // Data fetching
@@ -563,6 +590,7 @@ export default function ProvisioningDashboardPage() {
   const [unassignedPage, setUnassignedPage] = useState(1);
   const [inProgressPage, setInProgressPage] = useState(1);
   const [completedPage, setCompletedPage] = useState(1);
+  const [cancelledPage, setCancelledPage] = useState(1);
 
   const safeToDate = (timestamp: any): Date | null => {
     if (!timestamp) return null;
@@ -887,6 +915,10 @@ export default function ProvisioningDashboardPage() {
             assignedTo_userName: technician.displayName,
             assignedAt: Timestamp.now(),
             provisioningStatus: 'assigned',
+            kendalaNotes: '',
+            kendalaPhotos: [],
+            kendalaCategory: undefined,
+            kendalaAt: null,
             assignedTo_crew_userId: crewMember ? crewMember.id : '',
             assignedTo_crew_userName: crewMember ? crewMember.displayName : '',
         };
@@ -904,6 +936,21 @@ export default function ProvisioningDashboardPage() {
         setIsAssigning(false);
     }
   }
+  
+  const handleCancelOrder = async () => {
+    if (!orderToCancel) return;
+    setIsAssigning(true); // Re-use assigning state for loading
+    const docRef = doc(firestore, 'provisioning-records', orderToCancel.id);
+    try {
+        await updateDoc(docRef, { provisioningStatus: 'cancelled' });
+        toast({ title: 'Order Dibatalkan', description: `Order untuk ${orderToCancel.customerName} telah dibatalkan.`});
+        setOrderToCancel(null);
+    } catch (error: any) {
+        toast({ variant: 'destructive', title: 'Gagal Membatalkan', description: error.message });
+    } finally {
+        setIsAssigning(false);
+    }
+  };
 
   const handleUpdate = async (data: Partial<ProvisioningRecord>) => {
     if (!orderToEdit) return;
@@ -950,7 +997,7 @@ export default function ProvisioningDashboardPage() {
     return allOrders;
   }, [data, filterMode, selectedMonth, dateRange]);
   
-  const { unassignedOrders, inProgressOrders, completedOrders, kendalaOrders } = useMemo(() => {
+  const { unassignedOrders, inProgressOrders, completedOrders, kendalaOrders, cancelledOrders } = useMemo(() => {
     let filteredOrders = dateFilteredData || [];
 
     if (selectedWorkzone !== 'all') {
@@ -971,6 +1018,7 @@ export default function ProvisioningDashboardPage() {
         inProgressOrders: filteredOrders.filter(o => ['assigned', 'picked_up', 'departed', 'arrived', 'wip_odp_done'].includes(o.provisioningStatus || '')),
         completedOrders: filteredOrders.filter(o => o.provisioningStatus === 'completed'),
         kendalaOrders: filteredOrders.filter(o => o.provisioningStatus === 'kendala'),
+        cancelledOrders: filteredOrders.filter(o => o.provisioningStatus === 'cancelled'),
     };
   }, [dateFilteredData, selectedWorkzone, searchQuery, selectedTechnician]);
 
@@ -1021,8 +1069,8 @@ export default function ProvisioningDashboardPage() {
   }, [dateFilteredData, selectedTechnician]);
   
   const allFilteredOrders = useMemo(() => {
-    return [...unassignedOrders, ...inProgressOrders, ...completedOrders, ...kendalaOrders];
-  }, [unassignedOrders, inProgressOrders, completedOrders, kendalaOrders]);
+    return [...unassignedOrders, ...inProgressOrders, ...completedOrders, ...kendalaOrders, ...cancelledOrders];
+  }, [unassignedOrders, inProgressOrders, completedOrders, kendalaOrders, cancelledOrders]);
 
   const dateHeader = useMemo(() => {
     if (filterMode === 'all') return 'Semua Waktu';
@@ -1090,20 +1138,21 @@ export default function ProvisioningDashboardPage() {
   }, [completedOrders, completedPage]);
   const totalCompletedPages = Math.ceil(completedOrders.length / ITEMS_PER_PAGE);
   
+  const paginatedCancelled = useMemo(() => {
+      const startIndex = (cancelledPage - 1) * ITEMS_PER_PAGE;
+      return cancelledOrders.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [cancelledOrders, cancelledPage]);
+  const totalCancelledPages = Math.ceil(cancelledOrders.length / ITEMS_PER_PAGE);
+  
   const [activeTab, setActiveTab] = useState('unassigned');
   
-  
   useEffect(() => {
-      if (unassignedOrders.length > 0) {
-        setActiveTab('unassigned');
-      } else if (inProgressOrders.length > 0) {
-        setActiveTab('in-progress');
-      } else if (completedOrders.length > 0) {
-        setActiveTab('completed');
-      } else {
-        setActiveTab('unassigned');
-      }
-  }, [unassignedOrders.length, inProgressOrders.length, completedOrders.length]);
+    if (unassignedOrders.length > 0) setActiveTab('unassigned');
+    else if (inProgressOrders.length > 0) setActiveTab('in-progress');
+    else if (completedOrders.length > 0) setActiveTab('completed');
+    else if (cancelledOrders.length > 0) setActiveTab('cancelled');
+    else setActiveTab('unassigned');
+  }, [unassignedOrders.length, inProgressOrders.length, completedOrders.length, cancelledOrders.length]);
   
   const isDataLoading = areRecordsLoading || areTechniciansLoading;
 
@@ -1118,7 +1167,12 @@ export default function ProvisioningDashboardPage() {
         </Button>
       </div>
       
-      <KendalaCard kendalaOrders={kendalaOrders || []} isLoading={isDataLoading} />
+      <KendalaCard 
+          kendalaOrders={kendalaOrders || []} 
+          isLoading={isDataLoading}
+          onAssign={setOrderToAssign}
+          onCancel={setOrderToCancel}
+      />
       
       <Card>
         <CardHeader>
@@ -1244,7 +1298,7 @@ export default function ProvisioningDashboardPage() {
 
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="unassigned">
             <Package className="mr-2" />
             Antrian ({unassignedOrders.length})
@@ -1256,6 +1310,10 @@ export default function ProvisioningDashboardPage() {
           <TabsTrigger value="completed">
             <PackageCheck className="mr-2" />
             Selesai ({completedOrders.length})
+          </TabsTrigger>
+           <TabsTrigger value="cancelled" className="text-destructive">
+            <X className="mr-2" />
+            Batal ({cancelledOrders.length})
           </TabsTrigger>
         </TabsList>
         
@@ -1376,6 +1434,65 @@ export default function ProvisioningDashboardPage() {
             </CardFooter>}
             </Card>
         </TabsContent>
+
+        <TabsContent value="cancelled">
+           <Card><CardContent className="pt-6">
+                <Table><TableHeader><TableRow>
+                    <TableHead>WO Lama</TableHead>
+                    <TableHead>WO Baru</TableHead>
+                    <TableHead>SC Order</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Alasan</TableHead>
+                    <TableHead className="text-right">Aksi</TableHead>
+                </TableRow></TableHeader>
+                <TableBody>
+                    {areRecordsLoading ? <TableRow><TableCell colSpan={6}><Skeleton className="h-10 w-full" /></TableCell></TableRow> : paginatedCancelled.length > 0 ? (
+                        paginatedCancelled.map(item => (
+                            <TableRow key={item.id} className="bg-muted/30">
+                                <TableCell>{item.workorder}</TableCell>
+                                <TableCell>{item.workorderBaru || '-'}</TableCell>
+                                <TableCell>{item.scOrder}</TableCell>
+                                <TableCell>{item.customerName}</TableCell>
+                                <TableCell className="text-xs text-muted-foreground">{item.kendalaNotes || 'Dibatalkan tanpa alasan.'}</TableCell>
+                                <TableCell className="text-right">
+                                    {(userProfile?.role === 'admin') && (
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Hapus Order Ini?</AlertDialogTitle>
+                                                    <AlertDialogDescription>Tindakan ini akan menghapus order yang dibatalkan secara permanen. Tindakan ini tidak dapat dibatalkan.</AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                                                    <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={async () => {
+                                                        await deleteDoc(doc(firestore, 'provisioning-records', item.id));
+                                                        toast({ title: "Order Dihapus", description: "Order yang dibatalkan telah dihapus permanen." });
+                                                    }}>Hapus Permanen</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    )}
+                                </TableCell>
+                            </TableRow>
+                        ))
+                    ) : <TableRow><TableCell colSpan={6} className="h-24 text-center">Tidak ada order yang dibatalkan.</TableCell></TableRow>}
+                </TableBody>
+              </Table>
+            </CardContent>
+            {totalCancelledPages > 1 && (
+              <CardFooter>
+                <div className="text-xs text-muted-foreground">Halaman <strong>{cancelledPage}</strong> dari <strong>{totalCancelledPages}</strong></div>
+                <div className="flex items-center gap-2 ml-auto">
+                    <Button variant="outline" size="sm" onClick={() => setCancelledPage(p => Math.max(p - 1, 1))} disabled={cancelledPage === 1}><ChevronLeft className="h-4 w-4" /> Sebelumnya</Button>
+                    <Button variant="outline" size="sm" onClick={() => setCancelledPage(p => Math.min(p + 1, totalCancelledPages))} disabled={cancelledPage === totalCancelledPages}>Berikutnya <ChevronRight className="h-4 w-4" /></Button>
+                </div>
+              </CardFooter>
+            )}
+            </Card>
+        </TabsContent>
       </Tabs>
       
       {orderToAssign && technicians && (
@@ -1405,7 +1522,24 @@ export default function ProvisioningDashboardPage() {
             </DialogContent>
         </Dialog>
       )}
+
+      {orderToCancel && (
+        <AlertDialog open={!!orderToCancel} onOpenChange={(open) => !open && setOrderToCancel(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Batalkan Order Ini?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Order untuk <strong>{orderToCancel.customerName}</strong> akan ditandai sebagai "dibatalkan" dan tidak akan muncul di antrian lagi. Anda dapat menghapusnya secara permanen nanti jika diperlukan.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Tidak</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleCancelOrder} className="bg-destructive hover:bg-destructive/90">Ya, Batalkan Order</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+      )}
+
     </div>
   );
 }
-
