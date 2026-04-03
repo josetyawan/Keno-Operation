@@ -1283,7 +1283,9 @@ export default function ProvisioningDashboardPage() {
                                     <TableCell>{item.scOrder}</TableCell>
                                     <TableCell>{item.customerName}</TableCell>
                                     <TableCell>
-                                        <a href={formatWaNumber(item.contactNumber)} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1"><Phone className="h-3 w-3" />{item.contactNumber}</a>
+                                        <a href={formatWaNumber(item.contactNumber)} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
+                                            <Phone className="h-3 w-3" /> {item.contactNumber}
+                                        </a>
                                     </TableCell>
                                     <TableCell className="max-w-xs truncate">{item.address}</TableCell>
                                     <TableCell className="text-right">
@@ -1411,3 +1413,4 @@ export default function ProvisioningDashboardPage() {
   );
 }
 
+    
