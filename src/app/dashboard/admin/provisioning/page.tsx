@@ -58,7 +58,65 @@ const jenisPekerjaanOptions = [
   "PSB Indihome", "PSB Indibiz", "PDA Indihome", "PDA Indibiz"
 ].sort();
 
-// --- Child Components ---
+const typeOrderOptions: Record<string, string[]> = {
+    'DISMANTLING EBIS': ['ONT', 'STB', 'AP', 'IP CAMERA'],
+    'REPLACEMENT': ['ONT', 'STB'],
+};
+
+function KendalaCard({ kendalaOrders, isLoading, onAssign, onCancel }: { 
+    kendalaOrders: ProvisioningRecord[], 
+    isLoading: boolean,
+    onAssign: (order: ProvisioningRecord) => void,
+    onCancel: (order: ProvisioningRecord) => void,
+}) {
+    return (
+        <Card className="border-destructive">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-destructive">
+                    <AlertTriangle /> Monitoring Kendala
+                </CardTitle>
+                <CardDescription>Daftar order provisioning yang mengalami kendala dan memerlukan perhatian.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {isLoading ? <Skeleton className="h-10 w-full" /> : 
+                 kendalaOrders && kendalaOrders.length > 0 ? (
+                    <ul className="space-y-3">
+                        {kendalaOrders.map(order => (
+                             <li key={order.id} className="text-sm p-3 bg-destructive/10 rounded-md flex items-start justify-between gap-2">
+                                <Link href={`/dashboard/provi-orders/${order.id}`} className="flex-grow hover:bg-destructive/10 -m-3 p-3 rounded-l-md">
+                                    <div className="flex justify-between items-start">
+                                        <span className="font-semibold">{order.customerName} ({order.workorder})</span>
+                                        <Badge variant="outline" className="capitalize shrink-0">{order.kendalaCategory || 'Teknis'}</Badge>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-1">Teknisi: {order.assignedTo_userName}</p>
+                                    <p className="text-sm mt-1 truncate">Alasan: {order.kendalaNotes || 'Tidak ada catatan.'}</p>
+                                </Link>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuLabel>Aksi Kendala</DropdownMenuLabel>
+                                        <DropdownMenuItem onSelect={() => onAssign(order)}>
+                                            <RefreshCw className="mr-2 h-4 w-4" />
+                                            Assign Ulang Teknisi
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onSelect={() => onCancel(order)} className="text-destructive focus:text-destructive">
+                                            <X className="mr-2 h-4 w-4" />
+                                            Batalkan Order
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </li>
+                        ))}
+                    </ul>
+                ) : <p className="text-sm text-muted-foreground">Tidak ada order yang berkendala saat ini.</p>}
+            </CardContent>
+        </Card>
+    );
+}
 
 function ManualOrderForm({ users, onSave, onCancel, currentUserProfile }: { users: UserProfile[], onSave: (data: Partial<ProvisioningRecord>) => Promise<void>, onCancel: () => void, currentUserProfile: UserProfile | null }) {
     const [isSaving, setIsSaving] = useState(false);
@@ -378,61 +436,6 @@ function AssignTechnicianDialog({ order, users, isOpen, onOpenChange, onAssign, 
   );
 }
 
-function KendalaCard({ kendalaOrders, isLoading, onAssign, onCancel }: { 
-    kendalaOrders: ProvisioningRecord[], 
-    isLoading: boolean,
-    onAssign: (order: ProvisioningRecord) => void,
-    onCancel: (order: ProvisioningRecord) => void,
-}) {
-    return (
-        <Card className="border-destructive">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-destructive">
-                    <AlertTriangle /> Monitoring Kendala
-                </CardTitle>
-                <CardDescription>Daftar order provisioning yang mengalami kendala dan memerlukan perhatian.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                {isLoading ? <Skeleton className="h-10 w-full" /> : 
-                 kendalaOrders && kendalaOrders.length > 0 ? (
-                    <ul className="space-y-3">
-                        {kendalaOrders.map(order => (
-                             <li key={order.id} className="text-sm p-3 bg-destructive/10 rounded-md flex items-start justify-between gap-2">
-                                <Link href={`/dashboard/provi-orders/${order.id}`} className="flex-grow hover:bg-destructive/10 -m-3 p-3 rounded-l-md">
-                                    <div className="flex justify-between items-start">
-                                        <span className="font-semibold">{order.customerName} ({order.workorder})</span>
-                                        <Badge variant="outline" className="capitalize shrink-0">{order.kendalaCategory || 'Teknis'}</Badge>
-                                    </div>
-                                    <p className="text-xs text-muted-foreground mt-1">Teknisi: {order.assignedTo_userName}</p>
-                                    <p className="text-sm mt-1 truncate">Alasan: {order.kendalaNotes || 'Tidak ada catatan.'}</p>
-                                </Link>
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
-                                            <MoreHorizontal className="h-4 w-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DropdownMenuLabel>Aksi Kendala</DropdownMenuLabel>
-                                        <DropdownMenuItem onSelect={() => onAssign(order)}>
-                                            <RefreshCw className="mr-2 h-4 w-4" />
-                                            Assign Ulang Teknisi
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onSelect={() => onCancel(order)} className="text-destructive focus:text-destructive">
-                                            <X className="mr-2 h-4 w-4" />
-                                            Batalkan Order
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            </li>
-                        ))}
-                    </ul>
-                ) : <p className="text-sm text-muted-foreground">Tidak ada order yang berkendala saat ini.</p>}
-            </CardContent>
-        </Card>
-    );
-}
-
 function PivotTable({ data, workzones }: { data: any; workzones: string[]; }) {
     const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
 
@@ -556,7 +559,7 @@ function PivotTable({ data, workzones }: { data: any; workzones: string[]; }) {
                  </TableFooter>
             </Table>
         </div>
-    )
+    );
 }
 
 
@@ -606,28 +609,12 @@ export default function ProvisioningDashboardPage() {
   const [completedPage, setCompletedPage] = useState(1);
   const [cancelledPage, setCancelledPage] = useState(1);
 
-  const safeToDate = (timestamp: any): Date | null => {
-    if (!timestamp) return null;
-    if (timestamp instanceof Timestamp) {
-        return timestamp.toDate();
-    }
-    if (typeof timestamp === 'string') {
-        const date = new Date(timestamp);
-        if (isValid(date)) return date;
-    }
-    if (typeof timestamp === 'object' && timestamp.seconds) {
-        return new Timestamp(timestamp.seconds, timestamp.nanoseconds).toDate();
-    }
-    if (timestamp instanceof Date && isValid(timestamp)) return timestamp;
-    return null;
-  };
-  
   const monthYearOptions = useMemo(() => {
     const periods = new Set<string>();
     const allRecords = data || [];
 
     allRecords.forEach(order => {
-        const date = safeToDate(order.dateCreated);
+        const date = order.dateCreated?.toDate();
         if (date) {
             periods.add(format(date, 'yyyy-MM'));
         }
@@ -966,7 +953,7 @@ export default function ProvisioningDashboardPage() {
     setIsAssigning(true); // Re-use assigning state for loading
     const docRef = doc(firestore, 'provisioning-records', orderToCancel.id);
     try {
-        await updateDoc(docRef, { provisioningStatus: 'cancelled' });
+        await updateDoc(docRef, { provisioningStatus: 'cancelled', cancelledAt: serverTimestamp() });
         toast({ title: 'Order Dibatalkan', description: `Order untuk ${orderToCancel.customerName} telah dibatalkan.`});
         setOrderToCancel(null);
     } catch (error: any) {
@@ -991,68 +978,83 @@ export default function ProvisioningDashboardPage() {
     }
   };
   
-  const dateFilteredData = useMemo(() => {
-    const allOrders = data || [];
-    if (filterMode === 'all') {
-      return allOrders;
-    }
-    
-    if (filterMode === 'month') {
-        if (!selectedMonth) return [];
-        const [year, month] = selectedMonth.split('-').map(Number);
-        const startDate = startOfMonth(new Date(year, month - 1));
-        const endDate = endOfMonth(startDate);
-        return allOrders.filter(o => {
-            const orderDate = safeToDate(o.dateCreated);
-            return orderDate && orderDate >= startDate && orderDate <= endDate;
-        });
-    }
+    const { unassignedOrders, inProgressOrders, completedOrders, kendalaOrders, cancelledOrders, allFilteredOrders } = useMemo(() => {
+        if (!data) return { unassignedOrders: [], inProgressOrders: [], completedOrders: [], kendalaOrders: [], cancelledOrders: [], allFilteredOrders: [] };
 
-    if (filterMode === 'range') {
-        if (!dateRange?.from) return [];
-        const startDate = startOfDay(dateRange.from);
-        const endDate = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
-        return allOrders.filter(o => {
-            const orderDate = safeToDate(o.dateCreated);
-            return orderDate && orderDate >= startDate && orderDate <= endDate;
+        const baseFiltered = data.filter(o => {
+            if (selectedWorkzone !== 'all') {
+                const orderWz = (o.workzone || 'N/A').toUpperCase();
+                const upperSelectedWorkzone = selectedWorkzone.toUpperCase();
+                if (!(orderWz === upperSelectedWorkzone || (upperSelectedWorkzone === 'KUD' && (orderWz === 'KDS' || orderWz === 'N/A')))) {
+                    return false;
+                }
+            }
+            if (searchQuery) {
+                const lowerQuery = searchQuery.toLowerCase();
+                if (!Object.values(o).some(val => String(val).toLowerCase().includes(lowerQuery))) {
+                    return false;
+                }
+            }
+            if (selectedTechnician !== 'all') {
+                if (o.assignedTo_userId !== selectedTechnician && o.assignedTo_crew_userId !== selectedTechnician) {
+                    return false;
+                }
+            }
+            return true;
         });
-    }
-    
-    return allOrders;
-  }, [data, filterMode, selectedMonth, dateRange]);
-  
-  const { unassignedOrders, inProgressOrders, completedOrders, kendalaOrders, cancelledOrders } = useMemo(() => {
-    let filteredOrders = dateFilteredData || [];
 
-    if (selectedWorkzone !== 'all') {
-        const upperSelectedWorkzone = selectedWorkzone.toUpperCase();
-        filteredOrders = filteredOrders.filter(o => {
-            const orderWz = (o.workzone || 'N/A').toUpperCase();
-            return orderWz === upperSelectedWorkzone || (upperSelectedWorkzone === 'KUD' && (orderWz === 'KDS' || orderWz === 'N/A'));
-        });
-    }
-    if (searchQuery) {
-        const lowerQuery = searchQuery.toLowerCase();
-        filteredOrders = filteredOrders.filter(o =>
-            Object.values(o).some(val => String(val).toLowerCase().includes(lowerQuery))
-        );
-    }
-    if (selectedTechnician !== 'all') {
-        filteredOrders = filteredOrders.filter(o => o.assignedTo_userId === selectedTechnician || o.assignedTo_crew_userId === selectedTechnician);
-    }
-    
-    return {
-        unassignedOrders: filteredOrders.filter(o => !o.provisioningStatus || o.provisioningStatus === 'unassigned'),
-        inProgressOrders: filteredOrders.filter(o => ['assigned', 'picked_up', 'departed', 'arrived', 'wip_odp_done'].includes(o.provisioningStatus || '')),
-        completedOrders: filteredOrders.filter(o => o.provisioningStatus === 'completed'),
-        kendalaOrders: filteredOrders.filter(o => o.provisioningStatus === 'kendala'),
-        cancelledOrders: filteredOrders.filter(o => o.provisioningStatus === 'cancelled'),
-    };
-  }, [dateFilteredData, selectedWorkzone, searchQuery, selectedTechnician]);
+        const unassigned = baseFiltered.filter(o => !o.provisioningStatus || o.provisioningStatus === 'unassigned');
+        
+        const getFilteredByDate = (orders: ProvisioningRecord[], dateField: keyof ProvisioningRecord) => {
+            if (filterMode === 'all') return orders;
+
+            return orders.filter(o => {
+                const relevantDate = safeToDate((o as any)[dateField]);
+                if (!relevantDate) return false;
+                
+                if (filterMode === 'month') {
+                    if (!selectedMonth) return false;
+                    const [year, month] = selectedMonth.split('-').map(Number);
+                    const startDate = startOfMonth(new Date(year, month - 1));
+                    const endDate = endOfMonth(startDate);
+                    return relevantDate >= startDate && relevantDate <= endDate;
+                }
+                
+                if (filterMode === 'range') {
+                    if (!dateRange?.from) return false;
+                    const startDate = startOfDay(dateRange.from);
+                    const endDate = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
+                    return relevantDate >= startDate && relevantDate <= endDate;
+                }
+                return false;
+            });
+        };
+
+        const inProgressAll = baseFiltered.filter(o => ['assigned', 'picked_up', 'departed', 'arrived', 'wip_odp_done'].includes(o.provisioningStatus || ''));
+        const completedAll = baseFiltered.filter(o => o.provisioningStatus === 'completed');
+        const kendalaAll = baseFiltered.filter(o => o.provisioningStatus === 'kendala');
+        const cancelledAll = baseFiltered.filter(o => o.provisioningStatus === 'cancelled');
+
+        const inProgress = getFilteredByDate(inProgressAll, 'assignedAt');
+        const completed = getFilteredByDate(completedAll, 'completedAt');
+        const kendala = getFilteredByDate(kendalaAll, 'kendalaAt');
+        const cancelled = getFilteredByDate(cancelledAll, 'cancelledAt');
+
+        const allFiltered = [...unassigned, ...inProgress, ...completed, ...kendala, ...cancelled];
+
+        return {
+            unassignedOrders: unassigned,
+            inProgressOrders: inProgress,
+            completedOrders: completed,
+            kendalaOrders: kendala,
+            cancelledOrders: cancelled,
+            allFilteredOrders: allFiltered,
+        };
+    }, [data, filterMode, selectedMonth, dateRange, selectedWorkzone, searchQuery, selectedTechnician]);
 
   const pivotData = useMemo(() => {
     const pivot: any = {};
-    const dataToProcess = dateFilteredData.filter(item => {
+    const dataToProcess = allFilteredOrders.filter(item => {
         if (selectedTechnician !== 'all' && (item.assignedTo_userId !== selectedTechnician && item.assignedTo_crew_userId !== selectedTechnician)) {
             return false;
         }
@@ -1095,12 +1097,8 @@ export default function ProvisioningDashboardPage() {
     });
 
     return pivot;
-  }, [dateFilteredData, selectedTechnician]);
+  }, [allFilteredOrders, selectedTechnician]);
   
-  const allFilteredOrders = useMemo(() => {
-    return [...unassignedOrders, ...inProgressOrders, ...completedOrders, ...kendalaOrders, ...cancelledOrders];
-  }, [unassignedOrders, inProgressOrders, completedOrders, kendalaOrders, cancelledOrders]);
-
   const dateHeader = useMemo(() => {
     if (filterMode === 'all') return 'Semua Waktu';
     if (filterMode === 'month' && selectedMonth) {
@@ -1185,8 +1183,7 @@ export default function ProvisioningDashboardPage() {
   
   const isDataLoading = areRecordsLoading || areTechniciansLoading;
 
-
-  return (
+    return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Dashboard Provisioning</h1>
@@ -1232,10 +1229,26 @@ export default function ProvisioningDashboardPage() {
                     <ManualOrderForm users={technicians || []} onSave={handleManualSave} onCancel={() => setIsManualFormOpen(false)} currentUserProfile={userProfile} />
                 </DialogContent>
             </Dialog>
-            <Button variant="destructive" onClick={handleDeleteAll} disabled={isImporting || isDeleting || !data || data.length === 0}>
-                {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-                Hapus Semua Data
-            </Button>
+            <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <Button variant="destructive" disabled={isImporting || isDeleting || !data || data.length === 0}>
+                        {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                        Hapus Semua Data
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Anda Yakin?</AlertDialogTitle>
+                        <AlertDialogDescription>Tindakan ini akan menghapus semua data provisioning secara permanen. Pastikan Anda memiliki cadangan.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Batal</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteAll} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                            {isDeleting ? 'Menghapus...' : 'Ya, Hapus Semua'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
           </div>
         </CardContent>
       </Card>
@@ -1572,5 +1585,3 @@ export default function ProvisioningDashboardPage() {
     </div>
   );
 }
-
-    

@@ -414,6 +414,7 @@ export type ProvisioningRecord = {
   kendalaCategory?: 'pelanggan' | 'teknis' | 'batal' | null;
   kendalaPhotos?: string[];
   kendalaAt?: any; // Timestamp
+  cancelledAt?: any; // Timestamp for when an order is cancelled
   customerHousePhoto?: string;
   odpName?: string;
   odpPort?: string;
@@ -435,7 +436,3 @@ export type RekapDataItem = {
     userId: string;
     notaId?: string;
 };
-
-    
-
-  
