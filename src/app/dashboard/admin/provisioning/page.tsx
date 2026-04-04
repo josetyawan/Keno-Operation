@@ -609,12 +609,20 @@ export default function ProvisioningDashboardPage() {
   const [completedPage, setCompletedPage] = useState(1);
   const [cancelledPage, setCancelledPage] = useState(1);
 
+  const safeToDate = (timestamp: any): Date | null => {
+      if (!timestamp) return null;
+      if (timestamp.toDate) return timestamp.toDate();
+      if (timestamp instanceof Date) return timestamp;
+      const d = new Date(timestamp);
+      return d instanceof Date && !isNaN(d.getTime()) ? d : null;
+  };
+
   const monthYearOptions = useMemo(() => {
     const periods = new Set<string>();
     const allRecords = data || [];
 
     allRecords.forEach(order => {
-        const date = order.dateCreated?.toDate();
+        const date = safeToDate(order.dateCreated);
         if (date) {
             periods.add(format(date, 'yyyy-MM'));
         }
@@ -1003,6 +1011,7 @@ export default function ProvisioningDashboardPage() {
             return true;
         });
 
+        // 1. Unassigned orders are always shown, regardless of date filter.
         const unassigned = baseFiltered.filter(o => !o.provisioningStatus || o.provisioningStatus === 'unassigned');
         
         const getFilteredByDate = (orders: ProvisioningRecord[], dateField: keyof ProvisioningRecord) => {
@@ -1183,7 +1192,7 @@ export default function ProvisioningDashboardPage() {
   
   const isDataLoading = areRecordsLoading || areTechniciansLoading;
 
-    return (
+  return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Dashboard Provisioning</h1>
@@ -1290,7 +1299,7 @@ export default function ProvisioningDashboardPage() {
                     </div>
                 </div>
                 <div className="pt-4 border-t">
-                  <Label>Filter Berdasarkan Tanggal Dibuat</Label>
+                  <Label>Filter Berdasarkan Tanggal</Label>
                   <Tabs value={filterMode} onValueChange={(value) => {
                       setFilterMode(value as any);
                   }} className="w-full mt-2">
@@ -1581,7 +1590,8 @@ export default function ProvisioningDashboardPage() {
             </AlertDialogContent>
         </AlertDialog>
       )}
-
     </div>
   );
 }
+
+  
