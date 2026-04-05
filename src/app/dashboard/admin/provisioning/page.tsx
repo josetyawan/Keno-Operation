@@ -578,7 +578,7 @@ function BotPlottingCard({ plottingData }: { plottingData: any[] }) {
                                 <h3 className="font-bold text-base mb-2 pb-1 border-b border-dashed">{teamName}</h3>
                                 <div className="space-y-1">
                                     {orders.map((order: any, i: number) => (
-                                        <p key={i}>{order.status} {order.scOrder} {order.productName}</p>
+                                        <p key={i}>{order.statusEmoji} {order.statusText} {order.scOrder} {order.productName}</p>
                                     ))}
                                 </div>
                             </div>
@@ -1138,15 +1138,15 @@ export default function ProvisioningDashboardPage() {
     return pivot;
   }, [allFilteredOrders, selectedTechnician]);
   
-  const getStatusEmoji = (status: ProvisioningRecord['provisioningStatus']) => {
+  const getStatusInfo = (status: ProvisioningRecord['provisioningStatus']) => {
       switch (status) {
-          case 'assigned': return '➡️';
-          case 'picked_up': return '✅';
-          case 'departed': return '🚚';
-          case 'arrived': return '📍';
-          case 'wip_odp_done': return '🛠️';
-          case 'kendala': return '⚠️';
-          default: return '➡️';
+          case 'assigned': return { emoji: '➡️', text: 'Ditugaskan' };
+          case 'picked_up': return { emoji: '✅', text: 'Pickup' };
+          case 'departed': return { emoji: '🚚', text: 'Berangkat' };
+          case 'arrived': return { emoji: '📍', text: 'Tiba' };
+          case 'wip_odp_done': return { emoji: '🛠️', text: 'Progres' };
+          case 'kendala': return { emoji: '⚠️', text: 'Kendala' };
+          default: return { emoji: '➡️', text: 'Ditugaskan' };
       }
   };
 
@@ -1159,7 +1159,7 @@ export default function ProvisioningDashboardPage() {
       o.assignedTo_userName
     );
   
-    const teams: Record<string, { teamName: string; orders: { scOrder: string; productName: string; status: string; }[] }> = {};
+    const teams: Record<string, { teamName: string; orders: { scOrder: string; productName: string; statusEmoji: string; statusText: string; }[] }> = {};
   
     activeOrders.forEach(order => {
       let teamName = order.assignedTo_userName!.split(' ')[0].toUpperCase();
@@ -1170,11 +1170,14 @@ export default function ProvisioningDashboardPage() {
       if (!teams[teamName]) {
         teams[teamName] = { teamName, orders: [] };
       }
-  
+      
+      const { emoji, text } = getStatusInfo(order.provisioningStatus);
+
       teams[teamName].orders.push({
         scOrder: order.scOrder || 'NO_SC',
         productName: order.productName || 'No Product Info',
-        status: getStatusEmoji(order.provisioningStatus)
+        statusEmoji: emoji,
+        statusText: text
       });
     });
   
@@ -1231,12 +1234,17 @@ export default function ProvisioningDashboardPage() {
   const handleSendPlotting = async () => {
       setIsSendingPlotting(true);
       try {
-          if (!allFilteredOrders || allFilteredOrders.length === 0) {
+          if (!data || data.length === 0) { // Always use all data for plotting
             throw new Error("Tidak ada data untuk dikirim.");
           }
+
+          const activeOrders = data.filter(o =>
+            o.provisioningStatus &&
+            ['assigned', 'picked_up', 'departed', 'arrived', 'wip_odp_done', 'kendala'].includes(o.provisioningStatus)
+          );
           
           const payload = {
-              allOrders: allFilteredOrders,
+              allOrders: activeOrders,
               dateHeader: format(new Date(), 'dd/MM/yyyy', { locale: idLocale }),
           };
 

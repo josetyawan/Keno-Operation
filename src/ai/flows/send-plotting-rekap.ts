@@ -8,15 +8,15 @@ const sendPlottingRekapInputSchema = z.object({
   dateHeader: z.string(),
 });
 
-const getStatusEmoji = (status: ProvisioningRecord['provisioningStatus']) => {
+const getStatusInfo = (status: ProvisioningRecord['provisioningStatus']) => {
     switch (status) {
-        case 'assigned': return '➡️';
-        case 'picked_up': return '✅';
-        case 'departed': return '🚚';
-        case 'arrived': return '📍';
-        case 'wip_odp_done': return '🛠️';
-        case 'kendala': return '⚠️';
-        default: return '➡️';
+        case 'assigned': return { emoji: '➡️', text: 'Ditugaskan' };
+        case 'picked_up': return { emoji: '✅', text: 'Pickup' };
+        case 'departed': return { emoji: '🚚', text: 'Berangkat' };
+        case 'arrived': return { emoji: '📍', text: 'Tiba' };
+        case 'wip_odp_done': return { emoji: '🛠️', text: 'Progres' };
+        case 'kendala': return { emoji: '⚠️', text: 'Kendala' };
+        default: return { emoji: '➡️', text: 'Ditugaskan' };
     }
 };
 
@@ -31,7 +31,7 @@ export async function sendPlottingRekap(
     o.assignedTo_userName
   );
 
-  const teams: Record<string, { teamName: string; orders: { scOrder: string; productName: string; status: string; }[] }> = {};
+  const teams: Record<string, { teamName: string; orders: { scOrder: string; productName: string; statusEmoji: string; statusText: string; }[] }> = {};
 
   activeOrders.forEach(order => {
     if (!order.assignedTo_userName) return;
@@ -44,11 +44,14 @@ export async function sendPlottingRekap(
     if (!teams[teamName]) {
       teams[teamName] = { teamName, orders: [] };
     }
+    
+    const { emoji, text } = getStatusInfo(order.provisioningStatus);
 
     teams[teamName].orders.push({
       scOrder: order.scOrder || 'NO_SC',
       productName: order.productName || 'No Product Info',
-      status: getStatusEmoji(order.provisioningStatus)
+      statusEmoji: emoji,
+      statusText: text,
     });
   });
 
@@ -63,7 +66,7 @@ export async function sendPlottingRekap(
   sortedTeams.forEach(team => {
     message += `${team.teamName}\n`;
     team.orders.forEach(order => {
-      message += `${order.status} ${order.scOrder} ${order.productName}\n`;
+      message += `${order.statusEmoji} ${order.statusText} ${order.scOrder} ${order.productName}\n`;
     });
     message += '\n';
   });
