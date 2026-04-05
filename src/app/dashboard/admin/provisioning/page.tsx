@@ -1276,6 +1276,9 @@ export default function ProvisioningDashboardPage() {
   const handleSendPlotting = async () => {
       setIsSendingPlotting(true);
       try {
+        if (!data) {
+            throw new Error("Data order belum termuat.");
+        }
         const todayStart = startOfDay(new Date());
         const todayEnd = endOfDay(new Date());
   
@@ -1745,7 +1748,7 @@ export default function ProvisioningDashboardPage() {
                 <AlertDialogHeader>
                     <AlertDialogTitle>Batalkan Order Ini?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        Order untuk <strong>{orderToCancel.customerName}</strong> akan ditandai sebagai "dibatalkan" dan tidak akan muncul di antrian lagi. Anda dapat menghapusnya secara permanen nanti jika diperlukan.
+                        Order untuk <strong>{orderToCancel.customerName}</strong> akan ditandai sebagai "dibatalkan" dan tidak akan muncul di antrian lagi.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
