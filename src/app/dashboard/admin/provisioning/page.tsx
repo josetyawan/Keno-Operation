@@ -1094,6 +1094,21 @@ export default function ProvisioningDashboardPage() {
         };
     }, [data, filterMode, selectedMonth, dateRange, selectedWorkzone, searchQuery, selectedTechnician]);
 
+  const getShortName = (fullName?: string): string => {
+    if (!fullName) return '';
+    const parts = fullName.trim().split(' ').filter(p => p);
+    if (parts.length === 0) return '';
+    if (parts.length === 1) return parts[0].toUpperCase();
+  
+    for (let i = parts.length - 1; i >= 0; i--) {
+        if (parts[i].length > 1) {
+            return parts[i].toUpperCase();
+        }
+    }
+    
+    return parts[parts.length - 1].toUpperCase();
+  };
+
   const pivotData = useMemo(() => {
     const pivot: Record<string, { count: Record<string, number>, orders: {id: string, scOrder: string, status: string, workzone: string}[], statusCounts: Record<string, number>, fullOrders: any[] }> = {};
     const dataToProcess = allFilteredOrders.filter(item => {
@@ -1108,7 +1123,13 @@ export default function ProvisioningDashboardPage() {
         const wzRaw = (workzone || 'N/A').toUpperCase();
         const wz = (wzRaw === 'KDS' || wzRaw === 'N/A') ? 'KUD' : wzRaw;
         
-        const teamMembers = [assignedTo_userName, assignedTo_crew_userName].filter(Boolean).map(name => name.split(' ')[0].toUpperCase());
+        const mainTechName = getShortName(assignedTo_userName);
+        const crewTechName = getShortName(assignedTo_crew_userName);
+        
+        let teamMembers: string[] = [];
+        if(mainTechName) teamMembers.push(mainTechName);
+        if(crewTechName) teamMembers.push(crewTechName);
+
         const techGroupKey = teamMembers.length > 0 ? teamMembers.sort().join('-') : 'Unassigned';
         
         if (!pivot[techGroupKey]) {
@@ -1162,9 +1183,11 @@ export default function ProvisioningDashboardPage() {
     const teams: Record<string, { teamName: string; orders: { scOrder: string; productName: string; statusEmoji: string; statusText: string; }[] }> = {};
   
     activeOrders.forEach(order => {
-      let teamName = order.assignedTo_userName!.split(' ')[0].toUpperCase();
+      const mainTechName = getShortName(order.assignedTo_userName);
+      let teamName = mainTechName;
       if (order.assignedTo_crew_userName) {
-        teamName += `-${order.assignedTo_crew_userName.split(' ')[0].toUpperCase()}`;
+          const crewName = getShortName(order.assignedTo_crew_userName);
+          teamName += `-${crewName}`;
       }
   
       if (!teams[teamName]) {
@@ -1245,7 +1268,7 @@ export default function ProvisioningDashboardPage() {
           
           const payload = {
               allOrders: activeOrders,
-              dateHeader: format(new Date(), 'dd/MM/yyyy', { locale: idLocale }),
+              dateHeader: format(new Date(), 'dd/MM/yyyy HH:mm', { locale: idLocale }),
           };
 
           const result = await triggerPlottingRekapAction(payload);

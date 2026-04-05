@@ -1,3 +1,4 @@
+
 'use server';
 
 import { z } from 'zod';
@@ -20,6 +21,21 @@ const getStatusInfo = (status: ProvisioningRecord['provisioningStatus']) => {
     }
 };
 
+const getShortName = (fullName?: string): string => {
+    if (!fullName) return '';
+    const parts = fullName.trim().split(' ').filter(p => p);
+    if (parts.length === 0) return '';
+    if (parts.length === 1) return parts[0].toUpperCase();
+  
+    for (let i = parts.length - 1; i >= 0; i--) {
+        if (parts[i].length > 1) {
+            return parts[i].toUpperCase();
+        }
+    }
+    
+    return parts[parts.length - 1].toUpperCase();
+};
+
 export async function sendPlottingRekap(
   input: z.infer<typeof sendPlottingRekapInputSchema>
 ): Promise<string> {
@@ -36,9 +52,12 @@ export async function sendPlottingRekap(
   activeOrders.forEach(order => {
     if (!order.assignedTo_userName) return;
 
-    let teamName = order.assignedTo_userName.split(' ')[0].toUpperCase();
+    const mainTechName = getShortName(order.assignedTo_userName);
+    let teamName = mainTechName;
+
     if (order.assignedTo_crew_userName) {
-      teamName += `-${order.assignedTo_crew_userName.split(' ')[0].toUpperCase()}`;
+      const crewName = getShortName(order.assignedTo_crew_userName);
+      teamName += `-${crewName}`;
     }
 
     if (!teams[teamName]) {
