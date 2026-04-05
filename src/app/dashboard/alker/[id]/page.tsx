@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -8,11 +9,12 @@ import { id as idLocale } from 'date-fns/locale';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Check, X, Wrench, Printer } from 'lucide-react';
+import { ArrowLeft, Check, X, Wrench, Printer, FileSpreadsheet, Loader2 } from 'lucide-react';
 import type { AlkerChecklist, UserProfile } from '@/lib/types';
 import { useMemo, useState } from 'react';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
 
 const safeToDate = (timestamp: any): Date | null => {
   if (!timestamp) return null;
@@ -56,6 +58,8 @@ export default function AlkerDetailPage() {
   const router = useRouter();
   const { user } = useUser();
   const firestore = useFirestore();
+  const { toast } = useToast();
+  const [isExporting, setIsExporting] = useState(false);
 
   const checklistRef = useMemoFirebase(() => doc(firestore, 'tool-checklists', id), [firestore, id]);
   const { data: checklist, isLoading } = useDoc<AlkerChecklist>(checklistRef);
@@ -72,6 +76,77 @@ export default function AlkerDetailPage() {
   const handlePrint = () => {
     window.print();
   };
+  
+  const dateSubmitted = safeToDate(checklist?.dateSubmitted);
+
+  const handleExportExcel = async () => {
+    if (!checklist || !dateSubmitted) {
+        toast({
+            variant: "destructive",
+            title: "Data tidak tersedia",
+            description: "Tidak ada data untuk diekspor.",
+        });
+        return;
+    }
+
+    setIsExporting(true);
+    try {
+        const XLSX = await import('xlsx');
+
+        const headerInfo = [
+            { A: 'Laporan Pengecekan Alat Kerja' },
+            { A: '' },
+            { A: 'Nama Teknisi', B: checklist.userName },
+            { A: 'Jabatan', B: checklist.userJabatan },
+            { A: 'Unit', B: checklist.userUnit || '-' },
+            { A: 'Rekan Kerja', B: checklist.crewUserName || '-' },
+            { A: 'Tanggal Laporan', B: format(dateSubmitted, 'dd MMMM yyyy, HH:mm', { locale: idLocale }) },
+            { A: '' },
+        ];
+
+        const dataToExport = checklist.tools.map((tool, index) => ({
+            'No': index + 1,
+            'Nama Alat': tool.toolName,
+            'Kondisi': tool.condition,
+            'Merek/Tipe': tool.brand || '-',
+            'Serial Number': tool.serialNumber || '-',
+        }));
+
+        const ws = XLSX.utils.json_to_sheet([]);
+        XLSX.utils.sheet_add_json(ws, headerInfo, { skipHeader: true, origin: 'A1' });
+        XLSX.utils.sheet_add_json(ws, dataToExport, { origin: `A${headerInfo.length + 1}` });
+
+        const colWidths = [
+            { wch: 5 }, // No
+            { wch: 60 }, // Nama Alat
+            { wch: 15 }, // Kondisi
+            { wch: 25 }, // Merek/Tipe
+            { wch: 25 }, // Serial Number
+        ];
+        ws['!cols'] = colWidths;
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Pengecekan Alker');
+        
+        const fileName = `Alker_${checklist.userName.replace(/ /g, '_')}_${format(dateSubmitted, 'yyyyMMdd')}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+        
+        toast({
+            title: "Ekspor Berhasil",
+            description: "Laporan pengecekan alker telah diunduh sebagai file Excel.",
+        });
+
+    } catch (error) {
+        console.error("Failed to export Excel:", error);
+        toast({
+            variant: "destructive",
+            title: "Gagal Mengekspor",
+            description: "Terjadi kesalahan saat membuat file Excel.",
+        });
+    } finally {
+        setIsExporting(false);
+    }
+  };
 
   if (isLoading) {
     return <div className="mx-auto grid max-w-4xl flex-1 auto-rows-max gap-6"><Skeleton className="h-10 w-full" /><Skeleton className="h-[500px] w-full" /></div>;
@@ -86,8 +161,6 @@ export default function AlkerDetailPage() {
       </div>
     );
   }
-
-  const dateSubmitted = safeToDate(checklist.dateSubmitted);
 
   return (
     <>
@@ -121,10 +194,16 @@ export default function AlkerDetailPage() {
               Dikirim oleh {checklist.userName} pada {dateSubmitted ? format(dateSubmitted, 'dd MMMM yyyy, HH:mm', { locale: idLocale }) : ''}
             </p>
           </div>
-          <Button onClick={handlePrint} variant="outline" className="ml-auto">
-            <Printer className="mr-2" />
-            Cetak
-          </Button>
+          <div className="ml-auto flex items-center gap-2">
+            <Button onClick={handleExportExcel} disabled={isExporting} variant="outline">
+              {isExporting ? <Loader2 className="mr-2 animate-spin" /> : <FileSpreadsheet className="mr-2" />}
+              Download Excel
+            </Button>
+            <Button onClick={handlePrint} variant="outline">
+              <Printer className="mr-2" />
+              Cetak
+            </Button>
+          </div>
         </div>
 
         <Card>
