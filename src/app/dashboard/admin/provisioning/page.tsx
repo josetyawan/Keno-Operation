@@ -1124,6 +1124,7 @@ export default function ProvisioningDashboardPage() {
   };
 
   const pivotData = useMemo(() => {
+    if (!data) return {};
     const pivot: Record<string, { count: Record<string, number>, orders: {id: string, scOrder: string, status: string, workzone: string}[], statusCounts: Record<string, number>, fullOrders: any[] }> = {};
     const dataToProcess = allFilteredOrders.filter(item => {
         if (selectedTechnician !== 'all' && (item.assignedTo_userId !== selectedTechnician && item.assignedTo_crew_userId !== selectedTechnician)) {
@@ -1171,7 +1172,7 @@ export default function ProvisioningDashboardPage() {
     });
 
     return pivot;
-  }, [allFilteredOrders, selectedTechnician]);
+  }, [allFilteredOrders, selectedTechnician, data]);
   
   const plottingCardData = useMemo(() => {
     if (!data) return [];
