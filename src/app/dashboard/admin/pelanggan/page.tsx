@@ -1216,6 +1216,21 @@ export default function PelangganAdminPage() {
                                         <Label className="text-muted-foreground">ODP QR Code</Label>
                                         <p className="font-semibold font-mono">{selectedPelanggan.odpQRCodeUrl || '-'}</p>
                                     </div>
+                                    <div className="col-span-2 mt-4 border-t pt-4">
+                                        <Label className="text-muted-foreground">Info Data</Label>
+                                        <p className="text-sm">
+                                            Dibuat oleh: {selectedPelanggan.userEmail}
+                                            <br />
+                                            Pada: {selectedPelanggan.dateAdded?.toDate ? format(selectedPelanggan.dateAdded.toDate(), 'dd MMMM yyyy, HH:mm', { locale: idLocale }) : '-'}
+                                        </p>
+                                        {selectedPelanggan.lastEditedBy && (
+                                            <p className="text-sm mt-2">
+                                                Terakhir diubah oleh: {selectedPelanggan.lastEditedBy}
+                                                <br />
+                                                Pada: {selectedPelanggan.lastEditedDate?.toDate ? format(selectedPelanggan.lastEditedDate.toDate(), 'dd MMMM yyyy, HH:mm', { locale: idLocale }) : '-'}
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="md:col-span-1 space-y-2">
                                     <Label>Foto Lokasi</Label>
@@ -1262,6 +1277,7 @@ export default function PelangganAdminPage() {
         </div>
     );
 }
+
 
 
 
