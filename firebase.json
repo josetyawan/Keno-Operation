@@ -9,8 +9,8 @@
     "rewrites": [
       {
         "source": "**",
-        "apphosting": {
-          "backendId": "studio-7759201113-b7263",
+        "run": {
+          "serviceId": "studio",
           "region": "us-central1"
         }
       }

@@ -21,12 +21,21 @@ export async function GET(request: NextRequest) {
     try {
         const { firestore } = initializeFirebase();
         
-        // Fetch only orders that are "active" for today, now including unassigned
         const allActiveOrders = await fetchCollection<ProvisioningRecord>(firestore, 'provisioning-records', [
             where('provisioningStatus', 'in', ['unassigned', 'assigned', 'picked_up', 'departed', 'arrived', 'wip_odp_done', 'kendala'])
         ]);
         
         if (allActiveOrders.length === 0) {
+            // Send a "nothing to do" message to the group on the first cron of the day.
+            const currentHour = new Date().getUTCHours() + 7; // Convert to WIB
+            if (currentHour >= 10 && currentHour < 12) {
+                 const messageText = `<pre>LEMBAR KERJA ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: idLocale })}\n\nTidak ada order aktif untuk di-plot hari ini.</pre>`;
+                 const botToken = process.env.TELEGRAM_BOT_TOKEN;
+                 const chatId = process.env.TELEGRAM_CHAT_ID_PROVISIONING;
+                 if (botToken && chatId) {
+                     await sendTelegramMessage({ botToken, chatId, text: messageText });
+                 }
+            }
             return NextResponse.json({ message: 'No active orders to report for plotting.' });
         }
 
