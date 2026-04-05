@@ -38,13 +38,13 @@ Ganti `<PROJECT_NUMBER>` dengan nomor yang Anda catat pada langkah 2.1.
 
 **Contoh:** Jika *project number* Anda adalah `1234567890`, maka nama *service account*-nya adalah `service-1234567890@gcp-sa-cloudscheduler.iam.gserviceaccount.com`.
 
-#### 2.3. Berikan Peran "App Hosting Invoker"
+#### 2.3. Berikan Peran "Cloud Run Invoker"
 
 1.  Di Google Cloud Console, buka menu navigasi (ikon garis tiga di kiri atas).
 2.  Pilih **IAM & Admin** > **IAM**.
 3.  Di bagian atas halaman IAM, klik tombol **+ GRANT ACCESS**.
 4.  Di kolom **New principals**, tempel (paste) nama *service account* lengkap yang sudah Anda siapkan dari langkah 2.2.
-5.  Di bagian **Assign roles**, klik dan cari peran (role) bernama **`App Hosting Invoker`**. Pilih peran tersebut.
+5.  Di bagian **Assign roles**, klik dan cari peran (role) bernama **`Cloud Run Invoker`**. Pilih peran tersebut. Peran ini digunakan karena Firebase App Hosting berjalan di atas infrastruktur Cloud Run.
 6.  Klik **Save**.
 
 ---
@@ -60,16 +60,10 @@ Setelah deploy dan mengatur izin, Anda bisa memeriksa apakah jadwal sudah aktif.
 
 ---
 
-### Troubleshooting: Peran "App Hosting Invoker" Tidak Ditemukan
+### Troubleshooting
 
-Jika Anda tidak dapat menemukan peran "App Hosting Invoker" di Langkah 2.3, coba langkah-langkah berikut:
-
-1.  **Tunggu 5 Menit**: Terkadang setelah proses deploy pertama, perlu waktu beberapa menit bagi Google Cloud untuk mendaftarkan semua peran IAM yang baru. Coba segarkan (refresh) halaman IAM setelah 5 menit.
-2.  **Pastikan Filter Kosong**: Saat mencari peran, pastikan tidak ada teks lain di kotak pencarian "Filter".
-3.  **Salin Nama Peran**: Untuk menghindari salah ketik, salin-tempel (copy-paste) nama peran ini langsung ke kotak pencarian: **`App Hosting Invoker`**.
-4.  **Verifikasi API (Langkah Lanjutan)**: Jika peran tetap tidak muncul, ada kemungkinan API yang dibutuhkan belum aktif.
-    *   Buka menu navigasi Google Cloud > **APIs & Services** > **Enabled APIs & services**.
-    *   Pastikan **"Cloud Scheduler API"** dan **"App Hosting API"** ada di dalam daftar dan berstatus *Enabled*. Jika tidak, Anda mungkin perlu mengaktifkannya secara manual.
+-   **Peran "Cloud Run Invoker" Tidak Ditemukan**: Jika Anda tidak dapat menemukannya, coba segarkan halaman setelah 5 menit. Pastikan juga API berikut ini aktif di proyek Anda (biasanya aktif otomatis setelah deploy): **Cloud Run API**, **Cloud Scheduler API**, dan **App Hosting API**.
+-   **Jadwal Gagal Berjalan**: Jika jadwal ada di Cloud Scheduler tetapi gagal saat dijalankan (status `Failed`), hampir pasti masalahnya ada pada izin di Langkah 2. Pastikan Anda memberikan peran ke *principal* yang benar.
 
 ---
 
