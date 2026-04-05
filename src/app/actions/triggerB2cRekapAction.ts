@@ -16,7 +16,8 @@ export async function triggerB2cRekapAction(
   payload: RekapPayload
 ): Promise<{ success: boolean; message: string }> {
   try {
-    if (payload.summaryData.length === 0) {
+    // Improved check to match the manual trigger page logic
+    if (payload.summaryData.length === 0 && payload.detailData.length === 0) {
       return { success: true, message: 'Tidak ada data rekap untuk dikirim.' };
     }
 
