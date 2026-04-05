@@ -16,3 +16,6 @@ cron:
   - schedule: '0 8,10,12,14,16,17 * * *'
     uri: '/api/cron/b2c-rekap'
     timeZone: 'Asia/Jakarta'
+  - schedule: '0 10,12,15,17 * * *'
+    uri: '/api/cron/plotting-rekap'
+    timeZone: 'Asia/Jakarta'

@@ -8,12 +8,16 @@ const sendPlottingRekapInputSchema = z.object({
   dateHeader: z.string(),
 });
 
-type PlottingTeam = {
-  teamName: string;
-  orders: {
-    scOrder: string;
-    productName: string;
-  }[];
+const getStatusEmoji = (status: ProvisioningRecord['provisioningStatus']) => {
+    switch (status) {
+        case 'assigned': return '➡️';
+        case 'picked_up': return '✅';
+        case 'departed': return '🚚';
+        case 'arrived': return '📍';
+        case 'wip_odp_done': return '🛠️';
+        case 'kendala': return '⚠️';
+        default: return '➡️';
+    }
 };
 
 export async function sendPlottingRekap(
@@ -27,7 +31,7 @@ export async function sendPlottingRekap(
     o.assignedTo_userName
   );
 
-  const teams: Record<string, PlottingTeam> = {};
+  const teams: Record<string, { teamName: string; orders: { scOrder: string; productName: string; status: string; }[] }> = {};
 
   activeOrders.forEach(order => {
     if (!order.assignedTo_userName) return;
@@ -44,6 +48,7 @@ export async function sendPlottingRekap(
     teams[teamName].orders.push({
       scOrder: order.scOrder || 'NO_SC',
       productName: order.productName || 'No Product Info',
+      status: getStatusEmoji(order.provisioningStatus)
     });
   });
 
@@ -58,7 +63,7 @@ export async function sendPlottingRekap(
   sortedTeams.forEach(team => {
     message += `${team.teamName}\n`;
     team.orders.forEach(order => {
-      message += `${order.scOrder} ${order.productName}\n`;
+      message += `${order.status} ${order.scOrder} ${order.productName}\n`;
     });
     message += '\n';
   });
