@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Upload, FileSpreadsheet, ChevronLeft, ChevronRight, Trash2, ChevronRightIcon, User, AlertTriangle, Phone, MoreHorizontal, Edit, Save, Package, Truck, PackageCheck, Send, PlusCircle, Calendar as CalendarIcon, RefreshCw, X } from 'lucide-react';
+import { Loader2, Upload, FileSpreadsheet, ChevronLeft, ChevronRight, Trash2, ChevronRightIcon, User, AlertTriangle, Phone, MoreHorizontal, Edit, Save, Package, Truck, PackageCheck, Send, PlusCircle, Calendar as CalendarIcon, RefreshCw, X, Bot } from 'lucide-react';
 import { format, isValid, startOfMonth, endOfMonth, startOfDay, endOfDay } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import type { DateRange } from 'react-day-picker';
@@ -30,6 +30,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { triggerProvisioningRekapAction } from '@/app/actions/triggerProvisioningRekapAction';
+import { triggerPlottingRekapAction } from '@/app/actions/triggerPlottingRekapAction';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 
@@ -562,6 +563,65 @@ function PivotTable({ data, workzones }: { data: any; workzones: string[]; }) {
     );
 }
 
+function BotPlottingCard({ data, dateHeader }: { data: any, dateHeader: string }) {
+    const plottingData = useMemo(() => {
+        const teams: Record<string, { teamName: string; orders: { scOrder: string; productName: string }[] }> = {};
+        
+        Object.values(data).forEach((techData: any) => {
+            const activeOrders = (techData.orders || []).filter((o: any) => o.status && o.status !== 'completed' && o.status !== 'cancelled');
+            if (activeOrders.length === 0) return;
+
+            if (!teams[techData.teamName]) {
+                teams[techData.teamName] = { teamName: techData.teamName, orders: [] };
+            }
+
+            activeOrders.forEach((order: any) => {
+                const fullOrderData = data[techData.teamName].fullOrders.find((fo: any) => fo.scOrder === order.scOrder);
+                if (fullOrderData) {
+                    teams[techData.teamName].orders.push({
+                        scOrder: order.scOrder,
+                        productName: fullOrderData.productName || 'No Product Info'
+                    });
+                }
+            });
+        });
+
+        const sortedTeams = Object.values(teams)
+          .filter(team => team.orders.length > 0)
+          .sort((a, b) => a.teamName.localeCompare(b.teamName));
+          
+        return sortedTeams;
+    }, [data]);
+    
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Bot /> Bot Ploting Teknisi</CardTitle>
+                <CardDescription>Daftar alokasi pekerjaan untuk tim teknisi berdasarkan filter saat ini.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <ScrollArea className="h-[70vh] rounded-md border p-4 font-mono text-sm">
+                    {plottingData.length > 0 ? (
+                        plottingData.map(({ teamName, orders }) => (
+                            <div key={teamName} className="mb-6 last:mb-0">
+                                <h3 className="font-bold text-base mb-2 pb-1 border-b border-dashed">{teamName}</h3>
+                                <div className="space-y-1">
+                                    {orders.map((order, i) => (
+                                        <p key={i}>{order.scOrder} {order.productName}</p>
+                                    ))}
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="flex items-center justify-center h-full text-muted-foreground">
+                            Tidak ada order aktif untuk di-plot.
+                        </div>
+                    )}
+                </ScrollArea>
+            </CardContent>
+        </Card>
+    );
+}
 
 // --- Main Component ---
 export default function ProvisioningDashboardPage() {
@@ -583,6 +643,7 @@ export default function ProvisioningDashboardPage() {
   const [orderToCancel, setOrderToCancel] = useState<ProvisioningRecord | null>(null);
   
   const [isSendingRekap, setIsSendingRekap] = useState(false);
+  const [isSendingPlotting, setIsSendingPlotting] = useState(false);
 
   // Data fetching
   const recordsQuery = useMemoFirebase(() => query(collection(firestore, 'provisioning-records'), orderBy('dateCreated', 'desc')), [firestore]);
@@ -1062,7 +1123,7 @@ export default function ProvisioningDashboardPage() {
     }, [data, filterMode, selectedMonth, dateRange, selectedWorkzone, searchQuery, selectedTechnician]);
 
   const pivotData = useMemo(() => {
-    const pivot: any = {};
+    const pivot: Record<string, { count: Record<string, number>, orders: {id: string, scOrder: string, status: string, workzone: string}[], statusCounts: Record<string, number>, fullOrders: any[] }> = {};
     const dataToProcess = allFilteredOrders.filter(item => {
         if (selectedTechnician !== 'all' && (item.assignedTo_userId !== selectedTechnician && item.assignedTo_crew_userId !== selectedTechnician)) {
             return false;
@@ -1075,19 +1136,15 @@ export default function ProvisioningDashboardPage() {
         const wzRaw = (workzone || 'N/A').toUpperCase();
         const wz = (wzRaw === 'KDS' || wzRaw === 'N/A') ? 'KUD' : wzRaw;
         
-        let techGroupKey = 'Unassigned';
-        if (assignedTo_userName) {
-            techGroupKey = assignedTo_userName;
-            if (assignedTo_crew_userName) {
-                techGroupKey += ` & ${assignedTo_crew_userName}`;
-            }
-        }
+        const teamMembers = [assignedTo_userName, assignedTo_crew_userName].filter(Boolean).map(name => name.split(' ')[0].toUpperCase());
+        const techGroupKey = teamMembers.length > 0 ? teamMembers.sort().join('-') : 'Unassigned';
         
         if (!pivot[techGroupKey]) {
             pivot[techGroupKey] = {
               count: { 'Grand Total': 0 }, 
               orders: [],
-              statusCounts: {}
+              statusCounts: {},
+              fullOrders: [],
             };
         }
         
@@ -1103,6 +1160,7 @@ export default function ProvisioningDashboardPage() {
             status: status,
             workzone: wz,
         });
+        pivot[techGroupKey].fullOrders.push(item);
     });
 
     return pivot;
@@ -1155,6 +1213,36 @@ export default function ProvisioningDashboardPage() {
       }
   };
 
+  const handleSendPlotting = async () => {
+      setIsSendingPlotting(true);
+      try {
+          if (!allFilteredOrders || allFilteredOrders.length === 0) {
+            throw new Error("Tidak ada data untuk dikirim.");
+          }
+          
+          const payload = {
+              allOrders: allFilteredOrders,
+              dateHeader: format(new Date(), 'dd/MM/yyyy', { locale: idLocale }),
+          };
+
+          const result = await triggerPlottingRekapAction(payload);
+
+          if (result.success) {
+              toast({ title: "Sukses", description: result.message });
+          } else {
+              throw new Error(result.message);
+          }
+      } catch (error: any) {
+          toast({
+              variant: "destructive",
+              title: "Gagal Mengirim Plotting",
+              description: error.message || "Terjadi kesalahan saat mengirim laporan.",
+          });
+      } finally {
+          setIsSendingPlotting(false);
+      }
+  };
+
 
   const paginatedUnassigned = useMemo(() => {
     const startIndex = (unassignedPage - 1) * ITEMS_PER_PAGE;
@@ -1196,10 +1284,16 @@ export default function ProvisioningDashboardPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Dashboard Provisioning</h1>
-        <Button onClick={handleSendRekap} disabled={isSendingRekap}>
-            {isSendingRekap ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-            Kirim Rekap Sesuai Filter
-        </Button>
+        <div className="flex gap-2">
+            <Button onClick={handleSendPlotting} disabled={isSendingPlotting}>
+                {isSendingPlotting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Bot className="mr-2 h-4 w-4" />}
+                Kirim Plotting Harian
+            </Button>
+            <Button onClick={handleSendRekap} disabled={isSendingRekap}>
+                {isSendingRekap ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                Kirim Rekap Sesuai Filter
+            </Button>
+        </div>
       </div>
       
       <KendalaCard 
@@ -1337,15 +1431,18 @@ export default function ProvisioningDashboardPage() {
           </CardContent>
       </Card>
       
-      <Card>
-          <CardHeader>
-              <CardTitle>Tabel Rekapitulasi</CardTitle>
-              <CardDescription>Ringkasan order dikelompokkan berdasarkan teknisi, status, dan SC order.</CardDescription>
-          </CardHeader>
-          <CardContent>
-              <PivotTable data={pivotData} workzones={workzones} />
-          </CardContent>
-      </Card>
+      <div className="grid lg:grid-cols-2 gap-6">
+        <Card>
+            <CardHeader>
+                <CardTitle>Tabel Rekapitulasi</CardTitle>
+                <CardDescription>Ringkasan order dikelompokkan berdasarkan teknisi, status, dan SC order.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <PivotTable data={pivotData} workzones={workzones} />
+            </CardContent>
+        </Card>
+        <BotPlottingCard data={pivotData} dateHeader={dateHeader} />
+      </div>
 
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -1594,4 +1691,3 @@ export default function ProvisioningDashboardPage() {
   );
 }
 
-  

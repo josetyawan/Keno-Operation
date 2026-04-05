@@ -1,0 +1,67 @@
+'use server';
+
+import { z } from 'zod';
+import type { ProvisioningRecord } from '@/lib/types';
+
+const sendPlottingRekapInputSchema = z.object({
+  orders: z.array(z.any()),
+  dateHeader: z.string(),
+});
+
+type PlottingTeam = {
+  teamName: string;
+  orders: {
+    scOrder: string;
+    productName: string;
+  }[];
+};
+
+export async function sendPlottingRekap(
+  input: z.infer<typeof sendPlottingRekapInputSchema>
+): Promise<string> {
+  
+  const activeOrders = input.orders.filter(o => 
+    o.provisioningStatus && 
+    o.provisioningStatus !== 'completed' && 
+    o.provisioningStatus !== 'cancelled' &&
+    o.assignedTo_userName
+  );
+
+  const teams: Record<string, PlottingTeam> = {};
+
+  activeOrders.forEach(order => {
+    if (!order.assignedTo_userName) return;
+
+    let teamName = order.assignedTo_userName.split(' ')[0].toUpperCase();
+    if (order.assignedTo_crew_userName) {
+      teamName += `-${order.assignedTo_crew_userName.split(' ')[0].toUpperCase()}`;
+    }
+
+    if (!teams[teamName]) {
+      teams[teamName] = { teamName, orders: [] };
+    }
+
+    teams[teamName].orders.push({
+      scOrder: order.scOrder || 'NO_SC',
+      productName: order.productName || 'No Product Info',
+    });
+  });
+
+  const sortedTeams = Object.values(teams).sort((a, b) => a.teamName.localeCompare(b.teamName));
+  
+  if (sortedTeams.length === 0) {
+      return `Tidak ada teknisi yang ditugaskan untuk order aktif pada ${input.dateHeader}.`;
+  }
+
+  let message = `LEMBAR KERJA ${input.dateHeader}\n\n`;
+
+  sortedTeams.forEach(team => {
+    message += `${team.teamName}\n`;
+    team.orders.forEach(order => {
+      message += `${order.scOrder} ${order.productName}\n`;
+    });
+    message += '\n';
+  });
+
+  return `<pre>${message.trim()}</pre>`;
+}
