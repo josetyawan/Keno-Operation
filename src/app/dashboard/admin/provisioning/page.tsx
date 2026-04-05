@@ -563,39 +563,12 @@ function PivotTable({ data, workzones }: { data: any; workzones: string[]; }) {
     );
 }
 
-function BotPlottingCard({ data, dateHeader }: { data: any, dateHeader: string }) {
-    const plottingData = useMemo(() => {
-        const teams: { teamName: string; orders: { scOrder: string; productName: string }[] }[] = [];
-        
-        Object.entries(data).forEach(([teamName, techData]: [string, any]) => {
-            const activeOrders = (techData.fullOrders || []).filter((o: any) => 
-                o.provisioningStatus && 
-                o.provisioningStatus !== 'completed' && 
-                o.provisioningStatus !== 'cancelled'
-            );
-            
-            if (activeOrders.length === 0) return;
-
-            const teamOrders = activeOrders.map((order: any) => ({
-                scOrder: order.scOrder || 'NO_SC',
-                productName: order.productName || 'No Product Info'
-            }));
-
-            teams.push({
-                teamName: teamName,
-                orders: teamOrders
-            });
-        });
-
-        return teams.sort((a, b) => a.teamName.localeCompare(b.teamName));
-          
-    }, [data]);
-    
+function BotPlottingCard({ plottingData }: { plottingData: any[] }) {
     return (
         <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2"><Bot /> Bot Ploting Teknisi</CardTitle>
-                <CardDescription>Daftar alokasi pekerjaan untuk tim teknisi berdasarkan filter saat ini.</CardDescription>
+                <CardDescription>Daftar alokasi pekerjaan yang sedang aktif hari ini.</CardDescription>
             </CardHeader>
             <CardContent>
                 <ScrollArea className="h-[70vh] rounded-md border p-4 font-mono text-sm">
@@ -604,8 +577,8 @@ function BotPlottingCard({ data, dateHeader }: { data: any, dateHeader: string }
                             <div key={teamName} className="mb-6 last:mb-0">
                                 <h3 className="font-bold text-base mb-2 pb-1 border-b border-dashed">{teamName}</h3>
                                 <div className="space-y-1">
-                                    {orders.map((order, i) => (
-                                        <p key={i}>{order.scOrder} {order.productName}</p>
+                                    {orders.map((order: any, i: number) => (
+                                        <p key={i}>{order.status} {order.scOrder} {order.productName}</p>
                                     ))}
                                 </div>
                             </div>
@@ -620,6 +593,7 @@ function BotPlottingCard({ data, dateHeader }: { data: any, dateHeader: string }
         </Card>
     );
 }
+
 
 // --- Main Component ---
 export default function ProvisioningDashboardPage() {
@@ -1164,6 +1138,49 @@ export default function ProvisioningDashboardPage() {
     return pivot;
   }, [allFilteredOrders, selectedTechnician]);
   
+  const getStatusEmoji = (status: ProvisioningRecord['provisioningStatus']) => {
+      switch (status) {
+          case 'assigned': return '➡️';
+          case 'picked_up': return '✅';
+          case 'departed': return '🚚';
+          case 'arrived': return '📍';
+          case 'wip_odp_done': return '🛠️';
+          case 'kendala': return '⚠️';
+          default: return '➡️';
+      }
+  };
+
+  const plottingCardData = useMemo(() => {
+    if (!data) return [];
+  
+    const activeOrders = data.filter(o =>
+      o.provisioningStatus &&
+      ['assigned', 'picked_up', 'departed', 'arrived', 'wip_odp_done', 'kendala'].includes(o.provisioningStatus) &&
+      o.assignedTo_userName
+    );
+  
+    const teams: Record<string, { teamName: string; orders: { scOrder: string; productName: string; status: string; }[] }> = {};
+  
+    activeOrders.forEach(order => {
+      let teamName = order.assignedTo_userName!.split(' ')[0].toUpperCase();
+      if (order.assignedTo_crew_userName) {
+        teamName += `-${order.assignedTo_crew_userName.split(' ')[0].toUpperCase()}`;
+      }
+  
+      if (!teams[teamName]) {
+        teams[teamName] = { teamName, orders: [] };
+      }
+  
+      teams[teamName].orders.push({
+        scOrder: order.scOrder || 'NO_SC',
+        productName: order.productName || 'No Product Info',
+        status: getStatusEmoji(order.provisioningStatus)
+      });
+    });
+  
+    return Object.values(teams).sort((a, b) => a.teamName.localeCompare(b.teamName));
+  }, [data]);
+  
   const dateHeader = useMemo(() => {
     if (filterMode === 'all') return 'Semua Waktu';
     if (filterMode === 'month' && selectedMonth) {
@@ -1439,7 +1456,7 @@ export default function ProvisioningDashboardPage() {
                 <PivotTable data={pivotData} workzones={workzones} />
             </CardContent>
         </Card>
-        <BotPlottingCard data={pivotData} dateHeader={dateHeader} />
+        <BotPlottingCard plottingData={plottingCardData} />
       </div>
 
 
