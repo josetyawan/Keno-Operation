@@ -1118,6 +1118,7 @@ export default function ProvisioningDashboardPage() {
           case 'arrived': return { emoji: '📍', text: 'Tiba' };
           case 'wip_odp_done': return { emoji: '🛠️', text: 'Progres' };
           case 'kendala': return { emoji: '⚠️', text: 'Kendala' };
+          case 'completed': return { emoji: '🏁', text: 'Selesai' };
           default: return { emoji: '⌛', text: 'Antri' };
       }
   };
@@ -1174,11 +1175,18 @@ export default function ProvisioningDashboardPage() {
   
   const plottingCardData = useMemo(() => {
     if (!data) return [];
-  
-    const relevantOrders = data.filter(o =>
-      o.provisioningStatus &&
-      ['unassigned', 'assigned', 'picked_up', 'departed', 'arrived', 'wip_odp_done', 'kendala'].includes(o.provisioningStatus)
-    );
+    
+    const todayStart = startOfDay(new Date());
+    const todayEnd = endOfDay(new Date());
+
+    const relevantOrders = data.filter(o => {
+        if (o.provisioningStatus === 'completed') {
+            const completedDate = safeToDate(o.completedAt);
+            return completedDate && completedDate >= todayStart && completedDate <= todayEnd;
+        }
+        return o.provisioningStatus &&
+            ['unassigned', 'assigned', 'picked_up', 'departed', 'arrived', 'wip_odp_done', 'kendala'].includes(o.provisioningStatus);
+    });
   
     const teams: Record<string, { teamName: string; orders: { scOrder: string; productName: string; statusEmoji: string; statusText: string; }[] }> = {};
   
@@ -1268,14 +1276,17 @@ export default function ProvisioningDashboardPage() {
   const handleSendPlotting = async () => {
       setIsSendingPlotting(true);
       try {
-          if (!data || data.length === 0) { // Always use all data for plotting
-            throw new Error("Tidak ada data untuk dikirim.");
+        const todayStart = startOfDay(new Date());
+        const todayEnd = endOfDay(new Date());
+  
+        const activeOrders = data.filter(o => {
+          if (o.provisioningStatus === 'completed') {
+            const completedDate = safeToDate(o.completedAt);
+            return completedDate && completedDate >= todayStart && completedDate <= todayEnd;
           }
-
-          const activeOrders = data.filter(o =>
-            o.provisioningStatus &&
-            ['unassigned', 'assigned', 'picked_up', 'departed', 'arrived', 'wip_odp_done', 'kendala'].includes(o.provisioningStatus)
-          );
+          return o.provisioningStatus &&
+            ['unassigned', 'assigned', 'picked_up', 'departed', 'arrived', 'wip_odp_done', 'kendala'].includes(o.provisioningStatus);
+        });
           
           const payload = {
               allOrders: activeOrders,
@@ -1742,7 +1753,6 @@ export default function ProvisioningDashboardPage() {
                     <AlertDialogAction onClick={handleCancelOrder} className="bg-destructive hover:bg-destructive/90">Ya, Batalkan Order</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
-        </AlertDialog>
       )}
     </div>
   );

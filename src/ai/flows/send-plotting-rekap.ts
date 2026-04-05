@@ -18,6 +18,7 @@ const getStatusInfo = (status: ProvisioningRecord['provisioningStatus']) => {
         case 'arrived': return { emoji: '📍', text: 'Tiba' };
         case 'wip_odp_done': return { emoji: '🛠️', text: 'Progres' };
         case 'kendala': return { emoji: '⚠️', text: 'Kendala' };
+        case 'completed': return { emoji: '🏁', text: 'Selesai' };
         default: return { emoji: '⌛', text: 'Antri' };
     }
 };
@@ -43,7 +44,6 @@ export async function sendPlottingRekap(
   
   const relevantOrders = input.orders.filter(o => 
     o.provisioningStatus && 
-    o.provisioningStatus !== 'completed' && 
     o.provisioningStatus !== 'cancelled'
   );
 
