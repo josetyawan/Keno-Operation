@@ -49,21 +49,22 @@ Ganti `<PROJECT_NUMBER>` dengan nomor yang Anda catat pada langkah 2.1.
 
 ---
 
-### Langkah 3: Verifikasi Jadwal (Opsional)
+### Langkah 3: Verifikasi Jadwal
 
 Setelah deploy dan mengatur izin, Anda bisa memeriksa apakah jadwal sudah aktif.
 
 1.  Di Google Cloud Console, buka menu navigasi.
 2.  Pilih **Cloud Scheduler**.
-3.  Anda akan melihat daftar jadwal (jobs) yang sesuai dengan yang Anda definisikan di `apphosting.yaml`. Mungkin perlu beberapa menit setelah deploy agar jadwal ini muncul.
-4.  Anda bisa mengklik tombol "RUN NOW" pada salah satu jadwal untuk mengujinya secara manual.
+3.  **PENTING:** Anda akan melihat daftar jadwal (jobs) yang dibuat **secara otomatis** oleh Firebase. Nama jadwal-jadwal ini akan terlihat seperti `firebase-app-hosting-daily-schedule-xxxx`, `firebase-app-hosting-b2c-rekap-xxxx`, dan `firebase-app-hosting-plotting-rekap-xxxx`.
+4.  Jika Anda memiliki jadwal yang Anda buat manual sebelumnya (misalnya `kirim-card-otomatis`), Anda bisa **menghapusnya** dengan aman karena sudah tidak digunakan dan akan terus gagal.
+5.  Anda bisa mengklik tombol "RUN NOW" pada salah satu jadwal otomatis untuk mengujinya secara manual.
 
 ---
 
 ### Troubleshooting
 
 -   **Peran "Cloud Run Invoker" Tidak Ditemukan**: Jika Anda tidak dapat menemukannya, coba segarkan halaman setelah 5 menit. Pastikan juga API berikut ini aktif di proyek Anda (biasanya aktif otomatis setelah deploy): **Cloud Run API**, **Cloud Scheduler API**, dan **App Hosting API**.
--   **Jadwal Gagal Berjalan**: Jika jadwal ada di Cloud Scheduler tetapi gagal saat dijalankan (status `Failed`), hampir pasti masalahnya ada pada izin di Langkah 2. Pastikan Anda memberikan peran ke *principal* yang benar.
+-   **Jadwal Gagal Berjalan (Status Failed)**: Jika jadwal yang dibuat otomatis oleh Firebase gagal, hampir pasti masalahnya ada pada izin di Langkah 2. Pastikan Anda memberikan peran ke *principal* yang benar. Jika jadwal yang dibuat manual yang gagal, itu karena target URL-nya sudah tidak valid.
 
 ---
 
