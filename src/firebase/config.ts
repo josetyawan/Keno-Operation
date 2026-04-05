@@ -3,7 +3,7 @@ export const firebaseConfig = {
   "appId": "1:536501296484:web:447f2f64d42e500b6aae71",
   "storageBucket": "studio-7759201113-b7263.firebasestorage.app",
   "apiKey": "AIzaSyAcRFFqLjh7vVdJ5a6jy8aJ0f6QmvnlrB4",
-  "authDomain": "studio-7759201113-b7263.firebaseapp.com",
+  "authDomain": "www.kenooperation.com",
   "measurementId": "",
   "messagingSenderId": "536501296484"
 };
