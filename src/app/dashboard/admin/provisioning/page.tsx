@@ -64,7 +64,7 @@ const typeOrderOptions: Record<string, string[]> = {
     'REPLACEMENT': ['ONT', 'STB'],
 };
 
-function KendalaCard({ kendalaOrders, isLoading, onAssign, onCancel }: { 
+function KendalaDetailsCard({ kendalaOrders, isLoading, onAssign, onCancel }: { 
     kendalaOrders: ProvisioningRecord[], 
     isLoading: boolean,
     onAssign: (order: ProvisioningRecord) => void,
@@ -184,7 +184,7 @@ function ManualOrderForm({ users, onSave, onCancel, currentUserProfile }: { user
         } catch (error) {
             // Error is handled by the parent
         } finally {
-            setIsSaving(false);
+             setIsSaving(false);
         }
     };
 
@@ -1364,7 +1364,7 @@ export default function ProvisioningDashboardPage() {
         </div>
       </div>
       
-      <KendalaCard 
+      <KendalaDetailsCard 
           kendalaOrders={kendalaOrders || []} 
           isLoading={isDataLoading}
           onAssign={setOrderToAssign}
@@ -1753,6 +1753,7 @@ export default function ProvisioningDashboardPage() {
                     <AlertDialogAction onClick={handleCancelOrder} className="bg-destructive hover:bg-destructive/90">Ya, Batalkan Order</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
+        </AlertDialog>
       )}
     </div>
   );
