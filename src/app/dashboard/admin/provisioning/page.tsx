@@ -565,32 +565,30 @@ function PivotTable({ data, workzones }: { data: any; workzones: string[]; }) {
 
 function BotPlottingCard({ data, dateHeader }: { data: any, dateHeader: string }) {
     const plottingData = useMemo(() => {
-        const teams: Record<string, { teamName: string; orders: { scOrder: string; productName: string }[] }> = {};
+        const teams: { teamName: string; orders: { scOrder: string; productName: string }[] }[] = [];
         
-        Object.values(data).forEach((techData: any) => {
-            const activeOrders = (techData.orders || []).filter((o: any) => o.status && o.status !== 'completed' && o.status !== 'cancelled');
+        Object.entries(data).forEach(([teamName, techData]: [string, any]) => {
+            const activeOrders = (techData.fullOrders || []).filter((o: any) => 
+                o.provisioningStatus && 
+                o.provisioningStatus !== 'completed' && 
+                o.provisioningStatus !== 'cancelled'
+            );
+            
             if (activeOrders.length === 0) return;
 
-            if (!teams[techData.teamName]) {
-                teams[techData.teamName] = { teamName: techData.teamName, orders: [] };
-            }
+            const teamOrders = activeOrders.map((order: any) => ({
+                scOrder: order.scOrder || 'NO_SC',
+                productName: order.productName || 'No Product Info'
+            }));
 
-            activeOrders.forEach((order: any) => {
-                const fullOrderData = data[techData.teamName].fullOrders.find((fo: any) => fo.scOrder === order.scOrder);
-                if (fullOrderData) {
-                    teams[techData.teamName].orders.push({
-                        scOrder: order.scOrder,
-                        productName: fullOrderData.productName || 'No Product Info'
-                    });
-                }
+            teams.push({
+                teamName: teamName,
+                orders: teamOrders
             });
         });
 
-        const sortedTeams = Object.values(teams)
-          .filter(team => team.orders.length > 0)
-          .sort((a, b) => a.teamName.localeCompare(b.teamName));
+        return teams.sort((a, b) => a.teamName.localeCompare(b.teamName));
           
-        return sortedTeams;
     }, [data]);
     
     return (
@@ -1690,4 +1688,3 @@ export default function ProvisioningDashboardPage() {
     </div>
   );
 }
-
