@@ -647,7 +647,7 @@ export default function ProvisioningDashboardPage() {
       if (timestamp.toDate) return timestamp.toDate();
       if (timestamp instanceof Date) return timestamp;
       const d = new Date(timestamp);
-      return d instanceof Date && !isNaN(d.getTime()) ? d : null;
+      return d instanceof Date && !isNaN(d.valueOf()) ? d : null;
   };
 
   const monthYearOptions = useMemo(() => {
@@ -1109,6 +1109,19 @@ export default function ProvisioningDashboardPage() {
     return parts[parts.length - 1].toUpperCase();
   };
 
+  const getStatusInfo = (status: ProvisioningRecord['provisioningStatus']) => {
+      switch (status) {
+          case 'unassigned': return { emoji: '⌛', text: 'Antri' };
+          case 'assigned': return { emoji: '➡️', text: 'Ditugaskan' };
+          case 'picked_up': return { emoji: '✅', text: 'Pickup' };
+          case 'departed': return { emoji: '🚚', text: 'Berangkat' };
+          case 'arrived': return { emoji: '📍', text: 'Tiba' };
+          case 'wip_odp_done': return { emoji: '🛠️', text: 'Progres' };
+          case 'kendala': return { emoji: '⚠️', text: 'Kendala' };
+          default: return { emoji: '⌛', text: 'Antri' };
+      }
+  };
+
   const pivotData = useMemo(() => {
     const pivot: Record<string, { count: Record<string, number>, orders: {id: string, scOrder: string, status: string, workzone: string}[], statusCounts: Record<string, number>, fullOrders: any[] }> = {};
     const dataToProcess = allFilteredOrders.filter(item => {
@@ -1159,35 +1172,27 @@ export default function ProvisioningDashboardPage() {
     return pivot;
   }, [allFilteredOrders, selectedTechnician]);
   
-  const getStatusInfo = (status: ProvisioningRecord['provisioningStatus']) => {
-      switch (status) {
-          case 'assigned': return { emoji: '➡️', text: 'Ditugaskan' };
-          case 'picked_up': return { emoji: '✅', text: 'Pickup' };
-          case 'departed': return { emoji: '🚚', text: 'Berangkat' };
-          case 'arrived': return { emoji: '📍', text: 'Tiba' };
-          case 'wip_odp_done': return { emoji: '🛠️', text: 'Progres' };
-          case 'kendala': return { emoji: '⚠️', text: 'Kendala' };
-          default: return { emoji: '➡️', text: 'Ditugaskan' };
-      }
-  };
-
   const plottingCardData = useMemo(() => {
     if (!data) return [];
   
-    const activeOrders = data.filter(o =>
+    const relevantOrders = data.filter(o =>
       o.provisioningStatus &&
-      ['assigned', 'picked_up', 'departed', 'arrived', 'wip_odp_done', 'kendala'].includes(o.provisioningStatus) &&
-      o.assignedTo_userName
+      ['unassigned', 'assigned', 'picked_up', 'departed', 'arrived', 'wip_odp_done', 'kendala'].includes(o.provisioningStatus)
     );
   
     const teams: Record<string, { teamName: string; orders: { scOrder: string; productName: string; statusEmoji: string; statusText: string; }[] }> = {};
   
-    activeOrders.forEach(order => {
-      const mainTechName = getShortName(order.assignedTo_userName);
-      let teamName = mainTechName;
-      if (order.assignedTo_crew_userName) {
-          const crewName = getShortName(order.assignedTo_crew_userName);
-          teamName += `-${crewName}`;
+    relevantOrders.forEach(order => {
+      let teamName: string;
+      if (order.assignedTo_userName) {
+          const mainTechName = getShortName(order.assignedTo_userName);
+          teamName = mainTechName;
+          if (order.assignedTo_crew_userName) {
+              const crewName = getShortName(order.assignedTo_crew_userName);
+              teamName += `-${crewName}`;
+          }
+      } else {
+          teamName = "ANTRIAN"; // Group for unassigned orders
       }
   
       if (!teams[teamName]) {
@@ -1204,7 +1209,13 @@ export default function ProvisioningDashboardPage() {
       });
     });
   
-    return Object.values(teams).sort((a, b) => a.teamName.localeCompare(b.teamName));
+    const sortedTeamNames = Object.keys(teams).sort((a, b) => {
+        if (a === 'ANTRIAN') return 1;
+        if (b === 'ANTRIAN') return -1;
+        return a.localeCompare(b);
+    });
+
+    return sortedTeamNames.map(name => teams[name]);
   }, [data]);
   
   const dateHeader = useMemo(() => {
@@ -1263,7 +1274,7 @@ export default function ProvisioningDashboardPage() {
 
           const activeOrders = data.filter(o =>
             o.provisioningStatus &&
-            ['assigned', 'picked_up', 'departed', 'arrived', 'wip_odp_done', 'kendala'].includes(o.provisioningStatus)
+            ['unassigned', 'assigned', 'picked_up', 'departed', 'arrived', 'wip_odp_done', 'kendala'].includes(o.provisioningStatus)
           );
           
           const payload = {

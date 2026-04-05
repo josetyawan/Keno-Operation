@@ -11,13 +11,14 @@ const sendPlottingRekapInputSchema = z.object({
 
 const getStatusInfo = (status: ProvisioningRecord['provisioningStatus']) => {
     switch (status) {
+        case 'unassigned': return { emoji: '⌛', text: 'Antri' };
         case 'assigned': return { emoji: '➡️', text: 'Ditugaskan' };
         case 'picked_up': return { emoji: '✅', text: 'Pickup' };
         case 'departed': return { emoji: '🚚', text: 'Berangkat' };
         case 'arrived': return { emoji: '📍', text: 'Tiba' };
         case 'wip_odp_done': return { emoji: '🛠️', text: 'Progres' };
         case 'kendala': return { emoji: '⚠️', text: 'Kendala' };
-        default: return { emoji: '➡️', text: 'Ditugaskan' };
+        default: return { emoji: '⌛', text: 'Antri' };
     }
 };
 
@@ -40,24 +41,26 @@ export async function sendPlottingRekap(
   input: z.infer<typeof sendPlottingRekapInputSchema>
 ): Promise<string> {
   
-  const activeOrders = input.orders.filter(o => 
+  const relevantOrders = input.orders.filter(o => 
     o.provisioningStatus && 
     o.provisioningStatus !== 'completed' && 
-    o.provisioningStatus !== 'cancelled' &&
-    o.assignedTo_userName
+    o.provisioningStatus !== 'cancelled'
   );
 
   const teams: Record<string, { teamName: string; orders: { scOrder: string; productName: string; statusEmoji: string; statusText: string; }[] }> = {};
 
-  activeOrders.forEach(order => {
-    if (!order.assignedTo_userName) return;
+  relevantOrders.forEach(order => {
+    let teamName: string;
+    if (order.assignedTo_userName) {
+        const mainTechName = getShortName(order.assignedTo_userName);
+        teamName = mainTechName;
 
-    const mainTechName = getShortName(order.assignedTo_userName);
-    let teamName = mainTechName;
-
-    if (order.assignedTo_crew_userName) {
-      const crewName = getShortName(order.assignedTo_crew_userName);
-      teamName += `-${crewName}`;
+        if (order.assignedTo_crew_userName) {
+          const crewName = getShortName(order.assignedTo_crew_userName);
+          teamName += `-${crewName}`;
+        }
+    } else {
+        teamName = "ANTRIAN"; // Group for unassigned orders
     }
 
     if (!teams[teamName]) {
@@ -74,10 +77,16 @@ export async function sendPlottingRekap(
     });
   });
 
-  const sortedTeams = Object.values(teams).sort((a, b) => a.teamName.localeCompare(b.teamName));
+  const sortedTeamNames = Object.keys(teams).sort((a, b) => {
+      if (a === 'ANTRIAN') return 1; // Move ANTRIAN to the end
+      if (b === 'ANTRIAN') return -1;
+      return a.localeCompare(b);
+  });
+
+  const sortedTeams = sortedTeamNames.map(name => teams[name]);
   
   if (sortedTeams.length === 0) {
-      return `Tidak ada teknisi yang ditugaskan untuk order aktif pada ${input.dateHeader}.`;
+      return `Tidak ada order aktif untuk dilaporkan pada ${input.dateHeader}.`;
   }
 
   let message = `LEMBAR KERJA ${input.dateHeader}\n\n`;

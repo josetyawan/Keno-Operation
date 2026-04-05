@@ -1,3 +1,4 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 import { initializeFirebase } from '@/firebase/init';
 import { getFirestore, collection, getDocs, query, where, Timestamp } from 'firebase/firestore';
@@ -20,9 +21,9 @@ export async function GET(request: NextRequest) {
     try {
         const { firestore } = initializeFirebase();
         
-        // Fetch only orders that are "active" for today
+        // Fetch only orders that are "active" for today, now including unassigned
         const allActiveOrders = await fetchCollection<ProvisioningRecord>(firestore, 'provisioning-records', [
-            where('provisioningStatus', 'in', ['assigned', 'picked_up', 'departed', 'arrived', 'wip_odp_done', 'kendala'])
+            where('provisioningStatus', 'in', ['unassigned', 'assigned', 'picked_up', 'departed', 'arrived', 'wip_odp_done', 'kendala'])
         ]);
         
         if (allActiveOrders.length === 0) {
